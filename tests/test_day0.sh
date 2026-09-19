@@ -27,7 +27,7 @@ cleanup() {
 }
 trap cleanup EXIT INT HUP TERM
 
-# --- a) blank state: where-are-we.py exits 0 and prints JOURNEY + 1 / 9 ---
+# --- a) blank state: where-are-we.py exits 0 and prints spoken Day 0 clocks ---
 a_out="$TMP/where-are-we.out"
 a_err="$TMP/where-are-we.err"
 a_rc=0
@@ -37,8 +37,9 @@ python3 templates/company/state/where-are-we.py \
 
 if [ "$a_rc" -eq 0 ] \
   && grep -q 'JOURNEY' "$a_out" \
-  && grep -q '1 / 9' "$a_out"; then
-  ok "where-are-we.py on blank state (JOURNEY, 1 / 9)"
+  && grep -q 'Write the bet' "$a_out" \
+  && grep -q 'Ask' "$a_out"; then
+  ok "where-are-we.py on blank state (Write the bet, Ask)"
 else
   not_ok "where-are-we.py on blank state (exit $a_rc)"
 fi
@@ -1310,7 +1311,7 @@ if grep -Fq '**Version:** 2.8.15' company-os/operating-system.md \
   && grep -q 'Keep-doing map (stored integers' company-os/operating-system.md \
   && grep -q '8 or 9 | stay at Try until founder Advance' company-os/operating-system.md \
   && grep -q 'Never skip Write back' company-os/live-runtime.md \
-  && grep -q 'five-week' company-os/live-runtime.md \
+  && grep -q 'five weeks' company-os/live-runtime.md \
   && grep -q 'v2.8.15' company-os/ai-instructions.md \
   && grep -q 'Honor OS 2.8.15' AGENTS.md \
   && grep -q 'OS_VERSION = "2.8.15"' mcp/src/constants.ts \
