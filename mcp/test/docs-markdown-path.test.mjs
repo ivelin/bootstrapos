@@ -15,6 +15,7 @@ describe("markdown install path (zero MCP required)", () => {
       "company-os/ready-for-human-eyes.md",
       "company-os/ai-instructions.md",
       "company-os/first-hour.md",
+      "company-os/clock-examples.md",
       "company-os/after-proof-efficiency.md",
       "templates/company/state/company-state.json",
       "templates/company/state/where-are-we.py",
@@ -52,14 +53,28 @@ describe("markdown install path (zero MCP required)", () => {
     clearSession();
     try {
       const docs = listOsDocs();
-      assert.equal(docs.length, 6);
+      assert.equal(docs.length, 7);
+      assert.ok(docs.some((d) => d.key === "clock-examples"));
       const body = readOsDoc("ai-instructions");
       assert.match(body, /Hard rules/i);
       assert.match(body, /stated, synthetic, and observed/i);
       assert.match(body, /Likert/);
       assert.match(body, /then map/);
       assert.ok(body.length > 200);
+      const clocks = readOsDoc("clock-examples");
+      assert.match(clocks, /Teaching, not a live board/);
+      assert.match(clocks, /household jobs/);
+      assert.match(clocks, /parents who already pay a cleaner/);
+      assert.match(clocks, /founder butler/);
+      assert.match(clocks, /our house/);
+      assert.match(clocks, /Write back saves/);
+      assert.match(clocks, /Engineering green is not demand/);
+      assert.match(clocks, /Do \*\*not\*\* reset to Write the bet \/ Ask/);
+      assert.doesNotMatch(clocks, /IESER|FIRAC/);
+      assert.doesNotMatch(clocks, /cell 1|Cell 1|cell #/);
       const firstHour = readOsDoc("first-hour");
+      assert.match(firstHour, /clock-examples/);
+      assert.doesNotMatch(firstHour, /One-page thesis\. Not a landing page/);
       assert.match(firstHour, /demographic one-liner/i);
       assert.match(firstHour, /demo-only role-play is the weak case/i);
       assert.match(firstHour, /Eyeballs aren't buyers/);

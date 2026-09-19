@@ -32,6 +32,8 @@ Bill checks your board weekly.
 
 Bill watches the board when Cos turns it on. Those board updates stay in the background.
 
+Bill may quote a [clock-examples](../company-os/clock-examples.md) cell to explain. Bill may not Advance, seed personas, or rewrite a mentee board from that story.
+
 ## 4. Feedback
 
 Email [bootstrap@pirin.ai](mailto:bootstrap@pirin.ai). Say what you tried and what failed. Do not send mentee names, customer lists, or secrets.

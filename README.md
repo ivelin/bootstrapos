@@ -8,7 +8,7 @@ Use this repo as the **source of truth** for process and control. Point your AI 
 
 | | |
 |--|--|
-| **Version** | Blueprint + live runtime **v2.8.12** · optional local MCP **v0.2** (path 3) |
+| **Version** | Blueprint + live runtime **v2.8.16** · optional local MCP **v0.2** (path 3) |
 | **License** | Apache-2.0 |
 | **Audience** | Independent solo founders; mentors (Founder Institute, SCORE, …); AI helpers |
 | **Maintainer** | [Ivelin Ivanov](https://github.com/ivelin) · [Pirin.ai](https://pirin.ai) |
@@ -42,6 +42,7 @@ company-os/operating-system.md         company-os/live-runtime.md
 | [`company-os/ready-for-human-eyes.md`](company-os/ready-for-human-eyes.md) | **Ship gate checklist** — cold URL + happy path before external product-test asks |
 | [`company-os/ai-instructions.md`](company-os/ai-instructions.md) | Thin enforcement layer — paste into `AGENTS.md` / Cursor / Claude / Grok |
 | [`company-os/first-hour.md`](company-os/first-hour.md) | **Day 0 (~60 minutes)** — thesis, ≥3 ICPs, first “Where are we?” (chat or instance files). The two-minute figure is the snapshot *read*, not this hour. |
+| [`company-os/clock-examples.md`](company-os/clock-examples.md) | **Teaching 5 × 3** — fictional household jobs only. Not a live board. |
 | [`templates/`](templates/) | Blank files to copy into *your* company repo when you instantiate |
 | [`examples/`](examples/) | Pointers to public live instances (illustration only) |
 | [`.grok/workflows/`](.grok/workflows/) | Optional Grok Build workflows (path 2) — company-operating-loop, user-research, ready-for-human-eyes |
@@ -79,7 +80,7 @@ Optional. Script or hand copy — [Install](#install-in-your-company). Optional 
 
 ### 3. Self-hosted MCP (optional — several ideas)
 
-Several ideas are allowed. Do not hide a second thesis to look focused. Optional local MCP under [`mcp/`](mcp/) keeps each idea on its own board — `company-state.json` + `where-are-we.py` — without importing this tree into every product repo. Same founder gates. Same evidence rules (OS 2.8.12). Rank and kill per board. Markdown remains the constitution.
+Several ideas are allowed. Do not hide a second thesis to look focused. Optional local MCP under [`mcp/`](mcp/) keeps each idea on its own board — `company-state.json` + `where-are-we.py` — without importing this tree into every product repo. Same founder gates. Same evidence rules (OS 2.8.16). Rank and kill per board. Markdown remains the constitution.
 
 Not required. Path 1 (point an AI) and path 2 (optional files + workflows) stay enough.
 
@@ -164,12 +165,21 @@ Treat promotion into this template as rare, deliberate work — not a continuous
 
 | Doc | Current |
 |-----|---------|
-| Operating system blueprint | **v2.8.12** |
-| Live runtime | **v2.8.12** |
+| Operating system blueprint | **v2.8.16** |
+| Live runtime | **v2.8.16** |
 | Optional local MCP (path 3) | **v0.2** — adapter only; not a second OS. HTTP read transport is preview. |
 | Preview plugin | **0.1.1** — [`plugin/`](plugin/). Skills hyperlink this pack. Team Import from Repo only — not a public catalog submit. Not mentee-ready hosted boards. |
 
 ### Recent portable additions
+
+**v2.8.16 — clock examples (teaching 5 × 3)**  
+Teaching page only. Fifteen cells for one fictional household-jobs company. Not a live board. Do not copy onto a real company. Do not Advance from an example. Locked 2.8.15 clocks and 2.8.14 Decision methods stay. Full text: [clock-examples.md](company-os/clock-examples.md).
+
+**v2.8.15 — clock shrink (five rungs + three weeks)**  
+Spoken journey: Write the bet / Filter cheaply / Ground it / Build tiny slice / Try with real people. Spoken loop: Ask / Do / Write back. Stored integers 1–9 / 1–7 stay (no schema bump). Full text: [operating-system.md](company-os/operating-system.md#the-5-journey-rungs-simple-view--formal-aliases).
+
+**v2.8.14 — Decision methods (IESER + FIRAC Bind-class)**  
+Aliases, not a third clock. Full text: [operating-system.md](company-os/operating-system.md#decision-methods-aliases-not-a-third-clock).
 
 **v2.8.12 — founder checkpoints (QC / Bind / Clock / Alpha)**  
 Additive pack. Optional until useful. Absent checkpoints = 2.8.9 behavior. QC Hold is path-local; it does not freeze the journey. Alpha is a written five-field bet against the default recommendation. No tenth phase. No third clock. No schema bump. Full text: [founder checkpoints](company-os/operating-system.md#founder-checkpoints-when-human-judgment-is-the-work).

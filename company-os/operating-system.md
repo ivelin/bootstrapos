@@ -1,7 +1,7 @@
 # Company Operating System  
 ## For Solo Founders in Bootstrapping Mode
 
-**Version:** 2.8.15  
+**Version:** 2.8.16  
 **Last Updated:** 2026-09-19  
 **Status:** Living guideline (blueprint — not any one company’s live runtime)  
 **Audience:** Independent solo founders; mentors (e.g. Founder Institute, SCORE); AI helpers instructed to follow this system  
@@ -210,13 +210,7 @@ Labels first. Do takes the station’s shape.
 | Build tiny slice | What can fail in the lab; Ready-for-human-eyes line. | Design + build the smallest slice. Run tests. | Bugs and what ran. Cannot Advance to Try. |
 | Try with real people | What use would count; who, this week, in their life not ours. | Put the slice in their hands. Watch what they did. | Observed use or no use. Only here can that support a Grow pack. |
 
-Examples (fictional station, not a live board):
-
-- **Write the bet.** Household jobs — parents who already pay a cleaner vs founder butler vs our house. Kill if no paid analog.
-- **Filter cheaply.** Cleaner ads + calendar apps + “a chat model already does this.” Parents first on paper.
-- **Ground it.** Five parents; interest = they send last month’s job list. A smile is not interest.
-- **Build tiny slice.** Slice takes one job text and drafts a vendor SMS without sending. Tests green. Zero households used it. Kill. Engineering green is not demand.
-- **Try with real people.** A parent sends a real Saturday job and accepts the draft. “Looks good” in Slack is not use.
+Teaching scenes for one fictional company (household jobs — not a live board): [`clock-examples.md`](clock-examples.md). Do not copy those scenes onto a real company. Do not Advance from an example.
 
 ### End-to-end path
 
@@ -1598,6 +1592,7 @@ Everything else in the research method is adjacent literature or a **house rule*
 | 2.8.13 | House rule: [unpaid weeks cannot promote](#house-rule-unpaid-weeks-cannot-promote). Same family as 2.8.6–2.8.11; do not merge. First conversation is free. Next working session is paid or you stop. Customer type lives on the existing group card (consumer / small business / mid-market / enterprise) with a follow-up cue (listed price / BANT / MEDDIC / MEDDPICC). A long buying cycle is not free custom work. Not Day 0. Not a tenth phase. Not a sales course. Writing: [Say it once. Link. No filler.](#how-this-os-may-change-stability-contract). |
 | 2.8.14 | Additive: [Decision methods](#decision-methods-aliases-not-a-third-clock) (IESER for this week’s company move; FIRAC for Bind-class paper). Aliases, not a third clock. Not a house rule. Not a phase rename. No schema bump. Speaking rule: lead with descriptive labels; numbers in parentheses. Writing: [Say it once. Link. No filler.](#how-this-os-may-change-stability-contract). |
 | 2.8.15 | Clock shrink: five journey rungs (Write the bet / Filter cheaply / Ground it / Build tiny slice / Try with real people) and three loop weeks (Ask / Do / Write back). Old 8 Learn and old 9 Grow deleted as clock steps; grow is an after-proof pack after Try. Make / Check / Hear are not loop weeks. Stored integers 1–9 / 1–7 still valid (no schema bump); spoken/rendered uses the [keep-doing map](#keep-doing-map-stored-integers--spoken). 8 or 9 stay at Try until founder Advance. Fifteen cells + [end-to-end path](#end-to-end-path) land here. Speaking rule from 2.8.14 stays. Decision methods essay unchanged. Filter is not Ground. Build is not Try. Ask does not Ground. Do at Build is not Try. No invented Advance. Writing: [Say it once. Link. No filler.](#how-this-os-may-change-stability-contract). |
+| 2.8.16 | Teaching page: [clock examples](clock-examples.md) — fifteen cells for one fictional household-jobs company (parents who already pay a cleaner vs founder butler vs our house). Teaching, not a live board. Do not copy onto a real company. Do not Advance from an example. Locked 2.8.15 clocks and 2.8.14 Decision methods stay. No schema bump. No invented Advance. Writing: [Say it once. Link. No filler.](#how-this-os-may-change-stability-contract). |
 
 ---
 

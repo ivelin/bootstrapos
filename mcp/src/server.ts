@@ -219,7 +219,7 @@ function registerReadTools(server: McpServer, surface: McpSurface, hosted?: Host
       doc: z
         .enum(DOC_KEYS as unknown as [DocKey, ...DocKey[]])
         .describe(
-          "operating-system | live-runtime | ready-for-human-eyes | ai-instructions | first-hour | after-proof-efficiency (post-proof + fences + they asked)",
+          "operating-system | live-runtime | ready-for-human-eyes | ai-instructions | first-hour | clock-examples (teaching 5×3, not a live board) | after-proof-efficiency (post-proof + fences + they asked)",
         ),
     },
     async ({ doc }) => {
