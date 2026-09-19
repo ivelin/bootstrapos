@@ -59,6 +59,8 @@ describe("OS house rules (adapter reminders)", () => {
     assert.match(pins, /house-rule-do-not-automate-a-step-that-should-not-exist/);
     assert.match(pins, /house-rule-legal-paper-cannot-promote/);
     assert.match(pins, /house-rule-advisor-ride-along-is-assumed-not-observed/);
+    assert.match(pins, /house-rule-unpaid-weeks-cannot-promote/);
+    assert.match(pins, /unpaid-weeks-2.8.13/);
   });
 
   it("observed wins a clash; spoken yes / synthetic cannot promote", () => {

@@ -30,8 +30,8 @@ Optional path 3 (local MCP, several ideas): the same `company-state.json` + `whe
 | 8 | Learn from what happens and improve | |
 | 9 | Grow only after it clearly works | Deferred until proof |
 
-**Current journey phase:** N / 9 — [name]  
-**Current live loop stage:** M / 7 — [name]  
+**Current journey phase:** [name] (N / 9)  
+**Current live loop stage:** [name] (M / 7)  
 **Gate:** OPEN | WAITING | BLOCKED  
 **Autonomy posture:** Strict (default) | Auto | Dangerous  
 **Ready for human eyes:** unknown | blocked | green

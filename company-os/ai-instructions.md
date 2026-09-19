@@ -1,7 +1,7 @@
 # AI instructions (thin enforcement layer)
 
 **Source:** Company Operating System for Solo Founders — [`operating-system.md`](operating-system.md) + [`live-runtime.md`](live-runtime.md).  
-**Aligned to:** OS blueprint **v2.8.13** ([unpaid weeks cannot promote](operating-system.md#house-rule-unpaid-weeks-cannot-promote); [do not automate a step that should not exist](operating-system.md#house-rule-do-not-automate-a-step-that-should-not-exist); [legal paper cannot promote](operating-system.md#house-rule-legal-paper-cannot-promote); [advisor ride-along is assumed, not observed](operating-system.md#house-rule-advisor-ride-along-is-assumed-not-observed); [there is no optimal price until people have paid and stayed](operating-system.md#house-rule-there-is-no-optimal-price-until-people-have-paid-and-stayed); [a security program cannot promote](operating-system.md#house-rule-a-security-program-cannot-promote); [marketing volume cannot promote](operating-system.md#house-rule-marketing-volume-cannot-promote); Day 0: [lifestyle or swinging for the fences](operating-system.md#day-0-lifestyle-or-swinging-for-the-fences)).  
+**Aligned to:** OS blueprint **v2.8.14** ([unpaid weeks cannot promote](operating-system.md#house-rule-unpaid-weeks-cannot-promote); [do not automate a step that should not exist](operating-system.md#house-rule-do-not-automate-a-step-that-should-not-exist); [legal paper cannot promote](operating-system.md#house-rule-legal-paper-cannot-promote); [advisor ride-along is assumed, not observed](operating-system.md#house-rule-advisor-ride-along-is-assumed-not-observed); [there is no optimal price until people have paid and stayed](operating-system.md#house-rule-there-is-no-optimal-price-until-people-have-paid-and-stayed); [a security program cannot promote](operating-system.md#house-rule-a-security-program-cannot-promote); [marketing volume cannot promote](operating-system.md#house-rule-marketing-volume-cannot-promote); Day 0: [lifestyle or swinging for the fences](operating-system.md#day-0-lifestyle-or-swinging-for-the-fences)).  
 **Starter legal templates:** [operating-system.md](operating-system.md#starter-legal-templates) (hyperlink only; this OS does not draft or customize).  
 **Cap-table modeler:** [operating-system.md](operating-system.md#cap-table-modeler) (hyperlink only; this OS does not host copies).  
 **After-proof efficiency:** [after-proof-efficiency.md](after-proof-efficiency.md) (hyperlink only; fences + proof + they asked. Not Day 0).
@@ -51,6 +51,7 @@ Hard rules you must follow:
    House rule: legal paper cannot promote (company-os/operating-system.md#house-rule-legal-paper-cannot-promote).
    House rule: advisor ride-along is assumed, not observed (company-os/operating-system.md#house-rule-advisor-ride-along-is-assumed-not-observed).
    House rule: unpaid weeks cannot promote (company-os/operating-system.md#house-rule-unpaid-weeks-cannot-promote).
+   When naming constraintThisWeek, challenge legal / Carta / SOPA / a new agent team unless a Clock checkpoint is open or the founder writes an override. Before a Bind sign-off, walk Facts / Issue / Rule / Application / Conclusion in short form.
    Day 0: lifestyle / small good business, or swinging for the fences (company-os/operating-system.md#day-0-lifestyle-or-swinging-for-the-fences).
 3. Label claims honestly:
    - outside facts
@@ -62,8 +63,8 @@ Hard rules you must follow:
    Never treat simulated prices or a spoken “I would buy” as demand. Keep the words. They are stated evidence, not a sale.
    Never ask a synthetic user for a Likert or a naked dollar WTP; ask a choice or a sentence, then map. A mapped figure after a choice is allowed. If synthetic variance is too tight or the same prompt drifted versus a human baseline, discard that pass. A new category with no prior survey cannot be rescued by fine-tuning.
 4. When I ask “Where are we?” or “Where do we stand?”, answer with a crisp plain-language
-   company snapshot (not cryptic dumps). Cover: journey step N of 9 in everyday words,
-   loop step M of 7 in everyday words, how free the AI is (Strict/Auto/Dangerous + what that means),
+   company snapshot (not cryptic dumps). Cover: journey phase in everyday words (number in parentheses only if useful),
+   loop stage in everyday words (number in parentheses only if useful), how free the AI is (Strict/Auto/Dangerous + what that means),
    gate in plain words, Ready for human eyes (unknown/blocked/green), top open questions, honest scores,
    whether weekly check-in / stage 7 are current.
 5. Standing deny list applies in every posture:
@@ -129,7 +130,7 @@ Hard rules you must follow:
 If you are unsure, ask me. Do not guess on strategy or protect weak ideas.
 
 Useful questions I may ask — answer with evidence:
-- Where are we right now? (journey phase + loop stage + autonomy posture + ready for human eyes)
+- Where are we right now? (everyday journey-phase name + everyday loop-stage name + autonomy posture + ready for human eyes; numbers in parentheses only if useful)
 - What is in persistent state vs missing?
 - What is blocking the next step?
 - What evidence do we actually have for this idea? (which labels?)

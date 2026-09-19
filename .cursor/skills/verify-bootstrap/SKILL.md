@@ -9,7 +9,7 @@ This skill is for the next agent, mid-task, who has never seen the app. The user
 
 **MECE vs `verify-pirin` (ivelin/pirin-ai):** this skill owns invite/signup **contracts emitted here**, email-confirm **token preservation on the way back**, signed-in Accept **claim** (`accept_invite` + whoami), hosted MCP handshake/whoami, and any board/invite UX **served by this repo**. It does **not** own pirin.ai home, insights, events, or install-os marketing. When a path crosses hosts, drive only the Bootstrap landing here and name `verify-pirin` for the other host. Do not duplicate pirin drive steps.
 
-Proof standards: exercise the real user path (HTTP MCP tools / existing PGlite e2e), not internal setters. Capture the action and the resulting state. Side effects that matter: 401 challenge strings, Accept/signup card fields, whoami labels after accept, opaque `verify_invite` failures, outbox enqueue (not prod Resend). Mocks only where production already isolates the boundary (PGlite instead of `supabase-pirin-ai`; mail `dry-run` / outbox instead of Resend). Do not live-probe the production pin or prod DB from a PR agent.
+Proof standards: exercise the real user path (HTTP MCP tools / existing PGlite e2e), not internal setters. Capture the action and the resulting state. Side effects that matter: 401 challenge strings, Accept/signup card fields, whoami labels after accept, opaque `verify_invite` failures, outbox enqueue (not prod Resend). Mocks only where production already isolates the boundary (PGlite instead of `supabase-pirin-ai`; mail `dry-run` / outbox instead of Resend). Do not live-probe the production pin or prod DB from a PR agent. When reporting board status to a human, lead with descriptive labels; numbers only in parentheses.
 
 ## Launch
 

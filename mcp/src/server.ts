@@ -895,7 +895,7 @@ function registerJourneyTools(server: McpServer, ctx: HostedRequestContext) {
         .max(280)
         .optional()
         .describe(
-          "Honest biggest bottleneck this week. Not a clock. Not tickets. Not a fun side quest. Preference cannot name it.",
+          "Honest biggest bottleneck this week. Not a calendar stub. Not tickets. Not a fun side quest. Exception: an open Clock checkpoint.",
         ),
       why: z.string().describe("Short why for the gate"),
       founderYes: z

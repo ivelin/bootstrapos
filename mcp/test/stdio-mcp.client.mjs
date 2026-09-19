@@ -100,7 +100,7 @@ async function main() {
     const support = await call(client, "bootstrap_support");
     assert.equal(support.email, "bootstrap@pirin.ai");
     assert.match(String(support.routed), /human-routed/i);
-    assert.equal(info.osVersion, "2.8.12");
+    assert.equal(info.osVersion, "2.8.14");
     assert.equal(path.resolve(info.paths.dataRoot), path.resolve(dataRoot));
     assert.match(JSON.stringify(info.adoptionOrder), /not mentee-ready boards/);
     assert.match(JSON.stringify(info.adoptionOrder), /Not pirin\.ai/);

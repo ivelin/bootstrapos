@@ -6,7 +6,7 @@ Ivelin yes 2026-09-01 (via Cos): one source of truth for a FAST mentee 0-1 journ
 
 ## What this is
 
-SQL + gated MCP tools + a thin “when to write” skill. Same payload for team / advisor / board / investor prep. Views (mermaid, two-minute snapshot, optional meeting doc) are generated. Do not store a novel. Comments never mutate phase or gate.
+SQL + gated MCP tools + a thin “when to write” skill. Same payload for team / advisor / board / investor prep. Views (mermaid, two-minute snapshot, optional meeting doc) are generated. Do not store a novel. Comments never mutate phase or gate. Board status spoken to humans leads with descriptive labels; numbers are reference only.
 
 Each idea has a fluid `constraint_this_week` (short text on versioned jsonb). Not a clock. Not tickets. It is the honest biggest bottleneck — not a fun side quest. Preference / “this is interesting” cannot name it. Teaching picture, not extra law: the company only moves as fast as its weakest link. The platoon only moves as fast as the slowest soldier. Work that is not on that link is not progress. `get_journey` / “Where are we” must surface the field (and challenge a side quest dressed as the bottleneck). Writes emit an append-only audit row. Refuse “new landing page” when no one has talked to customers unless the founder writes an override. Do not rubber-stamp.
 
