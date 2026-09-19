@@ -33,6 +33,7 @@ Preconditions:
 
 ## Gotchas
 
+- When reporting board status to a human, lead with descriptive labels; numbers only in parentheses. Do not change tool-driving steps.
 - Journey tools list on the pin after Cos applies `20260920_bootstrap_os_board_subscribers.sql`. Do not live-probe the pin from a PR agent.
 - Labels from whoami are **not** boards. `get_journey` is a different ACL.
 - Comments and digests must not invent stage or Advance.

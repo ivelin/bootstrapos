@@ -67,7 +67,7 @@ python3 company/state/where-are-we.py
 
 That read uses `company/state/company-state.json` (and its schema).
 
-On Day 0 you should hear something like: journey phase **1 of 9**, loop stage **1 of 7**, gate open, autonomy **Strict**, Ready for human eyes **unknown**, three groups on **hold**, no proof.
+On Day 0 you should hear something like: **Form thesis and list possible customer groups** (phase 1), **Synthetic research** (loop 1), gate open, autonomy **Strict**, Ready for human eyes **unknown**, three groups on **hold**, no proof.
 
 ---
 
