@@ -4,9 +4,9 @@ export const OS_VERSION = "2.8.16";
 export const MCP_VERSION = "0.3.5";
 
 /** Published constitution. Hosted read adapter fetches from here; do not embed copies. */
-export const PUBLISHED_REPO = "https://github.com/ivelin/bootstrap";
+export const PUBLISHED_REPO = "https://github.com/ivelin/bootstrapos";
 export const PUBLISHED_BLOB_BASE = `${PUBLISHED_REPO}/blob/main`;
-export const PUBLISHED_RAW_BASE = "https://raw.githubusercontent.com/ivelin/bootstrap/main";
+export const PUBLISHED_RAW_BASE = "https://raw.githubusercontent.com/ivelin/bootstrapos/main";
 
 export const HOSTED_READ_TOOL_NAMES = [
   "bootstrap_os_info",
