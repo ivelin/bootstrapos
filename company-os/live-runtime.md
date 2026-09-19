@@ -136,7 +136,7 @@ Write the question and the kill line.
 |--|--|
 | **Goal** | Name what this station must learn this week, and what would kill or demote before you run work |
 | **Inputs** | Thesis; legal adjacent traces if no customers yet (public forums, substitute/competitor reviews, founder prior-domain notes with no PII — not a former employer’s private list); existing personas; hypotheses; prior scores |
-| **Work** | Seed personas from those traces (or write none yet). Do not seed from a demographic one-liner. Demo-only role-play is the weak case. Write the forced choice, the kill line, and what behavior would count. Do not ask a 1–5 or a naked dollar WTP — a choice or a sentence, then map. Ask does not Ground. |
+| **Work** | Seed personas from those traces (or write none yet). Do not seed from a demographic one-liner. Demo-only role-play is the weak case. Write the forced choice, the kill line, and what behavior would count. Do not ask a 1–5 or a naked dollar WTP — a choice or a sentence, then map. Mapping may still produce a dollar figure. Too-tight variance or same-prompt drift versus a human handful makes the pass unusable. New category / none yet stays the weak case. Ask does not Ground. |
 | **Outputs** | The week’s question, kill line, and what “works” means at this station |
 | **Founder gate?** | Soft — synthetic may rank or kill later. Do not promote a primary group without observed evidence (journey **Ground it**). |
 
