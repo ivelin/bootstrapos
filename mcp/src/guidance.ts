@@ -8,7 +8,14 @@ import {
   type PhaseGate,
   type StageGate,
 } from "./gates.js";
-import { JOURNEY_PHASES, LOOP_STAGES } from "./constants.js";
+import {
+  JOURNEY_PHASES,
+  LOOP_STAGES,
+  formatSpokenJourney,
+  formatSpokenLoop,
+  nextSpokenJourney,
+  nextSpokenLoop,
+} from "./constants.js";
 import { HOUSE_RULE_LINES } from "./house-rules.js";
 
 export interface StatusView {
@@ -92,12 +99,12 @@ export function buildStatusView(state: CompanyState, plainWhere: string): Status
     hypothesis: state.hypothesis,
     slowClock: {
       phase,
-      name: JOURNEY_PHASES[phase] ?? pg.name,
+      name: JOURNEY_PHASES[phase] ?? formatSpokenJourney(phase),
       exitSignalForCurrentPhase: pg.exitSignal,
     },
     fastClock: {
       stage,
-      name: LOOP_STAGES[stage] ?? sg.name,
+      name: LOOP_STAGES[stage] ?? formatSpokenLoop(stage),
       purpose: sg.purpose,
     },
     autonomyPosture: String(state.autonomyPosture ?? "strict"),
@@ -201,17 +208,17 @@ export function buildNextEvidenceView(state: CompanyState): NextEvidenceView {
   const plain = [
     "NEXT EVIDENCE & FOCUS (Bootstrap OS)",
     "",
-    `SLOW CLOCK — Journey phase ${phase}/9 (${JOURNEY_PHASES[phase] ?? pg.name})`,
-    `  Exit this phase when: ${pg.exitSignal}`,
-    np
-      ? `  To consider Advance → phase ${np} (${JOURNEY_PHASES[np]}), founder needs evidence pack:`
-      : "  Phase 9: grow only with proof; no further journey phase.",
+    `SLOW CLOCK — Journey: ${formatSpokenJourney(phase)}`,
+    `  Exit this rung when: ${pg.exitSignal}`,
+    nextSpokenJourney(phase)
+      ? `  To consider Advance → ${nextSpokenJourney(phase)?.label}, founder needs evidence pack:`
+      : "  Try: grow pack only after proof; stay at Try until founder Advance. No sixth journey rung.",
     ...pg.evidenceToAdvance.map((e, i) => `    ${i + 1}. [${e.labelHint}] ${e.plain}`),
     "  Founder must still decide Advance / Iterate / Hold / Kill — AI does not advance alone.",
     "",
-    `FAST CLOCK — Loop stage ${stage}/7 (${LOOP_STAGES[stage] ?? sg.name})`,
+    `FAST CLOCK — Loop: ${formatSpokenLoop(stage)}`,
     `  Purpose: ${sg.purpose}`,
-    `  Move toward stage ${ns} when: ${sg.nextStageWhen}`,
+    `  Move toward ${nextSpokenLoop(stage).label} when: ${sg.nextStageWhen}`,
     ...sg.evidenceThisStage.map((e, i) => `    ${i + 1}. [${e.labelHint}] ${e.plain}`),
     "",
     `HUMAN EYES: ${eyes}${eyesBlocked ? " — blocks cold product asks" : ""}`,
@@ -233,9 +240,9 @@ export function buildNextEvidenceView(state: CompanyState): NextEvidenceView {
     plain,
     slowClock: {
       currentPhase: phase,
-      currentName: JOURNEY_PHASES[phase] ?? pg.name,
+      currentName: JOURNEY_PHASES[phase] ?? formatSpokenJourney(phase),
       advanceToPhase: np,
-      advanceToName: np ? JOURNEY_PHASES[np] ?? null : null,
+      advanceToName: nextSpokenJourney(phase)?.label ?? null,
       exitSignal: pg.exitSignal,
       evidenceNeeded: pg.evidenceToAdvance,
       doNotCountAsEvidence: pg.doNotCountAsEvidence,
@@ -243,9 +250,9 @@ export function buildNextEvidenceView(state: CompanyState): NextEvidenceView {
     },
     fastClock: {
       currentStage: stage,
-      currentName: LOOP_STAGES[stage] ?? sg.name,
+      currentName: LOOP_STAGES[stage] ?? formatSpokenLoop(stage),
       nextStage: ns,
-      nextName: LOOP_STAGES[ns] ?? stageGate(ns).name,
+      nextName: nextSpokenLoop(stage).label,
       completeWhen: sg.nextStageWhen,
       evidenceNeeded: sg.evidenceThisStage,
     },

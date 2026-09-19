@@ -1,6 +1,6 @@
-/** Portable journey + loop labels (aligned to company-os v2.8.14). */
+/** Portable journey + loop labels (aligned to company-os v2.8.15). */
 
-export const OS_VERSION = "2.8.14";
+export const OS_VERSION = "2.8.15";
 export const MCP_VERSION = "0.3.5";
 
 /** Published constitution. Hosted read adapter fetches from here; do not embed copies. */
@@ -74,27 +74,21 @@ export function isHostedPreAllowlistToolName(name: string | undefined): boolean 
 export const PATH4_HONESTY =
   "Preview only. plugin/ + HTTP read adapter exist. Invite-only collab pin https://mcp.bootstrap.pirin.ai/mcp: handshake + gated whoami/labels 401 + WWW-Authenticate (authorization_servers = pirin.ai login; not a login UI here). Free docs are GitHub + install-os + local — not a hosted MCP connector. bootstrap-os-mcp.vercel.app is the same 401, not a silent 200 alias, not a pin, not mentee-ready boards. No public catalog submit (team Import from Repo only). Not pirin.ai. No founder company-state on a shared server. Path 1 stays the front door.";
 
-export const JOURNEY_PHASES: Record<number, string> = {
-  1: "Thesis",
-  2: "Success definitions",
-  3: "Synthetic research",
-  4: "Real-world research",
-  5: "Design tiny system",
-  6: "Build tiny slice",
-  7: "Real / realistic users",
-  8: "Learn and improve",
-  9: "Grow",
-};
-
-export const LOOP_STAGES: Record<number, string> = {
-  1: "Synthetic user research",
-  2: "Validation / concept testing",
-  3: "Product building",
-  4: "Testing (synthetic + automated)",
-  5: "Evaluation",
-  6: "Real user feedback ingestion",
-  7: "Memory update and loop back",
-};
+export {
+  CLOCK_REMAP_NOTE,
+  JOURNEY_PHASES,
+  JOURNEY_SPOKEN,
+  JOURNEY_STORED_MAP,
+  LOOP_SPOKEN,
+  LOOP_STAGES,
+  LOOP_STORED_MAP,
+  formatSpokenJourney,
+  formatSpokenLoop,
+  nextSpokenJourney,
+  nextSpokenLoop,
+  spokenJourneyOf,
+  spokenLoopOf,
+} from "./clock-map.js";
 
 export const DOC_KEYS = [
   "operating-system",

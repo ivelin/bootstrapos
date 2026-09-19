@@ -85,6 +85,10 @@ describe("journey views + tools (memory store)", () => {
     const dye = await dyeStore.getJourney(dyeFounder, { companySlug: "dyeconverter" });
     assert.equal(dye.ideas.length, 1);
     assert.equal(dye.ideas[0].slug, "dyeconverter");
+    assert.equal(dye.ideas[0].clocks.journeyPhase, 1);
+    assert.equal(dye.ideas[0].clocks.loopStage, 1);
+    assert.equal(dye.ideas[0].clocks.journeySpoken, "Write the bet");
+    assert.equal(dye.ideas[0].clocks.loopSpoken, "Ask");
   });
 
   it("visual/snapshot always; meeting doc only on expand; not stored", async () => {
@@ -93,8 +97,14 @@ describe("journey views + tools (memory store)", () => {
     const basic = await store.getJourney(founder, { companySlug: "corehaul" });
     const idea = basic.ideas[0];
     assert.match(idea.visualFlow, /mermaid/);
-    assert.match(idea.visualFlow, /Journey 1-9/);
-    assert.match(idea.visualFlow, /Loop 1-7/);
+    assert.match(idea.visualFlow, /subgraph journey \[Journey\]/);
+    assert.match(idea.visualFlow, /subgraph loop \[Loop\]/);
+    assert.match(idea.visualFlow, /Write the bet/);
+    assert.match(idea.visualFlow, /Ask/);
+    assert.match(idea.snapshot, /Journey: Write the bet \(1\)/);
+    assert.match(idea.snapshot, /Loop: Ask \(1\)/);
+    assert.equal(idea.clocks.journeySpoken, "Write the bet");
+    assert.equal(idea.clocks.loopSpoken, "Ask");
     assert.match(idea.snapshot, /two-minute read/);
     assert.match(idea.snapshot, /Owner \(from ACL\): founder-core@example.test, sub-only-corehaul/);
     assert.match(

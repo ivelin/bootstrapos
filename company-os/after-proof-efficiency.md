@@ -3,7 +3,7 @@
 **Dated:** 2026-08-24  
 **Home:** this page. Not a house rule. Not a third clock. Not Day 0. Not Path 1. Not a mentee dashboard.
 
-**Open only if all three:** they chose swinging for the fences (not lifestyle), they have proof (growth pack / phases 8–9), and they asked about efficiency or an exit. Otherwise: two clocks. Close this page.
+**Open only if all three:** they chose swinging for the fences (not lifestyle), they have proof (growth pack after Try), and they asked about efficiency or an exit. Otherwise: two clocks. Close this page.
 
 Message / channel experiments stay in the [growth pack](operating-system.md#after-proof-the-growth-pack). This page is the five instruments after that proof.
 

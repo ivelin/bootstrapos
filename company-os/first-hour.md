@@ -67,7 +67,7 @@ python3 company/state/where-are-we.py
 
 That read uses `company/state/company-state.json` (and its schema).
 
-On Day 0 you should hear something like: **Form thesis and list possible customer groups** (phase 1), **Synthetic research** (loop 1), gate open, autonomy **Strict**, Ready for human eyes **unknown**, three groups on **hold**, no proof.
+On Day 0 you should hear something like: **Write the bet**, **Ask**, gate open, autonomy **Strict**, Ready for human eyes **unknown**, three groups on **hold**, no proof.
 
 ---
 
@@ -96,6 +96,20 @@ Do **not** upload mentee work to Ivelin's GitHub.
 Path 1 is still `https://github.com/ivelin/bootstrap` as the free install source. Team Import from Repo is optional. Invite-only collab uses that MCP pin. **Not** a public catalog submit. **Not** mentee boards on our host. **Not** a Grok Bot marketplace bot.
 
 Follow the [near-term checklist](https://github.com/ivelin/bootstrap/blob/main/company-os/operating-system.md#near-term-checklist-any-startup). Next real work is usually honest research across those groups — not a platform.
+
+The live loop is three weeks: **Ask** (question + kill line) → **Do** (the work this station allows) → **Write back** (change memory; never skip; never Advance). Do takes the station’s shape. It is not a synonym for Build. Make / Check / Hear are not loop weeks.
+
+Fifteen cells (not this hour — labels first). Home: [operating-system — Fifteen cells](https://github.com/ivelin/bootstrap/blob/main/company-os/operating-system.md#fifteen-cells-journey-rung--loop-week).
+
+| Journey | Ask | Do | Write back |
+|---------|-----|-----|------------|
+| Write the bet | Three groups, what “works” means, kill line before ranking. | One-page thesis. Not a landing page. Not interviews. Not a bot. | Save as stated. Next is Filter, or stay if mush. |
+| Filter cheaply | Same forced choice; cheap signal that demotes a group; sims stay synthetic. | Comps, listings, sims. Rank. Still hold. Do not call a friend yet. | Rank as synthetic. Do not Advance. |
+| Ground it | Who talks this week; what behavior counts (time, intro, money-shaped), not “cool idea.” | Real talks or waitlist with friction. Not a product. Not a sim labeled heard. | Observed vs still synthetic. Founder gates Ground-done. |
+| Build tiny slice | What can fail in the lab; Ready-for-human-eyes line. | Design + build the smallest slice. Run tests. | Bugs and what ran. Cannot Advance to Try. |
+| Try with real people | What use would count; who, this week, in their life not ours. | Put the slice in their hands. Watch what they did. | Observed use or no use. Only here can that support a Grow pack. |
+
+End-to-end path: Write the bet Ask → Do → Write back → Filter Ask → Do → Write back → Ground Ask → Do → Write back → Build Ask → Do → Write back (a Build-stage kill can stop here) → Try Ask → Do → Write back. Grow pack stays closed unless observed use exists.
 
 Once real conversations start (later — not this hour), use the [founder-day pack](https://github.com/ivelin/bootstrap/blob/main/company-os/operating-system.md#founder-day-pack-how-the-week-actually-runs): prep, close the call, write up. Do not add those rituals to Day 0.
 

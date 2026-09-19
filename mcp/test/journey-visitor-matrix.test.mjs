@@ -81,7 +81,7 @@ describe("0-1 journey visitor matrix (CoS smell-test)", () => {
   it("H2 + A2 mentee CoS on 0-1: query OS first; company vs idea", () => {
     const standing = skill("query-os-first");
     const write = skill("when-to-write");
-    assert.match(standing, /the-9-phases-simple-view/);
+    assert.match(standing, /the-5-journey-rungs-simple-view/);
     assert.match(write, /Company and idea are separate/);
     assert.match(write, /One board per idea/);
     assert.match(write, /honest biggest bottleneck/);
