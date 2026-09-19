@@ -249,6 +249,8 @@ export type BoardClocksSnapshot = {
   journeyPhase: number;
   loopStage: number;
   currentGate: GateDecision;
+  journeySpoken: string;
+  loopSpoken: string;
 };
 
 export type BoardSnapshot = {
@@ -256,13 +258,22 @@ export type BoardSnapshot = {
   scoreboard: Scoreboard;
 };
 
+/** Stored integers plus spoken 2.8.15 labels. Comments reuse this so clocksUnchanged matches idea.clocks. */
+export function clocksOf(
+  idea: Pick<IdeaRow, "journeyPhase" | "loopStage" | "currentGate">,
+): BoardClocksSnapshot {
+  return {
+    journeyPhase: idea.journeyPhase,
+    loopStage: idea.loopStage,
+    currentGate: idea.currentGate,
+    journeySpoken: JOURNEY_PHASES[idea.journeyPhase] ?? spokenJourneyOf(idea.journeyPhase).label,
+    loopSpoken: LOOP_STAGES[idea.loopStage] ?? spokenLoopOf(idea.loopStage).label,
+  };
+}
+
 export function ideaBoardSnapshot(idea: IdeaRow): BoardSnapshot {
   return {
-    clocks: {
-      journeyPhase: idea.journeyPhase,
-      loopStage: idea.loopStage,
-      currentGate: idea.currentGate,
-    },
+    clocks: clocksOf(idea),
     scoreboard: { ...idea.scoreboard },
   };
 }
@@ -803,13 +814,7 @@ export function meetingDocView(
 export type JourneyIdeaPayload = {
   slug: string;
   name: string;
-  clocks: {
-    journeyPhase: number;
-    loopStage: number;
-    currentGate: GateDecision;
-    journeySpoken: string;
-    loopSpoken: string;
-  };
+  clocks: BoardClocksSnapshot;
   /** Fluid. Honest biggest bottleneck. Not a clock. Not tickets. */
   constraintThisWeek: string;
   constraintChallenge?: string;
@@ -847,13 +852,7 @@ export function ideaPayload(
   const payload: JourneyIdeaPayload = {
     slug: idea.slug,
     name: idea.name,
-    clocks: {
-      journeyPhase: idea.journeyPhase,
-      loopStage: idea.loopStage,
-      currentGate: idea.currentGate,
-      journeySpoken: JOURNEY_PHASES[idea.journeyPhase] ?? spokenJourneyOf(idea.journeyPhase).label,
-      loopSpoken: LOOP_STAGES[idea.loopStage] ?? spokenLoopOf(idea.loopStage).label,
-    },
+    clocks: clocksOf(idea),
     constraintThisWeek: constraintThisWeekOf(idea),
     constraintChallenge: constraintChallengeOf(idea),
     scoreboard: idea.scoreboard,
