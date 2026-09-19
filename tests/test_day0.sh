@@ -1281,7 +1281,7 @@ if grep -q 'When speaking the board to a human' company-os/operating-system.md \
   && grep -q 'Write the bet' company-os/first-hour.md \
   && grep -q '\*\*Ask\*\*' company-os/first-hour.md \
   && grep -q 'Write the bet' templates/applied-here.md \
-  && grep -q 'Ask / Make / Check / Hear / Write back' templates/applied-here.md \
+  && grep -q 'Ask / Do / Write back' templates/applied-here.md \
   && grep -q 'lead with descriptive labels; numbers only in parentheses' .cursor/skills/verify-bootstrap/SKILL.md \
   && grep -q 'lead with descriptive labels; numbers only in parentheses' .cursor/skills/verify-bootstrap/features/journey-board.md \
   && grep -q 'Spoken or rendered summary should lead with descriptive labels' mcp/src/hosted-copy.ts \
@@ -1299,8 +1299,9 @@ else
   not_ok "2.8.14 speaking rule strings must exist; do not drop Decision methods"
 fi
 
-# --- z4) OS 2.8.15: Clock shrink (five rungs + five weeks) ---
+# --- z4) OS 2.8.15: Clock shrink (five rungs + three weeks) ---
 # Separate from Decision methods. No invented Advance. Stored integers stay.
+# Make / Check / Hear are not loop weeks.
 if grep -Fq '**Version:** 2.8.15' company-os/operating-system.md \
   && grep -q '| 2.8.15 |' company-os/operating-system.md \
   && grep -q 'Write the bet' company-os/operating-system.md \
@@ -1311,7 +1312,18 @@ if grep -Fq '**Version:** 2.8.15' company-os/operating-system.md \
   && grep -q 'Keep-doing map (stored integers' company-os/operating-system.md \
   && grep -q '8 or 9 | stay at Try until founder Advance' company-os/operating-system.md \
   && grep -q 'Never skip Write back' company-os/live-runtime.md \
-  && grep -q 'five weeks' company-os/live-runtime.md \
+  && grep -q 'three weeks' company-os/live-runtime.md \
+  && grep -q 'Ask / Do / Write' company-os/operating-system.md \
+  && grep -q '### Fifteen cells (journey rung × loop week)' company-os/operating-system.md \
+  && grep -q '### End-to-end path' company-os/operating-system.md \
+  && grep -q 'Write the bet Ask → Do → Write back → Filter Ask' company-os/operating-system.md \
+  && grep -q 'Fifteen cells' company-os/live-runtime.md \
+  && grep -q 'End-to-end path' company-os/live-runtime.md \
+  && grep -q 'Fifteen cells' company-os/first-hour.md \
+  && grep -q 'End-to-end path' company-os/first-hour.md \
+  && grep -q 'Fifteen cells' templates/applied-here.md \
+  && grep -q 'End-to-end path' templates/applied-here.md \
+  && grep -q '3–6' company-os/operating-system.md \
   && grep -q 'v2.8.15' company-os/ai-instructions.md \
   && grep -q 'Honor OS 2.8.15' AGENTS.md \
   && grep -q 'OS_VERSION = "2.8.15"' mcp/src/constants.ts \
@@ -1321,10 +1333,15 @@ if grep -Fq '**Version:** 2.8.15' company-os/operating-system.md \
   && grep -q 'No invented Advance' mcp/src/clock-map.ts \
   && grep -q 'Do not merge Filter + Ground' company-os/operating-system.md \
   && grep -q 'Do not merge Build + Try' company-os/operating-system.md \
-  && grep -q 'Do not merge Check + Hear' company-os/live-runtime.md \
+  && grep -q 'Ask does not Ground' company-os/operating-system.md \
+  && grep -q 'Do at Build is not Try' company-os/operating-system.md \
+  && grep -q 'Make / Check / Hear are not loop weeks' mcp/src/clock-map.ts \
   && grep -q 'Use IESER, in this order' company-os/operating-system.md \
   && grep -q 'Use FIRAC before anyone signs' company-os/operating-system.md \
-  && grep -q '### Decision methods (aliases, not a third clock)' company-os/operating-system.md; then
+  && grep -q '### Decision methods (aliases, not a third clock)' company-os/operating-system.md \
+  && ! grep -q 'Ask / Make / Check / Hear / Write back' company-os/operating-system.md \
+  && ! grep -q 'Ask / Make / Check / Hear / Write back' company-os/live-runtime.md \
+  && ! grep -q 'Ask / Make / Check / Hear / Write back' templates/applied-here.md; then
   ok "OS 2.8.15 Clock shrink is pinned (Decision methods essay kept)"
 else
   not_ok "2.8.15 clock shrink strings must exist; keep Decision methods; no invented Advance"

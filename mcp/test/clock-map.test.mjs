@@ -23,14 +23,14 @@ describe("OS 2.8.15 clock remap (no invented Advance)", () => {
     assert.deepEqual(spokenJourneyOf(9), { rung: 5, label: "Try with real people" });
   });
 
-  it("maps stored loop integers to five spoken weeks", () => {
+  it("maps stored loop integers to three spoken weeks", () => {
     assert.deepEqual(spokenLoopOf(1), { week: 1, label: "Ask" });
     assert.deepEqual(spokenLoopOf(2), { week: 1, label: "Ask" });
-    assert.deepEqual(spokenLoopOf(3), { week: 2, label: "Make" });
-    assert.deepEqual(spokenLoopOf(4), { week: 3, label: "Check" });
-    assert.deepEqual(spokenLoopOf(5), { week: 3, label: "Check" });
-    assert.deepEqual(spokenLoopOf(6), { week: 4, label: "Hear" });
-    assert.deepEqual(spokenLoopOf(7), { week: 5, label: "Write back" });
+    assert.deepEqual(spokenLoopOf(3), { week: 2, label: "Do" });
+    assert.deepEqual(spokenLoopOf(4), { week: 2, label: "Do" });
+    assert.deepEqual(spokenLoopOf(5), { week: 2, label: "Do" });
+    assert.deepEqual(spokenLoopOf(6), { week: 2, label: "Do" });
+    assert.deepEqual(spokenLoopOf(7), { week: 3, label: "Write back" });
   });
 
   it("keeps DyeConverter-class 1-1 as Write the bet / Ask", () => {
@@ -47,21 +47,22 @@ describe("OS 2.8.15 clock remap (no invented Advance)", () => {
     assert.equal(nextSpokenJourney(9), null);
   });
 
-  it("does not merge Filter+Ground, Build+Try, or Check+Hear", () => {
+  it("does not merge Filter+Ground or Build+Try; loop weeks are Ask / Do / Write back", () => {
     assert.notEqual(JOURNEY_SPOKEN[2], JOURNEY_SPOKEN[3]);
     assert.notEqual(JOURNEY_SPOKEN[4], JOURNEY_SPOKEN[5]);
-    assert.notEqual(LOOP_SPOKEN[3], LOOP_SPOKEN[4]);
     assert.equal(JOURNEY_SPOKEN[2], "Filter cheaply");
     assert.equal(JOURNEY_SPOKEN[3], "Ground it");
     assert.equal(JOURNEY_SPOKEN[4], "Build tiny slice");
     assert.equal(JOURNEY_SPOKEN[5], "Try with real people");
-    assert.equal(LOOP_SPOKEN[3], "Check");
-    assert.equal(LOOP_SPOKEN[4], "Hear");
+    assert.deepEqual(Object.values(LOOP_SPOKEN), ["Ask", "Do", "Write back"]);
+    assert.ok(!Object.values(LOOP_SPOKEN).includes("Make"));
+    assert.ok(!Object.values(LOOP_SPOKEN).includes("Check"));
+    assert.ok(!Object.values(LOOP_SPOKEN).includes("Hear"));
   });
 
-  it("does not invent a sixth journey rung", () => {
+  it("does not invent a sixth journey rung or a fourth loop week", () => {
     assert.equal(Object.keys(JOURNEY_SPOKEN).length, 5);
-    assert.equal(Object.keys(LOOP_SPOKEN).length, 5);
+    assert.equal(Object.keys(LOOP_SPOKEN).length, 3);
     assert.ok(!Object.values(JOURNEY_SPOKEN).includes("Grow"));
     assert.ok(!Object.values(JOURNEY_SPOKEN).includes("Learn and improve"));
   });

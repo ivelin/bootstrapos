@@ -343,29 +343,29 @@ export const STAGE_GATES: Record<number, StageGate> = {
   },
   3: {
     stage: 3,
-    name: "Make",
-    purpose: "Build only the thin slice needed for this week's learning",
+    name: "Do",
+    purpose: "Run the work this station allows against the kill line. Do takes the station’s shape — not a synonym for Build.",
     evidenceThisStage: [
       {
         id: "slice_delta",
-        plain: "What shipped this cycle (thin) + why it enables learning",
+        plain: "What this station ran this cycle + why it enables learning",
         labelHint: "assumed_capability",
-        howToGather: "Ship minimal; link to eval criteria",
+        howToGather: "Do the station’s work; link to the written kill line",
       },
     ],
-    nextStageWhen: "Something runnable exists for test stage",
-    agentFocus: ["Thin slice only", "No feature salad"],
+    nextStageWhen: "The station’s work is written and can be scored",
+    agentFocus: ["Station-shaped Do only", "Do at Build is not Try"],
   },
   4: {
     stage: 4,
-    name: "Check",
-    purpose: "Exercise the slice before humans burn time",
+    name: "Do",
+    purpose: "Run the work this station allows against the kill line. Do takes the station’s shape — not a synonym for Build.",
     evidenceThisStage: [
       {
         id: "test_log",
-        plain: "Test log: happy path + key failures",
+        plain: "What ran: happy path + key failures (lab or paper, as the station allows)",
         labelHint: "assumed_capability",
-        howToGather: "Automated + synthetic cold checks; save blockers",
+        howToGather: "Automated + synthetic cold checks when the station is Build; save blockers",
       },
     ],
     nextStageWhen: "Known blockers listed; no silent 'works on my machine'",
@@ -373,8 +373,8 @@ export const STAGE_GATES: Record<number, StageGate> = {
   },
   5: {
     stage: 5,
-    name: "Check",
-    purpose: "Score against thresholds; founder-visible gate",
+    name: "Do",
+    purpose: "Run the work this station allows against the kill line. Do takes the station’s shape — not a synonym for Build.",
     evidenceThisStage: [
       {
         id: "eval_scores",
@@ -384,23 +384,23 @@ export const STAGE_GATES: Record<number, StageGate> = {
       },
     ],
     nextStageWhen: "Gate is visible; weak scores mean Iterate not ship",
-    agentFocus: ["Make gate visible", "Do not self-advance journey"],
+    agentFocus: ["Keep the gate visible", "Do not self-advance journey"],
   },
   6: {
     stage: 6,
-    name: "Hear",
-    purpose: "Bring real-world signal in lawfully and honestly",
+    name: "Do",
+    purpose: "Run the work this station allows against the kill line. Do takes the station’s shape — not a synonym for Build.",
     evidenceThisStage: [
       {
         id: "real_feedback",
-        plain: "Redacted real feedback notes with outcomes",
+        plain: "Redacted notes with outcomes, only if this station allows real people",
         labelHint: "company_signals",
-        howToGather: "Only after human-eyes policy allows external asks",
+        howToGather: "Only after human-eyes policy allows external asks. Ask does not Ground. Do at Build is not Try.",
       },
     ],
-    nextStageWhen: "At least one real signal written (or blocked reason)",
+    nextStageWhen: "At least one signal written (or blocked reason)",
     agentFocus: [
-      "Check bootstrap_refuse_external_ask_if_not_green first",
+      "Refuse external ask if not green first",
       "Capture behavior not compliments",
     ],
   },

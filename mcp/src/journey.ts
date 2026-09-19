@@ -671,12 +671,12 @@ export function visualFlowMermaid(idea: IdeaRow, events: GateEventRow[]): string
     return `    p${n}["${JOURNEY_SPOKEN[n]}"]${mark}`;
   }).join("\n");
   const phaseEdges = Array.from({ length: 4 }, (_, i) => `    p${i + 1} --> p${i + 2}`).join("\n");
-  const loopNodes = Array.from({ length: 5 }, (_, i) => {
+  const loopNodes = Array.from({ length: 3 }, (_, i) => {
     const n = i + 1;
     const mark = n === loop.week ? ":::current" : "";
     return `    l${n}["${LOOP_SPOKEN[n]}"]${mark}`;
   }).join("\n");
-  const loopEdges = Array.from({ length: 4 }, (_, i) => `    l${i + 1} --> l${i + 2}`).join("\n");
+  const loopEdges = Array.from({ length: 2 }, (_, i) => `    l${i + 1} --> l${i + 2}`).join("\n");
   const last = events
     .slice()
     .sort((a, b) => a.at.localeCompare(b.at))

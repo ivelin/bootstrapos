@@ -246,7 +246,7 @@ function registerReadTools(server: McpServer, surface: McpSurface, hosted?: Host
 
   server.tool(
     "bootstrap_reference_clocks",
-    "Reference labels for the two clocks: five journey rungs (Bet / Filter / Ground / Build / Try) and five loop weeks (Ask / Make / Check / Hear / Write). Stored integers stay 1–9 / 1–7; spoken/rendered uses the mapping table.",
+    "Reference labels for the two clocks: five journey rungs (Bet / Filter / Ground / Build / Try) and three loop weeks (Ask / Do / Write). Stored integers stay 1–9 / 1–7; spoken/rendered uses the mapping table.",
     {},
     async () =>
       text({

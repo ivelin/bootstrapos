@@ -30,10 +30,10 @@ JOURNEY = {
 LOOP = {
     1: "Ask",
     2: "Ask",
-    3: "Make",
-    4: "Check",
-    5: "Check",
-    6: "Hear",
+    3: "Do",
+    4: "Do",
+    5: "Do",
+    6: "Do",
     7: "Write back",
 }
 
@@ -50,13 +50,13 @@ JOURNEY_PLAIN = {
 }
 
 LOOP_PLAIN = {
-    1: "This week’s loop is Ask — cheap research and first validation across several groups.",
-    2: "This week’s loop is Ask — cheap research and first validation across several groups.",
-    3: "This week’s loop is Make — building the smallest thing that can fail the written rules.",
-    4: "This week’s loop is Check — testing and scoring against thresholds. Recommendation only, not auto-advance.",
-    5: "This week’s loop is Check — testing and scoring against thresholds. Recommendation only, not auto-advance.",
-    6: "This week’s loop is Hear — bringing real usage in (lawfully, redacted).",
-    7: "This week’s loop is Write back. Never skip this write-back.",
+    1: "This week’s loop is Ask — write the question and the kill line.",
+    2: "This week’s loop is Ask — write the question and the kill line.",
+    3: "This week’s loop is Do — run the work this station allows against that line. Do is not a synonym for Build.",
+    4: "This week’s loop is Do — run the work this station allows against that line. Do is not a synonym for Build.",
+    5: "This week’s loop is Do — run the work this station allows against that line. Do is not a synonym for Build.",
+    6: "This week’s loop is Do — run the work this station allows against that line. Do is not a synonym for Build.",
+    7: "This week’s loop is Write back — change company memory. Never skip. Never Advance.",
 }
 
 POSTURE_PLAIN = {

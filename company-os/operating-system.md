@@ -103,7 +103,7 @@ This is a Day 0 / Path 1 question. It is **not** a house rule and **not** a thir
 | Layer | What it is | Example |
 |-------|------------|---------|
 | **Blueprint (this document)** | How a company OS *should* work: journey phases, gates, control rules | This file |
-| **Live runtime** | Persistent state + continuous five-week learning loop + compute | Personas, hypotheses, scores, agents/graphs — see [`live-runtime.md`](live-runtime.md) |
+| **Live runtime** | Persistent state + continuous three-week learning loop + compute | Personas, hypotheses, scores, agents/graphs — see [`live-runtime.md`](live-runtime.md) |
 | **Product runtime** | What customers touch | Your app, MCP, website |
 
 The blueprint is **not** the running system. Do not confuse “we wrote the plan” with “we proved the business.”
@@ -111,11 +111,11 @@ The blueprint is **not** the running system. Do not confuse “we wrote the plan
 ### Two clocks (must stay distinct)
 
 1. **Bootstrap journey (five rungs below)** — slow, founder-gated “where is this bet on prove-it?”  
-2. **Live loop (five weeks)** — what we are learning this week: Ask → Make → Check → Hear → Write back  
+2. **Live loop (three weeks)** — what we are learning this week: Ask → Do → Write back  
 
 When speaking the board to a human, lead with the simple phase and loop names. Numbers stay in storage and in `get_journey`; use them in parentheses only if useful.
 
-Name rule: journey = place names (Bet / Filter / Ground / Build / Try). Loop = week verbs (Ask / Make / Check / Hear / Write). Never put “synthetic research” or “real users” on both clocks. Do not flatten the two clocks into one list.
+Name rule: journey = place names (Bet / Filter / Ground / Build / Try). Loop = week verbs (Ask / Do / Write). Never put “synthetic research” or “real users” on both clocks. Do not flatten the two clocks into one list. Do takes the station’s shape. It is not a synonym for Build. Make / Check / Hear are not loop weeks.
 
 You can run many loop cycles inside one journey phase. Full detail, state stores, and the stage diagram: **[`live-runtime.md`](live-runtime.md)**.
 
@@ -193,10 +193,34 @@ Live boards keep stored integers 1–9 (journey) and 1–7 (loop). No schema bum
 | Stored loop | Spoken |
 |-------------|--------|
 | 1 or 2 | Ask |
-| 3 | Make |
-| 4 or 5 | Check |
-| 6 | Hear |
+| 3–6 | Do |
 | 7 | Write back |
+
+House rules on the two clocks: Filter is not Ground. Build is not Try. Ask does not Ground. Do at Build is not Try. Engineering green is not demand. Write back does not promote. Paper cannot promote.
+
+### Fifteen cells (journey rung × loop week)
+
+Labels first. Do takes the station’s shape.
+
+| Journey | Ask | Do | Write back |
+|---------|-----|-----|------------|
+| Write the bet | Three groups, what “works” means, kill line before ranking. | One-page thesis. Not a landing page. Not interviews. Not a bot. | Save as stated. Next is Filter, or stay if mush. |
+| Filter cheaply | Same forced choice; cheap signal that demotes a group; sims stay synthetic. | Comps, listings, sims. Rank. Still hold. Do not call a friend yet. | Rank as synthetic. Do not Advance. |
+| Ground it | Who talks this week; what behavior counts (time, intro, money-shaped), not “cool idea.” | Real talks or waitlist with friction. Not a product. Not a sim labeled heard. | Observed vs still synthetic. Founder gates Ground-done. |
+| Build tiny slice | What can fail in the lab; Ready-for-human-eyes line. | Design + build the smallest slice. Run tests. | Bugs and what ran. Cannot Advance to Try. |
+| Try with real people | What use would count; who, this week, in their life not ours. | Put the slice in their hands. Watch what they did. | Observed use or no use. Only here can that support a Grow pack. |
+
+Examples (fictional station, not a live board):
+
+- **Write the bet.** Household jobs — parents who already pay a cleaner vs founder butler vs our house. Kill if no paid analog.
+- **Filter cheaply.** Cleaner ads + calendar apps + “a chat model already does this.” Parents first on paper.
+- **Ground it.** Five parents; interest = they send last month’s job list. A smile is not interest.
+- **Build tiny slice.** Slice takes one job text and drafts a vendor SMS without sending. Tests green. Zero households used it. Kill. Engineering green is not demand.
+- **Try with real people.** A parent sends a real Saturday job and accepts the draft. “Looks good” in Slack is not use.
+
+### End-to-end path
+
+Write the bet Ask → Do → Write back → Filter Ask → Do → Write back → Ground Ask → Do → Write back → Build Ask → Do → Write back (a Build-stage kill can stop here) → Try Ask → Do → Write back. Grow pack stays closed unless observed use exists.
 
 ### Phase gates (structured)
 
@@ -889,7 +913,7 @@ Skills are instance files in *your* repo (or your tool’s skill folder). Do not
 ESTABLISHED (kept)                      ADDITIVE (optional until useful)
 ──────────────────                      ────────────────────────────────
 FOUNDER (gates, send, spend)            same
-two clocks (five rungs + five weeks)    same two clocks; stored 1–9 / 1–7 still map
+two clocks (five rungs + three weeks)   same two clocks; stored 1–9 / 1–7 still map
 virtual-office cards                    same
   founder owns / AI helps / open          + partner may call jobs for a card
 primary AI partner                      same
@@ -1005,7 +1029,7 @@ Escalate to the human when stuck or when the decision is high-stakes (money, irr
 
 ## Evaluation-Driven Development (EDD)
 
-When you **build** (journey **Build tiny slice** / live loop **Make** + **Check**), prefer this factory loop over “code first, measure later”:
+When you **build** (journey **Build tiny slice** / live loop **Do** at Build), prefer this factory loop over “code first, measure later”:
 
 ```text
 Spec + success criteria
@@ -1573,7 +1597,7 @@ Everything else in the research method is adjacent literature or a **house rule*
 | 2.8.12 | Additive pack: [founder checkpoints](#founder-checkpoints-when-human-judgment-is-the-work) (QC, Bind, Clock, Alpha). Optional until useful. Absent checkpoints = 2.8.9 behavior. QC Hold is path-local; it does not freeze the journey. Alpha is a written five-field bet against the default recommendation. Founder-facing speech uses the [plain lines](#how-to-say-this); desk labels stay in traces. No tenth phase. No third clock. No schema bump. Writing: [Say it once. Link. No filler.](#how-this-os-may-change-stability-contract). |
 | 2.8.13 | House rule: [unpaid weeks cannot promote](#house-rule-unpaid-weeks-cannot-promote). Same family as 2.8.6–2.8.11; do not merge. First conversation is free. Next working session is paid or you stop. Customer type lives on the existing group card (consumer / small business / mid-market / enterprise) with a follow-up cue (listed price / BANT / MEDDIC / MEDDPICC). A long buying cycle is not free custom work. Not Day 0. Not a tenth phase. Not a sales course. Writing: [Say it once. Link. No filler.](#how-this-os-may-change-stability-contract). |
 | 2.8.14 | Additive: [Decision methods](#decision-methods-aliases-not-a-third-clock) (IESER for this week’s company move; FIRAC for Bind-class paper). Aliases, not a third clock. Not a house rule. Not a phase rename. No schema bump. Speaking rule: lead with descriptive labels; numbers in parentheses. Writing: [Say it once. Link. No filler.](#how-this-os-may-change-stability-contract). |
-| 2.8.15 | Clock shrink: five journey rungs (Write the bet / Filter cheaply / Ground it / Build tiny slice / Try with real people) and five loop weeks (Ask / Make / Check / Hear / Write back). Old 8 Learn and old 9 Grow deleted as clock steps; grow is an after-proof pack after Try. Stored integers 1–9 / 1–7 still valid (no schema bump); spoken/rendered uses the [keep-doing map](#keep-doing-map-stored-integers--spoken). 8 or 9 stay at Try until founder Advance. Speaking rule from 2.8.14 stays. Decision methods essay unchanged. Do not merge Filter+Ground, Build+Try, or Check+Hear. No invented Advance. Writing: [Say it once. Link. No filler.](#how-this-os-may-change-stability-contract). |
+| 2.8.15 | Clock shrink: five journey rungs (Write the bet / Filter cheaply / Ground it / Build tiny slice / Try with real people) and three loop weeks (Ask / Do / Write back). Old 8 Learn and old 9 Grow deleted as clock steps; grow is an after-proof pack after Try. Make / Check / Hear are not loop weeks. Stored integers 1–9 / 1–7 still valid (no schema bump); spoken/rendered uses the [keep-doing map](#keep-doing-map-stored-integers--spoken). 8 or 9 stay at Try until founder Advance. Fifteen cells + [end-to-end path](#end-to-end-path) land here. Speaking rule from 2.8.14 stays. Decision methods essay unchanged. Filter is not Ground. Build is not Try. Ask does not Ground. Do at Build is not Try. No invented Advance. Writing: [Say it once. Link. No filler.](#how-this-os-may-change-stability-contract). |
 
 ---
 

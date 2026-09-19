@@ -39,7 +39,7 @@
       "type": "integer",
       "minimum": 1,
       "maximum": 7,
-      "description": "Stored loop integer 1–7 (fast clock). Spoken maps to five weeks."
+      "description": "Stored loop integer 1–7 (fast clock). Spoken maps to three weeks (Ask / Do / Write back)."
     },
     "gateStatus": {
       "type": "string",
