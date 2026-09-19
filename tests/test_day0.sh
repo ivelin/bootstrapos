@@ -1157,7 +1157,7 @@ if grep -q '### Founder checkpoints (when human judgment is the work)' company-o
   && grep -q 'founder checkpoint, not a new clock' company-os/first-hour.md \
   && grep -q 'Checkpoint kind' templates/traces/decisions/TEMPLATE.md \
   && grep -q 'If Alpha' templates/traces/decisions/TEMPLATE.md \
-  && grep -q 'OS_VERSION = "2.8.15"' mcp/src/constants.ts; then
+  && grep -q 'OS_VERSION = "2.8.16"' mcp/src/constants.ts; then
   ok "OS 2.8.12 founder-checkpoints pack is pinned"
 else
   not_ok "2.8.12 founder-checkpoints strings must exist in OS, runtime, pins, and tests"
@@ -1219,7 +1219,7 @@ if grep -q '### House rule: unpaid weeks cannot promote' company-os/operating-sy
   && grep -q 'house-rule-unpaid-weeks-cannot-promote' company-os/ai-instructions.md \
   && grep -q 'unpaid-weeks-2.8.13' mcp/src/house-rules.ts \
   && grep -q 'house-rule-unpaid-weeks-cannot-promote' mcp/src/house-rules.ts \
-  && grep -q 'OS_VERSION = "2.8.15"' mcp/src/constants.ts \
+  && grep -q 'OS_VERSION = "2.8.16"' mcp/src/constants.ts \
   && grep -q '2.8.12' company-os/operating-system.md; then
   ok "OS 2.8.13 unpaid-weeks house-rule section has full rule, table, and card strings"
 else
@@ -1302,8 +1302,7 @@ fi
 # --- z4) OS 2.8.15: Clock shrink (five rungs + three weeks) ---
 # Separate from Decision methods. No invented Advance. Stored integers stay.
 # Make / Check / Hear are not loop weeks.
-if grep -Fq '**Version:** 2.8.15' company-os/operating-system.md \
-  && grep -q '| 2.8.15 |' company-os/operating-system.md \
+if grep -q '| 2.8.15 |' company-os/operating-system.md \
   && grep -q 'Write the bet' company-os/operating-system.md \
   && grep -q 'Filter cheaply' company-os/operating-system.md \
   && grep -q 'Ground it' company-os/operating-system.md \
@@ -1324,11 +1323,11 @@ if grep -Fq '**Version:** 2.8.15' company-os/operating-system.md \
   && grep -q 'Fifteen cells' templates/applied-here.md \
   && grep -q 'End-to-end path' templates/applied-here.md \
   && grep -q '3–6' company-os/operating-system.md \
-  && grep -q 'v2.8.15' company-os/ai-instructions.md \
-  && grep -q 'Honor OS 2.8.15' AGENTS.md \
-  && grep -q 'OS_VERSION = "2.8.15"' mcp/src/constants.ts \
-  && grep -q '2.8.15' company-os/live-runtime.md \
-  && grep -q '2.8.15' company-os/ready-for-human-eyes.md \
+  && grep -q 'v2.8.16' company-os/ai-instructions.md \
+  && grep -q 'Honor OS 2.8.16' AGENTS.md \
+  && grep -q 'OS_VERSION = "2.8.16"' mcp/src/constants.ts \
+  && grep -q '2.8.16' company-os/live-runtime.md \
+  && grep -q '2.8.16' company-os/ready-for-human-eyes.md \
   && grep -q 'spokenJourneyOf' mcp/src/clock-map.ts \
   && grep -q 'No invented Advance' mcp/src/clock-map.ts \
   && grep -q 'Do not merge Filter + Ground' company-os/operating-system.md \
@@ -1345,6 +1344,56 @@ if grep -Fq '**Version:** 2.8.15' company-os/operating-system.md \
   ok "OS 2.8.15 Clock shrink is pinned (Decision methods essay kept)"
 else
   not_ok "2.8.15 clock shrink strings must exist; keep Decision methods; no invented Advance"
+fi
+
+# --- z5) OS 2.8.16: clock-examples (teaching 5×3) ---
+# Docs-only. One fictional household-jobs company. Not a live board.
+# Do not paste fifteen scenes into Day 0. Keep 2.8.14 Decision methods + 2.8.15 clocks.
+if [ -s company-os/clock-examples.md ] \
+  && grep -Fq 'Teaching, not a live board' company-os/clock-examples.md \
+  && grep -q 'household jobs' company-os/clock-examples.md \
+  && grep -q 'parents who already pay a cleaner' company-os/clock-examples.md \
+  && grep -q 'founder butler' company-os/clock-examples.md \
+  && grep -q 'our house' company-os/clock-examples.md \
+  && grep -q 'Write back saves' company-os/clock-examples.md \
+  && grep -q 'Engineering green is not demand' company-os/clock-examples.md \
+  && grep -q 'Do \*\*not\*\* reset to Write the bet / Ask' company-os/clock-examples.md \
+  && grep -q 'operating-system.md#end-to-end-path' company-os/clock-examples.md \
+  && grep -q 'Write the bet Ask → Do → Write back → Filter Ask' company-os/clock-examples.md \
+  && ! grep -q 'IESER' company-os/clock-examples.md \
+  && ! grep -q 'FIRAC' company-os/clock-examples.md \
+  && ! grep -q 'Ask / Make / Check / Hear' company-os/clock-examples.md \
+  && grep -q '"clock-examples"' mcp/src/constants.ts \
+  && grep -q 'clock-examples": "company-os/clock-examples.md"' mcp/src/constants.ts \
+  && grep -q 'OS_VERSION = "2.8.16"' mcp/src/constants.ts \
+  && grep -Fq '**Version:** 2.8.16' company-os/operating-system.md \
+  && grep -q '| 2.8.16 |' company-os/operating-system.md \
+  && grep -q '| 2.8.15 |' company-os/operating-system.md \
+  && grep -q '| 2.8.14 |' company-os/operating-system.md \
+  && grep -q 'Use IESER, in this order' company-os/operating-system.md \
+  && grep -q 'Use FIRAC before anyone signs' company-os/operating-system.md \
+  && grep -q 'clock-examples' company-os/first-hour.md \
+  && grep -q 'Fifteen cells' company-os/first-hour.md \
+  && grep -q 'End-to-end path' company-os/first-hour.md \
+  && ! grep -q 'One-page thesis. Not a landing page' company-os/first-hour.md \
+  && grep -q 'clock-examples.md' company-os/ai-instructions.md \
+  && grep -q 'Do not copy those scenes onto my board' company-os/ai-instructions.md \
+  && grep -q 'Do not Advance from an example' company-os/ai-instructions.md \
+  && grep -q 'Honor OS 2.8.16' AGENTS.md \
+  && grep -q 'v2.8.16' README.md \
+  && grep -q 'clock-examples.md' company-os/operating-system.md \
+  && grep -q 'clock-examples' docs/install-bill.md; then
+  ok "OS 2.8.16 clock-examples teaching page is pinned (household jobs only; Day 0 not bloated)"
+else
+  not_ok "2.8.16 clock-examples must exist as teaching household jobs; DRY links; keep 2.8.14+2.8.15"
+fi
+done_when=$(sed -n '/^## Done when$/,/^## After this hour$/p' company-os/first-hour.md)
+if ! printf '%s\n' "$done_when" | grep -q 'clock-examples' \
+  && ! printf '%s\n' "$done_when" | grep -q 'household jobs' \
+  && ! printf '%s\n' "$done_when" | grep -q 'Fifteen cells'; then
+  ok "2.8.16 clock-examples is not Day 0 Done when homework"
+else
+  not_ok "do not put clock-examples / household jobs / Fifteen cells in the Day 0 Done when checklist"
 fi
 
 # --- w) Bootstrap Bill install docs (invite-only; not Path 1) ---

@@ -1,6 +1,6 @@
-/** Portable journey + loop labels (aligned to company-os v2.8.15). */
+/** Portable journey + loop labels (aligned to company-os v2.8.16). */
 
-export const OS_VERSION = "2.8.15";
+export const OS_VERSION = "2.8.16";
 export const MCP_VERSION = "0.3.5";
 
 /** Published constitution. Hosted read adapter fetches from here; do not embed copies. */
@@ -96,6 +96,7 @@ export const DOC_KEYS = [
   "ready-for-human-eyes",
   "ai-instructions",
   "first-hour",
+  "clock-examples",
   "after-proof-efficiency",
 ] as const;
 
@@ -107,5 +108,6 @@ export const DOC_FILES: Record<DocKey, string> = {
   "ready-for-human-eyes": "company-os/ready-for-human-eyes.md",
   "ai-instructions": "company-os/ai-instructions.md",
   "first-hour": "company-os/first-hour.md",
+  "clock-examples": "company-os/clock-examples.md",
   "after-proof-efficiency": "company-os/after-proof-efficiency.md",
 };
