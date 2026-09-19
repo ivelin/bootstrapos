@@ -10,6 +10,12 @@ import {
   JOURNEY_FIXTURE,
   JOURNEY_DIGEST_CONTRACT,
   MemoryJourneyStore,
+  PORTFOLIO_KILLED_OUT,
+  PORTFOLIO_RANK_FORMULA,
+  PORTFOLIO_SCORE_OUT_OF_RANGE,
+  PORTFOLIO_SKIP_NEED_TWO_LIVE,
+  PORTFOLIO_WHY_REQUIRED,
+  PORTFOLIO_WHY_TOO_LONG,
   commentsMayMutateGate,
   defaultScoreboard,
   digestMayAdvanceGate,
@@ -18,10 +24,19 @@ import {
   LANDING_PAGE_CONSTRAINT_REFUSE,
   agentMayRubberStampConstraint,
   mayWriteConstraintThisWeek,
+  normalizePortfolioScore,
+  portfolioScoreMayPromote,
+  portfolioScoreOf,
+  portfolioViewOf,
   preferenceMayNameConstraint,
   preferWebhookOverPoll,
   scoreboardMayCarryOwner,
 } from "../dist/journey.js";
+
+const GATE_ENR = {
+  whatChanged: "moved the clocks",
+  whatWereNotDoing: "not a landing-page side quest",
+};
 
 function bearer(email, sub) {
   return actorFromAuthorizationHeader(
@@ -70,6 +85,10 @@ describe("journey views + tools (memory store)", () => {
     const dye = await dyeStore.getJourney(dyeFounder, { companySlug: "dyeconverter" });
     assert.equal(dye.ideas.length, 1);
     assert.equal(dye.ideas[0].slug, "dyeconverter");
+    assert.equal(dye.ideas[0].clocks.journeyPhase, 1);
+    assert.equal(dye.ideas[0].clocks.loopStage, 1);
+    assert.equal(dye.ideas[0].clocks.journeySpoken, "Write the bet");
+    assert.equal(dye.ideas[0].clocks.loopSpoken, "Ask");
   });
 
   it("visual/snapshot always; meeting doc only on expand; not stored", async () => {
@@ -78,8 +97,14 @@ describe("journey views + tools (memory store)", () => {
     const basic = await store.getJourney(founder, { companySlug: "corehaul" });
     const idea = basic.ideas[0];
     assert.match(idea.visualFlow, /mermaid/);
-    assert.match(idea.visualFlow, /Journey 1-9/);
-    assert.match(idea.visualFlow, /Loop 1-7/);
+    assert.match(idea.visualFlow, /subgraph journey \[Journey\]/);
+    assert.match(idea.visualFlow, /subgraph loop \[Loop\]/);
+    assert.match(idea.visualFlow, /Write the bet/);
+    assert.match(idea.visualFlow, /Ask/);
+    assert.match(idea.snapshot, /Journey: Write the bet \(1\)/);
+    assert.match(idea.snapshot, /Loop: Ask \(1\)/);
+    assert.equal(idea.clocks.journeySpoken, "Write the bet");
+    assert.equal(idea.clocks.loopSpoken, "Ask");
     assert.match(idea.snapshot, /two-minute read/);
     assert.match(idea.snapshot, /Owner \(from ACL\): founder-core@example.test, sub-only-corehaul/);
     assert.match(
@@ -224,6 +249,7 @@ describe("journey views + tools (memory store)", () => {
       },
       why: "founder yes in chat",
       founderYes: true,
+      gateEnrichment: GATE_ENR,
     });
     assert.equal(ok.ok, true);
     assert.equal(ok.idea.clocks.journeyPhase, 2);
@@ -275,6 +301,7 @@ describe("journey views + tools (memory store)", () => {
       why: "founder yes",
       founderYes: true,
       client: "cursor-agent",
+      gateEnrichment: GATE_ENR,
     });
     await store.postComment(advisor, {
       companySlug: "corehaul",
@@ -471,14 +498,27 @@ describe("journey views + tools (memory store)", () => {
     const listed = await store.listSubscribers(advisor, { companySlug: "corehaul" });
     assert.equal(listed.ok, true);
     assert.equal(listed.subscribers.length, 1);
+    assert.equal(listed.subscribers[0].webhookUrl, "https://hooks.example.test/core");
     const hiddenList = await store.listSubscribers(dye, { companySlug: "corehaul" });
     assert.equal(hiddenList.ok, false);
+
+    const advisorBoard = await store.getJourney(advisor, { companySlug: "corehaul" });
+    assert.equal(advisorBoard.ok, true);
+    assert.doesNotMatch(JSON.stringify(advisorBoard.audit), /hooks\.example\.test|webhookUrl/);
+    const advisorProv = await store.listProvenance(advisor, { companySlug: "corehaul" });
+    assert.equal(advisorProv.ok, true);
+    assert.doesNotMatch(JSON.stringify(advisorProv), /hooks\.example\.test|webhookUrl/);
+    const subAudit = advisorBoard.audit.find((a) => a.whatChanged?.via === "subscribe_board");
+    assert.ok(subAudit);
+    assert.equal(subAudit.whatChanged.after.principal, "advisor-cos@example.test");
+    assert.equal(subAudit.whatChanged.after.webhookUrl, undefined);
 
     const wrote = await store.putJourney(founder, {
       companySlug: "corehaul",
       journeyPhase: 2,
       why: "founder yes",
       founderYes: true,
+      gateEnrichment: GATE_ENR,
     });
     assert.equal(wrote.ok, true);
     assert.equal(wrote.notify.webhook, 1);
@@ -512,6 +552,7 @@ describe("journey views + tools (memory store)", () => {
       loopStage: 2,
       why: "after revoke",
       founderYes: true,
+      gateEnrichment: GATE_ENR,
     });
     assert.equal(afterRevoke.notify.webhook, 0);
   });
@@ -557,5 +598,400 @@ describe("journey views + tools (memory store)", () => {
     assert.equal(digestMayAdvanceGate(), false);
     assert.equal(preferWebhookOverPoll(), true);
     assert.equal(commentsMayMutateGate(), false);
+  });
+
+  it("list_provenance rebuilds clocks/scoreboard; kill requires postmortem and stays readable", async () => {
+    const store = fixtureJourneyStore();
+    const founder = bearer("founder-core@example.test");
+    const dye = bearer("founder-dye@example.test");
+
+    const silent = await store.putJourney(founder, {
+      companySlug: "corehaul",
+      currentGate: "kill",
+      why: "did not work",
+      founderYes: true,
+      gateEnrichment: GATE_ENR,
+    });
+    assert.equal(silent.ok, false);
+    assert.match(String(silent.error), /lessonsLearned and actionableInsights/);
+
+    const noGateNote = await store.putJourney(founder, {
+      companySlug: "corehaul",
+      currentGate: "hold",
+      why: "still holding",
+      founderYes: true,
+    });
+    assert.equal(noGateNote.ok, false);
+    assert.match(String(noGateNote.error), /whatChanged and whatWereNotDoing/);
+
+    const held = await store.putJourney(founder, {
+      companySlug: "corehaul",
+      currentGate: "hold",
+      constraintThisWeek: "talk to two operators",
+      why: "hold while we talk",
+      founderYes: true,
+      gateEnrichment: GATE_ENR,
+    });
+    assert.equal(held.ok, true);
+    assert.equal(held.audit.whatChanged.before.clocks.currentGate, "hold");
+    assert.equal(held.audit.whatChanged.after.scoreboard.constraint_this_week, "talk to two operators");
+    assert.equal(held.audit.whatChanged.whatChanged, GATE_ENR.whatChanged);
+    assert.equal(held.audit.whatChanged.whatWereNotDoing, GATE_ENR.whatWereNotDoing);
+
+    const created = await store.createIdea(founder, {
+      companySlug: "corehaul",
+      ideaSlug: "retired-bet",
+      founderYes: true,
+      why: "second 0-1 board",
+    });
+    assert.equal(created.ok, true);
+
+    const killed = await store.putJourney(founder, {
+      companySlug: "corehaul",
+      ideaSlug: "retired-bet",
+      currentGate: "kill",
+      why: "no one would pay for the slice",
+      founderYes: true,
+      gateEnrichment: {
+        whatChanged: "retired the bet",
+        whatWereNotDoing: "not retrying the same pitch",
+        evidenceLinks: ["https://docs.example.test/retired-bet"],
+      },
+      killPostmortem: {
+        lessonsLearned: "operators already have a dispatcher they trust",
+        actionableInsights: "next bet must start from an observed paid workaround",
+        evidenceLinks: ["https://docs.example.test/retired-bet"],
+      },
+    });
+    assert.equal(killed.ok, true);
+    assert.equal(killed.idea.killed, true);
+    assert.equal(killed.idea.killPostmortem.lessonsLearned, "operators already have a dispatcher they trust");
+    assert.equal(
+      killed.idea.killPostmortem.actionableInsights,
+      "next bet must start from an observed paid workaround",
+    );
+    assert.match(killed.idea.killedCard, /☠ Killed — operators already have a dispatcher they trust/);
+    assert.equal(killed.audit.whatChanged.after.clocks.currentGate, "kill");
+    assert.equal(killed.audit.whatChanged.lessonsLearned, "operators already have a dispatcher they trust");
+
+    const board = await store.getJourney(founder, { companySlug: "corehaul" });
+    const retired = board.ideas.find((i) => i.slug === "retired-bet");
+    assert.ok(retired);
+    assert.equal(retired.clocks.currentGate, "kill");
+    assert.equal(retired.killedCard, killed.idea.killedCard);
+    assert.match(retired.snapshot, /☠ Killed — operators already have a dispatcher they trust/);
+
+    const listed = await store.listKilledIdeas(founder, { companySlug: "corehaul" });
+    assert.equal(listed.ok, true);
+    assert.equal(listed.ideas.length, 1);
+    assert.equal(listed.ideas[0].slug, "retired-bet");
+    assert.equal(listed.ideas[0].killPostmortem.lessonsLearned, retired.killPostmortem.lessonsLearned);
+
+    const prov = await store.listProvenance(founder, {
+      companySlug: "corehaul",
+      ideaSlug: "retired-bet",
+    });
+    assert.equal(prov.ok, true);
+    assert.ok(prov.events.some((e) => e.kind === "audit" && e.whatChanged?.after?.clocks?.currentGate === "kill"));
+    assert.ok(prov.gateEvents.some((e) => e.action === "kill" && e.why === "no one would pay for the slice"));
+    const lastAfter = [...prov.events]
+      .reverse()
+      .find((e) => e.kind === "audit" && e.whatChanged?.after?.clocks);
+    assert.equal(lastAfter.whatChanged.after.clocks.currentGate, "kill");
+    assert.equal(
+      lastAfter.whatChanged.after.scoreboard.killPostmortem.lessonsLearned,
+      "operators already have a dispatcher they trust",
+    );
+
+    const hidden = await store.listProvenance(dye, { companySlug: "corehaul" });
+    assert.equal(hidden.ok, false);
+    const hiddenKilled = await store.listKilledIdeas(dye, { companySlug: "corehaul" });
+    assert.equal(hiddenKilled.ok, false);
+  });
+
+  it("portfolio scores are 1–5 labels; never invent; never promote; rank live ideas only", async () => {
+    assert.equal(portfolioScoreMayPromote(), false);
+    assert.equal(normalizePortfolioScore({ impact: 0, evidence: 3, leverage: 3 }).ok, false);
+    assert.equal(normalizePortfolioScore({ impact: 6, evidence: 3, leverage: 3 }).ok, false);
+    assert.equal(normalizePortfolioScore({ impact: 3.5, evidence: 3, leverage: 3 }).ok, false);
+    assert.equal(normalizePortfolioScore({ impact: 3, evidence: 3 }).ok, false);
+    assert.equal(normalizePortfolioScore({ impact: 3, evidence: 3, leverage: 3 }).ok, false);
+    assert.equal(normalizePortfolioScore({ impact: 3, evidence: 3, leverage: 3 }).error, PORTFOLIO_WHY_REQUIRED);
+    assert.equal(
+      normalizePortfolioScore({ impact: 3, evidence: 3, leverage: 3, why: "x".repeat(281) }).error,
+      PORTFOLIO_WHY_TOO_LONG,
+    );
+    assert.match(normalizePortfolioScore({ impact: 9, evidence: 1, leverage: 1, why: "out of range" }).error, /1–5/);
+    assert.equal(PORTFOLIO_SCORE_OUT_OF_RANGE.includes("1–5"), true);
+
+    const unscored = {
+      id: "idea-alpha-a",
+      companyId: "co-alpha",
+      slug: "bet-a",
+      name: "bet-a",
+      journeyPhase: 1,
+      loopStage: 1,
+      currentGate: "hold",
+      scoreboard: defaultScoreboard(),
+    };
+    assert.equal(portfolioScoreOf(unscored), undefined);
+    assert.equal(portfolioViewOf([unscored]).applies, false);
+    assert.equal(portfolioViewOf([unscored]).reason, PORTFOLIO_SKIP_NEED_TWO_LIVE);
+
+    const store = new MemoryJourneyStore(
+      [
+        { id: "co-alpha", slug: "alpha", label: "alpha" },
+        { id: "co-bravo", slug: "bravo", label: "bravo" },
+      ],
+      [
+        {
+          companyId: "co-alpha",
+          principal: "founder@example.test",
+          principalKind: "email",
+          role: "founder",
+        },
+        {
+          companyId: "co-bravo",
+          principal: "founder-bravo@example.test",
+          principalKind: "email",
+          role: "founder",
+        },
+        {
+          companyId: "co-alpha",
+          principal: "advisor@example.test",
+          principalKind: "email",
+          role: "advisor",
+        },
+      ],
+      [
+        {
+          id: "idea-alpha-default",
+          companyId: "co-alpha",
+          slug: "default",
+          name: "alpha",
+          journeyPhase: 1,
+          loopStage: 1,
+          currentGate: "hold",
+          scoreboard: defaultScoreboard(),
+        },
+        {
+          id: "idea-bravo-default",
+          companyId: "co-bravo",
+          slug: "default",
+          name: "bravo",
+          journeyPhase: 1,
+          loopStage: 1,
+          currentGate: "hold",
+          scoreboard: defaultScoreboard(),
+        },
+      ],
+      [],
+      [],
+    );
+    const founder = bearer("founder@example.test");
+    const advisor = bearer("advisor@example.test");
+    const bravo = bearer("founder-bravo@example.test");
+
+    const skipNoWhy = await store.putPortfolioScore(founder, {
+      companySlug: "alpha",
+      ideaSlug: "default",
+      impact: 4,
+      evidence: 3,
+      leverage: 5,
+      why: "",
+      founderYes: true,
+    });
+    assert.equal(skipNoWhy.ok, false);
+    assert.equal(skipNoWhy.error, PORTFOLIO_WHY_REQUIRED);
+
+    const skip = await store.putPortfolioScore(founder, {
+      companySlug: "alpha",
+      ideaSlug: "default",
+      impact: 4,
+      evidence: 3,
+      leverage: 5,
+      why: "need a second live idea before ranking",
+      founderYes: true,
+    });
+    assert.equal(skip.ok, true);
+    assert.equal(skip.skipped, true);
+    assert.equal(skip.reason, PORTFOLIO_SKIP_NEED_TWO_LIVE);
+    const one = await store.getJourney(founder, { companySlug: "alpha" });
+    assert.equal(one.portfolio.applies, false);
+    assert.equal(one.ideas[0].portfolioScore, undefined);
+    assert.equal(one.ideas[0].scoreboard.portfolioScore, undefined);
+
+    const created = await store.createIdea(founder, {
+      companySlug: "alpha",
+      ideaSlug: "second-bet",
+      founderYes: true,
+      why: "second live idea",
+    });
+    assert.equal(created.ok, true);
+
+    const badRange = await store.putPortfolioScore(founder, {
+      companySlug: "alpha",
+      ideaSlug: "default",
+      impact: 9,
+      evidence: 3,
+      leverage: 3,
+      why: "out of range",
+      founderYes: true,
+    });
+    assert.equal(badRange.ok, false);
+    assert.match(String(badRange.error), /1–5/);
+
+    const advisorWrite = await store.putPortfolioScore(advisor, {
+      companySlug: "alpha",
+      ideaSlug: "default",
+      impact: 3,
+      evidence: 3,
+      leverage: 3,
+      why: "advisor cannot label",
+      founderYes: true,
+    });
+    assert.equal(advisorWrite.ok, false);
+
+    const noYes = await store.putPortfolioScore(founder, {
+      companySlug: "alpha",
+      ideaSlug: "default",
+      impact: 3,
+      evidence: 3,
+      leverage: 3,
+      why: "no founder yes",
+      founderYes: false,
+    });
+    assert.equal(noYes.ok, false);
+
+    const first = await store.putPortfolioScore(founder, {
+      companySlug: "alpha",
+      ideaSlug: "default",
+      impact: 5,
+      evidence: 4,
+      leverage: 3,
+      why: "operators already pay for a dispatcher",
+      founderYes: true,
+    });
+    assert.equal(first.ok, true);
+    assert.equal(first.skipped, false);
+    assert.equal(first.idea.clocks.currentGate, "hold");
+    assert.deepEqual(
+      { ...first.idea.portfolioScore, scoredAt: undefined, scoredBy: undefined },
+      {
+        impact: 5,
+        evidence: 4,
+        leverage: 3,
+        why: "operators already pay for a dispatcher",
+        scoredAt: undefined,
+        scoredBy: undefined,
+      },
+    );
+    assert.equal(first.idea.portfolioScore.scoredBy, "founder@example.test");
+    assert.equal(first.audit.whatChanged.via, "put_portfolio_score");
+    assert.equal(first.audit.whatChanged.why, "operators already pay for a dispatcher");
+    assert.equal(first.audit.whatChanged.before.scoreboard.portfolioScore, undefined);
+    assert.equal(first.audit.whatChanged.after.scoreboard.portfolioScore.impact, 5);
+    assert.equal(first.audit.whatChanged.after.scoreboard.portfolioScore.why, "operators already pay for a dispatcher");
+    assert.equal(first.notify, undefined);
+
+    const second = await store.putPortfolioScore(founder, {
+      companySlug: "alpha",
+      ideaSlug: "second-bet",
+      impact: 2,
+      evidence: 2,
+      leverage: 2,
+      why: "weaker observed pull",
+      founderYes: true,
+    });
+    assert.equal(second.ok, true);
+    assert.equal(second.portfolio.applies, true);
+    assert.equal(second.portfolio.formula, PORTFOLIO_RANK_FORMULA);
+    assert.deepEqual(
+      second.portfolio.ranked.map((row) => row.slug),
+      ["default", "second-bet"],
+    );
+    assert.equal(second.portfolio.ranked[0].total, 12);
+    assert.equal(second.portfolio.ranked[1].total, 6);
+    assert.deepEqual(second.portfolio.unscored, []);
+    assert.equal(second.portfolio.ranked[0].why, "operators already pay for a dispatcher");
+
+    const missingWhy = await store.putJourney(founder, {
+      companySlug: "alpha",
+      ideaSlug: "second-bet",
+      why: "relabel",
+      founderYes: true,
+      portfolioScore: { impact: 1, evidence: 1, leverage: 1 },
+    });
+    assert.equal(missingWhy.ok, false);
+    assert.equal(missingWhy.error, PORTFOLIO_WHY_REQUIRED);
+
+    const viaPut = await store.putJourney(founder, {
+      companySlug: "alpha",
+      ideaSlug: "second-bet",
+      why: "relabel",
+      founderYes: true,
+      portfolioScore: { impact: 1, evidence: 1, leverage: 1, why: "relabel after a weaker week" },
+    });
+    assert.equal(viaPut.ok, true);
+    assert.equal(viaPut.idea.portfolioScore.impact, 1);
+    assert.equal(viaPut.idea.portfolioScore.why, "relabel after a weaker week");
+    assert.equal(viaPut.idea.clocks.currentGate, "hold");
+    assert.equal(viaPut.audit.whatChanged.after.scoreboard.portfolioScore.why, "relabel after a weaker week");
+
+    const invalidBoard = await store.putJourney(founder, {
+      companySlug: "alpha",
+      ideaSlug: "second-bet",
+      why: "bad score",
+      founderYes: true,
+      scoreboard: { schema_version: 1, portfolioScore: { impact: 0, evidence: 3, leverage: 3 } },
+    });
+    assert.equal(invalidBoard.ok, false);
+
+    const killed = await store.putJourney(founder, {
+      companySlug: "alpha",
+      ideaSlug: "second-bet",
+      currentGate: "kill",
+      why: "retire the weaker bet",
+      founderYes: true,
+      gateEnrichment: GATE_ENR,
+      killPostmortem: {
+        lessonsLearned: "buyers already have a workaround",
+        actionableInsights: "next bet starts from an observed paid workaround",
+      },
+    });
+    assert.equal(killed.ok, true);
+    const afterKill = await store.getJourney(founder, { companySlug: "alpha" });
+    assert.equal(afterKill.portfolio.applies, false);
+    assert.equal(afterKill.portfolio.ranked.length, 0);
+    const live = afterKill.ideas.find((i) => i.slug === "default");
+    const dead = afterKill.ideas.find((i) => i.slug === "second-bet");
+    assert.ok(live.portfolioScore);
+    assert.equal(dead.killed, true);
+
+    const scoreKilled = await store.putPortfolioScore(founder, {
+      companySlug: "alpha",
+      ideaSlug: "second-bet",
+      impact: 5,
+      evidence: 5,
+      leverage: 5,
+      why: "killed bets stay off the live rank",
+      founderYes: true,
+    });
+    assert.equal(scoreKilled.ok, false);
+    assert.equal(scoreKilled.error, PORTFOLIO_KILLED_OUT);
+
+    const leak = await store.putPortfolioScore(bravo, {
+      companySlug: "alpha",
+      ideaSlug: "default",
+      impact: 5,
+      evidence: 5,
+      leverage: 5,
+      why: "cross-tenant leak",
+      founderYes: true,
+    });
+    assert.equal(leak.ok, false);
+    const hiddenBoard = await store.getJourney(bravo, { companySlug: "alpha" });
+    assert.equal(hiddenBoard.ok, false);
+    assert.doesNotMatch(JSON.stringify(hiddenBoard), /portfolioScore|impact/);
   });
 });

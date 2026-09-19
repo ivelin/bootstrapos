@@ -16,6 +16,7 @@ Critical paths run in CI on **PGlite** before any prod synthetic. Evidence: `mcp
 | R4 | Wrong token | Non-JWT / unusable Bearer → gated **401** (`not_a_pirin_access_token` or `invalid_or_revoked_token`). No label leak. | Yes |
 | R5 | Expired token | JWT `exp` in the past → gated **401** `invalid_or_revoked_token`. Fixture-allowed only — this host does not verify JWKS. | Yes |
 | R6 | Cross-company labels | Fixture A sees `alpha` only; B sees `bravo` only; seed founder sees `alpha` / `bravo` / `charlie`. | Yes |
+| R8 | Invite-only company boards | Unauthenticated / non-invited / invited-to-A-only must not see B via `get_journey` / `put_journey` / `post_comment` / `subscribe_*` / `list_*` / labels (`q=`, slug typo, idea slug, webhook). HTTP 401/403 or empty — never another company's rows. | Yes (`cross-tenant-leak.test.mjs`) |
 | P1 | Team member `invite_member` | Allowlisted inviter invites Bill / `member@example.test` to a workspace they belong to (`alpha`). Accept card + sign-in Auth card. Uninvited cannot invite. Cross-company refused. Unset store ≠ failed RPC (HTTP status + body, not `invite_store_unset`). | Yes |
 | P2 | Invitee Bearer `accept_invite` | Any MCP client with a matching JWT. Bill accepts → user + `alpha`. Wrong email, expired, replay, bad token fail closed. | Yes |
 | P3 | Invitee login-URL accept | Email outbox (From `bootstrap@pirin.ai`) + `?invite=` URL + `verify_invite` (opaque fail). After JWT, `accept_invite` → whoami label. Dry-run / mock only — no prod Resend. Universal path — not Grok-only. | Yes |

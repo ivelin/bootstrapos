@@ -176,4 +176,9 @@ export const HOUSE_RULE_PINS = [
     pin: "Advisor ride-along is assumed, not observed. An advisor's opinion is a tip, not proof customers will pay. Write down who said it.",
     url: "https://github.com/ivelin/bootstrap/blob/main/company-os/operating-system.md#house-rule-advisor-ride-along-is-assumed-not-observed",
   },
+  {
+    id: "unpaid-weeks-2.8.13",
+    pin: "Unpaid weeks cannot promote.",
+    url: "https://github.com/ivelin/bootstrap/blob/main/company-os/operating-system.md#house-rule-unpaid-weeks-cannot-promote",
+  },
 ] as const;

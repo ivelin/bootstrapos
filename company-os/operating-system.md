@@ -1,8 +1,8 @@
 # Company Operating System  
 ## For Solo Founders in Bootstrapping Mode
 
-**Version:** 2.8.12  
-**Last Updated:** 2026-09-17  
+**Version:** 2.8.16  
+**Last Updated:** 2026-09-19  
 **Status:** Living guideline (blueprint — not any one company’s live runtime)  
 **Audience:** Independent solo founders; mentors (e.g. Founder Institute, SCORE); AI helpers instructed to follow this system  
 **Isolation:** Portable across startups. Each company keeps its filled instance outside this template (see `../templates/applied-here.md`).  
@@ -90,7 +90,8 @@ This is a Day 0 / Path 1 question. It is **not** a house rule and **not** a thir
    House rule: [there is no optimal price until people have paid and stayed](#house-rule-there-is-no-optimal-price-until-people-have-paid-and-stayed).  
    House rule: [do not automate a step that should not exist](#house-rule-do-not-automate-a-step-that-should-not-exist).  
    House rule: [legal paper cannot promote](#house-rule-legal-paper-cannot-promote).  
-   House rule: [advisor ride-along is assumed, not observed](#house-rule-advisor-ride-along-is-assumed-not-observed).
+   House rule: [advisor ride-along is assumed, not observed](#house-rule-advisor-ride-along-is-assumed-not-observed).  
+   House rule: [unpaid weeks cannot promote](#house-rule-unpaid-weeks-cannot-promote).
 
 7. **Build evaluation-first when you build.**  
    Spec success criteria and a harness before (or with) the implementation — not after a big unmeasured build.
@@ -102,15 +103,19 @@ This is a Day 0 / Path 1 question. It is **not** a house rule and **not** a thir
 | Layer | What it is | Example |
 |-------|------------|---------|
 | **Blueprint (this document)** | How a company OS *should* work: journey phases, gates, control rules | This file |
-| **Live runtime** | Persistent state + continuous 7-stage learning loop + compute | Personas, hypotheses, scores, agents/graphs — see [`live-runtime.md`](live-runtime.md) |
+| **Live runtime** | Persistent state + continuous three-week learning loop + compute | Personas, hypotheses, scores, agents/graphs — see [`live-runtime.md`](live-runtime.md) |
 | **Product runtime** | What customers touch | Your app, MCP, website |
 
 The blueprint is **not** the running system. Do not confuse “we wrote the plan” with “we proved the business.”
 
 ### Two clocks (must stay distinct)
 
-1. **Bootstrap journey (phases 1–9 below)** — slow, founder-gated “where is the company on prove-it?”  
-2. **Live loop (stages 1–7)** — fast weekly/daily cycle: research → validate → build → test → eval → real feedback → memory update → back  
+1. **Bootstrap journey (five rungs below)** — slow, founder-gated “where is this bet on prove-it?”  
+2. **Live loop (three weeks)** — what we are learning this week: Ask → Do → Write back  
+
+When speaking the board to a human, lead with the simple phase and loop names. Numbers stay in storage and in `get_journey`; use them in parentheses only if useful.
+
+Name rule: journey = place names (Bet / Filter / Ground / Build / Try). Loop = week verbs (Ask / Do / Write). Never put “synthetic research” or “real users” on both clocks. Do not flatten the two clocks into one list. Do takes the station’s shape. It is not a synonym for Build. Make / Check / Hear are not loop weeks.
 
 You can run many loop cycles inside one journey phase. Full detail, state stores, and the stage diagram: **[`live-runtime.md`](live-runtime.md)**.
 
@@ -152,25 +157,64 @@ Any “current focus” in a real company is only a **hypothesis that has surviv
 
 ---
 
-## The 9 Phases (Simple View + Formal Aliases)
+## The 5 Journey rungs (Simple View + Formal Aliases)
 
-**Simple names are primary** (plain language).  
+**Simple names are primary** (plain language). When you say where we are, lead with these names; the `#` column is storage and reference only.  
 **Formal aliases** match common product-lifecycle language (FI decks, internal planning). They describe the **same journey**, not a second process.
+
+Journey rungs are place names. Do not merge Filter + Ground. Do not merge Build + Try.
 
 | # | Simple phase (primary) | Formal alias | Exit signal (simple) |
 |---|------------------------|--------------|----------------------|
-| 1 | Form thesis and list possible customer groups | Ideation & Opportunity Framing | Written thesis + at least 3 customer-group candidates |
-| 2 | Define what success looks like for each group | Vision, Mission & Customer Definition | Clear metrics / “done means…” per group |
-| 3 | Synthetic research and first validation | Customer Discovery & Problem Validation *(synthetic leg)* | Ranked groups with written evidence notes; promote still **hold** |
-| 4 | Real-world research and validation | Customer Discovery *(real leg)* + start of Solution & Monetization Validation | Real interest tests and/or conversations; weak groups demoted; see [next pack](#after-synthetic-ranking-the-next-pack) |
-| 5 | Design the simplest system that can test the winner | Architecture & Agentic System Design | One tiny slice + pass/fail rules + human gates; light synthetic product sandbox often runs here in parallel with phase 4 |
-| 6 | Build a tiny slice and test it hard | Build (Evaluation-Driven Development) | Slice runs end-to-end (fixture/sim OK); gate scores |
-| 7 | Try it with real or realistic users | Test, Synthetic Evaluation & Early Launch | Observed behavior, not only compliments |
-| 8 | Learn from what happens and improve | Traction, Feedback & Continuous Learning | Decision traces + score movement |
-| 9 | Grow only after it clearly works | Scale & Expansion (after clear product–market fit) | Proof of value or payment; then [growth pack](#after-proof-the-growth-pack) — not spray-and-pray |
+| 1 | Write the bet | Ideation + success definitions (old 1+2) | Written thesis + at least 3 customer-group candidates + done-means per group |
+| 2 | Filter cheaply | Customer Discovery *(synthetic leg)* (old 3) | Ranked groups with written evidence notes; promote still **hold** |
+| 3 | Ground it | Customer Discovery *(real leg)* (old 4) | Real interest tests and/or conversations; weak groups demoted; see [next pack](#after-synthetic-ranking-the-next-pack) |
+| 4 | Build tiny slice | Design + Build (old 5+6) | One tiny slice + pass/fail rules + human gates; slice runs end-to-end (fixture/sim OK) |
+| 5 | Try with real people | Early launch (old 7) | Observed behavior, not only compliments |
 
-**Monetization stress** (will they pay / which path?) lives mainly in journey phases **4–5** and in ongoing reward/risk scorecards — not as a separate tenth phase.  
-**Growth stress** (which channel, which message, when to spend) lives in journey phases **8–9** and the [growth pack](#after-proof-the-growth-pack) — not as a tenth phase and not before proof.
+Grow is an after-proof pack after Try, not a sixth journey rung. Old 8 Learn and old 9 Grow are deleted as clock steps.
+
+**Monetization stress** (will they pay / which path?) lives mainly in **Ground it** and **Build tiny slice** and in ongoing reward/risk scorecards — not as a separate sixth rung.  
+**Growth stress** (which channel, which message, when to spend) lives in the [growth pack](#after-proof-the-growth-pack) after Try and proof — not as a sixth rung and not before proof.
+
+### Keep-doing map (stored integers → spoken)
+
+Live boards keep stored integers 1–9 (journey) and 1–7 (loop). No schema bump. No invented Advance. Last month’s snapshot still maps.
+
+| Stored journey | Spoken |
+|----------------|--------|
+| 1 or 2 | Write the bet |
+| 3 | Filter cheaply |
+| 4 | Ground it |
+| 5 or 6 | Build tiny slice |
+| 7 | Try with real people |
+| 8 or 9 | stay at Try until founder Advance (grow pack only if proof exists) |
+
+| Stored loop | Spoken |
+|-------------|--------|
+| 1 or 2 | Ask |
+| 3–6 | Do |
+| 7 | Write back |
+
+House rules on the two clocks: Filter is not Ground. Build is not Try. Ask does not Ground. Do at Build is not Try. Engineering green is not demand. Write back does not promote. Paper cannot promote.
+
+### Fifteen cells (journey rung × loop week)
+
+Labels first. Do takes the station’s shape.
+
+| Journey | Ask | Do | Write back |
+|---------|-----|-----|------------|
+| Write the bet | Three groups, what “works” means, kill line before ranking. | One-page thesis. Not a landing page. Not interviews. Not a bot. | Save as stated. Next is Filter, or stay if mush. |
+| Filter cheaply | Same forced choice; cheap signal that demotes a group; sims stay synthetic. | Comps, listings, sims. Rank. Still hold. Do not call a friend yet. | Rank as synthetic. Do not Advance. |
+| Ground it | Who talks this week; what behavior counts (time, intro, money-shaped), not “cool idea.” | Real talks or waitlist with friction. Not a product. Not a sim labeled heard. | Observed vs still synthetic. Founder gates Ground-done. |
+| Build tiny slice | What can fail in the lab; Ready-for-human-eyes line. | Design + build the smallest slice. Run tests. | Bugs and what ran. Cannot Advance to Try. |
+| Try with real people | What use would count; who, this week, in their life not ours. | Put the slice in their hands. Watch what they did. | Observed use or no use. Only here can that support a Grow pack. |
+
+Teaching scenes for one fictional company (household jobs — not a live board): [`clock-examples.md`](clock-examples.md). Do not copy those scenes onto a real company. Do not Advance from an example.
+
+### End-to-end path
+
+Write the bet Ask → Do → Write back → Filter Ask → Do → Write back → Ground Ask → Do → Write back → Build Ask → Do → Write back (a Build-stage kill can stop here) → Try Ask → Do → Write back. Grow pack stays closed unless observed use exists.
 
 ### Phase gates (structured)
 
@@ -465,7 +509,7 @@ Primary-focus **promotion** still requires the full promotion rule (synthetic + 
 
 ## After Proof: The Growth Pack
 
-**When:** journey phases **8–9**, after proof — not a substitute for the [next pack](#after-synthetic-ranking-the-next-pack) (phases 3–5).  
+**When:** after **Try with real people**, after proof — not a substitute for the [next pack](#after-synthetic-ranking-the-next-pack) (Filter / Ground / Build). Not a sixth journey rung.  
 **What:** capped experiments on the **same proven customer group** and thin path.  
 **What not:** multi-channel acquisition machinery, channel-tooling folklore, a daily personal-brand calendar, or a tenth journey phase.
 
@@ -476,7 +520,7 @@ Primary-focus **promotion** still requires the full promotion rule (synthetic + 
 3. Primary customer group is explicit; promote is no longer **hold** for that group.  
 4. Pre-written **outcome** metrics for the next round (rule 1 below).
 
-If any item fails → **Hold scale**. Stay in phases 7–8. List size and creative do not unlock entry.
+If any item fails → **Hold scale**. Stay at **Try**. List size and creative do not unlock entry.
 
 ```text
 Proof markers + path still green
@@ -508,7 +552,7 @@ Write growth/ROUND_* + decision trace; only then expand spend or add a second ch
 5. **Reuse known history first** (closed-won patterns, champion continuity, churned power users) before buying cold volume — *if* that history exists.  
 6. **Evidence labels still apply.** A reply is not retention. Spend is not product–market fit.  
 7. **Overnight drafts after proof only.** The primary partner may batch research or message drafts for that one channel while you sleep. Outputs stay drafts. Live-send still waits for you. This is not a Day-0 ritual.  
-8. **Insight quality before posting cadence.** If the channel is public writing, one unexpected observation from *your* experience, on the same subject, short. AI may draft; you own the insight. Follower count, streak length, and creator payouts are diagnostics — not phase-9 success. Skip this rule if the channel is not public writing.
+8. **Insight quality before posting cadence.** If the channel is public writing, one unexpected observation from *your* experience, on the same subject, short. AI may draft; you own the insight. Follower count, streak length, and creator payouts are diagnostics — not grow-pack success. Skip this rule if the channel is not public writing.
 
 **Founder gate after each growth round:**
 
@@ -519,7 +563,7 @@ Write growth/ROUND_* + decision trace; only then expand spend or add a second ch
 | **Kill channel** | Fails cost, trust, or fit; stop |
 | **Hold scale** | Interesting but weak; no spend expansion |
 
-**Artifacts:** short notes under `growth/` (or equivalent) per round — hypothesis, cap, counts vs thresholds, decision, date. Live-loop stage 7 writes back scores and the next question.
+**Artifacts:** short notes under `growth/` (or equivalent) per round — hypothesis, cap, counts vs thresholds, decision, date. Live-loop **Write back** writes scores and the next question.
 
 **Not in this pack:** deliverability ops, data-vendor stacks, channel-specific tooling, posting calendars, or platform promotion promises. Optional private motion notes after a channel is chosen — never core OS law.
 
@@ -602,14 +646,14 @@ This is how you stay in charge of the company operating system.
 
 That snapshot must include, in everyday language:
 
-- How far you are on **proving the business** (slow journey: step N of 9 + one plain sentence)
-- What the **weekly learning loop** is doing (fast loop: step M of 7 + one plain sentence)
+- How far you are on **proving the business** (slow journey: simple phase name first; number in parentheses only if useful)
+- What the **weekly learning loop** is doing (fast loop: simple loop name first; number in parentheses only if useful)
 - Whether the next gate is open, waiting for you, blocked, or ready for review — **in plain words**
 - How free the AI is (Strict / Auto / Dangerous) — **with what that means for you**
 - Top open questions or risks
 - Honest scores for the **active hypotheses and slices** (not only vanity product metrics)
 - Last important action and why (plain language)
-- Whether the weekly check-in and stage 7 memory write happened recently
+- Whether the weekly check-in and Write back happened recently
 
 ### Natural language queries and Socratic dialogue
 
@@ -714,7 +758,7 @@ Default for early solo founders: **Strict**.
 3. Never treat simulated prices or “I would buy” as demand.  
 4. Never put secrets or personal customer data in public git or casual chat dumps.  
 5. Never invent a fake staffed role (“Marketing Bot”) that hides who approves.  
-6. Never skip stage 7 memory write after meaningful work if you claim you ran the loop.
+6. Never skip Write back after meaningful work if you claim you ran the loop.
 
 ### When solo vs add people (lightweight test)
 
@@ -757,7 +801,7 @@ Who must approve before anything goes external:
 | **Conversation prep** | Short brief you can read on a phone | Before a real talk |
 | **Close the call** | Next-step artifact from what they just said | Last minutes of a conversation |
 | **Post-talk write-up** | Follow-up draft + traces / open questions | After a real talk |
-| **Research** | Ranked notes with evidence labels | Live-loop stages 1–2 |
+| **Research** | Ranked notes with evidence labels | Live-loop **Ask** |
 | **Outreach drafts** | Message in your voice, unsent | Interest tests; growth pack after proof |
 | **Product-fact answers** | Customer-facing fact from *your* docs | When someone asks something technical |
 | **Conversation coach** | What we learned, missed, and should ask next | After interviews exist |
@@ -863,12 +907,12 @@ Skills are instance files in *your* repo (or your tool’s skill folder). Do not
 ESTABLISHED (kept)                      ADDITIVE (optional until useful)
 ──────────────────                      ────────────────────────────────
 FOUNDER (gates, send, spend)            same
-two clocks (journey 1–9, loop 1–7)      same
+two clocks (five rungs + three weeks)   same two clocks; stored 1–9 / 1–7 still map
 virtual-office cards                    same
   founder owns / AI helps / open          + partner may call jobs for a card
 primary AI partner                      same
 learning rituals                        same four
-  snapshot · stage 7                      snapshot may end with
+  snapshot · Write back                   snapshot may end with
   scoreboard · coordination-tax           “automate / parallelize / delete?”
 git = company memory                    same
                                           + day tools may feed the snapshot
@@ -979,7 +1023,7 @@ Escalate to the human when stuck or when the decision is high-stakes (money, irr
 
 ## Evaluation-Driven Development (EDD)
 
-When you **build** (journey phase 6 / live loop stages 3–5), prefer this factory loop over “code first, measure later”:
+When you **build** (journey **Build tiny slice** / live loop **Do** at Build), prefer this factory loop over “code first, measure later”:
 
 ```text
 Spec + success criteria
@@ -1083,7 +1127,7 @@ Portable checklist + evidence template: [`ready-for-human-eyes.md`](ready-for-hu
 
 ### House rule: marketing volume cannot promote
 
-Someone saying you need marketing to prove the product, or to attract people who might buy, is asking for access to **observed** evidence — not a marketing department. After Ready for human eyes is green, run one real-interest test ([Track B](#track-b--real-interest-tests-waitlist-and-friends)): one channel, one ask, to people who already have the job, kill threshold written first. A calendar, SEO push, public launch week, marketing hire, or a pre-AI playbook someone is selling cannot promote. Impressions and “potential buyers” cannot promote. Observed use or pay can. The [growth pack](#after-proof-the-growth-pack) stays after proof (phases 8–9).
+Someone saying you need marketing to prove the product, or to attract people who might buy, is asking for access to **observed** evidence — not a marketing department. After Ready for human eyes is green, run one real-interest test ([Track B](#track-b--real-interest-tests-waitlist-and-friends)): one channel, one ask, to people who already have the job, kill threshold written first. A calendar, SEO push, public launch week, marketing hire, or a pre-AI playbook someone is selling cannot promote. Impressions and “potential buyers” cannot promote. Observed use or pay can. The [growth pack](#after-proof-the-growth-pack) stays after Try and proof.
 
 In this OS, **Ready for human eyes** means a stranger can finish the happy path on a cold link. It does not mean get a crowd looking. If the link is broken, marketing only advertises the breakage.
 
@@ -1166,7 +1210,77 @@ Someone saying an advisor's promise of exclusivity, or an Office Hours tip about
 
 **Implement.** Write down who said what. Check that first before you write exclusivity language. A week of only lawyer emails and advisor meetings = stay put. A named person who wants to pay can move you.
 
+Same family: [legal paper cannot promote](#house-rule-legal-paper-cannot-promote). [There is no optimal price until people have paid and stayed](#house-rule-there-is-no-optimal-price-until-people-have-paid-and-stayed). [Unpaid weeks cannot promote](#house-rule-unpaid-weeks-cannot-promote).
+
+### House rule: unpaid weeks cannot promote
+
+Someone asking you to keep working for a company that has not paid, so the deal can close later, is asking for free work. That is not proof they will pay. Same family as [legal paper cannot promote](#house-rule-legal-paper-cannot-promote) and a spoken yes cannot promote.
+
+**Meaning.** The first conversation is free. After that, time you spend doing work for that company needs a named paid offer, or a written job with a date the work stops. A long buying process is normal for a large company. A long buying process is not free custom work.
+
+**Who buys.** Write the customer type on the existing customer-group card. It tells you how long a paid yes usually takes, and which follow-up questions to ask next. It does not create a second product or a second way of selling.
+
+| Type | Who usually decides | Time to a first paid yes | Follow-up cue |
+|------|---------------------|--------------------------|---------------|
+| **Consumer** | One person, paying for themselves | Days to a few weeks | Listed price. They buy or they do not. |
+| **Small business** | The owner or a small team | Weeks to a couple of months | BANT (see words below) |
+| **Mid-market** | A department. A few people must agree | About one to three months | MEDDIC (see words below) |
+| **Enterprise** | Many people. Purchasing, legal, often a security review | Several months, sometimes a year | MEDDPICC (see words below) |
+
+Rank is still test priority. A slow enterprise group is not automatically the best group to work this week.
+
+**Words used here.** These letters are a follow-up cue after the first conversation, for that customer type only. They are not Day 0 homework and not a second way of selling. Look them up when that type is live. Do not run all four methods on every group. Use these meanings only. Do not invent other expansions.
+
+- Listed price — they buy the published offer or they do not.
+- BANT — Budget (is there money), Authority (can this person say yes), Need (do they have the problem now), Timeline (when do they need it).
+- MEDDIC — Metrics (what number makes this worth buying), Economic buyer (who owns the money), Decision criteria (how they will judge you), Decision process (the steps to a yes), Identify pain (the problem in their words), Champion (the person inside who wants this to happen).
+- MEDDPICC — the same six, plus Paper process (purchasing, legal, security review) and Competition (including building it themselves or doing nothing).
+
+A filled BANT or MEDDIC list is still stated interest. It cannot promote the group. They have to pay and stay.
+
+**When this rule applies.** You already had a first conversation with a real person. They now want work from you: a custom plan, a build on their files, extra sessions, sitting with their team, or an unpaid trial.
+
+**When this rule does not apply.**
+- Day 0 (thesis, at least three customer groups, one snapshot).
+- Ranking groups before you have talked to anyone.
+- The first conversation itself.
+- Building your own product.
+- Public writing.
+- Waiting while their purchasing process runs, as long as you are not producing custom work for them during the wait.
+
+| | Do this | Not this |
+|--|---------|----------|
+| **First talk** | Take the first conversation. Learn if they have the problem and who decides. | Treat the first call as a promise to start unpaid work. |
+| **Next session** | Price the next working session. A small paid trial, a paid setup, or a written job with a stop date. | A second unpaid working session so they can "see it first." |
+| **Long cycle** | Send the price of a small first slice. Work other groups while they buy. | Spend the months of their process writing custom documents for free. |
+
+A shop owner likes the first call and asks you to set up her three stores next week. That setup is paid, or you stop and talk to other owners.
+
+An operations lead at a large company has a good first call. Purchasing will take four months. You send the price of a small paid trial they can run while purchasing works. You do not spend those four months writing custom reports for free.
+
+A person tries your consumer app. They pay the listed price or they do not. There is no second unpaid strategy workshop.
+
+This rule is **not** Day 0 homework, **not** a tenth phase, **not** a third clock, and **not** a sales course.
+
 Same family: [legal paper cannot promote](#house-rule-legal-paper-cannot-promote). [There is no optimal price until people have paid and stayed](#house-rule-there-is-no-optimal-price-until-people-have-paid-and-stayed).
+
+### Decision methods (aliases, not a third clock)
+
+Two jobs. Do not mix them.
+
+**This week’s company move (growth / constraint).** Use IESER, in this order, inside the house rules that already exist: Identify the one bottleneck; Exploit it with what already exists; Subordinate everything else; Elevate (spend, hire, extra paper, extra agents) only after Exploit is exhausted; Repeat when the constraint moves. Work the named bottleneck the way 2.8.9 already requires: every requirement has a person's name; delete the step before you simplify it; automate last. Legal paper, marketing volume, a security program, unpaid weeks, and advisor tips still cannot promote a journey phase.
+
+Exploit is the live paid path or the first conversation. It is not free custom work after that talk. Elevate is guidance. It is not the growth pack. Channel spend stays behind proof.
+
+**A document that binds the company.** Use FIRAC before anyone signs, files, or wires: Facts (observed, sourced); Issue (what this instrument actually does); Rule (the controlling paper + house SOP + any live Clock); Application (this company’s facts against that rule); Conclusion (sign / change / wait). FIRAC does not apply to routine receipts or clicking a website terms box. It applies to Bind checkpoints: board consent, plan/pool/SOPA, 83(b), SAFE or priced close, and any filing that starts a statute clock.
+
+Paper still cannot advance a journey phase. Paper may be constraintThisWeek only while a Clock checkpoint is open (close date, 83(b) after exercise, customer date that expires this week). No Clock open → paper is a side file. Checkpoint kind Clock is not the same as the two clocks (journey + live loop). Do not rename either.
+
+Where-are-we / recon card (plain words, put in why):
+Bottleneck: …
+Do this week with what we have: …
+Wait / do not spend: …
+Clock open?: none | 83(b) by DATE | close DATE | customer DATE
 
 ---
 
@@ -1206,8 +1320,8 @@ Hard rules you must follow:
 7. Prefer small, honest tests and evaluation-driven increments (Spec → Harness → Implement → Gate) over big unmeasured builds.
 8. After ranked synthetic research, prefer the next pack: light synthetic product sandbox and/or real interest tests before a heavy build.
 9. Never draft or send a request for external human product testing (mentor beta, “try my link,” interactive survey) unless Ready for human eyes is green: cold URL, happy path completed in a non-founder context (sandbox browser and/or synthetic cold user), no blocking console/iframe/auth failures — or I explicitly override with a written decision trace.
-10. Record the reason for important actions (decision traces); close stage 7 (memory update) after meaningful runs.
-11. If stage 7 or the weekly control-plane snapshot is missing after meaningful work, say so.
+10. Record the reason for important actions (decision traces); close Write back (memory update) after meaningful runs.
+11. If Write back or the weekly control-plane snapshot is missing after meaningful work, say so.
 12. Answer me in plain language I can understand. Avoid cryptic abbreviations.
 13. Surface recommended human interjections when judgment is high-leverage
     (customer group, thresholds, hire/cofounder, grow/kill, monetization path, autonomy posture, ready-for-human-eyes).
@@ -1318,7 +1432,7 @@ Thin-slice gates should set numeric thresholds on at least Completion, Extractio
 16. Run evaluation-driven increments (Spec → Harness → Implement → Gate).  
 17. Keep asking: “What evidence do we actually have?” and “What would make us kill this hypothesis?”  
 18. Keep decision traces for anything that changes phase, customer group, monetization path, autonomy posture, or spend.  
-19. Run the **learning rituals**: weekly control-plane snapshot; stage 7 after every real or heavy synthetic cycle. The snapshot may end with what to automate, parallelize, or delete.  
+19. Run the **learning rituals**: weekly control-plane snapshot; Write back after every real or heavy synthetic cycle. The snapshot may end with what to automate, parallelize, or delete.  
 20. Once real conversations start, run the **[founder-day pack](#founder-day-pack-how-the-week-actually-runs)** (prep / close the call / post-talk / weekly admin drafts). Capture skills the first time; update them when you steer.  
 21. When proof markers exist, run the **[growth pack](#after-proof-the-growth-pack)** before multi-channel spend. Overnight draft batches are allowed then — still no live-send.  
 22. Keep growth round notes under `growth/`; vanity metrics are not phase-9 exit.
@@ -1336,7 +1450,7 @@ Every company should maintain its own list. Starter prompts:
 - What are the **numeric pass thresholds** for the current thin slice?  
 - What **autonomy posture** are we on this week (Strict / Auto / Dangerous)?  
 - How often should the system ask the human for approval versus acting within a safe draft/dry-run band?  
-- Did we run the weekly control-plane snapshot and close stage 7 after the last real cycle?  
+- Did we run the weekly control-plane snapshot and close Write back after the last real cycle?  
 - Did this week’s snapshot see the actual conversations (calendar / inbox / notes as inputs), or only last week’s markdown?  
 - Which founder-day rituals ran (prep / close the call / post-talk / admin drafts)?  
 - What skills did we capture or update? Is there a founder-voice profile before outreach drafts?  
@@ -1376,7 +1490,7 @@ Every company should maintain its own list. Starter prompts:
 - Fake org charts (generic bot labels, empty roles with no outputs or human gates)  
 - A roster of named bots treated as staff (Prospecting Bot, Forecasting Bot, one agent per account)  
 - Overnight prospecting or message-batch machinery before proof  
-- Skipping weekly snapshot and stage 7 while claiming the company OS is “running”  
+- Skipping weekly snapshot and Write back while claiming the company OS is “running”  
 - Letting “Where are we?” see only git while the week’s conversations live only in chat  
 - Silently rewriting this template every time one product ships a feature  
 - Moving sand: renaming clocks, restacking the loop, or dropping a gate so last month’s snapshot no longer maps  
@@ -1393,6 +1507,7 @@ Every company should maintain its own list. Starter prompts:
 - Automating the playbook, or an agent team to skip a step with no named owner — see [do not automate a step that should not exist](#house-rule-do-not-automate-a-step-that-should-not-exist)  
 - Cap table, SAFE, or lawyer emails as proof the product works — see [legal paper cannot promote](#house-rule-legal-paper-cannot-promote)  
 - An advisor says stay exclusive, then a prospect asks to pay, and the founder delays them — see [advisor ride-along is assumed, not observed](#house-rule-advisor-ride-along-is-assumed-not-observed)  
+- Free work for a company after the first conversation — see [unpaid weeks cannot promote](#house-rule-unpaid-weeks-cannot-promote)
 - Commissioning custom legal agreements before revenue — see [starter legal templates](#starter-legal-templates)
 
 ---
@@ -1446,7 +1561,7 @@ Accuracy numbers perish with the model checkpoint. Mechanism findings last until
 - Bisbee et al., 2024, *Political Analysis*. Task: silicon sampling / prompt variance and drift. Finding: too-tight variance and same-prompt drift make a pass unusable.
 - Brand, Israeli, and Ngwe, HBS 23-062 rev. 2026, §3.3. Task: willingness-to-pay and cross-category fine-tune (laptop → tablet). Finding: direct dollar WTP from GPT was useless; fine-tune failed on a new category. They still used conjoint with prices in the profile and reported $. They did not write “never produce a dollar” or “one condition change.”
 
-Everything else in the research method is adjacent literature or a **house rule**. House rules (epistemology, not a paper): observed wins a clash; a spoken yes cannot promote; do not seed from a demographic one-liner (demo-only role-play is the weak case); several ideas are allowed (each its own board; do not hide a second idea to look focused); [marketing volume cannot promote](#house-rule-marketing-volume-cannot-promote); [a security program cannot promote](#house-rule-a-security-program-cannot-promote); [there is no optimal price until people have paid and stayed](#house-rule-there-is-no-optimal-price-until-people-have-paid-and-stayed); [do not automate a step that should not exist](#house-rule-do-not-automate-a-step-that-should-not-exist); [legal paper cannot promote](#house-rule-legal-paper-cannot-promote); [advisor ride-along is assumed, not observed](#house-rule-advisor-ride-along-is-assumed-not-observed).
+Everything else in the research method is adjacent literature or a **house rule**. House rules (epistemology, not a paper): observed wins a clash; a spoken yes cannot promote; do not seed from a demographic one-liner (demo-only role-play is the weak case); several ideas are allowed (each its own board; do not hide a second idea to look focused); [marketing volume cannot promote](#house-rule-marketing-volume-cannot-promote); [a security program cannot promote](#house-rule-a-security-program-cannot-promote); [there is no optimal price until people have paid and stayed](#house-rule-there-is-no-optimal-price-until-people-have-paid-and-stayed); [do not automate a step that should not exist](#house-rule-do-not-automate-a-step-that-should-not-exist); [legal paper cannot promote](#house-rule-legal-paper-cannot-promote); [advisor ride-along is assumed, not observed](#house-rule-advisor-ride-along-is-assumed-not-observed); [unpaid weeks cannot promote](#house-rule-unpaid-weeks-cannot-promote).
 
 ## Changelog (high level)
 
@@ -1474,6 +1589,10 @@ Everything else in the research method is adjacent literature or a **house rule*
 | 2.8.10 | House rule: [legal paper cannot promote](#house-rule-legal-paper-cannot-promote). Same family as 2.8.6 / 2.8.7 / 2.8.8 / 2.8.9; do not merge. Cap table, SAFE, and lawyer emails do not prove the product works. Writing: [Say it once. Link. No filler.](#how-this-os-may-change-stability-contract). |
 | 2.8.11 | House rule: [advisor ride-along is assumed, not observed](#house-rule-advisor-ride-along-is-assumed-not-observed). Same family as 2.8.6–2.8.10; do not merge. An advisor's opinion is a tip, not proof. Write down who said it. Do not delay a paying customer. Writing: [Say it once. Link. No filler.](#how-this-os-may-change-stability-contract). |
 | 2.8.12 | Additive pack: [founder checkpoints](#founder-checkpoints-when-human-judgment-is-the-work) (QC, Bind, Clock, Alpha). Optional until useful. Absent checkpoints = 2.8.9 behavior. QC Hold is path-local; it does not freeze the journey. Alpha is a written five-field bet against the default recommendation. Founder-facing speech uses the [plain lines](#how-to-say-this); desk labels stay in traces. No tenth phase. No third clock. No schema bump. Writing: [Say it once. Link. No filler.](#how-this-os-may-change-stability-contract). |
+| 2.8.13 | House rule: [unpaid weeks cannot promote](#house-rule-unpaid-weeks-cannot-promote). Same family as 2.8.6–2.8.11; do not merge. First conversation is free. Next working session is paid or you stop. Customer type lives on the existing group card (consumer / small business / mid-market / enterprise) with a follow-up cue (listed price / BANT / MEDDIC / MEDDPICC). A long buying cycle is not free custom work. Not Day 0. Not a tenth phase. Not a sales course. Writing: [Say it once. Link. No filler.](#how-this-os-may-change-stability-contract). |
+| 2.8.14 | Additive: [Decision methods](#decision-methods-aliases-not-a-third-clock) (IESER for this week’s company move; FIRAC for Bind-class paper). Aliases, not a third clock. Not a house rule. Not a phase rename. No schema bump. Speaking rule: lead with descriptive labels; numbers in parentheses. Writing: [Say it once. Link. No filler.](#how-this-os-may-change-stability-contract). |
+| 2.8.15 | Clock shrink: five journey rungs (Write the bet / Filter cheaply / Ground it / Build tiny slice / Try with real people) and three loop weeks (Ask / Do / Write back). Old 8 Learn and old 9 Grow deleted as clock steps; grow is an after-proof pack after Try. Make / Check / Hear are not loop weeks. Stored integers 1–9 / 1–7 still valid (no schema bump); spoken/rendered uses the [keep-doing map](#keep-doing-map-stored-integers--spoken). 8 or 9 stay at Try until founder Advance. Fifteen cells + [end-to-end path](#end-to-end-path) land here. Speaking rule from 2.8.14 stays. Decision methods essay unchanged. Filter is not Ground. Build is not Try. Ask does not Ground. Do at Build is not Try. No invented Advance. Writing: [Say it once. Link. No filler.](#how-this-os-may-change-stability-contract). |
+| 2.8.16 | Teaching page: [clock examples](clock-examples.md) — fifteen cells for one fictional household-jobs company (parents who already pay a cleaner vs founder butler vs our house). Teaching, not a live board. Do not copy onto a real company. Do not Advance from an example. Locked 2.8.15 clocks and 2.8.14 Decision methods stay. No schema bump. No invented Advance. Writing: [Say it once. Link. No filler.](#how-this-os-may-change-stability-contract). |
 
 ---
 

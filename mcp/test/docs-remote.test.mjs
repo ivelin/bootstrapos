@@ -37,7 +37,7 @@ describe("published docs source (no local clone)", () => {
 
     assert.equal(resolveDocsSource(), "published");
     const list = await loadOsDocList();
-    assert.equal(list.length, 6);
+    assert.equal(list.length, 7);
     assert.equal(list[0].source, "published");
     const body = await loadOsDoc("ai-instructions");
     assert.match(body, /Remote AI instructions/);

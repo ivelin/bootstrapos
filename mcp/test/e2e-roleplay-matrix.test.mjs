@@ -238,6 +238,8 @@ describe("E2E role-play matrix (PGlite, never prod)", { concurrency: false }, ()
     assert.match(e2e, /use_company/);
     assert.match(e2e, /P7/);
     assert.match(e2e, /Where are we/);
+    assert.match(e2e, /R8/);
+    assert.match(e2e, /cross-tenant-leak\.test\.mjs/);
     assert.match(e2e, /verify_invite/);
     assert.match(e2e, /bootstrap@pirin\.ai/);
     assert.match(e2e, /No prod Resend/);
@@ -651,7 +653,7 @@ describe("E2E role-play matrix (PGlite, never prod)", { concurrency: false }, ()
 
     const who = await whoamiPass(ivelin);
     assert.deepEqual(who.companies, [...IVELIN_SEED_LABELS]);
-    assert.doesNotMatch(JSON.stringify(who), /user-bootstrap-os-mcp|operating-system|first-hour/);
+    assert.doesNotMatch(JSON.stringify(who), /user-bootstrap-os-mcp|operating-system|first-hour|clock-examples/);
 
     const companies = parseTool((await callTool("bootstrap_list_companies", {}, ivelin)).body);
     assert.deepEqual(companies.companies, [...IVELIN_SEED_LABELS]);
@@ -659,6 +661,7 @@ describe("E2E role-play matrix (PGlite, never prod)", { concurrency: false }, ()
     const docs = parseTool((await callTool("bootstrap_list_docs", {}, ivelin)).body);
     const docKeys = JSON.stringify(docs);
     assert.match(docKeys, /operating-system/);
+    assert.match(docKeys, /clock-examples/);
     for (const company of IVELIN_SEED_LABELS) {
       assert.ok(companies.companies.includes(company));
       assert.doesNotMatch(docKeys, new RegExp(`"${company}"`));

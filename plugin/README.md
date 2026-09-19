@@ -29,7 +29,7 @@ Seven cases this package must support. Thin links, not essays. Install-first: no
 
 ## 0-1 journey visitor matrix (this PR, not the production pin)
 
-Write after a gate or a founder yes in chat — [`when-to-write`](skills/when-to-write/SKILL.md). Not a form. Not mail. Company and idea are separate. The weekly constraint is the honest biggest bottleneck (where help is required) — not a clock, not a fun side quest. Preference cannot name it. Comments never mutate phase. Plugin stays judge-only. Skills do not pick a database or a tool menu. No human Ivelin session claimed.
+Write after a gate or a founder yes in chat — [`when-to-write`](skills/when-to-write/SKILL.md). Not a form. Not mail. Company and idea are separate. The weekly constraint is the honest biggest bottleneck (where help is required) — not a clock, not a fun side quest. Preference cannot name it. Comments never mutate phase. Plugin stays judge-only. Skills do not pick a database or a tool menu. No human Ivelin session claimed. Clock examples are teaching only — quote a cell; do not copy onto a board or Advance from the story: [`clock-examples.md`](https://github.com/ivelin/bootstrap/blob/main/company-os/clock-examples.md).
 
 **Human**
 

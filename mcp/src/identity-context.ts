@@ -15,6 +15,14 @@ export type HostedRequestContext = {
   accessToken?: string;
   /** In-memory active-company key for this HTTP request. */
   sessionKey?: string;
+  /**
+   * initialize clientInfo.name + User-Agent. Hint only — never ACL.
+   * Used to drop the Bill line for non-Grok clients.
+   */
+  clientHint?: {
+    clientName?: string | null;
+    userAgent?: string | null;
+  };
 };
 
 export function anonymousWhoami(): HostedWhoami {

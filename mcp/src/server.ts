@@ -1,15 +1,19 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import {
+  CLOCK_REMAP_NOTE,
   DOC_KEYS,
-  JOURNEY_PHASES,
-  LOOP_STAGES,
+  JOURNEY_SPOKEN,
+  JOURNEY_STORED_MAP,
+  LOOP_SPOKEN,
+  LOOP_STORED_MAP,
   MCP_VERSION,
   OS_VERSION,
   PATH4_HONESTY,
   PUBLISHED_REPO,
   type DocKey,
 } from "./constants.js";
+import { enableBoardWatch } from "./board-watch.js";
 import { parseJourneyQuery, resolveJourneyStore } from "./journey.js";
 import { loadOsDoc, loadOsDocList, resolveDocsBaseUrl, resolveDocsSource } from "./docs.js";
 import {
@@ -42,20 +46,25 @@ import {
   setActiveCompany,
 } from "./hosted-company-context.js";
 import {
-  HOSTED_MCP_INSTRUCTIONS,
+  hostedInstructionsForClient,
   NOTE_COMPANIES,
   NOTE_INVITE_SENT,
   NOTE_NOT_SIGNED_IN,
   NOTE_OS_INFO_HOSTED,
+  SUPPORT_HOWTO,
   TOOL_ACCEPT_INVITE,
   TOOL_GET_JOURNEY,
   TOOL_INVITE_MEMBER,
   TOOL_CREATE_IDEA,
   TOOL_POST_COMMENT,
+  TOOL_ENABLE_BOARD_WATCH,
+  TOOL_LIST_PROVENANCE,
+  TOOL_PUT_PORTFOLIO_SCORE,
   TOOL_PUT_JOURNEY,
   TOOL_LIST_COMPANIES,
   TOOL_LIST_COMPANY_LABELS_ALIAS,
   TOOL_USE_COMPANY,
+  TOOL_SUPPORT,
   TOOL_WHOAMI,
 } from "./hosted-copy.js";
 import { inviteFailMessage, resolveInviteStore } from "./invite.js";
@@ -119,7 +128,7 @@ function membershipPayload(
 function registerReadTools(server: McpServer, surface: McpSurface, hosted?: HostedRequestContext) {
   server.tool(
     "bootstrap_os_info",
-    "Bootstrap OS version, house rules, and how this connector works.",
+    "Bootstrap OS version, house rules, how this connector works, and how to email support at bootstrap@pirin.ai.",
     {},
     async () => {
       const common = {
@@ -141,6 +150,7 @@ function registerReadTools(server: McpServer, surface: McpSurface, hosted?: Host
         houseRules: HOUSE_RULE_LINES,
         houseRulePins: HOUSE_RULE_PINS,
         marketplace: false,
+        support: SUPPORT_HOWTO,
         pluginPreview: {
           path: "plugin/",
           version: "0.1.1",
@@ -209,7 +219,7 @@ function registerReadTools(server: McpServer, surface: McpSurface, hosted?: Host
       doc: z
         .enum(DOC_KEYS as unknown as [DocKey, ...DocKey[]])
         .describe(
-          "operating-system | live-runtime | ready-for-human-eyes | ai-instructions | first-hour | after-proof-efficiency (post-proof + fences + they asked)",
+          "operating-system | live-runtime | ready-for-human-eyes | ai-instructions | first-hour | clock-examples (teaching 5×3, not a live board) | after-proof-efficiency (post-proof + fences + they asked)",
         ),
     },
     async ({ doc }) => {
@@ -236,13 +246,15 @@ function registerReadTools(server: McpServer, surface: McpSurface, hosted?: Host
 
   server.tool(
     "bootstrap_reference_clocks",
-    "Reference labels for the two clocks: journey phases 1–9 and live loop stages 1–7.",
+    "Reference labels for the two clocks: five journey rungs (Bet / Filter / Ground / Build / Try) and three loop weeks (Ask / Do / Write). Stored integers stay 1–9 / 1–7; spoken/rendered uses the mapping table.",
     {},
     async () =>
       text({
-        journeyPhases: JOURNEY_PHASES,
-        loopStages: LOOP_STAGES,
-        note: "Journey advances only with founder Advance / Iterate / Hold / Kill. Loop may run many times inside one phase.",
+        journeySpoken: JOURNEY_SPOKEN,
+        loopSpoken: LOOP_SPOKEN,
+        storedJourneyMap: JOURNEY_STORED_MAP,
+        storedLoopMap: LOOP_STORED_MAP,
+        note: CLOCK_REMAP_NOTE,
       }),
   );
 
@@ -257,6 +269,8 @@ function registerReadTools(server: McpServer, surface: McpSurface, hosted?: Host
         pins: HOUSE_RULE_PINS,
       }),
   );
+
+  server.tool("bootstrap_support", TOOL_SUPPORT, {}, async () => text(SUPPORT_HOWTO));
 }
 
 function registerGatedIdentityTools(server: McpServer, ctx: HostedRequestContext) {
@@ -886,7 +900,7 @@ function registerJourneyTools(server: McpServer, ctx: HostedRequestContext) {
         .max(280)
         .optional()
         .describe(
-          "Honest biggest bottleneck this week. Not a clock. Not tickets. Not a fun side quest. Preference cannot name it.",
+          "Honest biggest bottleneck this week. Not a calendar stub. Not tickets. Not a fun side quest. Exception: an open Clock checkpoint.",
         ),
       why: z.string().describe("Short why for the gate"),
       founderYes: z
@@ -899,6 +913,33 @@ function registerJourneyTools(server: McpServer, ctx: HostedRequestContext) {
           "Written founder override after a challenge. Required to name “new landing page” as the constraint when no one has talked to customers. founderYes alone is not a rubber-stamp.",
         ),
       client: z.string().optional().describe("Which client wrote. Stored on the audit row."),
+      gateEnrichment: z
+        .object({
+          whatChanged: z.string().max(280),
+          whatWereNotDoing: z.string().max(280),
+          evidenceLinks: z.array(z.string()).max(8).optional(),
+        })
+        .optional()
+        .describe("Required on Advance/Iterate/Hold/Kill. Short what-changed and what-we're-not-doing."),
+      killPostmortem: z
+        .object({
+          lessonsLearned: z.string().max(280),
+          actionableInsights: z.string().max(280),
+          evidenceLinks: z.array(z.string()).max(8).optional(),
+        })
+        .optional()
+        .describe("Required on kill. why + lessonsLearned + actionableInsights. Silent kill is rejected."),
+      portfolioScore: z
+        .object({
+          impact: z.number().int().min(1).max(5),
+          evidence: z.number().int().min(1).max(5),
+          leverage: z.number().int().min(1).max(5),
+          why: z.string().min(1).max(280).describe("Short why for this week's labels. Required."),
+        })
+        .optional()
+        .describe(
+          "Weekly Impact/Evidence/Leverage labels (1–5) plus required short why. Prefer put_portfolio_score. Does not Advance or Kill. Skipped on single-idea or killed boards.",
+        ),
     },
     async (input) => {
       const store = storeOf();
@@ -920,6 +961,9 @@ function registerJourneyTools(server: McpServer, ctx: HostedRequestContext) {
             founderYes: input.founderYes,
             founderWrittenDecision: input.founderWrittenDecision,
             client: input.client,
+            gateEnrichment: input.gateEnrichment,
+            killPostmortem: input.killPostmortem,
+            portfolioScore: input.portfolioScore,
           }),
         );
       } catch (e) {
@@ -960,7 +1004,7 @@ function registerJourneyTools(server: McpServer, ctx: HostedRequestContext) {
 
   server.tool(
     "subscribe_board",
-    "Grant a webhook (and optional email enqueue) to an ACL member on a company board. Founder or founder-authorized. Gated. Not the production pin. Email is not sent from this host.",
+    "Grant a webhook (and optional email enqueue) to an ACL member on a company board. Founder or founder-authorized. Gated. Production pin after Cos applies subscriber SQL. Email is not sent from this host.",
     {
       company: z.string().describe("Company slug"),
       idea: z.string().optional().describe("Optional idea scope. Omit for the whole company."),
@@ -1044,6 +1088,124 @@ function registerJourneyTools(server: McpServer, ctx: HostedRequestContext) {
       }
     },
   );
+
+  server.tool(
+    "put_portfolio_score",
+    TOOL_PUT_PORTFOLIO_SCORE,
+    {
+      company: z.string().optional().describe("Company slug. Uses the active company if omitted."),
+      idea: z.string().optional().describe("Idea slug. Default idea if omitted."),
+      impact: z.number().int().min(1).max(5).describe("If this works, how much does it change the beachhead? 1–5."),
+      evidence: z
+        .number()
+        .int()
+        .min(1)
+        .max(5)
+        .describe("How much of that is observed (not hoped)? 1–5."),
+      leverage: z
+        .number()
+        .int()
+        .min(1)
+        .max(5)
+        .describe("How much can this team uniquely do from here? 1–5."),
+      why: z
+        .string()
+        .min(1)
+        .max(280)
+        .describe("Short why for this week's labels. Required. Stored on portfolioScore and audit before/after."),
+      founderYes: z
+        .boolean()
+        .describe("True only after an explicit founder yes in their agent chat"),
+      client: z.string().optional().describe("Which client wrote. Stored on the audit row."),
+    },
+    async (input) => {
+      const store = storeOf();
+      const actor = ctx.actor;
+      if (!store || !actor?.authenticated) {
+        return err("Gated. Founder or founder-authorized token required.");
+      }
+      const parsed = companyOf({ company: input.company, idea: input.idea });
+      if (!parsed.companySlug) {
+        return err("Say which company, or call bootstrap_use_company first.");
+      }
+      try {
+        return text(
+          await store.putPortfolioScore(actor, {
+            companySlug: parsed.companySlug,
+            ideaSlug: parsed.ideaSlug,
+            impact: input.impact,
+            evidence: input.evidence,
+            leverage: input.leverage,
+            why: input.why,
+            founderYes: input.founderYes,
+            client: input.client,
+          }),
+        );
+      } catch (e) {
+        return err(e instanceof Error ? e.message : String(e));
+      }
+    },
+  );
+
+  server.tool(
+    "list_provenance",
+    TOOL_LIST_PROVENANCE,
+    {
+      company: z.string().optional().describe("Company slug. Uses the active company if omitted."),
+      idea: z.string().optional().describe("Optional idea. Omit for every idea under the company."),
+      from: z.string().optional().describe("Inclusive start timestamp (ISO)."),
+      to: z.string().optional().describe("Inclusive end timestamp (ISO)."),
+    },
+    async (input) => {
+      const store = storeOf();
+      const actor = ctx.actor;
+      if (!store || !actor?.authenticated) {
+        return err(NOTE_NOT_SIGNED_IN);
+      }
+      const parsed = companyOf({ company: input.company, idea: input.idea });
+      if (!parsed.companySlug) {
+        return err("Say which company, or call bootstrap_use_company first.");
+      }
+      try {
+        return text(
+          await store.listProvenance(actor, {
+            companySlug: parsed.companySlug,
+            ideaSlug: parsed.ideaSlug,
+            from: input.from,
+            to: input.to,
+          }),
+        );
+      } catch (e) {
+        return err(e instanceof Error ? e.message : String(e));
+      }
+    },
+  );
+
+  server.tool(
+    "enable_board_watch",
+    TOOL_ENABLE_BOARD_WATCH,
+    {
+      company: z.string().describe("Company slug"),
+      idea: z.string().optional().describe("Optional idea. Omit for the whole company."),
+    },
+    async (input) => {
+      const store = storeOf();
+      const actor = ctx.actor;
+      if (!store || !actor?.authenticated) {
+        return err("Gated. Founder or founder-authorized token required.");
+      }
+      try {
+        return text(
+          await enableBoardWatch(store, actor, {
+            companySlug: input.company,
+            ideaSlug: input.idea,
+          }),
+        );
+      } catch (e) {
+        return err(e instanceof Error ? e.message : String(e));
+      }
+    },
+  );
 }
 
 export function createBootstrapServer(
@@ -1055,7 +1217,9 @@ export function createBootstrapServer(
       name: "bootstrap-os",
       version: MCP_VERSION,
     },
-    surface === "hosted-read" ? { instructions: HOSTED_MCP_INSTRUCTIONS } : undefined,
+    surface === "hosted-read"
+      ? { instructions: hostedInstructionsForClient(hosted?.clientHint ?? {}) }
+      : undefined,
   );
   registerReadTools(server, surface, hosted);
   if (surface === "hosted-read") {

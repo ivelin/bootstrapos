@@ -31,6 +31,7 @@ const FIXTURE_DOCS = {
   "company-os/ready-for-human-eyes.md": "# Fixture human eyes\n",
   "company-os/ai-instructions.md": "# Fixture AI instructions\nHard rules live in the published OS.\n",
   "company-os/first-hour.md": "# Fixture first hour\nDay 0 only.\n",
+  "company-os/clock-examples.md": "# Fixture clock examples\nTeaching, not a live board.\n",
   "company-os/after-proof-efficiency.md": "# Fixture after-proof efficiency\nPost-proof only.\n",
 };
 
@@ -122,6 +123,12 @@ async function main() {
 
     const info = await call(client, "bootstrap_os_info");
     assert.equal(info.surface, "hosted-read");
+    assert.equal(info.support?.email, "bootstrap@pirin.ai");
+    assert.match(String(info.support?.routed), /human-routed/i);
+    const support = await call(client, "bootstrap_support");
+    assert.equal(support.email, "bootstrap@pirin.ai");
+    assert.deepEqual(support.include, ["company", "what you tried", "error text"]);
+    assert.match(String(support.routed), /not auto-fix/i);
     assert.equal(info.docsSource, "published");
     assert.match(String(info.docsBase), /127\.0\.0\.1/);
     assert.match(JSON.stringify(info.adoptionOrder), /not mentee-ready boards/);
@@ -154,7 +161,7 @@ async function main() {
 
     const listed = await call(client, "bootstrap_list_docs");
     assert.ok(Array.isArray(listed));
-    assert.equal(listed.length, 6);
+    assert.equal(listed.length, 7);
     assert.equal(listed[0].source, "published");
 
     const osDoc = await call(client, "bootstrap_get_doc", { doc: "operating-system" });

@@ -27,7 +27,7 @@ cleanup() {
 }
 trap cleanup EXIT INT HUP TERM
 
-# --- a) blank state: where-are-we.py exits 0 and prints JOURNEY + 1 / 9 ---
+# --- a) blank state: where-are-we.py exits 0 and prints spoken Day 0 clocks ---
 a_out="$TMP/where-are-we.out"
 a_err="$TMP/where-are-we.err"
 a_rc=0
@@ -37,8 +37,9 @@ python3 templates/company/state/where-are-we.py \
 
 if [ "$a_rc" -eq 0 ] \
   && grep -q 'JOURNEY' "$a_out" \
-  && grep -q '1 / 9' "$a_out"; then
-  ok "where-are-we.py on blank state (JOURNEY, 1 / 9)"
+  && grep -q 'Write the bet' "$a_out" \
+  && grep -q 'Ask' "$a_out"; then
+  ok "where-are-we.py on blank state (Write the bet, Ask)"
 else
   not_ok "where-are-we.py on blank state (exit $a_rc)"
 fi
@@ -1156,7 +1157,7 @@ if grep -q '### Founder checkpoints (when human judgment is the work)' company-o
   && grep -q 'founder checkpoint, not a new clock' company-os/first-hour.md \
   && grep -q 'Checkpoint kind' templates/traces/decisions/TEMPLATE.md \
   && grep -q 'If Alpha' templates/traces/decisions/TEMPLATE.md \
-  && grep -q 'OS_VERSION = "2.8.12"' mcp/src/constants.ts; then
+  && grep -q 'OS_VERSION = "2.8.16"' mcp/src/constants.ts; then
   ok "OS 2.8.12 founder-checkpoints pack is pinned"
 else
   not_ok "2.8.12 founder-checkpoints strings must exist in OS, runtime, pins, and tests"
@@ -1193,6 +1194,231 @@ if grep -q 'Core Belief 4' company-os/ai-instructions.md \
   ok "ai-instructions pins Core Belief 4; essay stays in the OS"
 else
   not_ok "ai-instructions must pin Core Belief 4 to #core-beliefs without copying the essay"
+fi
+
+# --- z2) OS 2.8.13: unpaid weeks cannot promote ---
+# Full rule lives once in the OS section. Pins + link elsewhere. Not Day 0 homework.
+# Cards hold Customer type / First paid offer / Unpaid work fields. OS holds the Who-buys table.
+if grep -q '### House rule: unpaid weeks cannot promote' company-os/operating-system.md \
+  && grep -q '| 2.8.13 |' company-os/operating-system.md \
+  && grep -q '2.8.13' company-os/operating-system.md \
+  && grep -q 'Customer type (consumer / small business / mid-market / enterprise' templates/research/icps/TEMPLATE.md \
+  && grep -q 'First paid offer' templates/research/icps/TEMPLATE.md \
+  && grep -q 'Unpaid work after the first talk' templates/research/icps/TEMPLATE.md \
+  && grep -q 'Unpaid work on live prospects' templates/instance/snapshots/TEMPLATE.md \
+  && grep -q 'Follow-up cue' company-os/operating-system.md \
+  && grep -q 'BANT' company-os/operating-system.md \
+  && grep -q 'MEDDIC' company-os/operating-system.md \
+  && grep -q 'MEDDPICC' company-os/operating-system.md \
+  && grep -q 'Listed price' company-os/operating-system.md \
+  && grep -q 'Words used here' company-os/operating-system.md \
+  && grep -q 'Budget (is there money)' company-os/operating-system.md \
+  && grep -q 'When this rule does not apply' company-os/operating-system.md \
+  && grep -q 'Waiting while their purchasing process runs' company-os/operating-system.md \
+  && grep -q 'house-rule-unpaid-weeks-cannot-promote' company-os/first-hour.md \
+  && grep -q 'house-rule-unpaid-weeks-cannot-promote' company-os/ai-instructions.md \
+  && grep -q 'unpaid-weeks-2.8.13' mcp/src/house-rules.ts \
+  && grep -q 'house-rule-unpaid-weeks-cannot-promote' mcp/src/house-rules.ts \
+  && grep -q 'OS_VERSION = "2.8.16"' mcp/src/constants.ts \
+  && grep -q '2.8.12' company-os/operating-system.md; then
+  ok "OS 2.8.13 unpaid-weeks house-rule section has full rule, table, and card strings"
+else
+  not_ok "operating-system.md must hold the 2.8.13 unpaid-weeks house rule; cards and pins must match"
+fi
+done_when=$(sed -n '/^## Done when$/,/^## After this hour$/p' company-os/first-hour.md)
+if ! printf '%s\n' "$done_when" | grep -q 'unpaid weeks' \
+  && ! printf '%s\n' "$done_when" | grep -q 'Buyer class' \
+  && ! printf '%s\n' "$done_when" | grep -q 'Customer type' \
+  && ! printf '%s\n' "$done_when" | grep -q 'BANT' \
+  && ! printf '%s\n' "$done_when" | grep -q 'MEDDIC'; then
+  ok "2.8.13 unpaid weeks is not Day 0 Done when homework"
+else
+  not_ok "do not put unpaid weeks / Buyer class / Customer type / BANT / MEDDIC in the Day 0 Done when checklist"
+fi
+
+# --- z3) OS 2.8.14: Decision methods (IESER + FIRAC Bind-class) ---
+# Additive aliases, not a third clock. Not Day 0. No IESER in first-hour.
+# Lock distinctive phrases. Do not invent doctrine.
+if grep -q '### Decision methods (aliases, not a third clock)' company-os/operating-system.md \
+  && grep -q '| 2.8.14 |' company-os/operating-system.md \
+  && grep -Fq '**Last Updated:** 2026-09-19' company-os/operating-system.md \
+  && grep -q 'Use IESER, in this order' company-os/operating-system.md \
+  && grep -q 'Use FIRAC before anyone signs' company-os/operating-system.md \
+  && grep -q 'Checkpoint kind Clock is not the same as the two clocks' company-os/operating-system.md \
+  && grep -q 'Do this week with what we have:' company-os/operating-system.md \
+  && grep -q 'Clock open?: none | 83(b) by DATE | close DATE | customer DATE' company-os/operating-system.md \
+  && grep -Fq 'When naming constraintThisWeek, challenge legal / Carta / SOPA / a new agent team unless a Clock checkpoint is open or the founder writes an override. Before a Bind sign-off, walk Facts / Issue / Rule / Application / Conclusion in short form.' company-os/ai-instructions.md \
+  && grep -q 'unpaid weeks cannot promote' AGENTS.md \
+  && grep -q 'unpaid-weeks-2.8.13' mcp/src/house-rules.ts \
+  && grep -Fq 'Honest biggest bottleneck this week. Not a calendar stub. Not tickets. Not a fun side quest. Exception: an open Clock checkpoint.' mcp/src/server.ts \
+  && ! grep -q 'liveClock' mcp/src/server.ts \
+  && grep -q '2.8.13' company-os/operating-system.md; then
+  ok "OS 2.8.14 Decision methods pack is pinned"
+else
+  not_ok "2.8.14 Decision methods strings must exist in OS, ai-instructions, MCP pins, and tests"
+fi
+done_when=$(sed -n '/^## Done when$/,/^## After this hour$/p' company-os/first-hour.md)
+if ! printf '%s\n' "$done_when" | grep -q 'IESER' \
+  && ! printf '%s\n' "$done_when" | grep -q 'FIRAC' \
+  && ! printf '%s\n' "$done_when" | grep -q 'Decision methods'; then
+  ok "2.8.14 Decision methods are not Day 0 Done when homework"
+else
+  not_ok "do not put IESER / FIRAC / Decision methods in the Day 0 Done when checklist"
+fi
+if ! grep -q 'IESER' company-os/first-hour.md \
+  && ! grep -q 'FIRAC' company-os/first-hour.md; then
+  ok "2.8.14 IESER/FIRAC stay out of first-hour"
+else
+  not_ok "do not put IESER or FIRAC in first-hour"
+fi
+# Speaking rule from 2.8.14 stays. Labels first; numbers in parentheses.
+# Decision methods essay stays. Clock shrink is 2.8.15.
+if grep -q 'When speaking the board to a human' company-os/operating-system.md \
+  && grep -q 'Speaking rule: lead with descriptive labels; numbers in parentheses' company-os/operating-system.md \
+  && grep -q 'lead with these names; the `#` column is storage' company-os/operating-system.md \
+  && grep -q 'journey phase in everyday words (number in parentheses only if useful)' company-os/ai-instructions.md \
+  && grep -q 'everyday journey-phase name + everyday loop-stage name' company-os/ai-instructions.md \
+  && grep -q 'Write the bet' company-os/first-hour.md \
+  && grep -q '\*\*Ask\*\*' company-os/first-hour.md \
+  && grep -q 'Write the bet' templates/applied-here.md \
+  && grep -q 'Ask / Do / Write back' templates/applied-here.md \
+  && grep -q 'lead with descriptive labels; numbers only in parentheses' .cursor/skills/verify-bootstrap/SKILL.md \
+  && grep -q 'lead with descriptive labels; numbers only in parentheses' .cursor/skills/verify-bootstrap/features/journey-board.md \
+  && grep -q 'Spoken or rendered summary should lead with descriptive labels' mcp/src/hosted-copy.ts \
+  && grep -q 'Spoken board talk leads with descriptive labels' mcp/src/hosted-copy.ts \
+  && grep -q 'Board status spoken to humans leads with descriptive labels' mcp/docs/JOURNEY.md \
+  && grep -q 'Spoken board talk leads with descriptive labels' AGENTS.md \
+  && grep -q 'simple phase name first; number in parentheses only if useful' company-os/operating-system.md \
+  && grep -q 'simple loop name first; number in parentheses only if useful' company-os/operating-system.md \
+  && ! grep -q 'step N of 9' company-os/operating-system.md \
+  && ! grep -q 'step M of 7' company-os/operating-system.md \
+  && grep -q 'Use IESER, in this order' company-os/operating-system.md \
+  && grep -q 'Use FIRAC before anyone signs' company-os/operating-system.md; then
+  ok "2.8.14 speaking rule is pinned (labels first; Decision methods essay kept)"
+else
+  not_ok "2.8.14 speaking rule strings must exist; do not drop Decision methods"
+fi
+
+# --- z4) OS 2.8.15: Clock shrink (five rungs + three weeks) ---
+# Separate from Decision methods. No invented Advance. Stored integers stay.
+# Make / Check / Hear are not loop weeks.
+if grep -q '| 2.8.15 |' company-os/operating-system.md \
+  && grep -q 'Write the bet' company-os/operating-system.md \
+  && grep -q 'Filter cheaply' company-os/operating-system.md \
+  && grep -q 'Ground it' company-os/operating-system.md \
+  && grep -q 'Build tiny slice' company-os/operating-system.md \
+  && grep -q 'Try with real people' company-os/operating-system.md \
+  && grep -q 'Keep-doing map (stored integers' company-os/operating-system.md \
+  && grep -q '8 or 9 | stay at Try until founder Advance' company-os/operating-system.md \
+  && grep -q 'Never skip Write back' company-os/live-runtime.md \
+  && grep -q 'three weeks' company-os/live-runtime.md \
+  && grep -q 'Ask / Do / Write' company-os/operating-system.md \
+  && grep -q '### Fifteen cells (journey rung × loop week)' company-os/operating-system.md \
+  && grep -q '### End-to-end path' company-os/operating-system.md \
+  && grep -q 'Write the bet Ask → Do → Write back → Filter Ask' company-os/operating-system.md \
+  && grep -q 'Fifteen cells' company-os/live-runtime.md \
+  && grep -q 'End-to-end path' company-os/live-runtime.md \
+  && grep -q 'Fifteen cells' company-os/first-hour.md \
+  && grep -q 'End-to-end path' company-os/first-hour.md \
+  && grep -q 'Fifteen cells' templates/applied-here.md \
+  && grep -q 'End-to-end path' templates/applied-here.md \
+  && grep -q '3–6' company-os/operating-system.md \
+  && grep -q 'v2.8.16' company-os/ai-instructions.md \
+  && grep -q 'Honor OS 2.8.16' AGENTS.md \
+  && grep -q 'OS_VERSION = "2.8.16"' mcp/src/constants.ts \
+  && grep -q '2.8.16' company-os/live-runtime.md \
+  && grep -q '2.8.16' company-os/ready-for-human-eyes.md \
+  && grep -q 'spokenJourneyOf' mcp/src/clock-map.ts \
+  && grep -q 'No invented Advance' mcp/src/clock-map.ts \
+  && grep -q 'Do not merge Filter + Ground' company-os/operating-system.md \
+  && grep -q 'Do not merge Build + Try' company-os/operating-system.md \
+  && grep -q 'Ask does not Ground' company-os/operating-system.md \
+  && grep -q 'Do at Build is not Try' company-os/operating-system.md \
+  && grep -q 'Make / Check / Hear are not loop weeks' mcp/src/clock-map.ts \
+  && grep -q 'Use IESER, in this order' company-os/operating-system.md \
+  && grep -q 'Use FIRAC before anyone signs' company-os/operating-system.md \
+  && grep -q '### Decision methods (aliases, not a third clock)' company-os/operating-system.md \
+  && ! grep -q 'Ask / Make / Check / Hear / Write back' company-os/operating-system.md \
+  && ! grep -q 'Ask / Make / Check / Hear / Write back' company-os/live-runtime.md \
+  && ! grep -q 'Ask / Make / Check / Hear / Write back' templates/applied-here.md; then
+  ok "OS 2.8.15 Clock shrink is pinned (Decision methods essay kept)"
+else
+  not_ok "2.8.15 clock shrink strings must exist; keep Decision methods; no invented Advance"
+fi
+
+# --- z5) OS 2.8.16: clock-examples (teaching 5×3) ---
+# Docs-only. One fictional household-jobs company. Not a live board.
+# Do not paste fifteen scenes into Day 0. Keep 2.8.14 Decision methods + 2.8.15 clocks.
+if [ -s company-os/clock-examples.md ] \
+  && grep -Fq 'Teaching, not a live board' company-os/clock-examples.md \
+  && grep -q 'household jobs' company-os/clock-examples.md \
+  && grep -q 'parents who already pay a cleaner' company-os/clock-examples.md \
+  && grep -q 'founder butler' company-os/clock-examples.md \
+  && grep -q 'our house' company-os/clock-examples.md \
+  && grep -q 'Write back saves' company-os/clock-examples.md \
+  && grep -q 'Engineering green is not demand' company-os/clock-examples.md \
+  && grep -q 'Do \*\*not\*\* reset to Write the bet / Ask' company-os/clock-examples.md \
+  && grep -q 'operating-system.md#end-to-end-path' company-os/clock-examples.md \
+  && grep -q 'Write the bet Ask → Do → Write back → Filter Ask' company-os/clock-examples.md \
+  && ! grep -q 'IESER' company-os/clock-examples.md \
+  && ! grep -q 'FIRAC' company-os/clock-examples.md \
+  && ! grep -q 'Ask / Make / Check / Hear' company-os/clock-examples.md \
+  && grep -q '"clock-examples"' mcp/src/constants.ts \
+  && grep -q 'clock-examples": "company-os/clock-examples.md"' mcp/src/constants.ts \
+  && grep -q 'OS_VERSION = "2.8.16"' mcp/src/constants.ts \
+  && grep -Fq '**Version:** 2.8.16' company-os/operating-system.md \
+  && grep -q '| 2.8.16 |' company-os/operating-system.md \
+  && grep -q '| 2.8.15 |' company-os/operating-system.md \
+  && grep -q '| 2.8.14 |' company-os/operating-system.md \
+  && grep -q 'Use IESER, in this order' company-os/operating-system.md \
+  && grep -q 'Use FIRAC before anyone signs' company-os/operating-system.md \
+  && grep -q 'clock-examples' company-os/first-hour.md \
+  && grep -q 'Fifteen cells' company-os/first-hour.md \
+  && grep -q 'End-to-end path' company-os/first-hour.md \
+  && ! grep -q 'One-page thesis. Not a landing page' company-os/first-hour.md \
+  && grep -q 'clock-examples.md' company-os/ai-instructions.md \
+  && grep -q 'Do not copy those scenes onto my board' company-os/ai-instructions.md \
+  && grep -q 'Do not Advance from an example' company-os/ai-instructions.md \
+  && grep -q 'Honor OS 2.8.16' AGENTS.md \
+  && grep -q 'v2.8.16' README.md \
+  && grep -q 'clock-examples.md' company-os/operating-system.md \
+  && grep -q 'clock-examples' docs/install-bill.md; then
+  ok "OS 2.8.16 clock-examples teaching page is pinned (household jobs only; Day 0 not bloated)"
+else
+  not_ok "2.8.16 clock-examples must exist as teaching household jobs; DRY links; keep 2.8.14+2.8.15"
+fi
+done_when=$(sed -n '/^## Done when$/,/^## After this hour$/p' company-os/first-hour.md)
+if ! printf '%s\n' "$done_when" | grep -q 'clock-examples' \
+  && ! printf '%s\n' "$done_when" | grep -q 'household jobs' \
+  && ! printf '%s\n' "$done_when" | grep -q 'Fifteen cells'; then
+  ok "2.8.16 clock-examples is not Day 0 Done when homework"
+else
+  not_ok "do not put clock-examples / household jobs / Fifteen cells in the Day 0 Done when checklist"
+fi
+
+# --- w) Bootstrap Bill install docs (invite-only; not Path 1) ---
+bill=docs/install-bill.md
+if [ -s "$bill" ] \
+  && grep -Fq 'https://x.ai/bot/NfURVcmf2bx9QyoljkJ7Y' "$bill" \
+  && grep -Fq 'https://mcp.bootstrap.pirin.ai/mcp' "$bill" \
+  && grep -Fq 'https://pirin.ai/bootstrap-os/login' "$bill" \
+  && grep -Fq 'https://github.com/ivelin/bootstrapos' "$bill" \
+  && grep -Fq 'https://pirin.ai/bootstrap-os' "$bill" \
+  && grep -Fq 'bootstrap@pirin.ai' "$bill" \
+  && grep -q 'Bill checks your board weekly' "$bill" \
+  && grep -q 'Bill watches the board when Cos turns it on' "$bill" \
+  && grep -q 'board updates' "$bill" \
+  && grep -q 'not.*Path 1' "$bill" \
+  && ! grep -qi 'webhook' "$bill" \
+  && ! grep -q 'subscribe_board' "$bill" \
+  && ! grep -qi 'grokbot' "$bill" \
+  && ! grep -q 'vercel.app' "$bill" \
+  && ! grep -q 'mcp.pirin.ai' "$bill" \
+  && grep -q 'docs/install-bill.md' README.md \
+  && grep -q 'That is not Path 1' README.md; then
+  ok "Bill install docs lock the live URL, invite MCP + login, Path 1 split, weekly board watch, and feedback"
+else
+  not_ok "docs/install-bill.md must ship the live Bill URL, invite-only MCP + login (not Path 1), weekly board watch, and bootstrap@pirin.ai — no webhook / subscribe_board / vercel.app or mcp.pirin.ai"
 fi
 
 # --- no instance secrets (hard contribution rule) ---

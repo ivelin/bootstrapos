@@ -49,9 +49,10 @@ Product code stays in its own repo. Point the agent at this connector once.
 
 | Tool | Purpose |
 |------|---------|
-| `bootstrap_os_info` | Modes, versions, data root, active paths |
+| `bootstrap_os_info` | Modes, versions, data root, active paths, support email |
+| `bootstrap_support` | How to email `bootstrap@pirin.ai` (human-routed, not auto-fix) |
 | `bootstrap_list_docs` / `bootstrap_get_doc` / `bootstrap_get_ai_instructions` | Blueprint |
-| `bootstrap_reference_clocks` | Journey 1–9 + loop 1–7 |
+| `bootstrap_reference_clocks` | Five journey rungs + five loop weeks (stored 1–9 / 1–7 still map) |
 | `bootstrap_get_state` | Active `company-state.json` |
 | `bootstrap_where_are_we` | Status visibility (active only) |
 | `bootstrap_next_evidence` | Evidence for next phase/stage |
@@ -146,7 +147,7 @@ See [`config/mcp.stdio.example.json`](config/mcp.stdio.example.json).
 
 Same package. Production entry is the Vercel request handler (`api/mcp.ts` + `api/health.ts`). `npm run start:http` is a local helper only.
 
-Same public read tool names as today (`bootstrap_os_info`, docs, house-rule pins). Fetches the published GitHub repo (`BOOTSTRAP_OS_DOCS_SOURCE=published`). Invite-only collab host 401s cookie-less `initialize` / `tools/list` / GET SSE; public OS tools stay listed **after** auth. Does **not** host founder `company-state`. Write / init / use-company stay stdio. Free docs are GitHub + install-os + local — not this host.
+Same public read tool names as today (`bootstrap_os_info`, docs, house-rule pins, `bootstrap_support`). Fetches the published GitHub repo (`BOOTSTRAP_OS_DOCS_SOURCE=published`). Invite-only collab host 401s cookie-less `initialize` / `tools/list` / GET SSE; public OS tools stay listed **after** auth. Does **not** host founder `company-state`. Write / init / use-company stay stdio. Free docs are GitHub + install-os + local — not this host.
 
 Optional gated tools on this host only: `bootstrap_whoami`, `bootstrap_list_companies` (alias `bootstrap_list_company_labels`), `bootstrap_use_company`, `invite_member`, and `accept_invite`. Unauthenticated calls return HTTP 401 + `WWW-Authenticate` pointing at this MCP origin RFC 9728 (`authorization_servers` = pirin.ai login). Login UI is `/bootstrap-os/login` (Web Builder), not this repo. Accept path is in-chat; outsider signup is `?invite=` — [`docs/INVITE.md`](docs/INVITE.md). Companies this login can open — not founder boards. Contract: [`docs/HOSTED_IDENTITY.md`](docs/HOSTED_IDENTITY.md).
 

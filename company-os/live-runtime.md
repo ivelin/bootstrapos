@@ -1,7 +1,7 @@
 # Live Company Runtime  
 ## Persistent state + continuous learning loop
 
-**Part of:** [Company Operating System](operating-system.md) (v2.8.6+)  
+**Part of:** [Company Operating System](operating-system.md) (v2.8.16)  
 **Audience:** Solo founders implementing the OS; AI helpers; mentors  
 **Portable:** Yes — this is the *runtime shape*, not any one product  
 **Instance mapping:** Fill `templates/applied-here.md` in *your* company repo (not part of this template).  
@@ -15,23 +15,23 @@ The OS has **two coordinated views**. Do not collapse them into one list.
 
 | View | What it is | Changes when |
 |------|------------|--------------|
-| **Bootstrap journey** (phases 1–9) | Where the company is on the *prove it* path | Founder **Advance / Iterate / Hold / Kill** |
-| **Live runtime loop** (stages 1–7) | How the company *computes and learns every week* | Continuous; may run many cycles inside one journey phase |
+| **Bootstrap journey** (five rungs) | Where this bet is on the *prove it* path | Founder **Advance / Iterate / Hold / Kill** |
+| **Live runtime loop** (three weeks) | What we are learning this week | Continuous; may run many cycles inside one journey rung |
 
-Early on you mostly live in journey phases 1–4 (research).  
-Later you still run the full runtime loop **inside** build/test/grow — research does not stop after launch.
+Early on you mostly live in **Write the bet / Filter cheaply / Ground it**.  
+Later you still run the full weekly loop **inside** Build / Try — research does not stop after launch. Grow is an after-proof pack after Try, not a sixth rung.
+
+Name rule: journey = place names (Bet / Filter / Ground / Build / Try). Loop = week verbs (Ask / Do / Write). Never put “synthetic research” or “real users” on both clocks. Do not flatten the two clocks into one list. Do takes the station’s shape. It is not a synonym for Build. Make / Check / Hear are not loop weeks.
 
 ```text
   BOOTSTRAP JOURNEY (slow, founder-gated)
-  1 thesis → … → 9 grow
+  Write the bet → Filter cheaply → Ground it → Build tiny slice → Try with real people
          │
          │  at every step, the LIVE LOOP can run:
          │
          ▼
   LIVE RUNTIME (fast, evidence-producing)
-  persistent state ──► 1 research ──► 2 validate ──► 3 build
-         ▲                    ──► 4 test ──► 5 eval ──► 6 real feedback
-         └──────────────────── 7 memory update ◄────────────┘
+  persistent state ──► Ask ──► Do ──► Write back ──► Ask
 ```
 
 ---
@@ -63,7 +63,7 @@ Whatever tools you pick, the **live OS needs durable, versioned state** that bot
 | **Research hypotheses & results** | Customer-group ranking and validation outcomes | Hypothesis id, method, evidence labels, scores, pass/fail, demotions |
 | **Real-usage feedback** | What happened with real people | Redacted notes, outcomes, quotes (lawful capture only) |
 | **Scores snapshot** | Current board | Completion, willingness, escalation, trust, etc. |
-| **Loop cursor** | Where the runtime is | Current stage 1–7, last run id, blocked reason; optional: last snapshot date |
+| **Loop cursor** | Where the runtime is | Current stored week 1–7 (spoken three weeks), last run id, blocked reason; optional: last snapshot date |
 | **Autonomy posture** | How much the system may do alone | Strict / Auto / Dangerous ([blueprint](operating-system.md#autonomy-postures-how-much-the-system-may-do-alone)); default Strict |
 | **Ready for human eyes** | May we ask cold humans to try a product URL? | `unknown` \| `blocked` \| `green` + optional evidence path / blockers ([blueprint](operating-system.md#ready-for-human-eyes-ship-gate-before-external-feedback)); default **unknown** |
 | **Founder checkpoints** | Open QC / Bind / Clock / Alpha moments | Optional. Default **empty** = 2.8.9 behavior. QC Hold is path-local. Does not change `current_gate`. See [founder checkpoints](operating-system.md#founder-checkpoints-when-human-judgment-is-the-work) |
@@ -95,10 +95,11 @@ Upgrade when state and multi-step agents become the bottleneck — not before.
 
 ---
 
-## 4. The continuous loop (7 stages)
+## 4. The continuous loop (three weeks)
 
-Each stage **reads** persistent state, **does work**, and **writes** traces + updates.  
-Founder gates sit between stages when strategy or spend would change.
+Each week **reads** persistent state, **does work**, and **writes** traces + updates.  
+Founder gates sit between weeks when strategy or spend would change.  
+Filter is not Ground. Build is not Try. Ask does not Ground. Do at Build is not Try.
 
 ```text
 ┌─────────────────────────────────────────────────────────────────┐
@@ -111,126 +112,102 @@ Founder gates sit between stages when strategy or spend would change.
 └────────────────────────────┬────────────────────────────────────┘
                              │
          ┌───────────────────▼───────────────────┐
-         │  1. SYNTHETIC USER RESEARCH           │
+         │  1. ASK                               │
          └───────────────────┬───────────────────┘
                              │
          ┌───────────────────▼───────────────────┐
-         │  2. VALIDATION / CONCEPT TESTING      │
+         │  2. DO  (station-shaped)              │
          └───────────────────┬───────────────────┘
                              │
          ┌───────────────────▼───────────────────┐
-         │  3. PRODUCT BUILDING                  │
+         │  3. WRITE BACK                        │
          └───────────────────┬───────────────────┘
                              │
-         ┌───────────────────▼───────────────────┐
-         │  4. TESTING (Synthetic + Automated)   │
-         └───────────────────┬───────────────────┘
-                             │
-         ┌───────────────────▼───────────────────┐
-         │  5. EVALUATION                        │
-         └───────────────────┬───────────────────┘
-                             │
-         ┌───────────────────▼───────────────────┐
-         │  6. REAL USER FEEDBACK INGESTION      │
-         └───────────────────┬───────────────────┘
-                             │
-         ┌───────────────────▼───────────────────┐
-         │  7. MEMORY UPDATE & LOOP BACK         │
-         └───────────────────┬───────────────────┘
-                             │
-                             └──────────► back to 1
+                             └──────────► back to Ask
 ```
 
-### Stage cards
+### Week cards
 
-#### 1 — Synthetic user research
+#### 1 — Ask
+
+Write the question and the kill line.
 
 | | |
 |--|--|
-| **Goal** | Explore customer groups and jobs-to-be-done cheaply across **several** groups |
+| **Goal** | Name what this station must learn this week, and what would kill or demote before you run work |
 | **Inputs** | Thesis; legal adjacent traces if no customers yet (public forums, substitute/competitor reviews, founder prior-domain notes with no PII — not a former employer’s private list); existing personas; hypotheses; prior scores |
-| **Work** | Seed personas from those traces (or write none yet). Do not seed from a demographic one-liner. Demo-only role-play is the weak case. Run the same forced choice across several groups, in the order they would decide, then change one condition (price, time, or current alternative). Write down what they say (stated) and what they choose after the change (synthetic). Do not ask a 1–5 or a naked dollar WTP — a choice or a sentence, then map. Mapping may still produce a dollar figure. Too-tight variance or same-prompt drift versus a human handful makes the pass unusable. New category / none yet stays the weak case. Use staged trust reveal when scoring trust or price interest. |
-| **Outputs** | Ranked notes labeled stated / synthetic / observed; demotions; open questions; optional “what to say” drafts labeled as stated hypotheses |
-| **Founder gate?** | Soft — synthetic may rank or kill. Do not promote a primary group without observed evidence later (stage 2 Track B / journey phase 4). |
+| **Work** | Seed personas from those traces (or write none yet). Do not seed from a demographic one-liner. Demo-only role-play is the weak case. Write the forced choice, the kill line, and what behavior would count. Do not ask a 1–5 or a naked dollar WTP — a choice or a sentence, then map. Mapping may still produce a dollar figure. Too-tight variance or same-prompt drift versus a human handful makes the pass unusable. New category / none yet stays the weak case. Ask does not Ground. |
+| **Outputs** | The week’s question, kill line, and what “works” means at this station |
+| **Founder gate?** | Soft — synthetic may rank or kill later. Do not promote a primary group without observed evidence (journey **Ground it**). |
 
-#### 2 — Validation / concept testing
+Ask at **Filter** stays synthetic. Ask at **Ground** names who talks and what behavior counts. Ask at **Build** names what can fail in the lab. Ask at **Try** names what use would count in their life, not ours.
 
-| | |
-|--|--|
-| **Goal** | Stress-test concepts and the **tiny slice** before/while building; run the [next pack](operating-system.md#after-synthetic-ranking-the-next-pack) after ranked research |
-| **Inputs** | Ranked groups (promote = hold), thin-slice definition, pass/fail rules, research persona ids |
-| **Work** | **Track A — light synthetic product sandbox (capability / feasibility):** isolated end-to-end baseline per group still on the board; sample path roles and styles; stress long-running work, multi-channel switches, handoffs, miscommunication, lost or wrong notes — ask “is the product capable enough yet?” not only “did the happy path finish?” **Track B — real interest tests:** waitlist/landing, organic, social, in-person, capped paid, or direct outreach — measure behavior with pre-written thresholds. Never treat simulated prices or waitlist size as willingness to pay. |
-| **Outputs** | Sandbox scenario ids + pass/fail + capability verdict; interest-test counts and costs; kill/iterate recommendations; updated open questions |
-| **Founder gate?** | Yes — next pack result (iterate / hold / deepen build); primary test group; slice definition; success thresholds |
+#### 2 — Do
 
-#### 3 — Product building
+Run the work this station allows against that line. Do takes the station’s shape. It is not a synonym for Build.
 
 | | |
 |--|--|
-| **Goal** | Ship the smallest thing that can fail the pass/fail rules honestly |
-| **Inputs** | Locked (for now) slice + product knowledge base + evaluation-driven **spec** (criteria, harness plan) |
-| **Work** | Implement via [Evaluation-Driven Development](operating-system.md#evaluation-driven-development-edd): Spec → Harness → Implement; keep scope to the slice |
-| **Outputs** | Runnable product (or manual concierge path), decision traces for scope cuts |
-| **Founder gate?** | Yes — major scope expands, spend, “platform” temptations |
+| **Goal** | Do only the work this rung allows |
+| **Inputs** | The Ask question + kill line; product knowledge; personas; pass/fail rules when the station is Build or Try |
+| **Work** | **Write the bet:** one-page thesis — not a landing page, not interviews, not a bot. **Filter cheaply:** comps, listings, sims; rank; still hold; do not call a friend yet. **Ground it:** real talks or waitlist with friction — not a product, not a sim labeled heard. **Build tiny slice:** design + build the smallest slice; run tests ([Evaluation-Driven Development](operating-system.md#evaluation-driven-development-edd)). **Try with real people:** put the slice in their hands; watch what they did. |
+| **Outputs** | Station-shaped artifacts: thesis, ranked notes, talks, slice + tests, or observed use |
+| **Founder gate?** | Yes — spend, scope expand, or any move that would treat Do at Build as Try. Engineering green is not demand. |
 
-#### 4 — Testing (synthetic + automated)
+Do at Build may include a light synthetic product sandbox (capability / feasibility) and Ready-for-human-eyes cold path. That is still lab work. Real interest tests belong at Ground. Real use belongs at Try.
 
-| | |
-|--|--|
-| **Goal** | Prove the slice **works** under control (fixtures, sims, unit/integration) **and** cold-user happy path where a product URL exists |
-| **Inputs** | Product build, personas, scenarios, stress cases from prior failures; cold URL + happy-path definition |
-| **Work** | Automated tests; synthetic end-to-end runs; safety/refusal cases; re-run same scenario ids; **Ready for human eyes** cold-path check (sandbox browser and/or NL synthetic user) before external asks |
-| **Outputs** | Pass/fail against engineering and scenario suites; bug list; `readyForHumanEyes` update (`unknown` / `blocked` / `green`) + evidence path |
-| **Founder gate?** | Soft — stop the line if safety tests fail; **hard** — do not draft external product-test asks while human-eyes is not green (unless explicit override + decision trace) |
+#### 3 — Write back
 
-#### 5 — Evaluation
-
-| | |
-|--|--|
-| **Goal** | Score quality, not just “did it run?” |
-| **Inputs** | Test artifacts, score definitions, baselines, numeric thresholds; human-eyes evidence if seeking external product feedback |
-| **Work** | Score completion, extraction, escalation, time-to-resolution, trust, channel distribution, customer-group attractiveness; compare to thresholds; separate “engineering green” from “cold path green” from “people care” |
-| **Outputs** | Scoreboard update; Advance/Iterate/Hold/Kill **recommendation** (not auto-apply) |
-| **Founder gate?** | Yes — journey phase advance or kill |
-
-#### 6 — Real user feedback ingestion
-
-| | |
-|--|--|
-| **Goal** | Bring **reality** into state (lawfully, redacted) |
-| **Inputs** | Conversations, usage, support, pilots — **prefer** after Ready for human eyes is green when the ask is “try my product link” |
-| **Work** | Capture outcomes; separate what people *said* vs *did*; link to hypotheses; if feedback was “link broken,” write stress scenario and set human-eyes **blocked**. Prefer the [founder-day pack](operating-system.md#founder-day-pack-how-the-week-actually-runs): close-the-call artifact, then post-talk write-up into this store. |
-| **Outputs** | Feedback store entries; contradictions vs synthetic beliefs |
-| **Founder gate?** | Yes — when **observed** evidence overturns synthetic ranking |
-
-#### 7 — Memory update & loop back
+Change company memory. Never skip. Never Advance.
 
 | | |
 |--|--|
 | **Goal** | Close the learning loop so the next cycle is smarter |
 | **Inputs** | All new traces, scores, feedback |
-| **Work** | Version personas; revise hypotheses; update product knowledge; write decision traces; set next loop cursor |
-| **Outputs** | Fresh state ready for stage 1; explicit list of what changed and why |
-| **Founder gate?** | Soft — review diffs when strategy-sensitive fields change |
+| **Work** | Version personas; revise hypotheses; update product knowledge; write decision traces; set next loop cursor. At Write the bet: save as stated. At Filter: rank as synthetic. At Ground: observed vs still synthetic. At Build: bugs and what ran — cannot Advance to Try. At Try: observed use or no use. |
+| **Outputs** | Fresh state ready for Ask; explicit list of what changed and why |
+| **Founder gate?** | Soft — review diffs when strategy-sensitive fields change. Write back does not promote. |
 
-**Never skip stage 7.** Without memory update, you are generating noise, not running a company OS.
+**Never skip Write back.** Without memory update, you are generating noise, not running a company OS.
 
-**Learning rituals (blueprint):** Weekly control-plane snapshot is the **read-back**. Stage 7 is the **write-back**. Also: weekly scoreboard glance; monthly (or pre-hire) coordination-tax check. Full table: [operating-system — Learning rituals](operating-system.md#learning-rituals-your-crons-without-servers).
+**Learning rituals (blueprint):** Weekly control-plane snapshot is the **read-back**. Write back is the **write-back**. Also: weekly scoreboard glance; monthly (or pre-hire) coordination-tax check. Full table: [operating-system — Learning rituals](operating-system.md#learning-rituals-your-crons-without-servers).
+
+### Fifteen cells
+
+The full 5 × 3 matrix (labels first) lives in [operating-system — Fifteen cells](operating-system.md#fifteen-cells-journey-rung--loop-week). Same cells here, spoken names only:
+
+| Journey | Ask | Do | Write back |
+|---------|-----|-----|------------|
+| Write the bet | Three groups, what “works” means, kill line before ranking. | One-page thesis. Not a landing page. Not interviews. Not a bot. | Save as stated. Next is Filter, or stay if mush. |
+| Filter cheaply | Same forced choice; cheap signal that demotes a group; sims stay synthetic. | Comps, listings, sims. Rank. Still hold. Do not call a friend yet. | Rank as synthetic. Do not Advance. |
+| Ground it | Who talks this week; what behavior counts (time, intro, money-shaped), not “cool idea.” | Real talks or waitlist with friction. Not a product. Not a sim labeled heard. | Observed vs still synthetic. Founder gates Ground-done. |
+| Build tiny slice | What can fail in the lab; Ready-for-human-eyes line. | Design + build the smallest slice. Run tests. | Bugs and what ran. Cannot Advance to Try. |
+| Try with real people | What use would count; who, this week, in their life not ours. | Put the slice in their hands. Watch what they did. | Observed use or no use. Only here can that support a Grow pack. |
+
+### End-to-end path
+
+Write the bet Ask → Do → Write back → Filter Ask → Do → Write back → Ground Ask → Do → Write back → Build Ask → Do → Write back (a Build-stage kill can stop here) → Try Ask → Do → Write back. Grow pack stays closed unless observed use exists.
 
 ---
 
-## 5. Mapping loop stages ↔ bootstrap journey phases
+## 5. Mapping loop weeks ↔ bootstrap journey rungs
 
-| Journey phase (slow) | Runtime stages that dominate |
-|----------------------|------------------------------|
-| 1–2 Thesis & success defs | Seed state; light stage 1 |
-| 3 Synthetic research | **1** heavy |
-| 4 Real-world research | **2** Track B + **6** (interest tests, talks) |
-| 5 Design tiny system | **2** Track A (sandbox) → plan for **3** |
-| 6 Build tiny slice | **3** + **4** (reuse sandbox scenario ids) |
-| 7 Real/realistic users | **4** + **5** + **6** |
-| 8 Learn & improve | **5** + **7** (full cycles) |
-| 9 Grow | Full loop; [growth pack](operating-system.md#after-proof-the-growth-pack) only after proof markers; one channel hypothesis; expand spend only after founder promote. Efficiency or an exit after fences + proof: [after-proof-efficiency.md](after-proof-efficiency.md). |
+Stored integers stay 1–9 / 1–7. Spoken/rendered uses five rungs and three weeks. No invented Advance.
+
+| Stored journey | Spoken journey | Runtime weeks that dominate |
+|----------------|----------------|-----------------------------|
+| 1 or 2 | Write the bet | **Ask** + **Do** (one-page thesis) + **Write back** as stated |
+| 3 | Filter cheaply | **Ask** + **Do** (comps / sims) + **Write back** as synthetic |
+| 4 | Ground it | **Ask** + **Do** (real talks) + **Write back** observed vs synthetic |
+| 5 or 6 | Build tiny slice | **Ask** + **Do** (design + tests) + **Write back** bugs. Cannot Advance to Try. |
+| 7 | Try with real people | **Ask** + **Do** (slice in their hands) + **Write back** observed use |
+| 8 or 9 | stay at Try until founder Advance | Full loop; [growth pack](operating-system.md#after-proof-the-growth-pack) only after proof markers. Efficiency or an exit after fences + proof: [after-proof-efficiency.md](after-proof-efficiency.md). |
+
+| Stored loop | Spoken week |
+|-------------|-------------|
+| 1 or 2 | Ask |
+| 3–6 | Do |
+| 7 | Write back |
 
 ---
 
@@ -256,7 +233,7 @@ AI permanent instructions: [`ai-instructions.md`](ai-instructions.md).
 
 ## 7. Evaluation harness & synthetic testing
 
-Before relying only on real users, the system should run end-to-end against **synthetic** versions of the target customers. This is the backbone of loop stage **2** (light sandbox), then stages **4–5** as the product hardens.
+Before relying only on real users, the system should run end-to-end against **synthetic** versions of the target customers. This is the backbone of **Ask**, then **Do at Build** as the product hardens.
 
 The first serious harness is often the **light synthetic product sandbox** from the [next pack](operating-system.md#after-synthetic-ranking-the-next-pack): isolated, end-to-end, baseline scenarios, path roles only.
 
@@ -270,9 +247,9 @@ The first serious harness is often the **light synthetic product sandbox** from 
 
 ### Synthetic continuity
 
-The same synthetic personas used in early research (stage 1) should remain available in the product sandbox (stage 2) and later product evaluation (stages 4–5).  
+The same synthetic personas used in early **Ask** should remain available in the product sandbox (still **Ask** / **Do at Filter or Build**) and later product evaluation (**Do at Build**).  
 
-That creates continuity: the people you “talked to” in research are the same ones the product path is later tested against. Over time, real usage (stage 6) refines these personas via stage 7 — it does not silently invent a second disconnected cast of characters.
+That creates continuity: the people you “talked to” in research are the same ones the product path is later tested against. Over time, real usage (**Do at Ground or Try**) refines these personas via **Write back** — it does not silently invent a second disconnected cast of characters.
 
 Treat synthetic testing as a fast, repeatable **filter**. It does not replace real-world validation or real interest tests.
 
@@ -296,25 +273,25 @@ Synthetic runs and real jobs should emit **decision traces with the same core fi
 
 Prioritize failures, novel objections, and successful recoveries:
 
-1. Update reward/risk notes and persona attributes (stage 7)  
+1. Update reward/risk notes and persona attributes (**Write back**)  
 2. **Seed a permanent stress scenario** in the eval harness when the failure is repeatable or high-cost  
 3. Promote successful patterns into playbooks / agent instructions only after the eval gate still passes. First time you do a repeatable task together: write a short skill; every later steer updates it ([skill-capture](operating-system.md#skill-capture-first-time--skill)).  
 
 Do not let high-value traces die in chat history.
 
-### Coupling stages 3–5 with EDD
+### Coupling Do at Build with EDD
 
 ```text
-Stage 3  Spec + implement thin increment
-Stage 4  Harness / synthetic + automated re-runs + cold-path (human eyes)
-Stage 5  Gate on scores → founder Advance/Iterate/Hold/Kill
+Do at Build   Spec + implement thin increment
+Do at Build   Harness / synthetic + automated re-runs + cold-path (human eyes)
+Do at Build   Gate on scores → founder Advance/Iterate/Hold/Kill (recommendation only)
 ```
 
 See [Evaluation-Driven Development](operating-system.md#evaluation-driven-development-edd) and [Ready for human eyes](operating-system.md#ready-for-human-eyes-ship-gate-before-external-feedback).
 
 ### Ready for human eyes (runtime)
 
-Before stage 6 product asks that depend on a **working URL** (mentor beta, “try this link,” interactive survey):
+Before **Do at Try** product asks that depend on a **working URL** (mentor beta, “try this link,” interactive survey):
 
 1. Founder states who + happy path + done-means + URL (plain language).  
 2. Harness runs cold path (sandbox browser and/or NL synthetic first-time user).  
@@ -336,8 +313,8 @@ Before heavy agent frameworks, a solo founder can run an honest loop with:
 2. Market notes: what outside evidence supports vs does not establish  
 3. `traces/` or `docs/decisions/YYYY-MM-DD-*.md`  
 4. Scoreboard + loop cursor + **autonomy posture** (markdown is fine; default Strict)  
-5. Learning rituals: weekly control-plane snapshot; stage 7 after real/heavy cycles; optional weekly scoreboard glance. Snapshot may end with automate / parallelize / delete.  
-6. A weekly pass through stages 1→7 with written outputs (even if stage 3 is “no build this week”)  
+5. Learning rituals: weekly control-plane snapshot; Write back after real/heavy cycles; optional weekly scoreboard glance. Snapshot may end with automate / parallelize / delete.  
+6. A weekly pass through Ask → Do → Write back with written outputs (even if Do is “no build this week”)  
 7. After ranking: next pack — light synthetic product sandbox and/or real interest tests  
 8. Product tests that encode pass/fail for the tiny slice (reuse sandbox scenario ids)  
 9. **Ready for human eyes** field + cold-path check before external product-test asks ([checklist](ready-for-human-eyes.md))  
@@ -357,16 +334,16 @@ Before heavy agent frameworks, a solo founder can run an honest loop with:
 
 | Anti-pattern | Why it fails |
 |--------------|--------------|
-| Loop with no real stage 6 | Synthetic echo chamber |
-| Build (3) before ranked 1–2 | Fast wrong product |
-| Eval (5) without fixed thresholds | Endless storytelling |
-| Memory (7) as chat history only | Nothing versioned or auditable |
+| Loop with no real people at Ground or Try | Synthetic echo chamber |
+| Do at Build before ranked Ask | Fast wrong product |
+| Do without fixed thresholds | Endless storytelling |
+| Write back as chat history only | Nothing versioned or auditable |
 | New personas every eval week | No synthetic continuity; scores not comparable |
 | Framework first | Months of glue, zero evidence |
 | Auto-advance journey phase | Founder out of control |
 | Default **Dangerous** posture | Harm without pauses |
 | Channel expansion before thin slice works | Complexity without signal |
-| Skip stage 7 + weekly snapshot | Chat logs, not a company |
+| Skip Write back + weekly snapshot | Chat logs, not a company |
 | Simulated price tables treated as list prices | Fake demand; bad sales and bad fundraising stories |
 | Capability-stage scores treated as current product proof | You measured a wish list, not a product |
 | Green sandbox treated as product–market fit | Feasibility is not demand |
@@ -374,9 +351,9 @@ Before heavy agent frameworks, a solo founder can run an honest loop with:
 | Huge multi-role sim before thin baseline works | Complexity without a path |
 | Paid ads scaled while sandbox baselines fail | Spend on a broken story |
 | Growth pack without proof markers | Spend/reputation burn before the business is real ([growth pack](operating-system.md#after-proof-the-growth-pack)) |
-| Multi-channel spray in phase 9 | Solo complexity without comparable signal |
+| Multi-channel spray in the grow pack | Solo complexity without comparable signal |
 | Vanity metrics as growth success | Optimizes noise; hides weak offer/channel |
-| Daily content machine or follower count as phase-9 | Personal brand is not product–market fit |
+| Daily content machine or follower count as grow-pack success | Personal brand is not product–market fit |
 | Ask mentor/user to try product while human-eyes is not green | Wastes human attention on deploy/path debris |
 | “Works in my chat / my cookies” as ready for eyes | Cold users hit different failures |
 | Green human-eyes treated as PMF | Path alive ≠ people care or pay |
@@ -395,11 +372,11 @@ Before heavy agent frameworks, a solo founder can run an honest loop with:
 - [ ] Scores have numbers and thresholds, not only adjectives  
 - [ ] Reward/risk scorecards exist for candidate customer groups (with demotions / hold)  
 - [ ] After ranking, next pack artifacts exist: sandbox pass/fail and/or real interest tests with thresholds  
-- [ ] Stage 4 tests run in continuous integration or on a known command (scenario ids from sandbox when possible)  
+- [ ] Tests run in continuous integration or on a known command (scenario ids from sandbox when possible)  
 - [ ] High-value failures have become stress scenarios or explicit “wontfix yet” notes  
-- [ ] Stage 6 has at least one real (or clearly labeled pilot) input path  
-- [ ] Stage 7 updates personas, hypotheses, scores, and the next stage 1 question  
-- [ ] Founder can answer “Where are we?” in under two minutes from state (phase + loop stage + posture + gate)  
+- [ ] Ground or Try has at least one real (or clearly labeled pilot) input path  
+- [ ] Write back updates personas, hypotheses, scores, and the next Ask question  
+- [ ] Founder can answer “Where are we?” in under two minutes from state (journey rung + loop week + posture + gate)  
 - [ ] If claiming “growth,” proof markers and a growth-round note exist — or explicit hold-scale ([growth pack](operating-system.md#after-proof-the-growth-pack))  
 - [ ] Autonomy posture is written down (default Strict); standing deny list known  
 - [ ] Weekly control-plane snapshot happened recently  

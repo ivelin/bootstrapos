@@ -3,7 +3,7 @@
  * Used by the Vercel function entry and the optional local HTTP helper.
  * Does not listen on 127.0.0.1. Does not host founder company-state.
  *
- * Journey tools (get/put/comment + board notify) are gated on this branch.
+ * Journey tools (get/put/comment + board notify + enable_board_watch) are gated on this branch.
  * Public OS tools stay listed after auth on the invite-only collab host. Pin: oauth.ts / HOSTED_IDENTITY.md.
  */
 import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js";
@@ -64,6 +64,21 @@ function gatedToolNameFromRpc(body: unknown): string | undefined {
 function isHandshakeRpc(body: unknown): boolean {
   const method = rpcMethodOf(body);
   return method === "initialize" || method === "tools/list";
+}
+
+/** Hint only. Never ACL. Wrong name must not change tools or companies. */
+function clientHintFromInitialize(req: Request, body: unknown): {
+  clientName?: string;
+  userAgent?: string;
+} {
+  const userAgent = req.headers.get("user-agent") ?? undefined;
+  let clientName: string | undefined;
+  if (rpcMethodOf(body) === "initialize" && body && typeof body === "object") {
+    const name = (body as { params?: { clientInfo?: { name?: unknown } } }).params
+      ?.clientInfo?.name;
+    if (typeof name === "string") clientName = name;
+  }
+  return { clientName, userAgent };
 }
 
 export function unauthorizedGatedToolResponse(
@@ -199,13 +214,13 @@ export async function handleHostedReadFetch(req: Request): Promise<Response> {
   const hasBearer = Boolean(parseBearerToken(req.headers.get("authorization")));
   const handshakeAuth = requiresHandshakeAuth(req);
   let actor: JourneyActor | undefined;
+  let rpcBody: unknown = null;
 
   if (handshakeAuth && !hasBearer && req.method === "GET") {
     return unauthorizedGatedToolResponse(whoami, req);
   }
 
   if (req.method === "POST") {
-    let rpcBody: unknown = null;
     try {
       rpcBody = await req.clone().json();
     } catch {
@@ -242,6 +257,7 @@ export async function handleHostedReadFetch(req: Request): Promise<Response> {
     inviteActor: inviteClaims ?? (whoami.email ? { email: whoami.email } : undefined),
     accessToken,
     sessionKey: hostedSessionKey(req, accessToken),
+    clientHint: clientHintFromInitialize(req, rpcBody),
   });
   const transport = new WebStandardStreamableHTTPServerTransport({
     sessionIdGenerator: undefined,

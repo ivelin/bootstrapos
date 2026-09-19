@@ -18,23 +18,33 @@ Optional path 3 (local MCP, several ideas): the same `company-state.json` + `whe
 
 ## Journey phase (bootstrap) — where we are
 
-| OS # | Simple name | Our status (honest) |
-|------|-------------|---------------------|
-| 1 | Form thesis + list possible customer groups | |
-| 2 | Define success per group | |
-| 3 | Synthetic research and first validation | |
-| 4 | Real-world research + monetization stress | |
-| 5 | Design the simplest system that can test the winner | |
-| 6 | Build a tiny slice and test it hard | |
-| 7 | Try it with real or realistic users | |
-| 8 | Learn from what happens and improve | |
-| 9 | Grow only after it clearly works | Deferred until proof |
+| Spoken | Simple name | Our status (honest) |
+|--------|-------------|---------------------|
+| 1 | Write the bet | |
+| 2 | Filter cheaply | |
+| 3 | Ground it | |
+| 4 | Build tiny slice | |
+| 5 | Try with real people | |
 
-**Current journey phase:** N / 9 — [name]  
-**Current live loop stage:** M / 7 — [name]  
+Grow is an after-proof pack after Try, not a sixth rung. Stored integers 1–9 still map (1 or 2 → Write the bet; 8 or 9 stay at Try until founder Advance).
+
+**Current journey:** [Write the bet / Filter cheaply / Ground it / Build tiny slice / Try with real people]  
+**Current loop week:** [Ask / Do / Write back]  
 **Gate:** OPEN | WAITING | BLOCKED  
 **Autonomy posture:** Strict (default) | Auto | Dangerous  
 **Ready for human eyes:** unknown | blocked | green
+
+Fifteen cells (labels first). Home: [operating-system — Fifteen cells](https://github.com/ivelin/bootstrap/blob/main/company-os/operating-system.md#fifteen-cells-journey-rung--loop-week). Do takes the station’s shape. Make / Check / Hear are not loop weeks.
+
+| Journey | Ask | Do | Write back |
+|---------|-----|-----|------------|
+| Write the bet | Three groups, what “works” means, kill line before ranking. | One-page thesis. Not a landing page. Not interviews. Not a bot. | Save as stated. Next is Filter, or stay if mush. |
+| Filter cheaply | Same forced choice; cheap signal that demotes a group; sims stay synthetic. | Comps, listings, sims. Rank. Still hold. Do not call a friend yet. | Rank as synthetic. Do not Advance. |
+| Ground it | Who talks this week; what behavior counts (time, intro, money-shaped), not “cool idea.” | Real talks or waitlist with friction. Not a product. Not a sim labeled heard. | Observed vs still synthetic. Founder gates Ground-done. |
+| Build tiny slice | What can fail in the lab; Ready-for-human-eyes line. | Design + build the smallest slice. Run tests. | Bugs and what ran. Cannot Advance to Try. |
+| Try with real people | What use would count; who, this week, in their life not ours. | Put the slice in their hands. Watch what they did. | Observed use or no use. Only here can that support a Grow pack. |
+
+End-to-end path: Write the bet Ask → Do → Write back → Filter Ask → Do → Write back → Ground Ask → Do → Write back → Build Ask → Do → Write back (a Build-stage kill can stop here) → Try Ask → Do → Write back. Grow pack stays closed unless observed use exists.
 
 ---
 
@@ -68,7 +78,7 @@ Optional path 3 (local MCP, several ideas): the same `company-state.json` + `whe
 | Evidence beats narrative | | |
 | Build evaluation-first | | |
 | Ready for human eyes before external product asks | | |
-| Learning rituals (weekly snapshot, stage 7) | | |
+| Learning rituals (weekly snapshot, Write back) | | |
 
 ---
 

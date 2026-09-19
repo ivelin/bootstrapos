@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { resolveStatePath, resolveTracesDir } from "./paths.js";
-import { JOURNEY_PHASES, LOOP_STAGES } from "./constants.js";
+import { formatSpokenJourney, formatSpokenLoop } from "./constants.js";
 
 export type AutonomyPosture = "strict" | "auto" | "dangerous";
 export type ReadyStatus = "unknown" | "blocked" | "green";
@@ -100,8 +100,8 @@ export function patchState(
 export function whereAreWePlain(state: CompanyState): string {
   const phase = state.journeyPhase;
   const stage = state.loopStage;
-  const phaseLabel = JOURNEY_PHASES[phase] ?? `phase ${phase}`;
-  const stageLabel = LOOP_STAGES[stage] ?? `stage ${stage}`;
+  const phaseLabel = formatSpokenJourney(phase);
+  const stageLabel = formatSpokenLoop(stage);
   const eyes = state.readyForHumanEyes?.status ?? "unknown";
   const posture = state.autonomyPosture ?? "strict";
   const weekly = state.lastWeeklySnapshotAt
@@ -120,8 +120,8 @@ export function whereAreWePlain(state: CompanyState): string {
     `Company: ${state.companyId}`,
     `Hypothesis: ${state.hypothesis}`,
     "",
-    `Journey: step ${phase} of 9 — ${phaseLabel}`,
-    `Live loop: stage ${stage} of 7 — ${stageLabel}`,
+    `Journey: ${phaseLabel}`,
+    `Live loop: ${stageLabel}`,
     `AI freedom (autonomy): ${posture} (Strict = pause on strategy/spend/live sends; Auto = more routine autonomy; Dangerous = high risk)`,
     `Gate status: ${state.gateStatus}`,
     `Ready for human eyes: ${eyes} (green only means cold happy path works — not demand or PMF)`,

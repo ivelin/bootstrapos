@@ -3,7 +3,16 @@
  * Clocks are enums. Scoreboard is versioned jsonb. Views are generated, not stored.
  * Research/traces stay local — do not lift ~/.bootstrap-os.
  */
-import { JOURNEY_PHASES, LOOP_STAGES } from "./constants.js";
+import {
+  JOURNEY_PHASES,
+  JOURNEY_SPOKEN,
+  LOOP_SPOKEN,
+  LOOP_STAGES,
+  formatSpokenJourney,
+  formatSpokenLoop,
+  spokenJourneyOf,
+  spokenLoopOf,
+} from "./constants.js";
 import type { JourneyAclRole, JourneyActor } from "./journey-auth.js";
 import {
   enqueueBoardNotify,
@@ -45,7 +54,315 @@ export type Scoreboard = {
   /** Observed talks, not preference. Used to judge a landing-page side quest. */
   customerConversations?: number;
   talkedToCustomers?: boolean;
+  /** All-gate short enrichment. Not a novel. */
+  gateEnrichment?: GateEnrichment;
+  /** Kill postmortem. Required on kill. Never invent on read. */
+  killPostmortem?: KillPostmortem;
+  /** Founder/advisor weekly labels. Never invent on read. Never auto-promote. */
+  portfolioScore?: PortfolioScore;
 };
+
+/** Weekly Impact / Evidence / Leverage labels. Integers 1–5. OS never auto-promotes. */
+export type PortfolioScore = {
+  impact: number;
+  evidence: number;
+  leverage: number;
+  /** Required on write (≤280). Never invent on read. */
+  why?: string;
+  scoredAt?: string;
+  scoredBy?: string;
+};
+
+/** Short all-gate enrichment. why lives on the gate event. */
+export type GateEnrichment = {
+  whatChanged: string;
+  whatWereNotDoing: string;
+  evidenceLinks?: string[];
+};
+
+/** Kill REQUIRES this. Silent kill is rejected. */
+export type KillPostmortem = {
+  why: string;
+  lessonsLearned: string;
+  actionableInsights: string;
+  evidenceLinks?: string[];
+};
+
+export const GATE_ENRICHMENT_TEXT_MAX = 280;
+export const EVIDENCE_LINKS_MAX = 8;
+export const PORTFOLIO_SCORE_MIN = 1;
+export const PORTFOLIO_SCORE_MAX = 5;
+export const PORTFOLIO_RANK_FORMULA = "impact + evidence + leverage";
+export const PORTFOLIO_SCORE_OUT_OF_RANGE =
+  "impact, evidence, and leverage must be integers 1–5";
+export const PORTFOLIO_SKIP_NEED_TWO_LIVE =
+  "portfolio scoring applies when two or more live (non-kill) ideas are on the board";
+export const PORTFOLIO_KILLED_OUT =
+  "killed ideas are out of the live portfolio";
+export const PORTFOLIO_WHY_MAX = 280;
+export const PORTFOLIO_WHY_REQUIRED = "why required";
+export const PORTFOLIO_WHY_TOO_LONG = `why is short text (${PORTFOLIO_WHY_MAX})`;
+
+/** Scores are labels. They cannot Advance, Iterate, Hold, or Kill. */
+export function portfolioScoreMayPromote(): false {
+  return false;
+}
+
+export function isPortfolioAxis(n: unknown): n is number {
+  return typeof n === "number" && Number.isInteger(n) && n >= PORTFOLIO_SCORE_MIN && n <= PORTFOLIO_SCORE_MAX;
+}
+
+export function normalizePortfolioWhy(
+  raw: unknown,
+): { ok: true; value: string } | { ok: false; error: string } {
+  if (typeof raw !== "string" || !raw.trim()) {
+    return { ok: false, error: PORTFOLIO_WHY_REQUIRED };
+  }
+  const trimmed = raw.trim();
+  if (trimmed.length > PORTFOLIO_WHY_MAX) {
+    return { ok: false, error: PORTFOLIO_WHY_TOO_LONG };
+  }
+  return { ok: true, value: trimmed };
+}
+
+export function normalizePortfolioScore(
+  raw: unknown,
+  meta?: { scoredAt?: string; scoredBy?: string; why?: string; requireWhy?: boolean },
+): { ok: true; value: PortfolioScore } | { ok: false; error: string } {
+  const src =
+    raw && typeof raw === "object" && !Array.isArray(raw)
+      ? ((raw as { portfolioScore?: unknown }).portfolioScore &&
+        typeof (raw as { portfolioScore?: unknown }).portfolioScore === "object"
+          ? ((raw as { portfolioScore: Record<string, unknown> }).portfolioScore)
+          : (raw as Record<string, unknown>))
+      : {};
+  if (!isPortfolioAxis(src.impact) || !isPortfolioAxis(src.evidence) || !isPortfolioAxis(src.leverage)) {
+    return { ok: false, error: PORTFOLIO_SCORE_OUT_OF_RANGE };
+  }
+  const requireWhy = meta?.requireWhy !== false;
+  const whyRaw = meta?.why ?? src.why;
+  let why = "";
+  if (requireWhy) {
+    const whyNorm = normalizePortfolioWhy(whyRaw);
+    if (!whyNorm.ok) return whyNorm;
+    why = whyNorm.value;
+  } else if (typeof whyRaw === "string" && whyRaw.trim()) {
+    why = whyRaw.trim().slice(0, PORTFOLIO_WHY_MAX);
+  }
+  const scoredAtRaw = meta?.scoredAt ?? src.scoredAt;
+  const scoredByRaw = meta?.scoredBy ?? src.scoredBy;
+  const scoredAt =
+    typeof scoredAtRaw === "string" && scoredAtRaw.trim() ? scoredAtRaw.trim() : undefined;
+  const scoredBy =
+    typeof scoredByRaw === "string" && scoredByRaw.trim() ? scoredByRaw.trim() : undefined;
+  return {
+    ok: true,
+    value: {
+      impact: src.impact,
+      evidence: src.evidence,
+      leverage: src.leverage,
+      ...(why ? { why } : {}),
+      ...(scoredAt ? { scoredAt } : {}),
+      ...(scoredBy ? { scoredBy } : {}),
+    },
+  };
+}
+
+/** Never invent a score on read. Missing or invalid axes → undefined. Do not invent why. */
+export function portfolioScoreOf(idea: IdeaRow): PortfolioScore | undefined {
+  if (idea.scoreboard.portfolioScore == null) return undefined;
+  const hit = normalizePortfolioScore(idea.scoreboard.portfolioScore, { requireWhy: false });
+  return hit.ok ? hit.value : undefined;
+}
+
+export function portfolioTotal(score: PortfolioScore): number {
+  return score.impact + score.evidence + score.leverage;
+}
+
+export function isLiveIdea(idea: Pick<IdeaRow, "currentGate">): boolean {
+  return idea.currentGate !== "kill";
+}
+
+export type PortfolioRankRow = {
+  slug: string;
+  name: string;
+  impact: number;
+  evidence: number;
+  leverage: number;
+  total: number;
+  why?: string;
+  scoredAt?: string;
+  scoredBy?: string;
+};
+
+export type PortfolioView = {
+  applies: boolean;
+  reason?: string;
+  formula: typeof PORTFOLIO_RANK_FORMULA;
+  ranked: PortfolioRankRow[];
+  unscored: Array<{ slug: string; name: string }>;
+};
+
+/** Live ideas only. Rank = impact + evidence + leverage. Never invent missing scores. */
+export function portfolioViewOf(ideas: IdeaRow[]): PortfolioView {
+  const live = ideas.filter(isLiveIdea);
+  if (live.length < 2) {
+    return {
+      applies: false,
+      reason: PORTFOLIO_SKIP_NEED_TWO_LIVE,
+      formula: PORTFOLIO_RANK_FORMULA,
+      ranked: [],
+      unscored: [],
+    };
+  }
+  const ranked: PortfolioRankRow[] = [];
+  const unscored: Array<{ slug: string; name: string }> = [];
+  for (const idea of live) {
+    const score = portfolioScoreOf(idea);
+    if (!score) {
+      unscored.push({ slug: idea.slug, name: idea.name });
+      continue;
+    }
+    ranked.push({
+      slug: idea.slug,
+      name: idea.name,
+      impact: score.impact,
+      evidence: score.evidence,
+      leverage: score.leverage,
+      total: portfolioTotal(score),
+      ...(score.why ? { why: score.why } : {}),
+      ...(score.scoredAt ? { scoredAt: score.scoredAt } : {}),
+      ...(score.scoredBy ? { scoredBy: score.scoredBy } : {}),
+    });
+  }
+  ranked.sort((a, b) => b.total - a.total || a.slug.localeCompare(b.slug));
+  unscored.sort((a, b) => a.slug.localeCompare(b.slug));
+  return {
+    applies: true,
+    formula: PORTFOLIO_RANK_FORMULA,
+    ranked,
+    unscored,
+  };
+}
+
+export type BoardClocksSnapshot = {
+  journeyPhase: number;
+  loopStage: number;
+  currentGate: GateDecision;
+  journeySpoken: string;
+  loopSpoken: string;
+};
+
+export type BoardSnapshot = {
+  clocks: BoardClocksSnapshot;
+  scoreboard: Scoreboard;
+};
+
+/** Stored integers plus spoken 2.8.15 labels. Comments reuse this so clocksUnchanged matches idea.clocks. */
+export function clocksOf(
+  idea: Pick<IdeaRow, "journeyPhase" | "loopStage" | "currentGate">,
+): BoardClocksSnapshot {
+  return {
+    journeyPhase: idea.journeyPhase,
+    loopStage: idea.loopStage,
+    currentGate: idea.currentGate,
+    journeySpoken: JOURNEY_PHASES[idea.journeyPhase] ?? spokenJourneyOf(idea.journeyPhase).label,
+    loopSpoken: LOOP_STAGES[idea.loopStage] ?? spokenLoopOf(idea.loopStage).label,
+  };
+}
+
+export function ideaBoardSnapshot(idea: IdeaRow): BoardSnapshot {
+  return {
+    clocks: clocksOf(idea),
+    scoreboard: { ...idea.scoreboard },
+  };
+}
+
+function normalizeEvidenceLinks(raw: unknown): string[] | undefined {
+  if (!Array.isArray(raw)) return undefined;
+  const links = raw
+    .filter((item): item is string => typeof item === "string" && item.trim().length > 0)
+    .map((item) => item.trim().slice(0, 2048))
+    .slice(0, EVIDENCE_LINKS_MAX);
+  return links.length ? links : undefined;
+}
+
+function shortRequired(value: unknown, field: string): { ok: true; value: string } | { ok: false; error: string } {
+  if (typeof value !== "string" || !value.trim()) {
+    return { ok: false, error: `${field} required` };
+  }
+  return { ok: true, value: value.trim().slice(0, GATE_ENRICHMENT_TEXT_MAX) };
+}
+
+export function normalizeGateEnrichment(
+  raw: unknown,
+): { ok: true; value: GateEnrichment } | { ok: false; error: string } {
+  const src =
+    raw && typeof raw === "object" && !Array.isArray(raw)
+      ? ((raw as { gateEnrichment?: unknown }).gateEnrichment &&
+        typeof (raw as { gateEnrichment?: unknown }).gateEnrichment === "object"
+          ? ((raw as { gateEnrichment: Record<string, unknown> }).gateEnrichment)
+          : (raw as Record<string, unknown>))
+      : {};
+  const changed = shortRequired(src.whatChanged, "whatChanged");
+  if (!changed.ok) return { ok: false, error: "gate requires whatChanged and whatWereNotDoing" };
+  const notDoing = shortRequired(src.whatWereNotDoing, "whatWereNotDoing");
+  if (!notDoing.ok) return { ok: false, error: "gate requires whatChanged and whatWereNotDoing" };
+  const evidenceLinks = normalizeEvidenceLinks(src.evidenceLinks);
+  return {
+    ok: true,
+    value: {
+      whatChanged: changed.value,
+      whatWereNotDoing: notDoing.value,
+      ...(evidenceLinks ? { evidenceLinks } : {}),
+    },
+  };
+}
+
+export function normalizeKillPostmortem(
+  raw: unknown,
+  why: string,
+): { ok: true; value: KillPostmortem } | { ok: false; error: string } {
+  const src =
+    raw && typeof raw === "object" && !Array.isArray(raw)
+      ? ((raw as { killPostmortem?: unknown }).killPostmortem &&
+        typeof (raw as { killPostmortem?: unknown }).killPostmortem === "object"
+          ? ((raw as { killPostmortem: Record<string, unknown> }).killPostmortem)
+          : (raw as Record<string, unknown>))
+      : {};
+  const whyNorm = shortRequired(src.why ?? why, "why");
+  const learned = shortRequired(src.lessonsLearned, "lessonsLearned");
+  const insights = shortRequired(src.actionableInsights, "actionableInsights");
+  if (!whyNorm.ok || !learned.ok || !insights.ok) {
+    return { ok: false, error: "kill requires lessonsLearned and actionableInsights" };
+  }
+  const evidenceLinks = normalizeEvidenceLinks(
+    src.evidenceLinks ??
+      (raw && typeof raw === "object"
+        ? (raw as { gateEnrichment?: { evidenceLinks?: unknown } }).gateEnrichment?.evidenceLinks
+        : undefined),
+  );
+  return {
+    ok: true,
+    value: {
+      why: whyNorm.value,
+      lessonsLearned: learned.value,
+      actionableInsights: insights.value,
+      ...(evidenceLinks ? { evidenceLinks } : {}),
+    },
+  };
+}
+
+export function killPostmortemOf(idea: IdeaRow): KillPostmortem | undefined {
+  const hit = normalizeKillPostmortem(idea.scoreboard.killPostmortem ?? idea.scoreboard, "");
+  return hit.ok ? hit.value : undefined;
+}
+
+export function killedCardOf(idea: IdeaRow): string | undefined {
+  if (idea.currentGate !== "kill") return undefined;
+  const postmortem = killPostmortemOf(idea);
+  return postmortem ? `☠ Killed — ${postmortem.lessonsLearned}` : "☠ Killed";
+}
 
 export type CompanyRow = {
   id: string;
@@ -346,18 +663,20 @@ export function auditEventsMayBeUpdated(): boolean {
 }
 
 export function visualFlowMermaid(idea: IdeaRow, events: GateEventRow[]): string {
-  const phaseNodes = Array.from({ length: 9 }, (_, i) => {
+  const journey = spokenJourneyOf(idea.journeyPhase);
+  const loop = spokenLoopOf(idea.loopStage);
+  const phaseNodes = Array.from({ length: 5 }, (_, i) => {
     const n = i + 1;
-    const mark = n === idea.journeyPhase ? ":::current" : "";
-    return `    p${n}["${n} ${JOURNEY_PHASES[n]}"]${mark}`;
+    const mark = n === journey.rung ? ":::current" : "";
+    return `    p${n}["${JOURNEY_SPOKEN[n]}"]${mark}`;
   }).join("\n");
-  const phaseEdges = Array.from({ length: 8 }, (_, i) => `    p${i + 1} --> p${i + 2}`).join("\n");
-  const loopNodes = Array.from({ length: 7 }, (_, i) => {
+  const phaseEdges = Array.from({ length: 4 }, (_, i) => `    p${i + 1} --> p${i + 2}`).join("\n");
+  const loopNodes = Array.from({ length: 3 }, (_, i) => {
     const n = i + 1;
-    const mark = n === idea.loopStage ? ":::current" : "";
-    return `    l${n}["${n} ${LOOP_STAGES[n]}"]${mark}`;
+    const mark = n === loop.week ? ":::current" : "";
+    return `    l${n}["${LOOP_SPOKEN[n]}"]${mark}`;
   }).join("\n");
-  const loopEdges = Array.from({ length: 6 }, (_, i) => `    l${i + 1} --> l${i + 2}`).join("\n");
+  const loopEdges = Array.from({ length: 2 }, (_, i) => `    l${i + 1} --> l${i + 2}`).join("\n");
   const last = events
     .slice()
     .sort((a, b) => a.at.localeCompare(b.at))
@@ -368,18 +687,18 @@ export function visualFlowMermaid(idea: IdeaRow, events: GateEventRow[]): string
     "```mermaid",
     "flowchart TB",
     "  classDef current fill:#111,color:#fff,stroke:#111;",
-    "  subgraph journey [Journey 1-9]",
+    "  subgraph journey [Journey]",
     phaseNodes,
     phaseEdges,
     "  end",
-    "  subgraph loop [Loop 1-7]",
+    "  subgraph loop [Loop]",
     loopNodes,
     loopEdges,
     "  end",
     `  gate["Gate: ${idea.currentGate}"]:::current`,
     `  help["Constraint this week: ${escapeMermaid(constraintThisWeekOf(idea) || "none yet")}"]`,
-    "  p" + idea.journeyPhase + " --> gate",
-    "  l" + idea.loopStage + " --> gate",
+    "  p" + journey.rung + " --> gate",
+    "  l" + loop.week + " --> gate",
     "  gate --> help",
     last ? "  subgraph last [Last transitions]\n" + last + "\n  end" : "",
     "```",
@@ -413,9 +732,10 @@ export function twoMinuteSnapshot(
     CONSTRAINT_TEACHING_PICTURE,
     "Not a fun side quest. Preference / “this is interesting” cannot name it.",
     challenge,
-    `Journey: ${idea.journeyPhase} ${JOURNEY_PHASES[idea.journeyPhase]} of 9`,
-    `Loop: ${idea.loopStage} ${LOOP_STAGES[idea.loopStage]} of 7`,
+    `Journey: ${formatSpokenJourney(idea.journeyPhase)}`,
+    `Loop: ${formatSpokenLoop(idea.loopStage)}`,
     `Gate: ${idea.currentGate}`,
+    idea.currentGate === "kill" ? killedCardOf(idea) : undefined,
     last
       ? `Last transition: ${last.action} by ${last.who} at ${last.at} — ${last.why}`
       : "Last transition: none yet",
@@ -437,7 +757,7 @@ export function meetingDocView(
   const progress =
     idea.scoreboard.progress?.length
       ? idea.scoreboard.progress.map((x) => `- ${x}`).join("\n")
-      : `- Clocks at journey ${idea.journeyPhase} / loop ${idea.loopStage}, gate ${idea.currentGate}.`;
+      : `- Clocks at ${formatSpokenJourney(idea.journeyPhase)} / ${formatSpokenLoop(idea.loopStage)}, gate ${idea.currentGate}.`;
   const challenges =
     idea.scoreboard.challenges?.length
       ? idea.scoreboard.challenges.map((x) => `- ${x}`).join("\n")
@@ -494,15 +814,18 @@ export function meetingDocView(
 export type JourneyIdeaPayload = {
   slug: string;
   name: string;
-  clocks: {
-    journeyPhase: number;
-    loopStage: number;
-    currentGate: GateDecision;
-  };
+  clocks: BoardClocksSnapshot;
   /** Fluid. Honest biggest bottleneck. Not a clock. Not tickets. */
   constraintThisWeek: string;
   constraintChallenge?: string;
   scoreboard: Scoreboard;
+  /** Stored weekly labels only. Never invented on read. */
+  portfolioScore?: PortfolioScore;
+  gateEnrichment?: GateEnrichment;
+  killed?: boolean;
+  killPostmortem?: KillPostmortem;
+  killedCard?: string;
+  killedDecision?: { who: string; at: string; why: string };
   lastTransitions: GateEventRow[];
   visualFlow: string;
   snapshot: string;
@@ -529,11 +852,7 @@ export function ideaPayload(
   const payload: JourneyIdeaPayload = {
     slug: idea.slug,
     name: idea.name,
-    clocks: {
-      journeyPhase: idea.journeyPhase,
-      loopStage: idea.loopStage,
-      currentGate: idea.currentGate,
-    },
+    clocks: clocksOf(idea),
     constraintThisWeek: constraintThisWeekOf(idea),
     constraintChallenge: constraintChallengeOf(idea),
     scoreboard: idea.scoreboard,
@@ -541,6 +860,23 @@ export function ideaPayload(
     visualFlow: visualFlowMermaid(idea, lastTransitions),
     snapshot: twoMinuteSnapshot(company, idea, lastTransitions, owners),
   };
+  const storedScore = portfolioScoreOf(idea);
+  if (storedScore) {
+    payload.portfolioScore = storedScore;
+  }
+  if (idea.scoreboard.gateEnrichment) {
+    payload.gateEnrichment = idea.scoreboard.gateEnrichment;
+  }
+  if (idea.currentGate === "kill") {
+    payload.killed = true;
+    const postmortem = killPostmortemOf(idea);
+    if (postmortem) payload.killPostmortem = postmortem;
+    payload.killedCard = killedCardOf(idea);
+    const lastKill = lastTransitions.filter((e) => e.action === "kill").at(-1);
+    if (lastKill) {
+      payload.killedDecision = { who: lastKill.who, at: lastKill.at, why: lastKill.why };
+    }
+  }
   if (expandMeetingDoc) {
     payload.meetingDoc = meetingDocView(company, idea, lastTransitions, ideaComments, owners);
     payload.comments = ideaComments;
@@ -580,7 +916,31 @@ export type JourneyStore = {
       founderYes: boolean;
       founderWrittenDecision?: string;
       client?: string;
+      gateEnrichment?: GateEnrichment;
+      killPostmortem?: Omit<KillPostmortem, "why"> & { why?: string };
+      portfolioScore?: PortfolioScore;
     },
+  ): Promise<unknown>;
+  putPortfolioScore(
+    actor: JourneyActor,
+    input: {
+      companySlug: string;
+      ideaSlug?: string;
+      impact: number;
+      evidence: number;
+      leverage: number;
+      why: string;
+      founderYes: boolean;
+      client?: string;
+    },
+  ): Promise<unknown>;
+  listProvenance(
+    actor: JourneyActor,
+    query: { companySlug: string; ideaSlug?: string; from?: string; to?: string },
+  ): Promise<unknown>;
+  listKilledIdeas(
+    actor: JourneyActor,
+    query: { companySlug: string },
   ): Promise<unknown>;
   postComment(
     actor: JourneyActor,
@@ -745,12 +1105,14 @@ export class MemoryJourneyStore implements JourneyStore {
       return notFound("idea not visible");
     }
     const owners = ownersFromAcl(this.acl, company.id);
+    const allIdeas = this.ideasFor(company.id);
     return {
       ok: true,
       company: { slug: company.slug, label: company.label },
       owners,
       acl: companyAclView(this.acl, company.id),
       digest: JOURNEY_DIGEST_CONTRACT,
+      portfolio: portfolioViewOf(allIdeas),
       ideas: ideas.map((idea) =>
         ideaPayload(
           company,
@@ -762,7 +1124,7 @@ export class MemoryJourneyStore implements JourneyStore {
         ),
       ),
       audit: this.auditFor(company.id, query.ideaSlug ? ideas[0]?.id : undefined),
-      note: `Same payload for team / advisor / board / investor prep. Views are generated. Owner comes from ACL — do not invent. Prefer webhook notify over polling. Comments never mutate gates or Advance. constraint_this_week is the honest biggest bottleneck, not a fun side quest. ${CONSTRAINT_TEACHING_PICTURE} Audit is append-only. Not ~/.bootstrap-os.`,
+      note: `Same payload for team / advisor / board / investor prep. Views are generated. Owner comes from ACL — do not invent. Prefer webhook notify over polling. Comments never mutate gates or Advance. constraint_this_week is the honest biggest bottleneck, not a fun side quest. ${CONSTRAINT_TEACHING_PICTURE} Audit is append-only. Portfolio scores are founder/advisor labels — they cannot Advance or Kill. Not ~/.bootstrap-os.`,
     };
   }
 
@@ -811,9 +1173,12 @@ export class MemoryJourneyStore implements JourneyStore {
       who: actor.principal,
       client: input.client?.trim() || "create_idea",
       whatChanged: {
+        op: "create_idea",
         via: "create_idea",
         idea: slug,
         why: input.why?.trim() || "new 0-1 board",
+        before: null,
+        after: ideaBoardSnapshot(idea),
       },
     });
     return this.getJourney(actor, { companySlug: company.slug, ideaSlug: slug });
@@ -833,6 +1198,9 @@ export class MemoryJourneyStore implements JourneyStore {
       founderYes: boolean;
       founderWrittenDecision?: string;
       client?: string;
+      gateEnrichment?: GateEnrichment;
+      killPostmortem?: Omit<KillPostmortem, "why"> & { why?: string };
+      portfolioScore?: PortfolioScore;
     },
   ): Promise<unknown> {
     if (!actor.authenticated || !actor.principal) {
@@ -840,6 +1208,9 @@ export class MemoryJourneyStore implements JourneyStore {
     }
     if (!input.founderYes) {
       return forbidden("founder yes required in the agent chat — not a form, not mail");
+    }
+    if (!input.why.trim()) {
+      return forbidden("why required");
     }
     const company = this.companyBySlug(input.companySlug);
     if (!company || !canWriteJourney(this.acl, actor, company.id)) {
@@ -850,17 +1221,22 @@ export class MemoryJourneyStore implements JourneyStore {
       return notFound(IDEA_NOT_FOUND_WRITE);
     }
     const idea = ideas[0];
+    const before = ideaBoardSnapshot(idea);
     let nextScoreboard: Scoreboard = { ...idea.scoreboard };
     if (input.scoreboard) {
       const fromBoard = normalizeConstraintThisWeek(input.scoreboard.constraint_this_week);
       if (!fromBoard.ok) {
         return forbidden(fromBoard.error);
       }
+      const incoming = stripInventedOwnerFields(input.scoreboard);
       nextScoreboard = {
-        ...stripInventedOwnerFields(input.scoreboard),
+        ...incoming,
         schema_version: input.scoreboard.schema_version ?? SCOREBOARD_SCHEMA_VERSION,
         constraint_this_week: fromBoard.value,
       };
+      if (!("portfolioScore" in incoming) && idea.scoreboard.portfolioScore) {
+        nextScoreboard.portfolioScore = idea.scoreboard.portfolioScore;
+      }
     }
     if (input.constraintThisWeek !== undefined) {
       const normalized = normalizeConstraintThisWeek(input.constraintThisWeek);
@@ -885,6 +1261,60 @@ export class MemoryJourneyStore implements JourneyStore {
     if (!constraintGate.ok) {
       return forbidden(constraintGate.error);
     }
+    const clocksChanged =
+      input.journeyPhase !== undefined ||
+      input.loopStage !== undefined ||
+      input.currentGate !== undefined;
+    if (clocksChanged) {
+      const gateRaw = input.gateEnrichment ?? nextScoreboard.gateEnrichment ?? nextScoreboard;
+      const gateEnr = normalizeGateEnrichment(gateRaw);
+      if (!gateEnr.ok) return forbidden(gateEnr.error);
+      nextScoreboard = { ...nextScoreboard, gateEnrichment: gateEnr.value };
+    }
+    if (input.currentGate === "kill") {
+      const killRaw = {
+        ...(nextScoreboard.killPostmortem ?? {}),
+        ...(input.killPostmortem ?? {}),
+        gateEnrichment: nextScoreboard.gateEnrichment,
+      };
+      const killPm = normalizeKillPostmortem(killRaw, input.why);
+      if (!killPm.ok) return forbidden(killPm.error);
+      nextScoreboard = { ...nextScoreboard, killPostmortem: killPm.value };
+    }
+    const incomingScore = input.portfolioScore ?? input.scoreboard?.portfolioScore;
+    let portfolioSkip: string | undefined;
+    if (incomingScore !== undefined) {
+      const scored = normalizePortfolioScore(incomingScore);
+      if (!scored.ok) {
+        return forbidden(scored.error);
+      }
+      const proposedGate = input.currentGate ?? idea.currentGate;
+      const liveCount = this.ideasFor(company.id).filter((row) => {
+        if (row.id === idea.id) return proposedGate !== "kill";
+        return isLiveIdea(row);
+      }).length;
+      if (proposedGate === "kill") {
+        if (idea.scoreboard.portfolioScore) {
+          nextScoreboard.portfolioScore = idea.scoreboard.portfolioScore;
+        } else {
+          delete nextScoreboard.portfolioScore;
+        }
+        portfolioSkip = PORTFOLIO_KILLED_OUT;
+      } else if (liveCount < 2) {
+        if (idea.scoreboard.portfolioScore) {
+          nextScoreboard.portfolioScore = idea.scoreboard.portfolioScore;
+        } else {
+          delete nextScoreboard.portfolioScore;
+        }
+        portfolioSkip = PORTFOLIO_SKIP_NEED_TWO_LIVE;
+      } else {
+        nextScoreboard.portfolioScore = {
+          ...scored.value,
+          scoredAt: new Date().toISOString(),
+          scoredBy: actor.principal,
+        };
+      }
+    }
     if (input.journeyPhase !== undefined) {
       if (!isJourneyPhase(input.journeyPhase)) {
         return forbidden("journey_phase is a strict enum 1-9");
@@ -903,13 +1333,16 @@ export class MemoryJourneyStore implements JourneyStore {
       }
       idea.currentGate = input.currentGate;
     }
-    if (input.scoreboard || input.constraintThisWeek !== undefined) {
+    if (
+      input.scoreboard ||
+      input.constraintThisWeek !== undefined ||
+      input.gateEnrichment ||
+      input.killPostmortem ||
+      incomingScore !== undefined ||
+      clocksChanged
+    ) {
       idea.scoreboard = nextScoreboard;
     }
-    const clocksChanged =
-      input.journeyPhase !== undefined ||
-      input.loopStage !== undefined ||
-      input.currentGate !== undefined;
     if (clocksChanged) {
       this.events.push({
         id: this.nextId("ge"),
@@ -926,13 +1359,22 @@ export class MemoryJourneyStore implements JourneyStore {
       who: actor.principal,
       client: input.client?.trim() || "put_journey",
       whatChanged: {
+        op: "put_journey",
         via: "put_journey",
         journeyPhase: idea.journeyPhase,
         loopStage: idea.loopStage,
         currentGate: idea.currentGate,
         constraint_this_week: constraintThisWeekOf(idea),
         why: input.why,
+        gate: idea.currentGate,
+        whatChanged: idea.scoreboard.gateEnrichment?.whatChanged,
+        whatWereNotDoing: idea.scoreboard.gateEnrichment?.whatWereNotDoing,
+        evidenceLinks: idea.scoreboard.gateEnrichment?.evidenceLinks,
+        lessonsLearned: idea.scoreboard.killPostmortem?.lessonsLearned,
+        actionableInsights: idea.scoreboard.killPostmortem?.actionableInsights,
         founderWrittenDecision: input.founderWrittenDecision?.trim() || undefined,
+        before,
+        after: ideaBoardSnapshot(idea),
       },
     });
     const notify = this.fireBoardNotify({
@@ -954,8 +1396,107 @@ export class MemoryJourneyStore implements JourneyStore {
         false,
         ownersFromAcl(this.acl, company.id),
       ),
+      portfolio: portfolioViewOf(this.ideasFor(company.id)),
+      ...(portfolioSkip ? { portfolioSkip } : {}),
       audit,
       notify,
+    };
+  }
+
+  async putPortfolioScore(
+    actor: JourneyActor,
+    input: {
+      companySlug: string;
+      ideaSlug?: string;
+      impact: number;
+      evidence: number;
+      leverage: number;
+      why: string;
+      founderYes: boolean;
+      client?: string;
+    },
+  ): Promise<unknown> {
+    if (!actor.authenticated || !actor.principal) {
+      return forbidden("unauthenticated");
+    }
+    if (!input.founderYes) {
+      return forbidden("founder yes required in the agent chat — not a form, not mail");
+    }
+    const company = this.companyBySlug(input.companySlug);
+    if (!company || !canWriteJourney(this.acl, actor, company.id)) {
+      return forbidden("founder or founder-authorized only");
+    }
+    const ideas = this.ideasFor(company.id, input.ideaSlug);
+    if (ideas.length !== 1) {
+      return notFound(IDEA_NOT_FOUND_WRITE);
+    }
+    const idea = ideas[0];
+    const scored = normalizePortfolioScore(
+      {
+        impact: input.impact,
+        evidence: input.evidence,
+        leverage: input.leverage,
+        why: input.why,
+      },
+      { why: input.why, requireWhy: true },
+    );
+    if (!scored.ok) {
+      return forbidden(scored.error);
+    }
+    if (!isLiveIdea(idea)) {
+      return forbidden(PORTFOLIO_KILLED_OUT);
+    }
+    const liveCount = this.ideasFor(company.id).filter(isLiveIdea).length;
+    if (liveCount < 2) {
+      return {
+        ok: true,
+        skipped: true,
+        reason: PORTFOLIO_SKIP_NEED_TWO_LIVE,
+        company: { slug: company.slug, label: company.label },
+        portfolio: portfolioViewOf(this.ideasFor(company.id)),
+      };
+    }
+    const before = ideaBoardSnapshot(idea);
+    const gate = idea.currentGate;
+    idea.scoreboard = {
+      ...idea.scoreboard,
+      portfolioScore: {
+        ...scored.value,
+        scoredAt: new Date().toISOString(),
+        scoredBy: actor.principal,
+      },
+    };
+    if (idea.currentGate !== gate) {
+      return forbidden("portfolio scores cannot change the gate");
+    }
+    const audit = this.emitAudit({
+      companyId: company.id,
+      ideaId: idea.id,
+      who: actor.principal,
+      client: input.client?.trim() || "put_portfolio_score",
+      whatChanged: {
+        op: "put_portfolio_score",
+        via: "put_portfolio_score",
+        why: scored.value.why,
+        before,
+        after: ideaBoardSnapshot(idea),
+      },
+    });
+    return {
+      ok: true,
+      skipped: false,
+      company: { slug: company.slug, label: company.label },
+      owners: ownersFromAcl(this.acl, company.id),
+      idea: ideaPayload(
+        company,
+        idea,
+        this.events,
+        this.comments,
+        false,
+        ownersFromAcl(this.acl, company.id),
+      ),
+      portfolio: portfolioViewOf(this.ideasFor(company.id)),
+      audit,
     };
   }
 
@@ -978,11 +1519,8 @@ export class MemoryJourneyStore implements JourneyStore {
       return notFound(IDEA_NOT_FOUND_COMMENT);
     }
     const idea = ideas[0];
-    const before = {
-      journeyPhase: idea.journeyPhase,
-      loopStage: idea.loopStage,
-      currentGate: idea.currentGate,
-    };
+    const snap = ideaBoardSnapshot(idea);
+    const before = snap.clocks;
     this.comments.push({
       id: this.nextId("c"),
       ideaId: idea.id,
@@ -996,7 +1534,13 @@ export class MemoryJourneyStore implements JourneyStore {
       ideaId: idea.id,
       who: actor.principal,
       client: input.client?.trim() || "post_comment",
-      whatChanged: { via: "post_comment", commentId: comment.id },
+      whatChanged: {
+        op: "post_comment",
+        via: "post_comment",
+        commentId: comment.id,
+        before: snap,
+        after: snap,
+      },
     });
     const notify = this.fireBoardNotify({
       company,
@@ -1035,6 +1579,15 @@ export class MemoryJourneyStore implements JourneyStore {
     }
     const principal =
       input.principalKind === "email" ? input.principal.trim().toLowerCase() : input.principal.trim();
+    const existing = this.acl.find(
+      (row) =>
+        row.companyId === company.id &&
+        row.principal === principal &&
+        row.principalKind === input.principalKind,
+    );
+    const beforeAcl = existing
+      ? { principal: existing.principal, principalKind: existing.principalKind, role: existing.role }
+      : null;
     if (input.op === "grant") {
       const exists = this.acl.some(
         (row) =>
@@ -1070,6 +1623,11 @@ export class MemoryJourneyStore implements JourneyStore {
         op: input.op,
         principalKind: input.principalKind,
         role: input.role,
+        before: beforeAcl,
+        after:
+          input.op === "revoke"
+            ? null
+            : { principal, principalKind: input.principalKind, role: input.role },
       },
     });
     return { ok: true, audit };
@@ -1150,6 +1708,24 @@ export class MemoryJourneyStore implements JourneyStore {
         emailOptIn: Boolean(input.emailOptIn),
         createdBy: actor.principal,
       });
+      this.emitAudit({
+        companyId: company.id,
+        ideaId,
+        who: actor.principal,
+        client: "subscribe_board",
+        whatChanged: {
+          op: "INSERT",
+          via: "subscribe_board",
+          // webhookUrl stays on list_subscribers. Do not archive it in provenance.
+          before: null,
+          after: {
+            principal,
+            principalKind: input.principalKind,
+            emailOptIn: Boolean(input.emailOptIn),
+            ideaId,
+          },
+        },
+      });
     }
     return {
       ok: true,
@@ -1187,7 +1763,15 @@ export class MemoryJourneyStore implements JourneyStore {
       if (ideas.length !== 1) return notFound("idea not visible");
       ideaId = ideas[0].id;
     }
-    const before = this.subscribers.length;
+    const existing = this.subscribers.find((row) =>
+      sameSubscriberScope(row, {
+        companyId: company.id,
+        ideaId,
+        principal,
+        principalKind: input.principalKind,
+      }),
+    );
+    const beforeCount = this.subscribers.length;
     this.subscribers = this.subscribers.filter(
       (row) =>
         !sameSubscriberScope(row, {
@@ -1197,7 +1781,122 @@ export class MemoryJourneyStore implements JourneyStore {
           principalKind: input.principalKind,
         }),
     );
-    return { ok: true, removed: before - this.subscribers.length };
+    const removed = beforeCount - this.subscribers.length;
+    if (existing && removed > 0) {
+      this.emitAudit({
+        companyId: company.id,
+        ideaId,
+        who: actor.principal,
+        client: "unsubscribe_board",
+        whatChanged: {
+          op: "DELETE",
+          via: "unsubscribe_board",
+          before: {
+            principal: existing.principal,
+            principalKind: existing.principalKind,
+            emailOptIn: existing.emailOptIn,
+            ideaId: existing.ideaId,
+          },
+          after: null,
+        },
+      });
+    }
+    return { ok: true, removed };
+  }
+
+  async listProvenance(
+    actor: JourneyActor,
+    query: { companySlug: string; ideaSlug?: string; from?: string; to?: string },
+  ): Promise<unknown> {
+    if (!actor.authenticated || !actor.principal) {
+      return forbidden("unauthenticated");
+    }
+    const company = this.companyBySlug(query.companySlug);
+    if (!company || !canReadCompany(this.acl, actor, company.id)) {
+      return notFound("company not visible");
+    }
+    const ideas = this.ideasFor(company.id, query.ideaSlug);
+    if (query.ideaSlug && ideas.length === 0) {
+      return notFound("idea not visible");
+    }
+    const ideaId = query.ideaSlug ? ideas[0]?.id : undefined;
+    const fromMs = query.from ? Date.parse(query.from) : Number.NaN;
+    const toMs = query.to ? Date.parse(query.to) : Number.NaN;
+    const inRange = (iso: string) => {
+      const t = Date.parse(iso);
+      if (Number.isFinite(fromMs) && t < fromMs) return false;
+      if (Number.isFinite(toMs) && t > toMs) return false;
+      return true;
+    };
+    const slugOf = (id: string | null) =>
+      id ? (this.ideas.find((row) => row.id === id)?.slug ?? null) : null;
+    const audit = this.audit
+      .filter((row) => {
+        if (row.companyId !== company.id) return false;
+        if (ideaId && row.ideaId !== ideaId) return false;
+        return inRange(row.at);
+      })
+      .map((row) => ({
+        at: row.at,
+        who: row.who,
+        client: row.client,
+        ideaSlug: slugOf(row.ideaId),
+        whatChanged: row.whatChanged,
+      }));
+    const gateEvents = this.events
+      .filter((row) => {
+        const idea = this.ideas.find((i) => i.id === row.ideaId);
+        if (!idea || idea.companyId !== company.id) return false;
+        if (ideaId && row.ideaId !== ideaId) return false;
+        return inRange(row.at);
+      })
+      .map((row) => ({
+        at: row.at,
+        who: row.who,
+        action: row.action,
+        why: row.why,
+        ideaSlug: slugOf(row.ideaId),
+      }));
+    const events = [
+      ...audit.map((row) => ({ kind: "audit" as const, ...row })),
+      ...gateEvents.map((row) => ({ kind: "gate" as const, ...row })),
+    ].sort((a, b) => a.at.localeCompare(b.at) || a.kind.localeCompare(b.kind));
+    return {
+      ok: true,
+      company: { slug: company.slug, label: company.label },
+      idea: query.ideaSlug ? normalizeSlug(query.ideaSlug) : null,
+      events,
+      audit,
+      gateEvents,
+    };
+  }
+
+  async listKilledIdeas(
+    actor: JourneyActor,
+    query: { companySlug: string },
+  ): Promise<unknown> {
+    const board = (await this.getJourney(actor, { companySlug: query.companySlug })) as {
+      ok?: boolean;
+      error?: string;
+      company?: { slug: string; label: string };
+      ideas?: JourneyIdeaPayload[];
+    };
+    if (!board.ok) return board;
+    return {
+      ok: true,
+      company: board.company,
+      ideas: (board.ideas ?? [])
+        .filter((idea) => idea.clocks.currentGate === "kill")
+        .map((idea) => ({
+          slug: idea.slug,
+          name: idea.name,
+          clocks: idea.clocks,
+          gateEnrichment: idea.gateEnrichment,
+          killPostmortem: idea.killPostmortem,
+          killedCard: idea.killedCard,
+          killedDecision: idea.killedDecision,
+        })),
+    };
   }
 
   async listSubscribers(

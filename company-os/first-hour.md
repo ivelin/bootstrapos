@@ -67,7 +67,7 @@ python3 company/state/where-are-we.py
 
 That read uses `company/state/company-state.json` (and its schema).
 
-On Day 0 you should hear something like: journey phase **1 of 9**, loop stage **1 of 7**, gate open, autonomy **Strict**, Ready for human eyes **unknown**, three groups on **hold**, no proof.
+On Day 0 you should hear something like: **Write the bet**, **Ask**, gate open, autonomy **Strict**, Ready for human eyes **unknown**, three groups on **hold**, no proof.
 
 ---
 
@@ -96,6 +96,10 @@ Do **not** upload mentee work to Ivelin's GitHub.
 Path 1 is still `https://github.com/ivelin/bootstrap` as the free install source. Team Import from Repo is optional. Invite-only collab uses that MCP pin. **Not** a public catalog submit. **Not** mentee boards on our host. **Not** a Grok Bot marketplace bot.
 
 Follow the [near-term checklist](https://github.com/ivelin/bootstrap/blob/main/company-os/operating-system.md#near-term-checklist-any-startup). Next real work is usually honest research across those groups — not a platform.
+
+The live loop is three weeks: **Ask** (question + kill line) → **Do** (the work this station allows) → **Write back** (change memory; never skip; never Advance). Do takes the station’s shape. It is not a synonym for Build. Make / Check / Hear are not loop weeks.
+
+Fifteen cells (not this hour — labels first). Teaching scenes: [clock-examples](clock-examples.md). Locked table and End-to-end path: [operating-system — Fifteen cells](https://github.com/ivelin/bootstrap/blob/main/company-os/operating-system.md#fifteen-cells-journey-rung--loop-week).
 
 Once real conversations start (later — not this hour), use the [founder-day pack](https://github.com/ivelin/bootstrap/blob/main/company-os/operating-system.md#founder-day-pack-how-the-week-actually-runs): prep, close the call, write up. Do not add those rituals to Day 0.
 
@@ -142,6 +146,12 @@ When someone treats an advisor's promise of exclusivity or an Office Hours tip a
 > An advisor's opinion is a tip, not proof customers will pay. Write down who said it. Do not delay a customer who wants to pay.
 
 House rule: [advisor ride-along is assumed, not observed](https://github.com/ivelin/bootstrap/blob/main/company-os/operating-system.md#house-rule-advisor-ride-along-is-assumed-not-observed).
+
+When a company or person asks for more work after the first conversation, and they have not paid for that next session:
+
+> The first conversation is free. The next working session is paid, or you stop. A long buying cycle is not a reason to keep working for free.
+
+House rule: [unpaid weeks cannot promote](https://github.com/ivelin/bootstrap/blob/main/company-os/operating-system.md#house-rule-unpaid-weeks-cannot-promote).
 
 ### SoR / buy vs build / advice (not this hour)
 

@@ -195,3 +195,47 @@ export function sameSubscriberScope(
     row.principalKind === input.principalKind
   );
 }
+
+export function parseWebhookDeliveries(raw: unknown): WebhookDelivery[] {
+  if (!raw || typeof raw !== "object") return [];
+  const rows = (raw as { webhookDeliveries?: unknown }).webhookDeliveries;
+  if (!Array.isArray(rows)) return [];
+  const out: WebhookDelivery[] = [];
+  for (const row of rows) {
+    if (!row || typeof row !== "object") continue;
+    const url = typeof (row as { url?: unknown }).url === "string" ? (row as { url: string }).url.trim() : "";
+    const payload = (row as { payload?: unknown }).payload;
+    if (!isHttpsWebhookUrl(url)) continue;
+    if (!payload || typeof payload !== "object" || Array.isArray(payload)) continue;
+    out.push({ url, payload: payload as BoardNotifyPayload });
+  }
+  return out;
+}
+
+/** POST https webhooks. Failures never throw — board state already committed. */
+export async function postBoardWebhookDeliveries(
+  deliveries: WebhookDelivery[],
+  post: typeof fetch = fetch,
+): Promise<{ posted: number; failed: number }> {
+  let posted = 0;
+  let failed = 0;
+  for (const row of deliveries) {
+    if (!isHttpsWebhookUrl(row.url)) {
+      failed += 1;
+      continue;
+    }
+    try {
+      const res = await post(row.url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Accept: "application/json" },
+        body: JSON.stringify(row.payload),
+        signal: AbortSignal.timeout(8_000),
+      });
+      if (res.ok) posted += 1;
+      else failed += 1;
+    } catch {
+      failed += 1;
+    }
+  }
+  return { posted, failed };
+}

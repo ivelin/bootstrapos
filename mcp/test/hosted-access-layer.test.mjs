@@ -9,7 +9,12 @@ import {
   HOSTED_GATED_IDENTITY_TOOL_NAMES,
   HOSTED_GATED_JOURNEY_TOOL_NAMES,
 } from "../dist/constants.js";
-import { HOSTED_MCP_INSTRUCTIONS, TOOL_GET_JOURNEY } from "../dist/hosted-copy.js";
+import {
+  HOSTED_BILL_GROK_LINE,
+  hostedInstructionsForClient,
+  TOOL_ENABLE_BOARD_WATCH,
+  TOOL_GET_JOURNEY,
+} from "../dist/hosted-copy.js";
 import { HostedMembershipJourneyStore } from "../dist/hosted-journey-store.js";
 import { clearHostedCompanyContextForTests } from "../dist/hosted-company-context.js";
 import {
@@ -81,9 +86,15 @@ describe("hosted access layer (one login, many companies)", () => {
     assert.match(instructions, /owners/);
     assert.match(instructions, /constraintThisWeek|bottleneck/i);
     assert.match(instructions, /user-bootstrap-os-mcp/);
+    assert.match(instructions, /bootstrap@pirin\.ai/);
+    assert.match(instructions, /bootstrap_support/);
+    assert.match(instructions, /human-routed|human reads it/i);
     assert.doesNotMatch(instructions, /swim/i);
     assert.doesNotMatch(instructions, /Path 3|WWW-Authenticate|Bearer|mentee/i);
-    assert.equal(instructions, HOSTED_MCP_INSTRUCTIONS);
+    assert.doesNotMatch(instructions, /webhook|resend/i);
+    assert.doesNotMatch(instructions, /x\.ai\/bot/);
+    assert.ok(!instructions.includes(HOSTED_BILL_GROK_LINE));
+    assert.equal(instructions, hostedInstructionsForClient({ clientName: "access-layer" }));
   });
 
   it("hosted tool descriptions stay in founder English", async () => {
@@ -98,10 +109,17 @@ describe("hosted access layer (one login, many companies)", () => {
       assert.ok(!names.includes(n), `must hide ${n} without a store`);
     }
     for (const tool of tools) {
-      if (!HOSTED_GATED_IDENTITY_TOOL_NAMES.includes(tool.name) && tool.name !== "bootstrap_os_info") {
+      if (
+        !HOSTED_GATED_IDENTITY_TOOL_NAMES.includes(tool.name) &&
+        tool.name !== "bootstrap_os_info" &&
+        tool.name !== "bootstrap_support"
+      ) {
         continue;
       }
       assert.doesNotMatch(String(tool.description ?? ""), FORBIDDEN_IN_TOOL_TEXT, tool.name);
+      if (tool.name === "bootstrap_os_info" || tool.name === "bootstrap_support") {
+        assert.match(String(tool.description ?? ""), /bootstrap@pirin\.ai/);
+      }
     }
   });
 
@@ -132,6 +150,11 @@ describe("hosted access layer (one login, many companies)", () => {
     assert.match(String(companyParam?.description ?? ""), /team/i);
     assert.match(String(ideaParam?.description ?? ""), /idea/i);
     assert.doesNotMatch(JSON.stringify(journey.inputSchema), /CoreHaul/);
+    const watch = listed.result.tools.find((t) => t.name === "enable_board_watch");
+    assert.ok(watch);
+    assert.equal(watch.description, TOOL_ENABLE_BOARD_WATCH);
+    assert.match(watch.description, /Turn on board updates for Bill/);
+    assert.doesNotMatch(watch.description, /webhook|subscribe_board|https URL/i);
   });
 
   it("whoami and list_companies return companies for the seed user", async () => {

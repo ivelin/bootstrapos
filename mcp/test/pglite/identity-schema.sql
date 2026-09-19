@@ -467,3 +467,21 @@ GRANT EXECUTE ON FUNCTION bootstrap_mcp_accept_invite(text) TO mentee_reader;
 REVOKE ALL ON FUNCTION bootstrap_mcp_verify_invite(text) FROM PUBLIC;
 REVOKE ALL ON FUNCTION bootstrap_mcp_verify_invite(text) FROM mentee_reader;
 -- verify_invite is table-owner only here (service_role analog). No mentee_reader. No anon.
+
+-- Test-only replica of public.bootstrap_os_held_label (prod uses auth.jwt()).
+-- NEVER apply this fixture to supabase-pirin-ai. Invite-only company boards.
+CREATE OR REPLACE FUNCTION bootstrap_os_held_label(p_company text)
+RETURNS boolean
+LANGUAGE sql
+STABLE
+AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM bootstrap_mcp_mentees m
+    JOIN bootstrap_company_labels l ON l.mentee_id = m.id
+    WHERE l.label = lower(p_company)
+      AND (
+        m.email = NULLIF(lower(current_setting('app.auth_email', true)), '')
+        OR m.auth_user_id = NULLIF(current_setting('app.auth_uid', true), '')
+      )
+  );
+$$;

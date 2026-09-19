@@ -1,6 +1,6 @@
 # Journey board
 
-On this draft branch the hosted adapter also lists gated journey board tools. A founder or advisor with an allowlisted JWT reads `get_journey` (company or company/idea), and a founder-authorized actor may subscribe an ACL member to board notify. Cookie-less calls 401. These tools are **not** on the production pin. There is no snapshot HTML UI in this repo.
+On this draft branch the hosted adapter also lists gated journey board tools. A founder or advisor with an allowlisted JWT reads `get_journey` (company or company/idea), and a founder-authorized actor may subscribe an ACL member to board notify. Cookie-less calls 401. Tools list on the production pin after Cos applies subscriber SQL. Preview/dev never attach the live store. There is no snapshot HTML UI in this repo.
 
 ## Sub-features
 
@@ -8,13 +8,13 @@ On this draft branch the hosted adapter also lists gated journey board tools. A 
 - `board-company` `get_journey` with a company slug returns every idea for that company.
 - `board-idea` company + idea returns one idea.
 - `board-constraint` response surfaces `constraint_this_week` and ACL `owners` (not a free-text owner).
-- `board-subscribe` `subscribe_board` / `list_subscribers` / `unsubscribe_board` grant and remove webhook notify for an ACL principal.
+- `board-subscribe` `enable_board_watch` turns on board updates for Bill (Cos-set env). `subscribe_board` / `list_subscribers` / `unsubscribe_board` remain Cos / adapter furniture.
 - `board-comments` `post_comment` never advances a gate.
 
 ## How to get to it (user POV)
 
 - Authenticated MCP client on this branch's hosted adapter calls `get_journey` with `company` (and optional `idea` or `q` like `CoreHaul / last-mile`).
-- Founder-authorized client calls `subscribe_board` with `company`, `principal`, `principalKind`, `webhookUrl`.
+- Founder-authorized client calls `enable_board_watch` with `company` (optional `idea`) after invite. Cos sets the watch secrets; founders never paste a URL.
 - Anyone who may `get_journey` can `list_subscribers` for that company.
 - Path 1 founders on GitHub are not told to connect this host.
 
@@ -33,7 +33,8 @@ Preconditions:
 
 ## Gotchas
 
-- Journey tools are branch/draft. Do not claim they are on `https://mcp.bootstrap.pirin.ai/mcp` until Cos merges.
+- When reporting board status to a human, lead with descriptive labels; numbers only in parentheses. Do not change tool-driving steps.
+- Journey tools list on the pin after Cos applies `20260920_bootstrap_os_board_subscribers.sql`. Do not live-probe the pin from a PR agent.
 - Labels from whoami are **not** boards. `get_journey` is a different ACL.
 - Comments and digests must not invent stage or Advance.
 - Email notify is enqueue-only. Resend is pirin-ai (`verify-pirin` / Cos), not this helper.

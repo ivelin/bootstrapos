@@ -6,10 +6,18 @@
 import { hostedProdIdentityAllowed } from "./identity.js";
 import type { JourneyActor } from "./journey-auth.js";
 import {
+  parseWebhookDeliveries,
+  postBoardWebhookDeliveries,
+  type BoardNotifyEventType,
+} from "./journey-notify.js";
+import {
   MemoryJourneyStore,
   normalizeSlug,
   type GateDecision,
+  type GateEnrichment,
   type JourneyStore,
+  type KillPostmortem,
+  type PortfolioScore,
   type Scoreboard,
 } from "./journey.js";
 
@@ -35,27 +43,37 @@ export class HostedMembershipJourneyStore implements JourneyStore {
   }
 
   actorOnAllowlist(actor: JourneyActor): boolean {
-    return this.labelsFor(actor).length > 0;
+    return Boolean(actor.authenticated && actor.principal && this.labelsFor(actor).length > 0);
   }
 
   private held(actor: JourneyActor, slug: string): boolean {
     return this.labelsFor(actor).includes(normalizeSlug(slug));
   }
 
+  /** Invite-only: unauthenticated or a label the actor does not hold — never another company's rows. */
+  private denyUnlessHeld(
+    actor: JourneyActor,
+    slug: string | undefined,
+  ): { ok: false; error: string } | null {
+    if (!actor.authenticated || !actor.principal) {
+      return { ok: false, error: "unauthenticated" };
+    }
+    if (!slug) {
+      return { ok: false, error: "company required" };
+    }
+    if (!this.held(actor, slug)) {
+      return { ok: false, error: "company not visible" };
+    }
+    return null;
+  }
+
   async getJourney(
     actor: JourneyActor,
     query: { companySlug?: string; ideaSlug?: string; expandMeetingDoc?: boolean },
   ): Promise<unknown> {
-    if (!actor.authenticated || !actor.principal) {
-      return { ok: false, error: "unauthenticated" };
-    }
-    if (!query.companySlug) {
-      return { ok: false, error: "company required" };
-    }
-    const slug = normalizeSlug(query.companySlug);
-    if (!this.held(actor, slug)) {
-      return { ok: false, error: "company not visible" };
-    }
+    const denied = this.denyUnlessHeld(actor, query.companySlug);
+    if (denied) return denied;
+    const slug = normalizeSlug(query.companySlug!);
     this.inner.ensureCompanyForMember(slug, actor);
     const result = (await this.inner.getJourney(actor, { ...query, companySlug: slug })) as {
       ok?: boolean;
@@ -72,9 +90,8 @@ export class HostedMembershipJourneyStore implements JourneyStore {
     actor: JourneyActor,
     input: Parameters<JourneyStore["createIdea"]>[1],
   ): Promise<unknown> {
-    if (!this.held(actor, input.companySlug)) {
-      return { ok: false, error: "company not visible" };
-    }
+    const denied = this.denyUnlessHeld(actor, input.companySlug);
+    if (denied) return denied;
     this.inner.ensureCompanyForMember(input.companySlug, actor);
     return this.inner.createIdea(actor, input);
   }
@@ -83,9 +100,8 @@ export class HostedMembershipJourneyStore implements JourneyStore {
     actor: JourneyActor,
     input: Parameters<JourneyStore["putJourney"]>[1],
   ): Promise<unknown> {
-    if (!this.held(actor, input.companySlug)) {
-      return { ok: false, error: "company not visible" };
-    }
+    const denied = this.denyUnlessHeld(actor, input.companySlug);
+    if (denied) return denied;
     this.inner.ensureCompanyForMember(input.companySlug, actor);
     return this.inner.putJourney(actor, {
       ...input,
@@ -97,25 +113,22 @@ export class HostedMembershipJourneyStore implements JourneyStore {
     actor: JourneyActor,
     input: Parameters<JourneyStore["postComment"]>[1],
   ): Promise<unknown> {
-    if (!this.held(actor, input.companySlug)) {
-      return { ok: false, error: "company not visible" };
-    }
+    const denied = this.denyUnlessHeld(actor, input.companySlug);
+    if (denied) return denied;
     this.inner.ensureCompanyForMember(input.companySlug, actor);
     return this.inner.postComment(actor, { ...input, ideaSlug: input.ideaSlug || "default" });
   }
 
   async changeAcl(actor: JourneyActor, input: Parameters<JourneyStore["changeAcl"]>[1]) {
-    if (!this.held(actor, input.companySlug)) {
-      return { ok: false, error: "company not visible" };
-    }
+    const denied = this.denyUnlessHeld(actor, input.companySlug);
+    if (denied) return denied;
     this.inner.ensureCompanyForMember(input.companySlug, actor);
     return this.inner.changeAcl(actor, input);
   }
 
   async subscribeBoard(actor: JourneyActor, input: Parameters<JourneyStore["subscribeBoard"]>[1]) {
-    if (!this.held(actor, input.companySlug)) {
-      return { ok: false, error: "company not visible" };
-    }
+    const denied = this.denyUnlessHeld(actor, input.companySlug);
+    if (denied) return denied;
     this.inner.ensureCompanyForMember(input.companySlug, actor);
     return this.inner.subscribeBoard(actor, input);
   }
@@ -124,9 +137,8 @@ export class HostedMembershipJourneyStore implements JourneyStore {
     actor: JourneyActor,
     input: Parameters<JourneyStore["unsubscribeBoard"]>[1],
   ) {
-    if (!this.held(actor, input.companySlug)) {
-      return { ok: false, error: "company not visible" };
-    }
+    const denied = this.denyUnlessHeld(actor, input.companySlug);
+    if (denied) return denied;
     return this.inner.unsubscribeBoard(actor, input);
   }
 
@@ -134,11 +146,43 @@ export class HostedMembershipJourneyStore implements JourneyStore {
     actor: JourneyActor,
     input: Parameters<JourneyStore["listSubscribers"]>[1],
   ) {
-    if (!this.held(actor, input.companySlug)) {
-      return { ok: false, error: "company not visible" };
-    }
+    const denied = this.denyUnlessHeld(actor, input.companySlug);
+    if (denied) return denied;
     this.inner.ensureCompanyForMember(input.companySlug, actor);
     return this.inner.listSubscribers(actor, input);
+  }
+
+  async putPortfolioScore(
+    actor: JourneyActor,
+    input: Parameters<JourneyStore["putPortfolioScore"]>[1],
+  ) {
+    const denied = this.denyUnlessHeld(actor, input.companySlug);
+    if (denied) return denied;
+    this.inner.ensureCompanyForMember(input.companySlug, actor);
+    return this.inner.putPortfolioScore(actor, {
+      ...input,
+      ideaSlug: input.ideaSlug || "default",
+    });
+  }
+
+  async listProvenance(
+    actor: JourneyActor,
+    query: Parameters<JourneyStore["listProvenance"]>[1],
+  ) {
+    const denied = this.denyUnlessHeld(actor, query.companySlug);
+    if (denied) return denied;
+    this.inner.ensureCompanyForMember(query.companySlug, actor);
+    return this.inner.listProvenance(actor, query);
+  }
+
+  async listKilledIdeas(
+    actor: JourneyActor,
+    query: Parameters<JourneyStore["listKilledIdeas"]>[1],
+  ) {
+    const denied = this.denyUnlessHeld(actor, query.companySlug);
+    if (denied) return denied;
+    this.inner.ensureCompanyForMember(query.companySlug, actor);
+    return this.inner.listKilledIdeas(actor, query);
   }
 }
 
@@ -228,21 +272,38 @@ export class SupabaseJourneyStore implements JourneyStore {
       founderYes: boolean;
       founderWrittenDecision?: string;
       client?: string;
+      gateEnrichment?: GateEnrichment;
+      killPostmortem?: Omit<KillPostmortem, "why"> & { why?: string };
+      portfolioScore?: PortfolioScore;
     },
   ): Promise<unknown> {
+    const idea = input.ideaSlug ?? "default";
+    const scoreboard = {
+      ...(input.scoreboard ?? {}),
+      ...(input.gateEnrichment ? { gateEnrichment: input.gateEnrichment } : {}),
+      ...(input.killPostmortem
+        ? { killPostmortem: { why: input.why, ...input.killPostmortem } }
+        : {}),
+      ...(input.portfolioScore ? { portfolioScore: input.portfolioScore } : {}),
+    };
     const hit = await this.rpc("bootstrap_os_put_journey", {
       p_company: input.companySlug,
-      p_idea: input.ideaSlug ?? "default",
+      p_idea: idea,
       p_journey_phase: input.journeyPhase ?? null,
       p_loop_stage: input.loopStage ?? null,
       p_current_gate: input.currentGate ?? null,
       p_constraint: input.constraintThisWeek ?? null,
-      p_scoreboard: input.scoreboard ?? null,
+      p_scoreboard: Object.keys(scoreboard).length ? scoreboard : null,
       p_why: input.why,
       p_founder_yes: input.founderYes,
       p_founder_written_decision: input.founderWrittenDecision ?? null,
     });
     if ("error" in hit) return { ok: false, error: hit.error };
+    await this.fireWebhooksAfterWrite(hit.raw, {
+      company: input.companySlug,
+      idea,
+      event: "put_journey",
+    });
     return hit.raw;
   }
 
@@ -250,26 +311,172 @@ export class SupabaseJourneyStore implements JourneyStore {
     _actor: JourneyActor,
     input: { companySlug: string; ideaSlug?: string; body: string; client?: string },
   ): Promise<unknown> {
+    const idea = input.ideaSlug ?? "default";
     const hit = await this.rpc("bootstrap_os_post_comment", {
       p_company: input.companySlug,
-      p_idea: input.ideaSlug ?? "default",
+      p_idea: idea,
       p_body: input.body,
+    });
+    if ("error" in hit) return { ok: false, error: hit.error };
+    await this.fireWebhooksAfterWrite(hit.raw, {
+      company: input.companySlug,
+      idea,
+      event: "post_comment",
+    });
+    return hit.raw;
+  }
+
+  async changeAcl(
+    _actor: JourneyActor,
+    input: {
+      companySlug: string;
+      principal: string;
+      principalKind: "email" | "sub";
+      role: "founder" | "founder_authorized" | "advisor";
+      op: "grant" | "revoke";
+      client?: string;
+    },
+  ) {
+    const hit = await this.rpc("bootstrap_os_change_acl", {
+      p_company: input.companySlug,
+      p_principal: input.principal,
+      p_principal_kind: input.principalKind,
+      p_role: input.role,
+      p_op: input.op,
     });
     if ("error" in hit) return { ok: false, error: hit.error };
     return hit.raw;
   }
 
-  async changeAcl() {
-    return { ok: false, error: "not in this slice" };
+  async subscribeBoard(
+    _actor: JourneyActor,
+    input: {
+      companySlug: string;
+      ideaSlug?: string;
+      principal: string;
+      principalKind: "email" | "sub";
+      webhookUrl: string;
+      emailOptIn?: boolean;
+    },
+  ) {
+    const hit = await this.rpc("bootstrap_os_subscribe_board", {
+      p_company: input.companySlug,
+      p_idea: input.ideaSlug ?? null,
+      p_principal: input.principal,
+      p_principal_kind: input.principalKind,
+      p_webhook_url: input.webhookUrl,
+      p_email_opt_in: Boolean(input.emailOptIn),
+    });
+    if ("error" in hit) return { ok: false, error: hit.error };
+    return hit.raw;
   }
-  async subscribeBoard() {
-    return { ok: false, error: "not in this slice" };
+
+  async unsubscribeBoard(
+    _actor: JourneyActor,
+    input: {
+      companySlug: string;
+      ideaSlug?: string;
+      principal: string;
+      principalKind: "email" | "sub";
+    },
+  ) {
+    const hit = await this.rpc("bootstrap_os_unsubscribe_board", {
+      p_company: input.companySlug,
+      p_idea: input.ideaSlug ?? null,
+      p_principal: input.principal,
+      p_principal_kind: input.principalKind,
+    });
+    if ("error" in hit) return { ok: false, error: hit.error };
+    return hit.raw;
   }
-  async unsubscribeBoard() {
-    return { ok: false, error: "not in this slice" };
+
+  async listSubscribers(
+    _actor: JourneyActor,
+    input: { companySlug: string },
+  ) {
+    const hit = await this.rpc("bootstrap_os_list_subscribers", {
+      p_company: input.companySlug,
+    });
+    if ("error" in hit) return { ok: false, error: hit.error };
+    return hit.raw;
   }
-  async listSubscribers() {
-    return { ok: false, error: "not in this slice" };
+
+  async putPortfolioScore(
+    _actor: JourneyActor,
+    input: {
+      companySlug: string;
+      ideaSlug?: string;
+      impact: number;
+      evidence: number;
+      leverage: number;
+      why: string;
+      founderYes: boolean;
+      client?: string;
+    },
+  ) {
+    const hit = await this.rpc("bootstrap_os_put_portfolio_score", {
+      p_company: input.companySlug,
+      p_idea: input.ideaSlug ?? "default",
+      p_impact: input.impact,
+      p_evidence: input.evidence,
+      p_leverage: input.leverage,
+      p_why: input.why,
+      p_founder_yes: input.founderYes,
+    });
+    if ("error" in hit) return { ok: false, error: hit.error };
+    return hit.raw;
+  }
+
+  async listProvenance(
+    _actor: JourneyActor,
+    query: { companySlug: string; ideaSlug?: string; from?: string; to?: string },
+  ) {
+    const hit = await this.rpc("bootstrap_os_list_provenance", {
+      p_company: query.companySlug,
+      p_idea: query.ideaSlug ?? null,
+      p_from: query.from ?? null,
+      p_to: query.to ?? null,
+    });
+    if ("error" in hit) return { ok: false, error: hit.error };
+    return hit.raw;
+  }
+
+  async listKilledIdeas(
+    _actor: JourneyActor,
+    query: { companySlug: string },
+  ) {
+    const hit = await this.rpc("bootstrap_os_list_killed_ideas", {
+      p_company: query.companySlug,
+    });
+    if ("error" in hit) return { ok: false, error: hit.error };
+    return hit.raw;
+  }
+
+  private async fireWebhooksAfterWrite(
+    raw: unknown,
+    query: { company: string; idea: string; event: BoardNotifyEventType },
+  ): Promise<void> {
+    try {
+      let deliveries = parseWebhookDeliveries(raw);
+      if (
+        deliveries.length === 0 &&
+        raw &&
+        typeof raw === "object" &&
+        (raw as { ok?: boolean }).ok === true
+      ) {
+        const extra = await this.rpc("bootstrap_os_list_webhook_deliveries_for_event", {
+          p_company: query.company,
+          p_idea: query.idea,
+          p_event: query.event,
+        });
+        if (!("error" in extra)) {
+          deliveries = parseWebhookDeliveries(extra.raw);
+        }
+      }
+      await postBoardWebhookDeliveries(deliveries);
+    } catch {
+      // Delivery failure must not mutate board state.
+    }
   }
 }
 

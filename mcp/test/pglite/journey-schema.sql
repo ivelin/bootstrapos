@@ -351,6 +351,25 @@ BEGIN
 END;
 $$;
 
+CREATE FUNCTION bootstrap_os.idea_board_snapshot(
+  p_phase smallint,
+  p_loop smallint,
+  p_gate bootstrap_os.gate_decision,
+  p_scoreboard jsonb
+) RETURNS jsonb
+LANGUAGE sql
+IMMUTABLE
+AS $$
+  SELECT jsonb_build_object(
+    'clocks', jsonb_build_object(
+      'journeyPhase', p_phase,
+      'loopStage', p_loop,
+      'currentGate', p_gate
+    ),
+    'scoreboard', coalesce(p_scoreboard, '{}'::jsonb)
+  );
+$$;
+
 CREATE FUNCTION bootstrap_os.audit_idea_write() RETURNS trigger
 LANGUAGE plpgsql
 SECURITY DEFINER
@@ -364,10 +383,18 @@ BEGIN
     COALESCE(NULLIF(current_setting('app.client', true), ''), 'put_journey'),
     jsonb_build_object(
       'via', 'put_journey',
+      'op', 'put_journey',
       'journey_phase', NEW.journey_phase,
       'loop_stage', NEW.loop_stage,
       'current_gate', NEW.current_gate,
-      'constraint_this_week', COALESCE(NEW.scoreboard->>'constraint_this_week', '')
+      'constraint_this_week', COALESCE(NEW.scoreboard->>'constraint_this_week', ''),
+      'gate', NEW.current_gate,
+      'before', bootstrap_os.idea_board_snapshot(
+        OLD.journey_phase, OLD.loop_stage, OLD.current_gate, OLD.scoreboard
+      ),
+      'after', bootstrap_os.idea_board_snapshot(
+        NEW.journey_phase, NEW.loop_stage, NEW.current_gate, NEW.scoreboard
+      )
     )
   );
   PERFORM bootstrap_os.enqueue_board_notify(
@@ -392,7 +419,21 @@ BEGIN
     NEW.idea_id,
     NEW.who,
     COALESCE(NULLIF(current_setting('app.client', true), ''), 'post_comment'),
-    jsonb_build_object('via', 'post_comment', 'comment_id', NEW.id)
+    jsonb_build_object(
+      'via', 'post_comment',
+      'op', 'post_comment',
+      'comment_id', NEW.id,
+      'before', (
+        SELECT bootstrap_os.idea_board_snapshot(
+          i.journey_phase, i.loop_stage, i.current_gate, i.scoreboard
+        ) FROM bootstrap_os.ideas i WHERE i.id = NEW.idea_id
+      ),
+      'after', (
+        SELECT bootstrap_os.idea_board_snapshot(
+          i.journey_phase, i.loop_stage, i.current_gate, i.scoreboard
+        ) FROM bootstrap_os.ideas i WHERE i.id = NEW.idea_id
+      )
+    )
   );
   PERFORM bootstrap_os.enqueue_board_notify(
     bootstrap_os.idea_company_id(NEW.idea_id),
@@ -420,7 +461,23 @@ BEGIN
       'via', 'acl',
       'op', TG_OP,
       'principal_kind', COALESCE(NEW.principal_kind, OLD.principal_kind),
-      'role', COALESCE(NEW.role, OLD.role)
+      'role', COALESCE(NEW.role, OLD.role),
+      'before', CASE
+        WHEN TG_OP = 'INSERT' THEN NULL
+        ELSE jsonb_build_object(
+          'principal', OLD.principal,
+          'principalKind', OLD.principal_kind,
+          'role', OLD.role
+        )
+      END,
+      'after', CASE
+        WHEN TG_OP = 'DELETE' THEN NULL
+        ELSE jsonb_build_object(
+          'principal', NEW.principal,
+          'principalKind', NEW.principal_kind,
+          'role', NEW.role
+        )
+      END
     )
   );
   RETURN COALESCE(NEW, OLD);
@@ -441,6 +498,52 @@ CREATE TRIGGER company_acl_audit_write
   AFTER INSERT OR UPDATE OR DELETE ON bootstrap_os.company_acl
   FOR EACH ROW
   EXECUTE FUNCTION bootstrap_os.audit_acl_write();
+
+CREATE FUNCTION bootstrap_os.audit_subscriber_write() RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = bootstrap_os, public
+AS $$
+DECLARE
+  via text := CASE WHEN TG_OP = 'DELETE' THEN 'unsubscribe_board' ELSE 'subscribe_board' END;
+BEGIN
+  PERFORM bootstrap_os.emit_audit(
+    COALESCE(NEW.company_id, OLD.company_id),
+    COALESCE(NEW.idea_id, OLD.idea_id),
+    COALESCE(bootstrap_os.actor_principal(), COALESCE(NEW.created_by, OLD.created_by, via)),
+    COALESCE(NULLIF(current_setting('app.client', true), ''), via),
+    jsonb_build_object(
+      'via', via,
+      'op', TG_OP,
+      -- webhookUrl stays on list_subscribers. Do not archive it in provenance.
+      'before', CASE
+        WHEN TG_OP = 'INSERT' THEN NULL
+        ELSE jsonb_build_object(
+          'principal', OLD.principal,
+          'principalKind', OLD.principal_kind,
+          'emailOptIn', OLD.email_opt_in,
+          'ideaId', OLD.idea_id
+        )
+      END,
+      'after', CASE
+        WHEN TG_OP = 'DELETE' THEN NULL
+        ELSE jsonb_build_object(
+          'principal', NEW.principal,
+          'principalKind', NEW.principal_kind,
+          'emailOptIn', NEW.email_opt_in,
+          'ideaId', NEW.idea_id
+        )
+      END
+    )
+  );
+  RETURN COALESCE(NEW, OLD);
+END;
+$$;
+
+CREATE TRIGGER board_subscribers_audit_write
+  AFTER INSERT OR DELETE ON bootstrap_os.board_subscribers
+  FOR EACH ROW
+  EXECUTE FUNCTION bootstrap_os.audit_subscriber_write();
 
 CREATE FUNCTION bootstrap_os.notify_gate_write() RETURNS trigger
 LANGUAGE plpgsql

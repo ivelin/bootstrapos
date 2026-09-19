@@ -48,7 +48,7 @@ export interface StageGate {
 export const PHASE_GATES: Record<number, PhaseGate> = {
   1: {
     phase: 1,
-    name: "Thesis",
+    name: "Write the bet",
     exitSignal: "Written thesis + at least 3 customer-group candidates",
     evidenceToAdvance: [
       {
@@ -80,7 +80,7 @@ export const PHASE_GATES: Record<number, PhaseGate> = {
   },
   2: {
     phase: 2,
-    name: "Success definitions",
+    name: "Write the bet",
     exitSignal: "Clear metrics / “done means…” per group",
     evidenceToAdvance: [
       {
@@ -104,7 +104,7 @@ export const PHASE_GATES: Record<number, PhaseGate> = {
   },
   3: {
     phase: 3,
-    name: "Synthetic research",
+    name: "Filter cheaply",
     exitSignal: "Ranked groups with written evidence notes; promote still hold",
     evidenceToAdvance: [
       {
@@ -142,7 +142,7 @@ export const PHASE_GATES: Record<number, PhaseGate> = {
   },
   4: {
     phase: 4,
-    name: "Real-world research",
+    name: "Ground it",
     exitSignal: "Real interest tests and/or conversations; weak groups demoted",
     evidenceToAdvance: [
       {
@@ -176,7 +176,7 @@ export const PHASE_GATES: Record<number, PhaseGate> = {
   },
   5: {
     phase: 5,
-    name: "Design tiny system",
+    name: "Build tiny slice",
     exitSignal: "One tiny slice + pass/fail rules + human gates",
     evidenceToAdvance: [
       {
@@ -225,7 +225,7 @@ export const PHASE_GATES: Record<number, PhaseGate> = {
   },
   7: {
     phase: 7,
-    name: "Real / realistic users",
+    name: "Try with real people",
     exitSignal: "Observed behavior, not only compliments",
     evidenceToAdvance: [
       {
@@ -254,7 +254,7 @@ export const PHASE_GATES: Record<number, PhaseGate> = {
   },
   8: {
     phase: 8,
-    name: "Learn and improve",
+    name: "Try with real people",
     exitSignal: "Decision traces + score movement",
     evidenceToAdvance: [
       {
@@ -278,7 +278,7 @@ export const PHASE_GATES: Record<number, PhaseGate> = {
   },
   9: {
     phase: 9,
-    name: "Grow",
+    name: "Try with real people",
     exitSignal: "Proof of value or payment; then growth pack — not spray-and-pray",
     evidenceToAdvance: [
       {
@@ -311,7 +311,7 @@ export const PHASE_GATES: Record<number, PhaseGate> = {
 export const STAGE_GATES: Record<number, StageGate> = {
   1: {
     stage: 1,
-    name: "Synthetic user research",
+    name: "Ask",
     purpose: "Produce labeled synthetic insights that sharpen groups/hypotheses",
     evidenceThisStage: [
       {
@@ -328,7 +328,7 @@ export const STAGE_GATES: Record<number, StageGate> = {
   },
   2: {
     stage: 2,
-    name: "Validation / concept testing",
+    name: "Ask",
     purpose: "Test concept against synthetic and/or planned real checks",
     evidenceThisStage: [
       {
@@ -343,29 +343,29 @@ export const STAGE_GATES: Record<number, StageGate> = {
   },
   3: {
     stage: 3,
-    name: "Product building",
-    purpose: "Build only the thin slice needed for this week's learning",
+    name: "Do",
+    purpose: "Run the work this station allows against the kill line. Do takes the station’s shape — not a synonym for Build.",
     evidenceThisStage: [
       {
         id: "slice_delta",
-        plain: "What shipped this cycle (thin) + why it enables learning",
+        plain: "What this station ran this cycle + why it enables learning",
         labelHint: "assumed_capability",
-        howToGather: "Ship minimal; link to eval criteria",
+        howToGather: "Do the station’s work; link to the written kill line",
       },
     ],
-    nextStageWhen: "Something runnable exists for test stage",
-    agentFocus: ["Thin slice only", "No feature salad"],
+    nextStageWhen: "The station’s work is written and can be scored",
+    agentFocus: ["Station-shaped Do only", "Do at Build is not Try"],
   },
   4: {
     stage: 4,
-    name: "Testing (synthetic + automated)",
-    purpose: "Exercise the slice before humans burn time",
+    name: "Do",
+    purpose: "Run the work this station allows against the kill line. Do takes the station’s shape — not a synonym for Build.",
     evidenceThisStage: [
       {
         id: "test_log",
-        plain: "Test log: happy path + key failures",
+        plain: "What ran: happy path + key failures (lab or paper, as the station allows)",
         labelHint: "assumed_capability",
-        howToGather: "Automated + synthetic cold checks; save blockers",
+        howToGather: "Automated + synthetic cold checks when the station is Build; save blockers",
       },
     ],
     nextStageWhen: "Known blockers listed; no silent 'works on my machine'",
@@ -373,8 +373,8 @@ export const STAGE_GATES: Record<number, StageGate> = {
   },
   5: {
     stage: 5,
-    name: "Evaluation",
-    purpose: "Score against thresholds; founder-visible gate",
+    name: "Do",
+    purpose: "Run the work this station allows against the kill line. Do takes the station’s shape — not a synonym for Build.",
     evidenceThisStage: [
       {
         id: "eval_scores",
@@ -384,34 +384,34 @@ export const STAGE_GATES: Record<number, StageGate> = {
       },
     ],
     nextStageWhen: "Gate is visible; weak scores mean Iterate not ship",
-    agentFocus: ["Make gate visible", "Do not self-advance journey"],
+    agentFocus: ["Keep the gate visible", "Do not self-advance journey"],
   },
   6: {
     stage: 6,
-    name: "Real user feedback ingestion",
-    purpose: "Bring real-world signal in lawfully and honestly",
+    name: "Do",
+    purpose: "Run the work this station allows against the kill line. Do takes the station’s shape — not a synonym for Build.",
     evidenceThisStage: [
       {
         id: "real_feedback",
-        plain: "Redacted real feedback notes with outcomes",
+        plain: "Redacted notes with outcomes, only if this station allows real people",
         labelHint: "company_signals",
-        howToGather: "Only after human-eyes policy allows external asks",
+        howToGather: "Only after human-eyes policy allows external asks. Ask does not Ground. Do at Build is not Try.",
       },
     ],
-    nextStageWhen: "At least one real signal written (or blocked reason)",
+    nextStageWhen: "At least one signal written (or blocked reason)",
     agentFocus: [
-      "Check bootstrap_refuse_external_ask_if_not_green first",
+      "Refuse external ask if not green first",
       "Capture behavior not compliments",
     ],
   },
   7: {
     stage: 7,
-    name: "Memory update and loop back",
+    name: "Write back",
     purpose: "Write back so next cycle is smarter",
     evidenceThisStage: [
       {
         id: "stage7_write",
-        plain: "Stage 7 write-back: scores, open questions, hypothesis notes",
+        plain: "Write back: scores, open questions, hypothesis notes",
         labelHint: "company_signals",
         howToGather: "Update state + decision trace; set lastWeeklySnapshotAt if weekly",
       },

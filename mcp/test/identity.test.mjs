@@ -166,6 +166,8 @@ describe("hosted identity (resource server, gated)", () => {
     assert.match(String(info.companyState), /shared 0-1 board|Not hosted/i);
     assert.ok(!info.paths?.statePath);
     assert.equal(info.identityStore, "memory");
+    assert.equal(info.support?.email, "bootstrap@pirin.ai");
+    assert.match(String(info.support?.routed), /human-routed/i);
   });
 
   it("gated tools without a token return 401 + WWW-Authenticate to pirin.ai", async () => {
