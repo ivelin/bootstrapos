@@ -5,7 +5,7 @@ This folder is the **Bootstrap OS** blueprint and runtime shape. It is not any o
 | File | Role |
 |------|------|
 | [`operating-system.md`](operating-system.md) | Blueprint — phases, gates, evidence, growth pack, Ready for human eyes |
-| [`live-runtime.md`](live-runtime.md) | Live OS shape — durable state + 7-stage loop |
+| [`live-runtime.md`](live-runtime.md) | Live OS shape — durable state + five-week loop |
 | [`ready-for-human-eyes.md`](ready-for-human-eyes.md) | Ship gate checklist before external product-test asks |
 | [`ai-instructions.md`](ai-instructions.md) | Thin always-on rules for your main AI tool |
 | [`first-hour.md`](first-hour.md) | Day 0 (~60 minutes) — thesis, lifestyle or fences, ≥3 customer groups, first “Where are we?”. The two-minute figure is the snapshot *read*, not the hour. |
@@ -22,7 +22,7 @@ Optional local MCP (path 3, several ideas only): [`../mcp/README.md`](../mcp/REA
 ```text
 BLUEPRINT                          LIVE RUNTIME
 operating-system.md                live-runtime.md
-  journey 1–9 + gates                state + stages 1→7 → memory → back
+  five rungs + gates                 state + Ask → Write back
   virtual office cards (jobs optional)  git remembers; day tools may feed it
   founder-day + skill-capture (optional)  honest scores + open questions
 ```

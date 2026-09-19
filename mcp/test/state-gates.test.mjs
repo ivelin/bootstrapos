@@ -48,7 +48,8 @@ describe("phase advance gate", () => {
   it("whereAreWePlain includes company and clocks", () => {
     const plain = whereAreWePlain(readState());
     assert.match(plain, /charlie/i);
-    assert.match(plain, /Journey: step 1 of 9/);
+    assert.match(plain, /Journey: Write the bet \(1\)/);
+    assert.match(plain, /Live loop: Ask \(1\)/);
     assert.match(plain, /not demand or PMF/i);
     assert.match(plain, /observed wins/i);
     assert.match(plain, /Spoken yes cannot promote/i);

@@ -48,7 +48,7 @@ export interface StageGate {
 export const PHASE_GATES: Record<number, PhaseGate> = {
   1: {
     phase: 1,
-    name: "Thesis",
+    name: "Write the bet",
     exitSignal: "Written thesis + at least 3 customer-group candidates",
     evidenceToAdvance: [
       {
@@ -80,7 +80,7 @@ export const PHASE_GATES: Record<number, PhaseGate> = {
   },
   2: {
     phase: 2,
-    name: "Success definitions",
+    name: "Write the bet",
     exitSignal: "Clear metrics / “done means…” per group",
     evidenceToAdvance: [
       {
@@ -104,7 +104,7 @@ export const PHASE_GATES: Record<number, PhaseGate> = {
   },
   3: {
     phase: 3,
-    name: "Synthetic research",
+    name: "Filter cheaply",
     exitSignal: "Ranked groups with written evidence notes; promote still hold",
     evidenceToAdvance: [
       {
@@ -142,7 +142,7 @@ export const PHASE_GATES: Record<number, PhaseGate> = {
   },
   4: {
     phase: 4,
-    name: "Real-world research",
+    name: "Ground it",
     exitSignal: "Real interest tests and/or conversations; weak groups demoted",
     evidenceToAdvance: [
       {
@@ -176,7 +176,7 @@ export const PHASE_GATES: Record<number, PhaseGate> = {
   },
   5: {
     phase: 5,
-    name: "Design tiny system",
+    name: "Build tiny slice",
     exitSignal: "One tiny slice + pass/fail rules + human gates",
     evidenceToAdvance: [
       {
@@ -225,7 +225,7 @@ export const PHASE_GATES: Record<number, PhaseGate> = {
   },
   7: {
     phase: 7,
-    name: "Real / realistic users",
+    name: "Try with real people",
     exitSignal: "Observed behavior, not only compliments",
     evidenceToAdvance: [
       {
@@ -254,7 +254,7 @@ export const PHASE_GATES: Record<number, PhaseGate> = {
   },
   8: {
     phase: 8,
-    name: "Learn and improve",
+    name: "Try with real people",
     exitSignal: "Decision traces + score movement",
     evidenceToAdvance: [
       {
@@ -278,7 +278,7 @@ export const PHASE_GATES: Record<number, PhaseGate> = {
   },
   9: {
     phase: 9,
-    name: "Grow",
+    name: "Try with real people",
     exitSignal: "Proof of value or payment; then growth pack — not spray-and-pray",
     evidenceToAdvance: [
       {
@@ -311,7 +311,7 @@ export const PHASE_GATES: Record<number, PhaseGate> = {
 export const STAGE_GATES: Record<number, StageGate> = {
   1: {
     stage: 1,
-    name: "Synthetic user research",
+    name: "Ask",
     purpose: "Produce labeled synthetic insights that sharpen groups/hypotheses",
     evidenceThisStage: [
       {
@@ -328,7 +328,7 @@ export const STAGE_GATES: Record<number, StageGate> = {
   },
   2: {
     stage: 2,
-    name: "Validation / concept testing",
+    name: "Ask",
     purpose: "Test concept against synthetic and/or planned real checks",
     evidenceThisStage: [
       {
@@ -343,7 +343,7 @@ export const STAGE_GATES: Record<number, StageGate> = {
   },
   3: {
     stage: 3,
-    name: "Product building",
+    name: "Make",
     purpose: "Build only the thin slice needed for this week's learning",
     evidenceThisStage: [
       {
@@ -358,7 +358,7 @@ export const STAGE_GATES: Record<number, StageGate> = {
   },
   4: {
     stage: 4,
-    name: "Testing (synthetic + automated)",
+    name: "Check",
     purpose: "Exercise the slice before humans burn time",
     evidenceThisStage: [
       {
@@ -373,7 +373,7 @@ export const STAGE_GATES: Record<number, StageGate> = {
   },
   5: {
     stage: 5,
-    name: "Evaluation",
+    name: "Check",
     purpose: "Score against thresholds; founder-visible gate",
     evidenceThisStage: [
       {
@@ -388,7 +388,7 @@ export const STAGE_GATES: Record<number, StageGate> = {
   },
   6: {
     stage: 6,
-    name: "Real user feedback ingestion",
+    name: "Hear",
     purpose: "Bring real-world signal in lawfully and honestly",
     evidenceThisStage: [
       {
@@ -406,12 +406,12 @@ export const STAGE_GATES: Record<number, StageGate> = {
   },
   7: {
     stage: 7,
-    name: "Memory update and loop back",
+    name: "Write back",
     purpose: "Write back so next cycle is smarter",
     evidenceThisStage: [
       {
         id: "stage7_write",
-        plain: "Stage 7 write-back: scores, open questions, hypothesis notes",
+        plain: "Write back: scores, open questions, hypothesis notes",
         labelHint: "company_signals",
         howToGather: "Update state + decision trace; set lastWeeklySnapshotAt if weekly",
       },

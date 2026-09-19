@@ -33,13 +33,13 @@
       "type": "integer",
       "minimum": 1,
       "maximum": 9,
-      "description": "Bootstrap journey phase 1–9 (slow clock). Founder-gated."
+      "description": "Stored journey integer 1–9 (slow clock). Spoken maps to five rungs. Founder-gated. No invented Advance."
     },
     "loopStage": {
       "type": "integer",
       "minimum": 1,
       "maximum": 7,
-      "description": "Live runtime loop stage 1–7 (fast clock)."
+      "description": "Stored loop integer 1–7 (fast clock). Spoken maps to five weeks."
     },
     "gateStatus": {
       "type": "string",

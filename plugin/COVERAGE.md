@@ -51,7 +51,7 @@ Seven cases. Skills/README make the four **agent** behaviors inevitable. Skip GU
 | # | Visitor | Surface | Done means | Evidence |
 |---|---------|---------|------------|----------|
 | H1 | Installing founder | `first-hour` + README (a)(b)(c) | First hour + plugin + GitHub / local. No hosted MCP URL on Path 1. No auth/DB on Path 1. Invite-only collab pin `https://mcp.bootstrap.pirin.ai/mcp`. | File lock |
-| H2 | Mentee CoS, where on 0-1 | `query-os-first` | Query this plugin first. Cite OS journey 1–9. | File lock + GitHub 200 |
+| H2 | Mentee CoS, where on 0-1 | `query-os-first` | Query this plugin first. Cite OS five journey rungs. | File lock + GitHub 200 |
 | H3 | Specialist, conversation = GTM? | `query-os-first` + `house-rule-pins` | Spoken yes cannot promote. Refuse. Cite OS. | File lock + GitHub 200 |
 | A1 | Agent install-first | `first-hour` | Plugin + this connector only. | File lock |
 | A2 | Agent 0-1 placement | `query-os-first` | Query-OS-first. | File lock |
@@ -81,7 +81,7 @@ Company and idea are separate. Write after a gate / founder yes. The weekly cons
 | # | Visitor | Surface | Done means | Evidence |
 |---|---------|---------|------------|----------|
 | H1 | Installing founder | `first-hour` + README | Plugin + production pin. No auth/DB on that pin. | File lock |
-| H2 | Mentee CoS on 0-1 | `query-os-first` + `when-to-write` | Query OS first. Company vs idea. Owner from ACL. Notify over poll. Cite journey 1–9. | File lock + `scoreboardMayCarryOwner()===false` |
+| H2 | Mentee CoS on 0-1 | `query-os-first` + `when-to-write` | Query OS first. Company vs idea. Owner from ACL. Notify over poll. Cite five journey rungs. | File lock + `scoreboardMayCarryOwner()===false` |
 | H3 | Specialist, GTM-or-not | `query-os-first` + pins | Spoken yes cannot promote. Refuse. Cite OS. | File lock |
 | A1 | Agent install-first | `first-hour` | Plugin + connector only. Public OS: no login. | File lock |
 | A2 | Agent query-OS-first | `query-os-first` | Query-OS-first. | File lock |

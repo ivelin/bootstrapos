@@ -69,7 +69,7 @@ export const TOOL_GET_JOURNEY =
   "Where are we — the company board and ideas under it (separate boards). Use when the user says where are we, show the company board, show company X ideas, show my idea board, or similar. Returns clocks, snapshot, visualFlow mermaid for the client to render in its own style, decision log (lastTransitions, comments, audit), bottleneck (constraintThisWeek), open questions, owners, and portfolio scores (impact/evidence/leverage on live ideas; ranked by impact+evidence+leverage when two or more live ideas exist). Omit idea for every idea under the company. Uses the active company if already chosen. Do not invent a stage, log rows, or missing scores. Do not use GitHub as the board. Spoken or rendered summary should lead with descriptive labels; numbers in parentheses."
 
 export const TOOL_CREATE_IDEA =
-  "Start a new 0-1 idea board under a company this login can open. Empty clocks (phase 1, loop 1, hold). Several ideas are allowed; each idea is its own board. Needs an explicit founder yes in this chat. Then put_journey writes that idea."
+  "Start a new 0-1 idea board under a company this login can open. Empty clocks (Write the bet, Ask, hold). Several ideas are allowed; each idea is its own board. Needs an explicit founder yes in this chat. Then put_journey writes that idea."
 
 export const TOOL_PUT_JOURNEY =
   "Update an existing 0-1 idea board (phase, gate, bottleneck this week). New slugs: create_idea first. Phase or gate change needs an explicit founder yes, why, whatChanged, and whatWereNotDoing. Kill also requires a postmortem: lessonsLearned and actionableInsights."

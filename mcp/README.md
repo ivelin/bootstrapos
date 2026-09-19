@@ -52,7 +52,7 @@ Product code stays in its own repo. Point the agent at this connector once.
 | `bootstrap_os_info` | Modes, versions, data root, active paths, support email |
 | `bootstrap_support` | How to email `bootstrap@pirin.ai` (human-routed, not auto-fix) |
 | `bootstrap_list_docs` / `bootstrap_get_doc` / `bootstrap_get_ai_instructions` | Blueprint |
-| `bootstrap_reference_clocks` | Journey 1–9 + loop 1–7 |
+| `bootstrap_reference_clocks` | Five journey rungs + five loop weeks (stored 1–9 / 1–7 still map) |
 | `bootstrap_get_state` | Active `company-state.json` |
 | `bootstrap_where_are_we` | Status visibility (active only) |
 | `bootstrap_next_evidence` | Evidence for next phase/stage |

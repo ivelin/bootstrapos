@@ -166,7 +166,7 @@ describe("merge-gate visitor matrix (CoS smell-test)", () => {
     const standing = skill("query-os-first");
     assert.ok(standing.length < 2400);
     assert.match(standing, /0-1/);
-    assert.match(standing, /the-9-phases-simple-view/);
+    assert.match(standing, /the-5-journey-rungs-simple-view/);
     assert.match(standing, /Call this plugin first/);
     assert.match(standing, /Do not speak as Ivelin/);
     assert.match(standing, /plugin\/README\.md#feedback/);

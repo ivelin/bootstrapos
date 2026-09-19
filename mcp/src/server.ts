@@ -1,9 +1,12 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import {
+  CLOCK_REMAP_NOTE,
   DOC_KEYS,
-  JOURNEY_PHASES,
-  LOOP_STAGES,
+  JOURNEY_SPOKEN,
+  JOURNEY_STORED_MAP,
+  LOOP_SPOKEN,
+  LOOP_STORED_MAP,
   MCP_VERSION,
   OS_VERSION,
   PATH4_HONESTY,
@@ -243,13 +246,15 @@ function registerReadTools(server: McpServer, surface: McpSurface, hosted?: Host
 
   server.tool(
     "bootstrap_reference_clocks",
-    "Reference labels for the two clocks: journey phases 1–9 and live loop stages 1–7.",
+    "Reference labels for the two clocks: five journey rungs (Bet / Filter / Ground / Build / Try) and five loop weeks (Ask / Make / Check / Hear / Write). Stored integers stay 1–9 / 1–7; spoken/rendered uses the mapping table.",
     {},
     async () =>
       text({
-        journeyPhases: JOURNEY_PHASES,
-        loopStages: LOOP_STAGES,
-        note: "Journey advances only with founder Advance / Iterate / Hold / Kill. Loop may run many times inside one phase.",
+        journeySpoken: JOURNEY_SPOKEN,
+        loopSpoken: LOOP_SPOKEN,
+        storedJourneyMap: JOURNEY_STORED_MAP,
+        storedLoopMap: LOOP_STORED_MAP,
+        note: CLOCK_REMAP_NOTE,
       }),
   );
 

@@ -18,20 +18,18 @@ Optional path 3 (local MCP, several ideas): the same `company-state.json` + `whe
 
 ## Journey phase (bootstrap) — where we are
 
-| OS # | Simple name | Our status (honest) |
-|------|-------------|---------------------|
-| 1 | Form thesis + list possible customer groups | |
-| 2 | Define success per group | |
-| 3 | Synthetic research and first validation | |
-| 4 | Real-world research + monetization stress | |
-| 5 | Design the simplest system that can test the winner | |
-| 6 | Build a tiny slice and test it hard | |
-| 7 | Try it with real or realistic users | |
-| 8 | Learn from what happens and improve | |
-| 9 | Grow only after it clearly works | Deferred until proof |
+| Spoken | Simple name | Our status (honest) |
+|--------|-------------|---------------------|
+| 1 | Write the bet | |
+| 2 | Filter cheaply | |
+| 3 | Ground it | |
+| 4 | Build tiny slice | |
+| 5 | Try with real people | |
 
-**Current journey phase:** [name] (N / 9)  
-**Current live loop stage:** [name] (M / 7)  
+Grow is an after-proof pack after Try, not a sixth rung. Stored integers 1–9 still map (1 or 2 → Write the bet; 8 or 9 stay at Try until founder Advance).
+
+**Current journey:** [Write the bet / Filter cheaply / Ground it / Build tiny slice / Try with real people]  
+**Current loop week:** [Ask / Make / Check / Hear / Write back]  
 **Gate:** OPEN | WAITING | BLOCKED  
 **Autonomy posture:** Strict (default) | Auto | Dangerous  
 **Ready for human eyes:** unknown | blocked | green
@@ -68,7 +66,7 @@ Optional path 3 (local MCP, several ideas): the same `company-state.json` + `whe
 | Evidence beats narrative | | |
 | Build evaluation-first | | |
 | Ready for human eyes before external product asks | | |
-| Learning rituals (weekly snapshot, stage 7) | | |
+| Learning rituals (weekly snapshot, Write back) | | |
 
 ---
 

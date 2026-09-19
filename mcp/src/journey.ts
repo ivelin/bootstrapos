@@ -3,7 +3,16 @@
  * Clocks are enums. Scoreboard is versioned jsonb. Views are generated, not stored.
  * Research/traces stay local — do not lift ~/.bootstrap-os.
  */
-import { JOURNEY_PHASES, LOOP_STAGES } from "./constants.js";
+import {
+  JOURNEY_PHASES,
+  JOURNEY_SPOKEN,
+  LOOP_SPOKEN,
+  LOOP_STAGES,
+  formatSpokenJourney,
+  formatSpokenLoop,
+  spokenJourneyOf,
+  spokenLoopOf,
+} from "./constants.js";
 import type { JourneyAclRole, JourneyActor } from "./journey-auth.js";
 import {
   enqueueBoardNotify,
@@ -643,18 +652,20 @@ export function auditEventsMayBeUpdated(): boolean {
 }
 
 export function visualFlowMermaid(idea: IdeaRow, events: GateEventRow[]): string {
-  const phaseNodes = Array.from({ length: 9 }, (_, i) => {
+  const journey = spokenJourneyOf(idea.journeyPhase);
+  const loop = spokenLoopOf(idea.loopStage);
+  const phaseNodes = Array.from({ length: 5 }, (_, i) => {
     const n = i + 1;
-    const mark = n === idea.journeyPhase ? ":::current" : "";
-    return `    p${n}["${n} ${JOURNEY_PHASES[n]}"]${mark}`;
+    const mark = n === journey.rung ? ":::current" : "";
+    return `    p${n}["${JOURNEY_SPOKEN[n]}"]${mark}`;
   }).join("\n");
-  const phaseEdges = Array.from({ length: 8 }, (_, i) => `    p${i + 1} --> p${i + 2}`).join("\n");
-  const loopNodes = Array.from({ length: 7 }, (_, i) => {
+  const phaseEdges = Array.from({ length: 4 }, (_, i) => `    p${i + 1} --> p${i + 2}`).join("\n");
+  const loopNodes = Array.from({ length: 5 }, (_, i) => {
     const n = i + 1;
-    const mark = n === idea.loopStage ? ":::current" : "";
-    return `    l${n}["${n} ${LOOP_STAGES[n]}"]${mark}`;
+    const mark = n === loop.week ? ":::current" : "";
+    return `    l${n}["${LOOP_SPOKEN[n]}"]${mark}`;
   }).join("\n");
-  const loopEdges = Array.from({ length: 6 }, (_, i) => `    l${i + 1} --> l${i + 2}`).join("\n");
+  const loopEdges = Array.from({ length: 4 }, (_, i) => `    l${i + 1} --> l${i + 2}`).join("\n");
   const last = events
     .slice()
     .sort((a, b) => a.at.localeCompare(b.at))
@@ -665,18 +676,18 @@ export function visualFlowMermaid(idea: IdeaRow, events: GateEventRow[]): string
     "```mermaid",
     "flowchart TB",
     "  classDef current fill:#111,color:#fff,stroke:#111;",
-    "  subgraph journey [Journey 1-9]",
+    "  subgraph journey [Journey]",
     phaseNodes,
     phaseEdges,
     "  end",
-    "  subgraph loop [Loop 1-7]",
+    "  subgraph loop [Loop]",
     loopNodes,
     loopEdges,
     "  end",
     `  gate["Gate: ${idea.currentGate}"]:::current`,
     `  help["Constraint this week: ${escapeMermaid(constraintThisWeekOf(idea) || "none yet")}"]`,
-    "  p" + idea.journeyPhase + " --> gate",
-    "  l" + idea.loopStage + " --> gate",
+    "  p" + journey.rung + " --> gate",
+    "  l" + loop.week + " --> gate",
     "  gate --> help",
     last ? "  subgraph last [Last transitions]\n" + last + "\n  end" : "",
     "```",
@@ -710,8 +721,8 @@ export function twoMinuteSnapshot(
     CONSTRAINT_TEACHING_PICTURE,
     "Not a fun side quest. Preference / “this is interesting” cannot name it.",
     challenge,
-    `Journey: ${idea.journeyPhase} ${JOURNEY_PHASES[idea.journeyPhase]} of 9`,
-    `Loop: ${idea.loopStage} ${LOOP_STAGES[idea.loopStage]} of 7`,
+    `Journey: ${formatSpokenJourney(idea.journeyPhase)}`,
+    `Loop: ${formatSpokenLoop(idea.loopStage)}`,
     `Gate: ${idea.currentGate}`,
     idea.currentGate === "kill" ? killedCardOf(idea) : undefined,
     last
@@ -735,7 +746,7 @@ export function meetingDocView(
   const progress =
     idea.scoreboard.progress?.length
       ? idea.scoreboard.progress.map((x) => `- ${x}`).join("\n")
-      : `- Clocks at journey ${idea.journeyPhase} / loop ${idea.loopStage}, gate ${idea.currentGate}.`;
+      : `- Clocks at ${formatSpokenJourney(idea.journeyPhase)} / ${formatSpokenLoop(idea.loopStage)}, gate ${idea.currentGate}.`;
   const challenges =
     idea.scoreboard.challenges?.length
       ? idea.scoreboard.challenges.map((x) => `- ${x}`).join("\n")
@@ -796,6 +807,8 @@ export type JourneyIdeaPayload = {
     journeyPhase: number;
     loopStage: number;
     currentGate: GateDecision;
+    journeySpoken: string;
+    loopSpoken: string;
   };
   /** Fluid. Honest biggest bottleneck. Not a clock. Not tickets. */
   constraintThisWeek: string;
@@ -838,6 +851,8 @@ export function ideaPayload(
       journeyPhase: idea.journeyPhase,
       loopStage: idea.loopStage,
       currentGate: idea.currentGate,
+      journeySpoken: JOURNEY_PHASES[idea.journeyPhase] ?? spokenJourneyOf(idea.journeyPhase).label,
+      loopSpoken: LOOP_STAGES[idea.loopStage] ?? spokenLoopOf(idea.loopStage).label,
     },
     constraintThisWeek: constraintThisWeekOf(idea),
     constraintChallenge: constraintChallengeOf(idea),

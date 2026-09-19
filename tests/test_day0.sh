@@ -1156,7 +1156,7 @@ if grep -q '### Founder checkpoints (when human judgment is the work)' company-o
   && grep -q 'founder checkpoint, not a new clock' company-os/first-hour.md \
   && grep -q 'Checkpoint kind' templates/traces/decisions/TEMPLATE.md \
   && grep -q 'If Alpha' templates/traces/decisions/TEMPLATE.md \
-  && grep -q 'OS_VERSION = "2.8.14"' mcp/src/constants.ts; then
+  && grep -q 'OS_VERSION = "2.8.15"' mcp/src/constants.ts; then
   ok "OS 2.8.12 founder-checkpoints pack is pinned"
 else
   not_ok "2.8.12 founder-checkpoints strings must exist in OS, runtime, pins, and tests"
@@ -1218,7 +1218,7 @@ if grep -q '### House rule: unpaid weeks cannot promote' company-os/operating-sy
   && grep -q 'house-rule-unpaid-weeks-cannot-promote' company-os/ai-instructions.md \
   && grep -q 'unpaid-weeks-2.8.13' mcp/src/house-rules.ts \
   && grep -q 'house-rule-unpaid-weeks-cannot-promote' mcp/src/house-rules.ts \
-  && grep -q 'OS_VERSION = "2.8.14"' mcp/src/constants.ts \
+  && grep -q 'OS_VERSION = "2.8.15"' mcp/src/constants.ts \
   && grep -q '2.8.12' company-os/operating-system.md; then
   ok "OS 2.8.13 unpaid-weeks house-rule section has full rule, table, and card strings"
 else
@@ -1240,7 +1240,6 @@ fi
 # Lock distinctive phrases. Do not invent doctrine.
 if grep -q '### Decision methods (aliases, not a third clock)' company-os/operating-system.md \
   && grep -q '| 2.8.14 |' company-os/operating-system.md \
-  && grep -Fq '**Version:** 2.8.14' company-os/operating-system.md \
   && grep -Fq '**Last Updated:** 2026-09-19' company-os/operating-system.md \
   && grep -q 'Use IESER, in this order' company-os/operating-system.md \
   && grep -q 'Use FIRAC before anyone signs' company-os/operating-system.md \
@@ -1248,14 +1247,9 @@ if grep -q '### Decision methods (aliases, not a third clock)' company-os/operat
   && grep -q 'Do this week with what we have:' company-os/operating-system.md \
   && grep -q 'Clock open?: none | 83(b) by DATE | close DATE | customer DATE' company-os/operating-system.md \
   && grep -Fq 'When naming constraintThisWeek, challenge legal / Carta / SOPA / a new agent team unless a Clock checkpoint is open or the founder writes an override. Before a Bind sign-off, walk Facts / Issue / Rule / Application / Conclusion in short form.' company-os/ai-instructions.md \
-  && grep -q 'v2.8.14' company-os/ai-instructions.md \
-  && grep -q 'Honor OS 2.8.14' AGENTS.md \
   && grep -q 'unpaid weeks cannot promote' AGENTS.md \
-  && grep -q 'OS_VERSION = "2.8.14"' mcp/src/constants.ts \
   && grep -q 'unpaid-weeks-2.8.13' mcp/src/house-rules.ts \
   && grep -Fq 'Honest biggest bottleneck this week. Not a calendar stub. Not tickets. Not a fun side quest. Exception: an open Clock checkpoint.' mcp/src/server.ts \
-  && grep -q '2.8.14' company-os/live-runtime.md \
-  && grep -q '2.8.14' company-os/ready-for-human-eyes.md \
   && ! grep -q 'liveClock' mcp/src/server.ts \
   && grep -q '2.8.13' company-os/operating-system.md; then
   ok "OS 2.8.14 Decision methods pack is pinned"
@@ -1276,16 +1270,17 @@ if ! grep -q 'IESER' company-os/first-hour.md \
 else
   not_ok "do not put IESER or FIRAC in first-hour"
 fi
-# Speaking rule folded into 2.8.14 (same PR). Labels first; numbers in parentheses.
-# Decision methods essay stays byte-stable. No 2.8.15.
+# Speaking rule from 2.8.14 stays. Labels first; numbers in parentheses.
+# Decision methods essay stays. Clock shrink is 2.8.15.
 if grep -q 'When speaking the board to a human' company-os/operating-system.md \
   && grep -q 'Speaking rule: lead with descriptive labels; numbers in parentheses' company-os/operating-system.md \
   && grep -q 'lead with these names; the `#` column is storage' company-os/operating-system.md \
   && grep -q 'journey phase in everyday words (number in parentheses only if useful)' company-os/ai-instructions.md \
   && grep -q 'everyday journey-phase name + everyday loop-stage name' company-os/ai-instructions.md \
-  && grep -q 'Form thesis and list possible customer groups' company-os/first-hour.md \
-  && grep -q 'Synthetic research' company-os/first-hour.md \
-  && grep -Fq '**Current journey phase:** [name] (N / 9)' templates/applied-here.md \
+  && grep -q 'Write the bet' company-os/first-hour.md \
+  && grep -q '\*\*Ask\*\*' company-os/first-hour.md \
+  && grep -q 'Write the bet' templates/applied-here.md \
+  && grep -q 'Ask / Make / Check / Hear / Write back' templates/applied-here.md \
   && grep -q 'lead with descriptive labels; numbers only in parentheses' .cursor/skills/verify-bootstrap/SKILL.md \
   && grep -q 'lead with descriptive labels; numbers only in parentheses' .cursor/skills/verify-bootstrap/features/journey-board.md \
   && grep -q 'Spoken or rendered summary should lead with descriptive labels' mcp/src/hosted-copy.ts \
@@ -1296,12 +1291,42 @@ if grep -q 'When speaking the board to a human' company-os/operating-system.md \
   && grep -q 'simple loop name first; number in parentheses only if useful' company-os/operating-system.md \
   && ! grep -q 'step N of 9' company-os/operating-system.md \
   && ! grep -q 'step M of 7' company-os/operating-system.md \
-  && ! grep -q '2.8.15' company-os/operating-system.md \
   && grep -q 'Use IESER, in this order' company-os/operating-system.md \
   && grep -q 'Use FIRAC before anyone signs' company-os/operating-system.md; then
   ok "2.8.14 speaking rule is pinned (labels first; Decision methods essay kept)"
 else
-  not_ok "2.8.14 speaking rule strings must exist; do not invent 2.8.15 or drop Decision methods"
+  not_ok "2.8.14 speaking rule strings must exist; do not drop Decision methods"
+fi
+
+# --- z4) OS 2.8.15: Clock shrink (five rungs + five weeks) ---
+# Separate from Decision methods. No invented Advance. Stored integers stay.
+if grep -Fq '**Version:** 2.8.15' company-os/operating-system.md \
+  && grep -q '| 2.8.15 |' company-os/operating-system.md \
+  && grep -q 'Write the bet' company-os/operating-system.md \
+  && grep -q 'Filter cheaply' company-os/operating-system.md \
+  && grep -q 'Ground it' company-os/operating-system.md \
+  && grep -q 'Build tiny slice' company-os/operating-system.md \
+  && grep -q 'Try with real people' company-os/operating-system.md \
+  && grep -q 'Keep-doing map (stored integers' company-os/operating-system.md \
+  && grep -q '8 or 9 | stay at Try until founder Advance' company-os/operating-system.md \
+  && grep -q 'Never skip Write back' company-os/live-runtime.md \
+  && grep -q 'five-week' company-os/live-runtime.md \
+  && grep -q 'v2.8.15' company-os/ai-instructions.md \
+  && grep -q 'Honor OS 2.8.15' AGENTS.md \
+  && grep -q 'OS_VERSION = "2.8.15"' mcp/src/constants.ts \
+  && grep -q '2.8.15' company-os/live-runtime.md \
+  && grep -q '2.8.15' company-os/ready-for-human-eyes.md \
+  && grep -q 'spokenJourneyOf' mcp/src/clock-map.ts \
+  && grep -q 'No invented Advance' mcp/src/clock-map.ts \
+  && grep -q 'Do not merge Filter + Ground' company-os/operating-system.md \
+  && grep -q 'Do not merge Build + Try' company-os/operating-system.md \
+  && grep -q 'Do not merge Check + Hear' company-os/live-runtime.md \
+  && grep -q 'Use IESER, in this order' company-os/operating-system.md \
+  && grep -q 'Use FIRAC before anyone signs' company-os/operating-system.md \
+  && grep -q '### Decision methods (aliases, not a third clock)' company-os/operating-system.md; then
+  ok "OS 2.8.15 Clock shrink is pinned (Decision methods essay kept)"
+else
+  not_ok "2.8.15 clock shrink strings must exist; keep Decision methods; no invented Advance"
 fi
 
 # --- w) Bootstrap Bill install docs (invite-only; not Path 1) ---

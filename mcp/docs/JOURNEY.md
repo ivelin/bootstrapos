@@ -6,7 +6,7 @@ Ivelin yes 2026-09-01 (via Cos): one source of truth for a FAST mentee 0-1 journ
 
 ## What this is
 
-SQL + gated MCP tools + a thin “when to write” skill. Same payload for team / advisor / board / investor prep. Views (mermaid, two-minute snapshot, optional meeting doc) are generated. Do not store a novel. Comments never mutate phase or gate. Board status spoken to humans leads with descriptive labels; numbers are reference only.
+SQL + gated MCP tools + a thin “when to write” skill. Same payload for team / advisor / board / investor prep. Views (mermaid, two-minute snapshot, optional meeting doc) are generated. Do not store a novel. Comments never mutate phase or gate. Board status spoken to humans leads with descriptive labels; numbers are reference only. Spoken journey names: Write the bet / Filter cheaply / Ground it / Build tiny slice / Try with real people. Spoken loop weeks: Ask / Make / Check / Hear / Write back. Stored integers stay 1–9 / 1–7 (no schema bump). Mapping: journey 1 or 2 → Write the bet; 3 → Filter cheaply; 4 → Ground it; 5 or 6 → Build tiny slice; 7 → Try with real people; 8 or 9 stay at Try until founder Advance. Loop 1 or 2 → Ask; 3 → Make; 4 or 5 → Check; 6 → Hear; 7 → Write back. Do not invent Advance on live boards.
 
 Each idea has a fluid `constraint_this_week` (short text on versioned jsonb). Not a clock. Not tickets. It is the honest biggest bottleneck — not a fun side quest. Preference / “this is interesting” cannot name it. Teaching picture, not extra law: the company only moves as fast as its weakest link. The platoon only moves as fast as the slowest soldier. Work that is not on that link is not progress. `get_journey` / “Where are we” must surface the field (and challenge a side quest dressed as the bottleneck). Writes emit an append-only audit row. Refuse “new landing page” when no one has talked to customers unless the founder writes an override. Do not rubber-stamp.
 
@@ -74,7 +74,7 @@ Cos sets Vercel secrets **once** on `bootstrap-os-mcp` production: `BOOTSTRAP_BO
 | Tool | Who | Notes |
 |------|-----|--------|
 | `get_journey` | founder / advisor on the allowlist | Company query → every idea. Company/idea → one idea. Surfaces `constraint_this_week`, ACL `owners`, stored `portfolioScore` on live ideas, and `portfolio` ranked by impact+evidence+leverage when ≥2 live ideas. Never invents missing scores. |
-| `create_idea` | founder + founder-authorized | New 0-1 board under a held company. Empty clocks (1 / 1 / hold). Founder yes in chat. Does not invent stage. |
+| `create_idea` | founder + founder-authorized | New 0-1 board under a held company. Empty clocks (Write the bet / Ask / hold; stored 1 / 1). Founder yes in chat. Does not invent stage. |
 | `put_journey` | founder + founder-authorized | Overwrite clocks/jsonb including `constraint_this_week` and scoreboard (hypothesis, open questions) on an **existing** idea. Missing slug → `idea not found; call create_idea first`. One founder yes in chat. |
 | `post_comment` | advisors | Side table. Never a gate. |
 | `subscribe_board` | founder + founder-authorized | Grant webhook (+ email opt-in enqueue) to an ACL member. Cos / adapter furniture — not the founder path. |

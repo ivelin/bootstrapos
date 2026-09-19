@@ -22,8 +22,8 @@ Use this repo as the **source of truth** for process and control. Point your AI 
 ```text
 BLUEPRINT (how to decide)              LIVE RUNTIME (how to learn every week)
 company-os/operating-system.md         company-os/live-runtime.md
-  journey phases 1–9                     persistent state (personas, traces, scores…)
-  founder gates + honest evidence        stages 1→7 loop → memory → back to 1
+  five journey rungs                     persistent state (personas, traces, scores…)
+  founder gates + honest evidence        five-week loop → Write back → Ask again
   reward/risk + virtual office           git remembers; day tools may feed it
   (cards stay; jobs optional)            optional: founder-day + skill-capture
 ```
@@ -36,9 +36,9 @@ company-os/operating-system.md         company-os/live-runtime.md
 
 | Path | What it is |
 |------|------------|
-| [`company-os/operating-system.md`](company-os/operating-system.md) | **Blueprint** — principles, 9 journey phases, gates, evidence labels, next pack, Ready for human eyes, growth pack |
+| [`company-os/operating-system.md`](company-os/operating-system.md) | **Blueprint** — principles, five journey rungs, gates, evidence labels, next pack, Ready for human eyes, growth pack |
 | [`company-os/after-proof-efficiency.md`](company-os/after-proof-efficiency.md) | **After proof** — five instruments (fences + they asked). Not Day 0. |
-| [`company-os/live-runtime.md`](company-os/live-runtime.md) | **Live OS shape** — durable state + 7-stage loop + eval harness ideas |
+| [`company-os/live-runtime.md`](company-os/live-runtime.md) | **Live OS shape** — durable state + five-week loop + eval harness ideas |
 | [`company-os/ready-for-human-eyes.md`](company-os/ready-for-human-eyes.md) | **Ship gate checklist** — cold URL + happy path before external product-test asks |
 | [`company-os/ai-instructions.md`](company-os/ai-instructions.md) | Thin enforcement layer — paste into `AGENTS.md` / Cursor / Claude / Grok |
 | [`company-os/first-hour.md`](company-os/first-hour.md) | **Day 0 (~60 minutes)** — thesis, ≥3 ICPs, first “Where are we?” (chat or instance files). The two-minute figure is the snapshot *read*, not this hour. |
@@ -125,8 +125,8 @@ Local CI is `./scripts/ci.sh`.
 
 | Clock | Question | Changes when |
 |-------|----------|--------------|
-| **Bootstrap journey** (phases 1–9) | Where is the company on the prove-it path? | Founder **Advance / Iterate / Hold / Kill** |
-| **Live loop** (stages 1–7) | What did we learn this week? | Continuous; many cycles inside one journey phase |
+| **Bootstrap journey** (five rungs: Bet / Filter / Ground / Build / Try) | Where is this bet on the prove-it path? | Founder **Advance / Iterate / Hold / Kill** |
+| **Live loop** (five weeks: Ask / Make / Check / Hear / Write) | What are we learning this week? | Continuous; many cycles inside one journey rung |
 
 AI never advances a journey phase alone. Evidence beats narrative. Waitlists and synthetic research are filters, not product–market fit.
 
