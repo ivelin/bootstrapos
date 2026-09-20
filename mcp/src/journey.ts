@@ -6,13 +6,19 @@
 import {
   JOURNEY_PHASES,
   JOURNEY_SPOKEN,
-  LOOP_SPOKEN,
   LOOP_STAGES,
   formatSpokenJourney,
-  formatSpokenLoop,
   spokenJourneyOf,
   spokenLoopOf,
 } from "./constants.js";
+import {
+  LOOP_STAGE_MUTATION_REJECTED,
+  SPOKEN_LOOP_WRITE_REJECTED,
+  loopStageMutationRejected,
+  missingWriteBackLine,
+  spokenLoopWriteRejected,
+  writeBackMissingFromArtifacts,
+} from "./loop-freeze.js";
 import type { JourneyAclRole, JourneyActor } from "./journey-auth.js";
 import {
   enqueueBoardNotify,
@@ -258,7 +264,7 @@ export type BoardSnapshot = {
   scoreboard: Scoreboard;
 };
 
-/** Stored integers plus spoken 2.8.15 labels. Comments reuse this so clocksUnchanged matches idea.clocks. */
+/** Stored integers plus spoken labels. loopSpoken is back-compat only — not where-we-are. */
 export function clocksOf(
   idea: Pick<IdeaRow, "journeyPhase" | "loopStage" | "currentGate">,
 ): BoardClocksSnapshot {
@@ -664,25 +670,21 @@ export function auditEventsMayBeUpdated(): boolean {
 
 export function visualFlowMermaid(idea: IdeaRow, events: GateEventRow[]): string {
   const journey = spokenJourneyOf(idea.journeyPhase);
-  const loop = spokenLoopOf(idea.loopStage);
   const phaseNodes = Array.from({ length: 5 }, (_, i) => {
     const n = i + 1;
     const mark = n === journey.rung ? ":::current" : "";
     return `    p${n}["${JOURNEY_SPOKEN[n]}"]${mark}`;
   }).join("\n");
   const phaseEdges = Array.from({ length: 4 }, (_, i) => `    p${i + 1} --> p${i + 2}`).join("\n");
-  const loopNodes = Array.from({ length: 3 }, (_, i) => {
-    const n = i + 1;
-    const mark = n === loop.week ? ":::current" : "";
-    return `    l${n}["${LOOP_SPOKEN[n]}"]${mark}`;
-  }).join("\n");
-  const loopEdges = Array.from({ length: 2 }, (_, i) => `    l${i + 1} --> l${i + 2}`).join("\n");
   const last = events
     .slice()
     .sort((a, b) => a.at.localeCompare(b.at))
     .slice(-3)
     .map((e) => `    t${e.id.replace(/[^a-zA-Z0-9]/g, "")}["${e.action} · ${e.who}: ${escapeMermaid(e.why)}"]`)
     .join("\n");
+  const missing = writeBackMissingFromArtifacts({ scoreboard: idea.scoreboard as Record<string, unknown> })
+    ? missingWriteBackLine()
+    : "none recorded";
   return [
     "```mermaid",
     "flowchart TB",
@@ -691,15 +693,12 @@ export function visualFlowMermaid(idea: IdeaRow, events: GateEventRow[]): string
     phaseNodes,
     phaseEdges,
     "  end",
-    "  subgraph loop [Loop]",
-    loopNodes,
-    loopEdges,
-    "  end",
     `  gate["Gate: ${idea.currentGate}"]:::current`,
     `  help["Constraint this week: ${escapeMermaid(constraintThisWeekOf(idea) || "none yet")}"]`,
+    `  miss["Missing artifacts: ${escapeMermaid(missing)}"]`,
     "  p" + journey.rung + " --> gate",
-    "  l" + loop.week + " --> gate",
     "  gate --> help",
+    "  help --> miss",
     last ? "  subgraph last [Last transitions]\n" + last + "\n  end" : "",
     "```",
   ]
@@ -725,6 +724,9 @@ export function twoMinuteSnapshot(
   const ownerLine = owners.length
     ? owners.map((row) => row.principal).join(", ")
     : "none on ACL — do not invent";
+  const writeBackMissing = writeBackMissingFromArtifacts({
+    scoreboard: idea.scoreboard as Record<string, unknown>,
+  });
   return [
     `${company.label} / ${idea.name} — two-minute read`,
     `Owner (from ACL): ${ownerLine}`,
@@ -733,8 +735,11 @@ export function twoMinuteSnapshot(
     "Not a fun side quest. Preference / “this is interesting” cannot name it.",
     challenge,
     `Journey: ${formatSpokenJourney(idea.journeyPhase)}`,
-    `Loop: ${formatSpokenLoop(idea.loopStage)}`,
     `Gate: ${idea.currentGate}`,
+    writeBackMissing
+      ? `Missing artifacts: ${missingWriteBackLine()}`
+      : "Missing artifacts: none recorded",
+    "Ask / Do / Write back is a quality bar on the week's artifact, not a card.",
     idea.currentGate === "kill" ? killedCardOf(idea) : undefined,
     last
       ? `Last transition: ${last.action} by ${last.who} at ${last.at} — ${last.why}`
@@ -757,7 +762,7 @@ export function meetingDocView(
   const progress =
     idea.scoreboard.progress?.length
       ? idea.scoreboard.progress.map((x) => `- ${x}`).join("\n")
-      : `- Clocks at ${formatSpokenJourney(idea.journeyPhase)} / ${formatSpokenLoop(idea.loopStage)}, gate ${idea.currentGate}.`;
+      : `- Journey ${formatSpokenJourney(idea.journeyPhase)}, gate ${idea.currentGate}.`;
   const challenges =
     idea.scoreboard.challenges?.length
       ? idea.scoreboard.challenges.map((x) => `- ${x}`).join("\n")
@@ -909,6 +914,10 @@ export type JourneyStore = {
       ideaSlug?: string;
       journeyPhase?: number;
       loopStage?: number;
+      loopSpoken?: unknown;
+      loopWeek?: unknown;
+      spokenLoop?: unknown;
+      weekVerb?: unknown;
       currentGate?: GateDecision;
       scoreboard?: Scoreboard;
       constraintThisWeek?: string;
@@ -1191,6 +1200,10 @@ export class MemoryJourneyStore implements JourneyStore {
       ideaSlug?: string;
       journeyPhase?: number;
       loopStage?: number;
+      loopSpoken?: unknown;
+      loopWeek?: unknown;
+      spokenLoop?: unknown;
+      weekVerb?: unknown;
       currentGate?: GateDecision;
       scoreboard?: Scoreboard;
       constraintThisWeek?: string;
@@ -1206,7 +1219,9 @@ export class MemoryJourneyStore implements JourneyStore {
     if (!actor.authenticated || !actor.principal) {
       return forbidden("unauthenticated");
     }
-    if (!input.founderYes) {
+    const journeyOrGateChange =
+      input.journeyPhase !== undefined || input.currentGate !== undefined;
+    if (journeyOrGateChange && !input.founderYes) {
       return forbidden("founder yes required in the agent chat — not a form, not mail");
     }
     if (!input.why.trim()) {
@@ -1221,6 +1236,12 @@ export class MemoryJourneyStore implements JourneyStore {
       return notFound(IDEA_NOT_FOUND_WRITE);
     }
     const idea = ideas[0];
+    if (spokenLoopWriteRejected(input) || spokenLoopWriteRejected(input.scoreboard)) {
+      return forbidden(SPOKEN_LOOP_WRITE_REJECTED);
+    }
+    if (loopStageMutationRejected(idea.loopStage, input.loopStage)) {
+      return forbidden(LOOP_STAGE_MUTATION_REJECTED);
+    }
     const before = ideaBoardSnapshot(idea);
     let nextScoreboard: Scoreboard = { ...idea.scoreboard };
     if (input.scoreboard) {
@@ -1262,9 +1283,7 @@ export class MemoryJourneyStore implements JourneyStore {
       return forbidden(constraintGate.error);
     }
     const clocksChanged =
-      input.journeyPhase !== undefined ||
-      input.loopStage !== undefined ||
-      input.currentGate !== undefined;
+      input.journeyPhase !== undefined || input.currentGate !== undefined;
     if (clocksChanged) {
       const gateRaw = input.gateEnrichment ?? nextScoreboard.gateEnrichment ?? nextScoreboard;
       const gateEnr = normalizeGateEnrichment(gateRaw);
@@ -1320,12 +1339,6 @@ export class MemoryJourneyStore implements JourneyStore {
         return forbidden("journey_phase is a strict enum 1-9");
       }
       idea.journeyPhase = input.journeyPhase;
-    }
-    if (input.loopStage !== undefined) {
-      if (!isLoopStage(input.loopStage)) {
-        return forbidden("loop_stage is a strict enum 1-7");
-      }
-      idea.loopStage = input.loopStage;
     }
     if (input.currentGate !== undefined) {
       if (!isGateDecision(input.currentGate)) {

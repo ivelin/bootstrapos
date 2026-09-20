@@ -17,6 +17,7 @@ import {
   nextSpokenLoop,
 } from "./constants.js";
 import { HOUSE_RULE_LINES } from "./house-rules.js";
+import { missingWriteBackLine, writeBackMissingFromArtifacts } from "./loop-freeze.js";
 
 export interface StatusView {
   plain: string;
@@ -157,22 +158,24 @@ export function buildNextEvidenceView(state: CompanyState): NextEvidenceView {
     },
   ];
 
-  // Mode selection: help agents choose gather vs work vs writeback vs founder
+  // Mode selection: help agents choose gather vs work vs writeback vs founder.
+  // Write back missing is said from artifacts — never invented as loopStage 7.
+  const writeBackMissing = writeBackMissingFromArtifacts({
+    lastWeeklySnapshotAt: state.lastWeeklySnapshotAt,
+    scoreboard: state as unknown as Record<string, unknown>,
+  });
   let mode: NextEvidenceView["agentFocus"]["mode"] = "do_work_toward_evidence";
   let modePlain =
-    "Do the work that produces solid evidence for the current stage and phase — then record it. Motion without evidence is not progress.";
+    "Do the work that produces solid evidence for the current journey rung — then record it. Motion without evidence is not progress. Ask / Do / Write back is a quality bar, not a card.";
 
-  if (stage === 7) {
+  if (writeBackMissing && phase >= 1) {
     mode = "stage7_writeback";
     modePlain =
-      "Close the loop: write scores, open questions, and a decision trace before starting new work.";
-  } else if (eyesBlocked && (phase >= 7 || stage === 6)) {
+      "Close Write back from artifacts: dated block labeled stated + what we will not do. Do not invent loopStage 7.";
+  } else if (eyesBlocked && phase >= 7) {
     mode = "gather_evidence";
     modePlain =
       "External learning is gated: clear Ready for human eyes (or founder override + trace) before cold asks.";
-  } else if (!state.lastWeeklySnapshotAt && stage === 7) {
-    mode = "stage7_writeback";
-    modePlain = "Weekly snapshot missing — control-plane read-back is due.";
   } else if ((state.openQuestions?.length ?? 0) === 0 && phase <= 4) {
     mode = "do_work_toward_evidence";
     modePlain =
@@ -181,6 +184,8 @@ export function buildNextEvidenceView(state: CompanyState): NextEvidenceView {
 
   const doNotDo = [
     ...pg.doNotCountAsEvidence.map((x) => `Do not treat as evidence: ${x}`),
+    "Do not write loopStage or spoken Ask/Do/Write back as card fields",
+    "Do not treat the week as that station's work unless the artifact exists (Ask = kill line + groups; Do = one-page thesis; Write back = dated stated + what we will not do). clock-examples is teaching only.",
     "Do not advance journey phase without founder Advance/Iterate/Hold/Kill",
     "Do not invent metrics or conversations",
     "Busy is not progress — agent runtime, chat volume, and feature count are not evidence",
@@ -200,8 +205,8 @@ export function buildNextEvidenceView(state: CompanyState): NextEvidenceView {
   const doNow = [
     ...sg.agentFocus,
     ...pg.agentFocus.slice(0, 2),
-    stage === 7
-      ? "Call bootstrap_log_decision + update state (scores, openQuestions, lastWeeklySnapshotAt)"
+    writeBackMissing
+      ? `Missing artifact: ${missingWriteBackLine()}. Update scores, openQuestions, lastWeeklySnapshotAt — do not write loopStage.`
       : "When evidence exists, record it (decision trace / state scores / human-eyes) — do not leave it in chat",
   ];
 
@@ -216,9 +221,12 @@ export function buildNextEvidenceView(state: CompanyState): NextEvidenceView {
     ...pg.evidenceToAdvance.map((e, i) => `    ${i + 1}. [${e.labelHint}] ${e.plain}`),
     "  Founder must still decide Advance / Iterate / Hold / Kill — AI does not advance alone.",
     "",
-    `FAST CLOCK — Loop: ${formatSpokenLoop(stage)}`,
-    `  Purpose: ${sg.purpose}`,
-    `  Move toward ${nextSpokenLoop(stage).label} when: ${sg.nextStageWhen}`,
+    "QUALITY BAR — Ask / Do / Write back (not a card; clock-examples teaching only)",
+    `  Stored loop integer (back-compat, not where-we-are): ${stage}`,
+    writeBackMissing
+      ? `  Missing artifacts: ${missingWriteBackLine()}`
+      : "  Write back artifact present (dated snapshot recorded)",
+    `  Station purpose (teaching): ${sg.purpose}`,
     ...sg.evidenceThisStage.map((e, i) => `    ${i + 1}. [${e.labelHint}] ${e.plain}`),
     "",
     `HUMAN EYES: ${eyes}${eyesBlocked ? " — blocks cold product asks" : ""}`,
@@ -270,7 +278,7 @@ export function buildNextEvidenceView(state: CompanyState): NextEvidenceView {
     },
     howToRecordWhenReady: [
       "bootstrap_log_decision — decision + evidence + next review",
-      "bootstrap_update_state — scores, openQuestions, loopStage, lastAction (phase only with founderApprovedPhaseChange)",
+      "bootstrap_update_state — scores, openQuestions, lastAction (phase only with founderApprovedPhaseChange; loopStage mutations are rejected)",
       "bootstrap_set_ready_for_human_eyes — when cold path checked",
       "Future: bootstrap_record_evidence / accept_proposed (Phase C ledger)",
     ],

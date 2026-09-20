@@ -246,7 +246,7 @@ function registerReadTools(server: McpServer, surface: McpSurface, hosted?: Host
 
   server.tool(
     "bootstrap_reference_clocks",
-    "Reference labels for the two clocks: five journey rungs (Bet / Filter / Ground / Build / Try) and three loop weeks (Ask / Do / Write). Stored integers stay 1–9 / 1–7; spoken/rendered uses the mapping table.",
+    "Reference labels: five journey rungs (Bet / Filter / Ground / Build / Try). Ask / Do / Write back is a quality bar on the week's artifact, not a card. Stored integers stay 1–9 / 1–7.",
     {},
     async () =>
       text({
@@ -558,7 +558,7 @@ function registerWriteTools(server: McpServer) {
 
   server.tool(
     "bootstrap_agent_focus",
-    "Short work order for active company: gather evidence vs do work vs stage-7.",
+    "Short work order for active company: gather evidence vs do work vs close Write back (artifact, not a card).",
     {},
     async () => {
       try {
@@ -602,6 +602,9 @@ function registerWriteTools(server: McpServer) {
       hypothesis: z.string().optional(),
       journeyPhase: z.number().int().min(1).max(9).optional(),
       loopStage: z.number().int().min(1).max(7).optional(),
+      loopSpoken: z.string().optional().describe("Rejected. Ask/Do/Write back are not card fields."),
+      loopWeek: z.string().optional(),
+      spokenLoop: z.string().optional(),
       gateStatus: z.string().optional(),
       autonomyPosture: z.enum(["strict", "auto", "dangerous"]).optional(),
       lastAction: z.string().optional(),
@@ -893,6 +896,10 @@ function registerJourneyTools(server: McpServer, ctx: HostedRequestContext) {
       idea: z.string().optional().describe("Idea slug. Default idea if omitted."),
       journeyPhase: z.number().int().min(1).max(9).optional(),
       loopStage: z.number().int().min(1).max(7).optional(),
+      loopSpoken: z.string().optional().describe("Rejected. Spoken Ask/Do/Write back are not card fields."),
+      loopWeek: z.string().optional(),
+      spokenLoop: z.string().optional(),
+      weekVerb: z.string().optional(),
       currentGate: z.enum(["advance", "iterate", "hold", "kill"]).optional(),
       scoreboard: z.record(z.unknown()).optional(),
       constraintThisWeek: z
@@ -954,6 +961,10 @@ function registerJourneyTools(server: McpServer, ctx: HostedRequestContext) {
             ideaSlug: input.idea,
             journeyPhase: input.journeyPhase,
             loopStage: input.loopStage,
+            loopSpoken: input.loopSpoken,
+            loopWeek: input.loopWeek,
+            spokenLoop: input.spokenLoop,
+            weekVerb: input.weekVerb,
             currentGate: input.currentGate as import("./journey.js").GateDecision | undefined,
             scoreboard: input.scoreboard as import("./journey.js").Scoreboard | undefined,
             constraintThisWeek: input.constraintThisWeek,

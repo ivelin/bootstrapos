@@ -1,13 +1,15 @@
 /**
- * OS 2.8.15 clock shrink — isolated remap.
+ * OS 2.8.15 clock shrink — isolated remap. OS 2.8.17: loop is implicit.
  *
  * Stored integers stay 1–9 (journey) and 1–7 (loop). No schema bump.
- * Spoken / rendered uses five journey rungs and three loop weeks.
+ * Spoken / rendered uses five journey rungs. Ask / Do / Write back is a
+ * quality bar on the week's artifact, not a stored week verb and not card
+ * position. get_journey may still return stored 1–7 for back-compat.
  * Stored 8 or 9 stay at Try — do not invent Advance.
  * Grow is an after-proof pack after Try, not a sixth rung.
  *
  * Name rule: journey = place names (Bet / Filter / Ground / Build / Try).
- * Loop = week verbs (Ask / Do / Write).
+ * Loop verbs = quality bar + clock-examples teaching only.
  * Never put “synthetic research” or “real users” on both clocks.
  * Do takes the station’s shape. It is not a synonym for Build.
  * Make / Check / Hear are not loop weeks.
@@ -28,7 +30,7 @@ export const LOOP_SPOKEN: Record<number, string> = {
 };
 
 export const CLOCK_REMAP_NOTE =
-  "Stored integers stay 1–9 (journey) and 1–7 (loop). Spoken/rendered uses five rungs and three weeks. 8 or 9 stay at Try until founder Advance. Grow is an after-proof pack, not a sixth rung. No invented Advance. Make / Check / Hear are not loop weeks.";
+  "Stored integers stay 1–9 (journey) and 1–7 (loop). Journey spoken/rendered uses five rungs. Ask / Do / Write back is a quality bar, not a card. 8 or 9 stay at Try until founder Advance. Grow is an after-proof pack, not a sixth rung. No invented Advance. Make / Check / Hear are not loop weeks.";
 
 export const JOURNEY_STORED_MAP: Record<string, string> = {
   "1 or 2": "Write the bet",

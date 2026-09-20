@@ -39,7 +39,7 @@
       "type": "integer",
       "minimum": 1,
       "maximum": 7,
-      "description": "Stored loop integer 1–7 (fast clock). Spoken maps to three weeks (Ask / Do / Write back)."
+      "description": "Stored loop integer 1–7 (back-compat). Ask / Do / Write back is a quality bar, not a card. Mutations are rejected."
     },
     "gateStatus": {
       "type": "string",

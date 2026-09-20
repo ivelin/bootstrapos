@@ -20,6 +20,12 @@ import {
   type PortfolioScore,
   type Scoreboard,
 } from "./journey.js";
+import {
+  LOOP_STAGE_MUTATION_REJECTED,
+  SPOKEN_LOOP_WRITE_REJECTED,
+  loopStageMutationRejected,
+  spokenLoopWriteRejected,
+} from "./loop-freeze.js";
 
 function supabaseUrl(): string | undefined {
   return process.env.BOOTSTRAP_SUPABASE_URL || process.env.SUPABASE_URL || undefined;
@@ -277,7 +283,26 @@ export class SupabaseJourneyStore implements JourneyStore {
       portfolioScore?: PortfolioScore;
     },
   ): Promise<unknown> {
+    if (spokenLoopWriteRejected(input) || spokenLoopWriteRejected(input.scoreboard)) {
+      return { ok: false, error: SPOKEN_LOOP_WRITE_REJECTED };
+    }
     const idea = input.ideaSlug ?? "default";
+    if (input.loopStage !== undefined) {
+      const current = await this.getJourney(_actor, {
+        companySlug: input.companySlug,
+        ideaSlug: idea,
+      });
+      const stored = Number(
+        (current as { ideas?: Array<{ clocks?: { loopStage?: number } }> })?.ideas?.[0]?.clocks
+          ?.loopStage,
+      );
+      if (Number.isInteger(stored) && loopStageMutationRejected(stored, input.loopStage)) {
+        return { ok: false, error: LOOP_STAGE_MUTATION_REJECTED };
+      }
+      if (!Number.isInteger(stored)) {
+        return { ok: false, error: LOOP_STAGE_MUTATION_REJECTED };
+      }
+    }
     const scoreboard = {
       ...(input.scoreboard ?? {}),
       ...(input.gateEnrichment ? { gateEnrichment: input.gateEnrichment } : {}),

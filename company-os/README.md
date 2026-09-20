@@ -23,7 +23,7 @@ Optional local MCP (path 3, several ideas only): [`../mcp/README.md`](../mcp/REA
 ```text
 BLUEPRINT                          LIVE RUNTIME
 operating-system.md                live-runtime.md
-  five rungs + gates                 state + Ask → Write back
+  five rungs + gates                 state + quality bar (Ask → Write back)
   virtual office cards (jobs optional)  git remembers; day tools may feed it
   founder-day + skill-capture (optional)  honest scores + open questions
 ```

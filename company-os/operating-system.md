@@ -1,8 +1,8 @@
 # Company Operating System  
 ## For Solo Founders in Bootstrapping Mode
 
-**Version:** 2.8.16  
-**Last Updated:** 2026-09-19  
+**Version:** 2.8.17  
+**Last Updated:** 2026-09-20  
 **Status:** Living guideline (blueprint — not any one company’s live runtime)  
 **Audience:** Independent solo founders; mentors (e.g. Founder Institute, SCORE); AI helpers instructed to follow this system  
 **Isolation:** Portable across startups. Each company keeps its filled instance outside this template (see `../templates/applied-here.md`).  
@@ -111,11 +111,11 @@ The blueprint is **not** the running system. Do not confuse “we wrote the plan
 ### Two clocks (must stay distinct)
 
 1. **Bootstrap journey (five rungs below)** — slow, founder-gated “where is this bet on prove-it?”  
-2. **Live loop (three weeks)** — what we are learning this week: Ask → Do → Write back  
+2. **Live loop (quality bar)** — Ask / Do / Write back is a quality bar on the week’s artifact, not a stored week verb and not card position  
 
-When speaking the board to a human, lead with the simple phase and loop names. Numbers stay in storage and in `get_journey`; use them in parentheses only if useful.
+When speaking the board to a human, lead with the simple journey name, the gate, the constraint, and missing artifacts. Numbers stay in storage and in `get_journey`; use them in parentheses only if useful. Spoken Ask / Do / Write back are not where-we-are.
 
-Name rule: journey = place names (Bet / Filter / Ground / Build / Try). Loop = week verbs (Ask / Do / Write). Never put “synthetic research” or “real users” on both clocks. Do not flatten the two clocks into one list. Do takes the station’s shape. It is not a synonym for Build. Make / Check / Hear are not loop weeks.
+Name rule: journey = place names (Bet / Filter / Ground / Build / Try). Loop verbs = quality bar + [clock-examples](clock-examples.md) teaching only. Never put “synthetic research” or “real users” on both clocks. Do not flatten the two clocks into one list. Do takes the station’s shape. It is not a synonym for Build. Make / Check / Hear are not loop weeks.
 
 You can run many loop cycles inside one journey phase. Full detail, state stores, and the stage diagram: **[`live-runtime.md`](live-runtime.md)**.
 
@@ -190,11 +190,13 @@ Live boards keep stored integers 1–9 (journey) and 1–7 (loop). No schema bum
 | 7 | Try with real people |
 | 8 or 9 | stay at Try until founder Advance (grow pack only if proof exists) |
 
-| Stored loop | Spoken |
+| Stored loop | Spoken (quality bar / teaching — not a card) |
 |-------------|--------|
 | 1 or 2 | Ask |
 | 3–6 | Do |
 | 7 | Write back |
+
+Stored 1–7 stay (no schema bump). `get_journey` may still return them for back-compat. Do **not** write `loopStage` as source of truth. Omit or identical no-op only; mutations are rejected. Do **not** invent Write back as `loopStage` 7.
 
 House rules on the two clocks: Filter is not Ground. Build is not Try. Ask does not Ground. Do at Build is not Try. Engineering green is not demand. Write back does not promote. Paper cannot promote.
 
@@ -647,8 +649,9 @@ This is how you stay in charge of the company operating system.
 That snapshot must include, in everyday language:
 
 - How far you are on **proving the business** (slow journey: simple phase name first; number in parentheses only if useful)
-- What the **weekly learning loop** is doing (fast loop: simple loop name first; number in parentheses only if useful)
-- Whether the next gate is open, waiting for you, blocked, or ready for review — **in plain words**
+- The **gate** (Advance / Iterate / Hold / Kill — or open / waiting / blocked) — **in plain words**
+- This week’s **constraint** (honest biggest bottleneck)
+- **Missing artifacts** — Write back missing is said from artifacts (dated stated + what we will not do), never invented as `loopStage` 7. Ask / Do / Write back is a quality bar, not a card. simple loop name first; number in parentheses only if useful — teaching only, not where-we-are
 - How free the AI is (Strict / Auto / Dangerous) — **with what that means for you**
 - Top open questions or risks
 - Honest scores for the **active hypotheses and slices** (not only vanity product metrics)
@@ -1593,6 +1596,7 @@ Everything else in the research method is adjacent literature or a **house rule*
 | 2.8.14 | Additive: [Decision methods](#decision-methods-aliases-not-a-third-clock) (IESER for this week’s company move; FIRAC for Bind-class paper). Aliases, not a third clock. Not a house rule. Not a phase rename. No schema bump. Speaking rule: lead with descriptive labels; numbers in parentheses. Writing: [Say it once. Link. No filler.](#how-this-os-may-change-stability-contract). |
 | 2.8.15 | Clock shrink: five journey rungs (Write the bet / Filter cheaply / Ground it / Build tiny slice / Try with real people) and three loop weeks (Ask / Do / Write back). Old 8 Learn and old 9 Grow deleted as clock steps; grow is an after-proof pack after Try. Make / Check / Hear are not loop weeks. Stored integers 1–9 / 1–7 still valid (no schema bump); spoken/rendered uses the [keep-doing map](#keep-doing-map-stored-integers--spoken). 8 or 9 stay at Try until founder Advance. Fifteen cells + [end-to-end path](#end-to-end-path) land here. Speaking rule from 2.8.14 stays. Decision methods essay unchanged. Filter is not Ground. Build is not Try. Ask does not Ground. Do at Build is not Try. No invented Advance. Writing: [Say it once. Link. No filler.](#how-this-os-may-change-stability-contract). |
 | 2.8.16 | Teaching page: [clock examples](clock-examples.md) — fifteen cells for one fictional household-jobs company (parents who already pay a cleaner vs founder butler vs our house). Teaching, not a live board. Do not copy onto a real company. Do not Advance from an example. Locked 2.8.15 clocks and 2.8.14 Decision methods stay. No schema bump. No invented Advance. Writing: [Say it once. Link. No filler.](#how-this-os-may-change-stability-contract). |
+| 2.8.17 | Implicit loop: Ask / Do / Write back is a quality bar on the week’s artifact, not a stored week verb and not card position. Founder gates journey only (Advance / Iterate / Hold / Kill). `loopStage` mutations are rejected (omit or identical no-op only). Spoken labels are not where-we-are. Missing Write back is said from artifacts, never invented as `loopStage` 7. [clock-examples](clock-examples.md) stays teaching. No schema bump. No invented Advance. Writing: [Say it once. Link. No filler.](#how-this-os-may-change-stability-contract). |
 
 ---
 

@@ -1,7 +1,7 @@
 let meta = #{
     name: "company-operating-loop",
-    description: "Inspect or advance the company OS living instance (status / continue / start); hands off to user-research on research/validation stages; founder gates for journey phase",
-    when_to_use: "When working the company operating system loop: where are we, continue a stage, or start a new live loop cycle",
+    description: "Inspect the company OS living instance (status / continue / start); quality-bar artifacts not loopStage writes; founder gates for journey phase",
+    when_to_use: "When working the company operating system loop: where are we, continue a week's artifact, or start a new live loop cycle",
     phases: [
         #{ title: "Inspect", detail: "Read instance state and open questions" },
         #{ title: "Research handoff", detail: "When loop/journey is in research-validation, require user-research workflow" },
@@ -58,11 +58,11 @@ inspect_prompt += "- DOCS: if docs/company-os/ exists, use it; else company-os/ 
 inspect_prompt += "- RESEARCH: if research/icps/ exists, use it; else templates/research/icps/\n";
 inspect_prompt += "Inspect via python3 on where-are-we.py + company-state.json:\n";
 inspect_prompt += "  python3 STATE_DIR/where-are-we.py STATE_DIR/company-state.json\n";
-inspect_prompt += "Then read STATE_DIR/company-state.json (journeyPhase, loopStage, gateStatus).\n";
+inspect_prompt += "Then read STATE_DIR/company-state.json (journeyPhase, gateStatus, lastWeeklySnapshotAt). loopStage is stored back-compat only — not where-we-are.\n";
 inspect_prompt += "Optional: DOCS instance README / scores if present.\n";
-inspect_prompt += "Report journey_phase (1-9), loop_stage (1-7), gate, a short teenage-founder summary, has_state_file=true if JSON existed,\n";
+inspect_prompt += "Report journey_phase (1-9), loop_stage (stored 1-7 back-compat only), gate, a short teenage-founder summary, has_state_file=true if JSON existed,\n";
 inspect_prompt += "state_dir used, and recommended_next one of: run-stage, continue, start, advance-journey-needs-founder, user-research, hold.\n";
-inspect_prompt += "If loop_stage is 1-2 or journey_phase is 1-3, recommended_next should lean user-research unless READY_FOR_REAL_WORLD.md exists.\n";
+inspect_prompt += "Where-are-we is journey + gate + constraint + missing artifacts. Do not treat Ask/Do/Write back as a card. If journey_phase is 1-3, recommended_next should lean user-research unless READY_FOR_REAL_WORLD.md exists.\n";
 inspect_prompt += "Never claim journey advanced without founder approval. Public-safe. No PII.\n";
 
 let insp = agent(inspect_prompt, #{
@@ -160,15 +160,16 @@ if action == "start" {
     let start_prompt = "";
     start_prompt += "Start or restart the company OS live loop. Founder-visible. Do not invent a product.\n";
     start_prompt += "Resolve STATE_DIR: company/state/ if company-state.json is there, else templates/company/state/.\n";
-    start_prompt += "Edit company-state.json: set loopStage = 1. Do NOT change journeyPhase.\n";
+    start_prompt += "Do NOT write loopStage. Mutations are rejected. Ask/Do/Write back is a quality bar, not a card.\n";
+    start_prompt += "Do NOT change journeyPhase.\n";
     start_prompt += "Set lastAction to a short note like loop_started so the founder can see it.\n";
     start_prompt += "Update updatedAt if that field exists.\n";
     if note != "" {
         start_prompt += "Founder note to record in lastAction or open questions: " + note + "\n";
     }
     start_prompt += "Then re-run: python3 STATE_DIR/where-are-we.py STATE_DIR/company-state.json\n";
-    start_prompt += "Report ok, message, journey_phase, loop_stage, gate.\n";
-    start_prompt += "Journey phase must NOT increase. loop_stage should be 1 after start.\n";
+    start_prompt += "Report ok, message, journey_phase, loop_stage (unchanged stored integer), gate.\n";
+    start_prompt += "Journey phase must NOT increase. Do not mutate loopStage.\n";
     start_prompt += "Public-safe only. No PII.\n";
 
     let started = agent(start_prompt, #{
@@ -274,15 +275,15 @@ if action == "continue" {
     }
 
     let cont_prompt = "";
-    cont_prompt += "Continue the company OS live loop by ONE stage only. Do not invent a product.\n";
+    cont_prompt += "Continue the company OS live loop by closing this week's artifact. Do not invent a product.\n";
     cont_prompt += "Resolve STATE_DIR: company/state/ if present, else templates/company/state/.\n";
-    cont_prompt += "1) Read company-state.json. Note current loopStage (1-7) and journeyPhase.\n";
+    cont_prompt += "1) Read company-state.json. Note journeyPhase, gate, lastWeeklySnapshotAt. loopStage is not a card.\n";
     if signal != "" {
         cont_prompt += "   Product signal the founder passed (do not treat as proof): " + signal + "\n";
     }
-    cont_prompt += "2) Advance ONE loop stage: if loopStage < 7, set loopStage = loopStage + 1; if 7, wrap to 1 (new cycle, same journey).\n";
+    cont_prompt += "2) Do NOT write loopStage. Refuse station work without the artifact (Ask = kill line + groups; Do = one-page thesis; Write back = dated stated + what we will not do). clock-examples is teaching only.\n";
     cont_prompt += "3) Do NOT change journeyPhase. Never silent-advance the journey.\n";
-    cont_prompt += "4) Set lastAction to a short founder-visible note (loop_continue). Update updatedAt if present.\n";
+    cont_prompt += "4) Set lastAction to a short founder-visible note (loop_continue). Patch openQuestions if needed. Update updatedAt if present.\n";
     cont_prompt += "5) Re-run: python3 STATE_DIR/where-are-we.py STATE_DIR/company-state.json\n";
     cont_prompt += "If research/icps/READY_FOR_REAL_WORLD.md exists, mention it in message.\n";
     cont_prompt += "Report ok, message, journey_phase, loop_stage, gate.\n";

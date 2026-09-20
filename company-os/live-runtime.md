@@ -1,7 +1,7 @@
 # Live Company Runtime  
 ## Persistent state + continuous learning loop
 
-**Part of:** [Company Operating System](operating-system.md) (v2.8.16)  
+**Part of:** [Company Operating System](operating-system.md) (v2.8.17)  
 **Audience:** Solo founders implementing the OS; AI helpers; mentors  
 **Portable:** Yes — this is the *runtime shape*, not any one product  
 **Instance mapping:** Fill `templates/applied-here.md` in *your* company repo (not part of this template).  
@@ -16,12 +16,12 @@ The OS has **two coordinated views**. Do not collapse them into one list.
 | View | What it is | Changes when |
 |------|------------|--------------|
 | **Bootstrap journey** (five rungs) | Where this bet is on the *prove it* path | Founder **Advance / Iterate / Hold / Kill** |
-| **Live runtime loop** (three weeks) | What we are learning this week | Continuous; may run many cycles inside one journey rung |
+| **Live runtime loop** (quality bar) | Ask / Do / Write back on this week’s artifact | Continuous; many cycles inside one journey rung. Not a stored week verb. Not card position. |
 
 Early on you mostly live in **Write the bet / Filter cheaply / Ground it**.  
-Later you still run the full weekly loop **inside** Build / Try — research does not stop after launch. Grow is an after-proof pack after Try, not a sixth rung.
+Later you still run the weekly quality bar **inside** Build / Try — research does not stop after launch. Grow is an after-proof pack after Try, not a sixth rung.
 
-Name rule: journey = place names (Bet / Filter / Ground / Build / Try). Loop = week verbs (Ask / Do / Write). Never put “synthetic research” or “real users” on both clocks. Do not flatten the two clocks into one list. Do takes the station’s shape. It is not a synonym for Build. Make / Check / Hear are not loop weeks.
+Name rule: journey = place names (Bet / Filter / Ground / Build / Try). Loop verbs = quality bar + [clock-examples](clock-examples.md) teaching only. Never put “synthetic research” or “real users” on both clocks. Do not flatten the two clocks into one list. Do takes the station’s shape. It is not a synonym for Build. Make / Check / Hear are not loop weeks. Where-are-we is journey + gate + constraint + missing artifacts. Do not invent Write back as `loopStage` 7.
 
 ```text
   BOOTSTRAP JOURNEY (slow, founder-gated)
@@ -32,6 +32,7 @@ Name rule: journey = place names (Bet / Filter / Ground / Build / Try). Loop = w
          ▼
   LIVE RUNTIME (fast, evidence-producing)
   persistent state ──► Ask ──► Do ──► Write back ──► Ask
+  (quality bar on the week's artifact — not a card)
 ```
 
 ---
@@ -164,7 +165,7 @@ Change company memory. Never skip. Never Advance.
 |--|--|
 | **Goal** | Close the learning loop so the next cycle is smarter |
 | **Inputs** | All new traces, scores, feedback |
-| **Work** | Version personas; revise hypotheses; update product knowledge; write decision traces; set next loop cursor. At Write the bet: save as stated. At Filter: rank as synthetic. At Ground: observed vs still synthetic. At Build: bugs and what ran — cannot Advance to Try. At Try: observed use or no use. |
+| **Work** | Version personas; revise hypotheses; update product knowledge; write decision traces. Do not write `loopStage`. At Write the bet: save as stated. At Filter: rank as synthetic. At Ground: observed vs still synthetic. At Build: bugs and what ran — cannot Advance to Try. At Try: observed use or no use. |
 | **Outputs** | Fresh state ready for Ask; explicit list of what changed and why |
 | **Founder gate?** | Soft — review diffs when strategy-sensitive fields change. Write back does not promote. |
 
@@ -192,7 +193,7 @@ Write the bet Ask → Do → Write back → Filter Ask → Do → Write back →
 
 ## 5. Mapping loop weeks ↔ bootstrap journey rungs
 
-Stored integers stay 1–9 / 1–7. Spoken/rendered uses five rungs and three weeks. No invented Advance.
+Stored integers stay 1–9 / 1–7. Spoken/rendered uses five rungs. Ask / Do / Write back is a quality bar, not a card. No invented Advance.
 
 | Stored journey | Spoken journey | Runtime weeks that dominate |
 |----------------|----------------|-----------------------------|
