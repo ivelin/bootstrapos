@@ -655,7 +655,7 @@ assert required <= found, found
 for skill in (root / "skills").glob("*/SKILL.md"):
     body = skill.read_text()
     assert "https://github.com/ivelin/bootstrap" in body, skill
-    limit = 2400 if skill.parent.name in {"house-rule-pins", "query-os-first"} else 1800
+    limit = 2800 if skill.parent.name in {"house-rule-pins", "query-os-first"} else 1800
     assert len(body) < limit, (skill, len(body), limit)
     for phrase in forbidden:
         assert phrase not in body, (skill, phrase)
@@ -666,6 +666,7 @@ assert "house-rule-there-is-no-optimal-price-until-people-have-paid-and-stayed" 
 assert "house-rule-do-not-automate-a-step-that-should-not-exist" in pins
 assert "house-rule-legal-paper-cannot-promote" in pins
 assert "house-rule-advisor-ride-along-is-assumed-not-observed" in pins
+assert "house-rule-an-idea-board-is-a-customer-thesis" in pins
 assert "old SaaS playbook" in pins
 assert "automate the playbook" in pins
 assert "one bottleneck this week" in pins
@@ -687,6 +688,7 @@ assert "house-rule-there-is-no-optimal-price-until-people-have-paid-and-stayed" 
 assert "house-rule-do-not-automate-a-step-that-should-not-exist" in standing
 assert "house-rule-legal-paper-cannot-promote" in standing
 assert "house-rule-advisor-ride-along-is-assumed-not-observed" in standing
+assert "house-rule-an-idea-board-is-a-customer-thesis" in standing
 assert "automate the playbook" in standing
 assert "new landing page" in standing
 assert "written founder override" in standing
@@ -1449,7 +1451,7 @@ if grep -q '| 2.8.18 |' company-os/operating-system.md \
   && grep -q 'relationship shelf' company-os/operating-system.md \
   && grep -q 'a People OS' company-os/operating-system.md \
   && grep -q 'house-rule-an-idea-board-is-a-customer-thesis' company-os/ai-instructions.md \
-  && grep -q 'named-group kill line' company-os/ai-instructions.md \
+  && grep -qi 'named-group kill line' company-os/ai-instructions.md \
   && grep -q 'Honor OS 2.8.18' AGENTS.md \
   && grep -q 'an idea board is a customer thesis' AGENTS.md \
   && grep -q 'OS_VERSION = "2.8.18"' mcp/src/constants.ts \

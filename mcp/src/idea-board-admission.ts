@@ -1,8 +1,8 @@
 /**
  * OS 2.8.18 — idea-board admission by bet class.
  *
- * An idea board is a customer thesis. Admit when the why is a named-group
- * kill line about pay or use. Reject when the primary object of the bet is a
+ * An idea board is a customer thesis. Admit when the why is a named-group kill line
+ * about pay or use. Reject when the primary object of the bet is a
  * person, hire, FAST/SAFE/SOPA/83(b), investor, contractor, employee,
  * consultant, or channel-partner-as-the-bet.
  *
