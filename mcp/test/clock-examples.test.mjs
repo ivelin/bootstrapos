@@ -81,7 +81,8 @@ describe("OS 2.8.16 clock-examples (teaching 5×3)", () => {
     assert.match(os, /\| 2\.8\.14 \|/);
     assert.match(os, /\| 2\.8\.15 \|/);
     assert.match(os, /\| 2\.8\.16 \|/);
-    assert.match(os, /\*\*Version:\*\* 2\.8\.17/);
+    assert.match(os, /\*\*Version:\*\* 2\.8\.18/);
+    assert.match(os, /\| 2\.8\.17 \|/);
     assert.match(ai, /clock-examples\.md/);
     assert.match(ai, /Do not copy those scenes onto my board/);
     assert.match(ai, /Do not Advance from an example/);
