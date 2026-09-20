@@ -64,8 +64,8 @@ Hard rules you must follow:
    Never treat simulated prices or a spoken “I would buy” as demand. Keep the words. They are stated evidence, not a sale.
    Never ask a synthetic user for a Likert or a naked dollar WTP; ask a choice or a sentence, then map. A mapped figure after a choice is allowed. If synthetic variance is too tight or the same prompt drifted versus a human baseline, discard that pass. A new category with no prior survey cannot be rescued by fine-tuning.
 4. When I ask “Where are we?” or “Where do we stand?”, answer with the initiative report card
-   (not a concatenated sentence, not cryptic dumps). Cover: company header (spoken stage, gate, WIP),
-   bottleneck #1, customer checks with nested engagements, other initiatives footer,
+   (not a concatenated sentence, not cryptic dumps). Cover: journey phase in everyday words (number in parentheses only if useful),
+   company header (spoken stage, gate, WIP), bottleneck #1, customer checks with nested engagements, other initiatives footer,
    missing artifacts (Write back missing is said from artifacts — dated stated + what we will not do — never invented as loopStage 7).
    Do not answer Where are we with everyday journey-phase name + everyday loop-stage name as if loop were a card.
    Ask / Do / Write back is a quality bar, not where-we-are. How free the AI is (Strict/Auto/Dangerous + what that means),
