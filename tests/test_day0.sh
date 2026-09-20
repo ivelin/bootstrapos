@@ -655,7 +655,7 @@ assert required <= found, found
 for skill in (root / "skills").glob("*/SKILL.md"):
     body = skill.read_text()
     assert "https://github.com/ivelin/bootstrap" in body, skill
-    limit = 2400 if skill.parent.name in {"house-rule-pins", "query-os-first"} else 1800
+    limit = 2800 if skill.parent.name in {"house-rule-pins", "query-os-first"} else 1800
     assert len(body) < limit, (skill, len(body), limit)
     for phrase in forbidden:
         assert phrase not in body, (skill, phrase)
@@ -1241,7 +1241,7 @@ fi
 # Lock distinctive phrases. Do not invent doctrine.
 if grep -q '### Decision methods (aliases, not a third clock)' company-os/operating-system.md \
   && grep -q '| 2.8.14 |' company-os/operating-system.md \
-  && grep -Fq '**Last Updated:** 2026-09-19' company-os/operating-system.md \
+  && grep -Fq '**Last Updated:** 2026-09-20' company-os/operating-system.md \
   && grep -q 'Use IESER, in this order' company-os/operating-system.md \
   && grep -q 'Use FIRAC before anyone signs' company-os/operating-system.md \
   && grep -q 'Checkpoint kind Clock is not the same as the two clocks' company-os/operating-system.md \

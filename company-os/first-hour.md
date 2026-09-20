@@ -143,9 +143,9 @@ House rule: [legal paper cannot promote](https://github.com/ivelin/bootstrap/blo
 
 When someone opens a 5-rung card for an advisor FAST, a SAFE, or a hire, or tells the founder to put that row on a spreadsheet:
 
-> One founder control plane. Write supporting on the same snapshot (role, state, clock, next action, last observed fact). No rungs. Cannot promote. Exile is rejected.
+> Write supporting on the same snapshot (role, state, clock, next action, last observed fact). No rungs. Cannot promote. Exile is rejected.
 
-House rule: [one founder control plane](https://github.com/ivelin/bootstrap/blob/main/company-os/operating-system.md#house-rule-one-founder-control-plane).
+House rule: [supporting stays on the same snapshot](https://github.com/ivelin/bootstrap/blob/main/company-os/operating-system.md#house-rule-one-founder-control-plane).
 
 When someone treats an advisor's promise of exclusivity or an Office Hours tip as proof customers will pay:
 
