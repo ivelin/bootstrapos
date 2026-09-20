@@ -12,6 +12,7 @@ Usage:
 from __future__ import annotations
 
 import json
+import re
 import sys
 from pathlib import Path
 
@@ -203,6 +204,126 @@ def engagement_lines(raw: object) -> list[str]:
     return lines or ["  (none)"]
 
 
+DATE_RE = re.compile(r"\b20\d{2}-\d{2}-\d{2}\b")
+
+
+def _as_initiatives(state: dict) -> list[dict]:
+    stored = state.get("initiatives")
+    if isinstance(stored, list) and stored:
+        return [item for item in stored if isinstance(item, dict)]
+    rows: list[dict] = []
+    constraint = state.get("constraintThisWeek") or state.get("constraint_this_week") or ""
+    if isinstance(constraint, str) and constraint.strip():
+        rows.append(
+            {
+                "id": "legacy-constraint",
+                "kind": "customer_check",
+                "premise": constraint.strip(),
+                "status": "active",
+                "last": "",
+                "next": constraint.strip(),
+            }
+        )
+    supporting = state.get("supporting") if isinstance(state.get("supporting"), list) else []
+    role_kind = {
+        "investor": "capital",
+        "counsel": "legal",
+        "advisor": "advisor",
+        "contractor": "advisor",
+        "partner": "advisor",
+    }
+    state_map = {"promise": "proposed", "clock": "waiting", "done": "closed", "dead": "closed"}
+    for i, item in enumerate(supporting, 1):
+        if not isinstance(item, dict):
+            continue
+        role = str(item.get("role") or "advisor")
+        st = str(item.get("state") or "promise")
+        rows.append(
+            {
+                "id": f"legacy-supporting-{i}",
+                "kind": role_kind.get(role, "advisor"),
+                "premise": str(item.get("lastObservedFact") or item.get("last_observed_fact") or role),
+                "status": state_map.get(st, "proposed"),
+                "last": str(item.get("lastObservedFact") or item.get("last_observed_fact") or ""),
+                "next": str(item.get("nextAction") or item.get("next_action") or ""),
+                "clock": item.get("clock"),
+            }
+        )
+    parent = next((r["id"] for r in rows if r.get("kind") == "customer_check"), None)
+    engagements = state.get("engagements") if isinstance(state.get("engagements"), list) else []
+    for i, item in enumerate(engagements, 1):
+        if not isinstance(item, dict):
+            continue
+        row = {
+            "id": f"legacy-engagement-{i}",
+            "kind": "engagement",
+            "premise": str(item.get("account") or ""),
+            "status": state_map.get(str(item.get("state") or "promise"), "proposed"),
+            "last": str(item.get("kind") or ""),
+            "next": "",
+        }
+        if parent:
+            row["parentId"] = parent
+        rows.append(row)
+    return rows
+
+
+def _card_lines(state: dict) -> list[str]:
+    rows = _as_initiatives(state)
+    phase = state.get("journeyPhase")
+    stage = JOURNEY.get(phase, "(unknown phase)")
+    gate = fmt(state.get("gateStatus"))
+    open_checks = [
+        r
+        for r in rows
+        if r.get("kind") == "customer_check" and str(r.get("status") or "") != "closed"
+    ]
+    dated = [
+        r
+        for r in open_checks
+        if DATE_RE.search(str(r.get("clock") or "") + " " + str(r.get("premise") or ""))
+    ]
+    bottleneck = (dated or open_checks or [None])[0]
+    nested: dict[str, list[dict]] = {}
+    footer: list[dict] = []
+    for row in rows:
+        if row.get("kind") == "engagement" and row.get("parentId"):
+            nested.setdefault(str(row["parentId"]), []).append(row)
+        elif row.get("kind") != "customer_check" or str(row.get("status") or "") == "closed":
+            footer.append(row)
+    lines = [
+        f"WHERE ARE WE — {fmt(state.get('companyId'))}",
+        f"Stage: {stage} · Gate: {gate} · WIP 1 on customer_check until paid use",
+        (
+            f"#1 BOTTLENECK  {bottleneck.get('id')} · {bottleneck.get('premise')}"
+            if bottleneck
+            else "#1 BOTTLENECK  none yet"
+        ),
+        "CUSTOMER CHECKS",
+    ]
+    if not open_checks:
+        lines.append("  (none)")
+    for check in open_checks:
+        lines.append(
+            f"  customer_check · {fmt(check.get('premise'))} · {fmt(check.get('status'))} · last {fmt(check.get('last'))} · next {fmt(check.get('next'))}"
+        )
+        for child in nested.get(str(check.get("id")), []):
+            nda = " (NDA is not Try)" if "nda" in str(child.get("premise") or child.get("last") or "").lower() else ""
+            lines.append(
+                f"    engagement · {fmt(child.get('premise'))} · {fmt(child.get('status'))}{nda}"
+            )
+    lines.append("OTHER INITIATIVES")
+    if not footer:
+        lines.append("  (none)")
+    else:
+        for row in footer:
+            lines.append(
+                f"  {fmt(row.get('kind'))} · {fmt(row.get('premise'))} · {fmt(row.get('status'))}"
+            )
+    lines.append("Ask / Do / Write back is a quality bar, not a card.")
+    return lines
+
+
 def snapshot(state: dict) -> str:
     phase = state.get("journeyPhase")
     stage = state.get("loopStage")
@@ -231,6 +352,8 @@ def snapshot(state: dict) -> str:
         "",
         f"CONSTRAINT         {fmt(constraint) if constraint else 'none yet'}",
         "  Honest biggest bottleneck this week. Not a card. Not a fun side quest.",
+        "",
+        *_card_lines(state),
         "",
         "MISSING ARTIFACTS",
         (

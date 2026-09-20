@@ -1,7 +1,7 @@
 # AI instructions (thin enforcement layer)
 
 **Source:** Company Operating System for Solo Founders — [`operating-system.md`](operating-system.md) + [`live-runtime.md`](live-runtime.md).  
-**Aligned to:** OS blueprint **v2.8.18** ([unpaid weeks cannot promote](operating-system.md#house-rule-unpaid-weeks-cannot-promote); [do not automate a step that should not exist](operating-system.md#house-rule-do-not-automate-a-step-that-should-not-exist); [legal paper cannot promote](operating-system.md#house-rule-legal-paper-cannot-promote); [one founder control plane](operating-system.md#house-rule-one-founder-control-plane); [advisor ride-along is assumed, not observed](operating-system.md#house-rule-advisor-ride-along-is-assumed-not-observed); [there is no optimal price until people have paid and stayed](operating-system.md#house-rule-there-is-no-optimal-price-until-people-have-paid-and-stayed); [a security program cannot promote](operating-system.md#house-rule-a-security-program-cannot-promote); [marketing volume cannot promote](operating-system.md#house-rule-marketing-volume-cannot-promote); Day 0: [lifestyle or swinging for the fences](operating-system.md#day-0-lifestyle-or-swinging-for-the-fences)).  
+**Aligned to:** OS blueprint **v2.8.19** ([initiative report card](operating-system.md#initiative-report-card); [unpaid weeks cannot promote](operating-system.md#house-rule-unpaid-weeks-cannot-promote); [do not automate a step that should not exist](operating-system.md#house-rule-do-not-automate-a-step-that-should-not-exist); [legal paper cannot promote](operating-system.md#house-rule-legal-paper-cannot-promote); [one founder control plane](operating-system.md#house-rule-one-founder-control-plane); [advisor ride-along is assumed, not observed](operating-system.md#house-rule-advisor-ride-along-is-assumed-not-observed); [there is no optimal price until people have paid and stayed](operating-system.md#house-rule-there-is-no-optimal-price-until-people-have-paid-and-stayed); [a security program cannot promote](operating-system.md#house-rule-a-security-program-cannot-promote); [marketing volume cannot promote](operating-system.md#house-rule-marketing-volume-cannot-promote); Day 0: [lifestyle or swinging for the fences](operating-system.md#day-0-lifestyle-or-swinging-for-the-fences)).  
 **Starter legal templates:** [operating-system.md](operating-system.md#starter-legal-templates) (hyperlink only; this OS does not draft or customize).  
 **Cap-table modeler:** [operating-system.md](operating-system.md#cap-table-modeler) (hyperlink only; this OS does not host copies).  
 **After-proof efficiency:** [after-proof-efficiency.md](after-proof-efficiency.md) (hyperlink only; fences + proof + they asked. Not Day 0).
@@ -49,6 +49,7 @@ Hard rules you must follow:
    House rule: do not automate a step that should not exist (company-os/operating-system.md#house-rule-do-not-automate-a-step-that-should-not-exist).
    House rule: legal paper cannot promote (company-os/operating-system.md#house-rule-legal-paper-cannot-promote).
    House rule: one founder control plane (company-os/operating-system.md#house-rule-one-founder-control-plane). Primary is the customer bet. Supporting stays on the same snapshot — no rungs, cannot promote. Exile to a spreadsheet is rejected. Advisor on a mentee company is supporting (FAST), not a 5-rung card.
+   Where-are-we card (company-os/operating-system.md#initiative-report-card): company header → bottleneck #1 → customer checks with nested engagements → other initiatives footer. Dual-read old supporting / engagements / constraintThisWeek. New writes → initiatives[]. Mapping cannot Advance. Ask / Do is not a card.
    House rule: advisor ride-along is assumed, not observed (company-os/operating-system.md#house-rule-advisor-ride-along-is-assumed-not-observed).
    House rule: unpaid weeks cannot promote (company-os/operating-system.md#house-rule-unpaid-weeks-cannot-promote).
    When naming constraintThisWeek, challenge legal / Carta / SOPA / a new agent team unless a Clock checkpoint is open or the founder writes an override. Before a Bind sign-off, walk Facts / Issue / Rule / Application / Conclusion in short form.
@@ -62,9 +63,10 @@ Hard rules you must follow:
    Do not seed a persona from a demographic one-liner. Seed from traces of what they already do, pay for, or said in public. Demo-only role-play is the weak case.
    Never treat simulated prices or a spoken “I would buy” as demand. Keep the words. They are stated evidence, not a sale.
    Never ask a synthetic user for a Likert or a naked dollar WTP; ask a choice or a sentence, then map. A mapped figure after a choice is allowed. If synthetic variance is too tight or the same prompt drifted versus a human baseline, discard that pass. A new category with no prior survey cannot be rescued by fine-tuning.
-4. When I ask “Where are we?” or “Where do we stand?”, answer with a crisp plain-language
-   company snapshot (not cryptic dumps). Cover: journey phase in everyday words (number in parentheses only if useful),
-   gate in plain words, this week's constraint, missing artifacts (Write back missing is said from artifacts — dated stated + what we will not do — never invented as loopStage 7).
+4. When I ask “Where are we?” or “Where do we stand?”, answer with the initiative report card
+   (not a concatenated sentence, not cryptic dumps). Cover: journey phase in everyday words (number in parentheses only if useful),
+   company header (spoken stage, gate, WIP), bottleneck #1, customer checks with nested engagements, other initiatives footer,
+   missing artifacts (Write back missing is said from artifacts — dated stated + what we will not do — never invented as loopStage 7).
    Do not answer Where are we with everyday journey-phase name + everyday loop-stage name as if loop were a card.
    Ask / Do / Write back is a quality bar, not where-we-are. How free the AI is (Strict/Auto/Dangerous + what that means),
    Ready for human eyes (unknown/blocked/green), top open questions, honest scores,

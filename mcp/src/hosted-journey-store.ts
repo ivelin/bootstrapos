@@ -12,10 +12,12 @@ import {
 } from "./journey-notify.js";
 import {
   MemoryJourneyStore,
+  cardFromScoreboard,
   normalizeSlug,
   type EngagementRow,
   type GateDecision,
   type GateEnrichment,
+  type Initiative,
   type JourneyStore,
   type KillPostmortem,
   type PortfolioScore,
@@ -32,6 +34,35 @@ import {
   admitPrimaryPhaseWhy,
   admitPrimaryWhy,
 } from "./control-plane.js";
+
+/** Scoreboard adapter: card from initiatives[] + dual-read. No prod SQL. */
+function attachCardFromScoreboard(raw: unknown): unknown {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return raw;
+  const payload = raw as {
+    ok?: boolean;
+    card?: unknown;
+    company?: { slug?: string; label?: string };
+    ideas?: Array<{
+      clocks?: { journeyPhase?: number; currentGate?: string };
+      scoreboard?: Record<string, unknown>;
+    }>;
+  };
+  if (!payload.ok || payload.card || !payload.ideas?.[0]) return raw;
+  const idea = payload.ideas[0];
+  const slug = payload.company?.slug || "";
+  const label = payload.company?.label || slug;
+  if (!idea.scoreboard) return raw;
+  return {
+    ...payload,
+    card: cardFromScoreboard({
+      slug,
+      label,
+      journeyPhase: Number(idea.clocks?.journeyPhase) || 1,
+      gate: String(idea.clocks?.currentGate || "hold"),
+      scoreboard: idea.scoreboard,
+    }),
+  };
+}
 
 function supabaseUrl(): string | undefined {
   return process.env.BOOTSTRAP_SUPABASE_URL || process.env.SUPABASE_URL || undefined;
@@ -245,7 +276,7 @@ export class SupabaseJourneyStore implements JourneyStore {
       p_idea: query.ideaSlug ?? null,
     });
     if ("error" in hit) return { ok: false, error: hit.error };
-    return hit.raw;
+    return attachCardFromScoreboard(hit.raw);
   }
 
   async createIdea(
@@ -293,6 +324,7 @@ export class SupabaseJourneyStore implements JourneyStore {
       portfolioScore?: PortfolioScore;
       supporting?: SupportingRow[];
       engagements?: EngagementRow[];
+      initiatives?: Initiative[];
     },
   ): Promise<unknown> {
     if (spokenLoopWriteRejected(input) || spokenLoopWriteRejected(input.scoreboard)) {
@@ -330,6 +362,7 @@ export class SupabaseJourneyStore implements JourneyStore {
       ...(input.portfolioScore ? { portfolioScore: input.portfolioScore } : {}),
       ...(input.supporting ? { supporting: input.supporting } : {}),
       ...(input.engagements ? { engagements: input.engagements } : {}),
+      ...(input.initiatives ? { initiatives: input.initiatives } : {}),
     };
     const hit = await this.rpc("bootstrap_os_put_journey", {
       p_company: input.companySlug,
@@ -349,7 +382,7 @@ export class SupabaseJourneyStore implements JourneyStore {
       idea,
       event: "put_journey",
     });
-    return hit.raw;
+    return attachCardFromScoreboard(hit.raw);
   }
 
   async postComment(

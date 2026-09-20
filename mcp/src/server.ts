@@ -976,6 +976,28 @@ function registerJourneyTools(server: McpServer, ctx: HostedRequestContext) {
         )
         .optional()
         .describe("Named accounts under the primary. NDA is not Try. No journeyPhase."),
+      initiatives: z
+        .array(
+          z.object({
+            id: z.string().min(1).max(48),
+            kind: z.enum(["customer_check", "engagement", "capital", "legal", "advisor"]),
+            premise: z.string().min(1).max(280),
+            measure: z.string().min(1).max(280),
+            killLine: z.string().min(1).max(280),
+            status: z.enum(["proposed", "active", "waiting", "closed"]),
+            last: z.string().max(280).optional().default(""),
+            next: z.string().max(280).optional().default(""),
+            outcome: z.enum(["none", "learned", "delivered", "killed"]),
+            impact: z.enum(["none", "learning", "revenue", "obligation", "clock"]),
+            evidence: z.enum(["stated", "synthetic", "observed"]),
+            clock: z.string().max(32).optional(),
+            parentId: z.string().max(48).optional(),
+          }),
+        )
+        .optional()
+        .describe(
+          "New writes. Dual-read old supporting / engagements / constraintThisWeek when omitted. Kinds v1 only. Mapping cannot Advance.",
+        ),
     },
     async (input) => {
       const store = storeOf();
@@ -1009,6 +1031,7 @@ function registerJourneyTools(server: McpServer, ctx: HostedRequestContext) {
               clock: row.clock?.trim() || "—",
             })),
             engagements: input.engagements,
+            initiatives: input.initiatives,
           }),
         );
       } catch (e) {

@@ -32,7 +32,7 @@ const GATE_ENR = {
 
 describe("OS 2.8.17 implicit loop (quality bar, not card)", () => {
   it("pins pack version and reject helpers", () => {
-    assert.equal(OS_VERSION, "2.8.18");
+    assert.equal(OS_VERSION, "2.8.19");
     assert.equal(loopStageMutationRejected(1, undefined), false);
     assert.equal(loopStageMutationRejected(1, 1), false);
     assert.equal(loopStageMutationRejected(1, 2), true);

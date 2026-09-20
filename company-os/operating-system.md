@@ -1,7 +1,7 @@
 # Company Operating System  
 ## For Solo Founders in Bootstrapping Mode
 
-**Version:** 2.8.18  
+**Version:** 2.8.19  
 **Last Updated:** 2026-09-20  
 **Status:** Living guideline (blueprint — not any one company’s live runtime)  
 **Audience:** Independent solo founders; mentors (e.g. Founder Institute, SCORE); AI helpers instructed to follow this system  
@@ -1232,6 +1232,30 @@ This rule is **not** a third clock, **not** Day 0 homework, and **not** a People
 
 Same family: [legal paper cannot promote](#house-rule-legal-paper-cannot-promote). [Advisor ride-along is assumed, not observed](#house-rule-advisor-ride-along-is-assumed-not-observed).
 
+### Initiative report card
+
+Where-are-we is a **report card**, not a concatenated sentence. Additive on 2.8.18. Not a third clock. Not a house rule. Mapping cannot Advance.
+
+**Company (header).** Spoken stage (five rungs), gate, `wipLimit` = 1 on `customer_check` until paid use, `bottleneckId` (derived).
+
+**Initiative.** `id`, `kind`, `premise`, `measure`, `killLine`, `status` (proposed | active | waiting | closed), `last`, `next`, `outcome` (none | learned | delivered | killed), `impact` (none | learning | revenue | obligation | clock), `evidence` (stated | synthetic | observed), optional `clock`, optional `parentId`.
+
+**Kinds v1 only.** `customer_check` | `engagement` | `capital` | `legal` | `advisor`.
+
+**Rank (computed).** `customer_check` above others until paid use. Stage picks a named account with a date. `impact=clock` may warn, not title. Closed rows are footer.
+
+**Card.** Company header → bottleneck #1 → customer checks with nested engagements → other initiatives footer.
+
+**Reads / writes.** Dual-read old `supporting[]` / `engagements[]` / `constraintThisWeek`. New writes go to `initiatives[]`. Stored journey integers stay. An NDA is not Try. Paper cannot promote. Ask / Do is not a card. `progress[]` is notes, not card body.
+
+| | Do this | Not this |
+|--|---------|----------|
+| **Lead** | One `customer_check` with a named account and a date. | Concatenate Clock paper and Operating pay/use into the lead. |
+| **Nest** | Engagements under the check via `parentId`. NDA stays nested. | Treat the NDA as Try. Open a second journey. |
+| **Footer** | Capital, legal, advisor, and closed rows. | Title the card with `impact=clock`. |
+
+Not Day 0 homework. No invented Advance.
+
 ### House rule: unpaid weeks cannot promote
 
 Someone asking you to keep working for a company that has not paid, so the deal can close later, is asking for free work. That is not proof they will pay. Same family as [legal paper cannot promote](#house-rule-legal-paper-cannot-promote) and a spoken yes cannot promote.
@@ -1616,6 +1640,7 @@ Everything else in the research method is adjacent literature or a **house rule*
 | 2.8.16 | Teaching page: [clock examples](clock-examples.md) — fifteen cells for one fictional household-jobs company (parents who already pay a cleaner vs founder butler vs our house). Teaching, not a live board. Do not copy onto a real company. Do not Advance from an example. Locked 2.8.15 clocks and 2.8.14 Decision methods stay. No schema bump. No invented Advance. Writing: [Say it once. Link. No filler.](#how-this-os-may-change-stability-contract). |
 | 2.8.17 | Implicit loop: Ask / Do / Write back is a quality bar on the week’s artifact, not a stored week verb and not card position. Founder gates journey only (Advance / Iterate / Hold / Kill). `loopStage` mutations are rejected (omit or identical no-op only). Spoken labels are not where-we-are. Missing Write back is said from artifacts, never invented as `loopStage` 7. [clock-examples](clock-examples.md) stays teaching. No schema bump. No invented Advance. Writing: [Say it once. Link. No filler.](#how-this-os-may-change-stability-contract). |
 | 2.8.18 | House rule: [one founder control plane](#house-rule-one-founder-control-plane). Primary is the customer bet. Supporting (advisor/FAST, investor/SAFE, counsel, contractor, partner) stays on the same snapshot — no rungs, cannot promote. Engagements are named accounts under primary. Exile to a spreadsheet is rejected. NDA is not Try. No third clock. No schema bump 1–9 / 1–7. Implicit loop from 2.8.17 stays. Writing: [Say it once. Link. No filler.](#how-this-os-may-change-stability-contract). |
+| 2.8.19 | Additive: [Initiative report card](#initiative-report-card). Company header → bottleneck #1 → customer checks with nested engagements → other initiatives footer. `initiatives[]` kinds v1 only (`customer_check` \| `engagement` \| `capital` \| `legal` \| `advisor`). Dual-read old supporting / engagements / constraintThisWeek. New writes → `initiatives[]`. Mapping cannot Advance. `wipLimit` 1 on customer_check until paid use. `impact=clock` may warn, not title. Closed = footer. `progress[]` is not card body. Ask / Do is not a card. No third clock. No schema bump 1–9 / 1–7. Writing: [Say it once. Link. No filler.](#how-this-os-may-change-stability-contract). |
 
 ---
 
