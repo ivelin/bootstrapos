@@ -1,5 +1,5 @@
 {
-  "note": "PR1 dyeconverter initiatives[] mapping. Cos live-board pack is ground truth. Test/fixture only — never apply to production or write a live board. Mapping cannot Advance. Stored clocks stay Write the bet / hold (spoken may say Ground on Oterra).",
+  "note": "PR1.1 dyeconverter Heavy-locked initiatives[] map. Fixture/test only — never apply to production or write a live board. Mapping cannot Advance. Stored clocks stay Write the bet / hold. Bottleneck / constraint lead is Oterra SKU+site+date only — never concat FAST/SAFE.",
   "companySlug": "dyeconverter",
   "ideaSlug": "dyeconverter",
   "journeyPhase": 1,
@@ -7,20 +7,20 @@
   "currentGate": "hold",
   "scoreboard": {
     "schema_version": 1,
-    "hypothesis": "Plants already buying pigment pay for conversion/tenancy on one SKU. Oterra is distribution.",
+    "hypothesis": "Plants already buying pigment pay for conversion/tenancy on one SKU. Oterra is this week's SKU+site+date. Turing Labs and Ocean Spray nest under the same plant check.",
     "readyForHumanEyes": { "status": "unknown" },
     "autonomyPosture": "strict",
     "openQuestions": [
       "SAFE text after 20 Sep call?",
-      "Oterra past NDA?"
+      "Oterra SKU+site+date?"
     ],
-    "lastAction": "pr1_dyeconverter_initiatives_mapping",
-    "constraint_this_week": "Oterra plant tenancy — quote names SKU, site, date, or paid plant use",
+    "lastAction": "pr1_1_dyeconverter_heavy_locked",
+    "constraint_this_week": "Oterra SKU+site+date only",
     "initiatives": [
       {
-        "id": "dye-check-oterra",
+        "id": "dye-check-plant",
         "kind": "customer_check",
-        "premise": "Oterra plant tenancy — plants already buying pigment pay for conversion on one SKU",
+        "premise": "Oterra SKU+site+date only",
         "measure": "quote names one SKU, site, date, or paid plant use",
         "killLine": "kill if no move past NDA",
         "status": "active",
@@ -42,35 +42,63 @@
         "outcome": "none",
         "impact": "obligation",
         "evidence": "stated",
-        "parentId": "dye-check-oterra"
+        "clock": "2026-09-21",
+        "parentId": "dye-check-plant"
+      },
+      {
+        "id": "dye-eng-turing",
+        "kind": "engagement",
+        "premise": "Turing Labs",
+        "measure": "plant pay or use",
+        "killLine": "talk is not Try",
+        "status": "waiting",
+        "last": "stated",
+        "next": "plant pay or use",
+        "outcome": "none",
+        "impact": "none",
+        "evidence": "stated",
+        "parentId": "dye-check-plant"
+      },
+      {
+        "id": "dye-eng-ocean-spray",
+        "kind": "engagement",
+        "premise": "Ocean Spray",
+        "measure": "plant pay or use",
+        "killLine": "talk is not Try",
+        "status": "waiting",
+        "last": "call #2 set",
+        "next": "call #2 22 Sep",
+        "outcome": "none",
+        "impact": "none",
+        "evidence": "stated",
+        "parentId": "dye-check-plant"
       },
       {
         "id": "dye-capital-safe",
         "kind": "capital",
         "premise": "Founder Capital $25k SAFE",
-        "measure": "20 Sep terms 2.5% at $1M",
+        "measure": "terms 2.5% at $1M — waiting for SAFE text",
         "killLine": "SAFE cannot promote",
         "status": "waiting",
-        "last": "20 Sep terms 2.5% at $1M",
+        "last": "20 Sep terms 2.5% at $1M — not closed",
         "next": "SAFE text after 20 Sep call",
         "outcome": "none",
         "impact": "clock",
-        "evidence": "stated",
-        "clock": "2026-09-20"
+        "evidence": "stated"
       },
       {
         "id": "dye-advisor-fast",
         "kind": "advisor",
         "premise": "FAST 31 Aug 1% Expert — grant not on sheet",
-        "measure": "SOPA or grant before SAFE close",
+        "measure": "SOPA due 2026-11-29",
         "killLine": "advisor ride-along cannot promote",
-        "status": "waiting",
+        "status": "proposed",
         "last": "FAST 31 Aug 1% Expert; grant not on sheet",
-        "next": "SOPA or grant before SAFE close",
+        "next": "SOPA due 2026-11-29",
         "outcome": "none",
         "impact": "clock",
         "evidence": "stated",
-        "clock": "2026-08-31"
+        "clock": "2026-11-29"
       },
       {
         "id": "dye-legal-seed",
@@ -86,8 +114,8 @@
         "evidence": "stated"
       },
       {
-        "id": "dye-eng-supply-change",
-        "kind": "engagement",
+        "id": "dye-capital-supply-change",
+        "kind": "capital",
         "premise": "Supply Change / Rachel one call",
         "measure": "done unless they return",
         "killLine": "one call is not Try",
