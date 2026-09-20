@@ -8,7 +8,7 @@ Use this repo as the **source of truth** for process and control. Point your AI 
 
 | | |
 |--|--|
-| **Version** | Blueprint + live runtime **v2.8.17** · optional local MCP **v0.2** (path 3) |
+| **Version** | Blueprint + live runtime **v2.8.18** · optional local MCP **v0.2** (path 3) |
 | **License** | Apache-2.0 |
 | **Audience** | Independent solo founders; mentors (Founder Institute, SCORE, …); AI helpers |
 | **Maintainer** | [Ivelin Ivanov](https://github.com/ivelin) · [Pirin.ai](https://pirin.ai) |
@@ -80,7 +80,7 @@ Optional. Script or hand copy — [Install](#install-in-your-company). Optional 
 
 ### 3. Self-hosted MCP (optional — several ideas)
 
-Several ideas are allowed. Do not hide a second thesis to look focused. Optional local MCP under [`mcp/`](mcp/) keeps each idea on its own board — `company-state.json` + `where-are-we.py` — without importing this tree into every product repo. Same founder gates. Same evidence rules (OS 2.8.17). Rank and kill per board. Markdown remains the constitution.
+Several ideas are allowed. Do not hide a second thesis to look focused. Optional local MCP under [`mcp/`](mcp/) keeps each idea on its own board — `company-state.json` + `where-are-we.py` — without importing this tree into every product repo. Same founder gates. Same evidence rules (OS 2.8.18). Rank and kill per board. Markdown remains the constitution.
 
 Not required. Path 1 (point an AI) and path 2 (optional files + workflows) stay enough.
 
@@ -165,12 +165,15 @@ Treat promotion into this template as rare, deliberate work — not a continuous
 
 | Doc | Current |
 |-----|---------|
-| Operating system blueprint | **v2.8.17** |
-| Live runtime | **v2.8.17** |
+| Operating system blueprint | **v2.8.18** |
+| Live runtime | **v2.8.18** |
 | Optional local MCP (path 3) | **v0.2** — adapter only; not a second OS. HTTP read transport is preview. |
 | Preview plugin | **0.1.1** — [`plugin/`](plugin/). Skills hyperlink this pack. Team Import from Repo only — not a public catalog submit. Not mentee-ready hosted boards. |
 
 ### Recent portable additions
+
+**v2.8.18 — one founder control plane**  
+House rule. Full text: [operating-system.md](company-os/operating-system.md#house-rule-one-founder-control-plane). Primary is the customer bet. Supporting (advisor/FAST, investor/SAFE, counsel, contractor, partner) stays on the same snapshot — no rungs, cannot promote. Engagements are named accounts under primary. Exile to a spreadsheet is rejected. NDA is not Try. No third clock. No schema bump. Implicit loop from 2.8.17 stays.
 
 **v2.8.17 — implicit loop (quality bar, not card)**  
 Ask / Do / Write back is a quality bar on the week’s artifact, not a stored week verb and not card position. Founder gates journey only. `loopStage` mutations are rejected. Missing Write back is said from artifacts. [clock-examples.md](company-os/clock-examples.md) stays teaching. No schema bump.

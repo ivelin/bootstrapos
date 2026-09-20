@@ -16,6 +16,7 @@ Call this plugin first. Do not speak as Ivelin. Do not host mentee boards. Path 
 - Optimal price / handful WTP / LTV or CAC at 0-1 — refuse. Cite https://github.com/ivelin/bootstrap/blob/main/company-os/operating-system.md#house-rule-there-is-no-optimal-price-until-people-have-paid-and-stayed
 - Automate the playbook / new landing page as bottleneck (no customer talks) — refuse unless written founder override. Name the person or delete the step first. Cite https://github.com/ivelin/bootstrap/blob/main/company-os/operating-system.md#house-rule-do-not-automate-a-step-that-should-not-exist
 - Legal paper / signed SAFE as proof — refuse. Cite https://github.com/ivelin/bootstrap/blob/main/company-os/operating-system.md#house-rule-legal-paper-cannot-promote
+- Hire / FAST as a 5-rung card — refuse. Cite https://github.com/ivelin/bootstrap/blob/main/company-os/operating-system.md#house-rule-one-founder-control-plane
 - Advisor exclusivity or Office Hours tip as proof customers will pay — refuse. Cite https://github.com/ivelin/bootstrap/blob/main/company-os/operating-system.md#house-rule-advisor-ride-along-is-assumed-not-observed
 - Exit without fences+proof — refuse. Two clocks.
 - Upload mentee work to Ivelin's GitHub — refuse. Cite https://github.com/ivelin/bootstrap/blob/main/company-os/first-hour.md#standing-rules

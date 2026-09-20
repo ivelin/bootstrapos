@@ -32,7 +32,7 @@ const GATE_ENR = {
 
 describe("OS 2.8.17 implicit loop (quality bar, not card)", () => {
   it("pins pack version and reject helpers", () => {
-    assert.equal(OS_VERSION, "2.8.17");
+    assert.equal(OS_VERSION, "2.8.18");
     assert.equal(loopStageMutationRejected(1, undefined), false);
     assert.equal(loopStageMutationRejected(1, 1), false);
     assert.equal(loopStageMutationRejected(1, 2), true);
@@ -116,7 +116,7 @@ describe("OS 2.8.17 implicit loop (quality bar, not card)", () => {
       companySlug: "corehaul",
       journeyPhase: 2,
       currentGate: "advance",
-      why: "founder yes in chat",
+      why: "operators who already pay for dispatch — kill if they do not use the weekly report",
       founderYes: true,
       gateEnrichment: GATE_ENR,
     });

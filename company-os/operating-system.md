@@ -1,8 +1,8 @@
 # Company Operating System  
 ## For Solo Founders in Bootstrapping Mode
 
-**Version:** 2.8.17  
-**Last Updated:** 2026-09-19  
+**Version:** 2.8.18  
+**Last Updated:** 2026-09-20  
 **Status:** Living guideline (blueprint — not any one company’s live runtime)  
 **Audience:** Independent solo founders; mentors (e.g. Founder Institute, SCORE); AI helpers instructed to follow this system  
 **Isolation:** Portable across startups. Each company keeps its filled instance outside this template (see `../templates/applied-here.md`).  
@@ -90,6 +90,7 @@ This is a Day 0 / Path 1 question. It is **not** a house rule and **not** a thir
    House rule: [there is no optimal price until people have paid and stayed](#house-rule-there-is-no-optimal-price-until-people-have-paid-and-stayed).  
    House rule: [do not automate a step that should not exist](#house-rule-do-not-automate-a-step-that-should-not-exist).  
    House rule: [legal paper cannot promote](#house-rule-legal-paper-cannot-promote).  
+   House rule: [one founder control plane](#house-rule-one-founder-control-plane).  
    House rule: [advisor ride-along is assumed, not observed](#house-rule-advisor-ride-along-is-assumed-not-observed).  
    House rule: [unpaid weeks cannot promote](#house-rule-unpaid-weeks-cannot-promote).
 
@@ -1213,7 +1214,23 @@ Someone saying an advisor's promise of exclusivity, or an Office Hours tip about
 
 **Implement.** Write down who said what. Check that first before you write exclusivity language. A week of only lawyer emails and advisor meetings = stay put. A named person who wants to pay can move you.
 
-Same family: [legal paper cannot promote](#house-rule-legal-paper-cannot-promote). [There is no optimal price until people have paid and stayed](#house-rule-there-is-no-optimal-price-until-people-have-paid-and-stayed). [Unpaid weeks cannot promote](#house-rule-unpaid-weeks-cannot-promote).
+Same family: [legal paper cannot promote](#house-rule-legal-paper-cannot-promote). [There is no optimal price until people have paid and stayed](#house-rule-there-is-no-optimal-price-until-people-have-paid-and-stayed). [Unpaid weeks cannot promote](#house-rule-unpaid-weeks-cannot-promote). [One founder control plane](#house-rule-one-founder-control-plane).
+
+### House rule: one founder control plane
+
+Someone opening a 5-rung card for an advisor FAST, a SAFE, or a hire — or telling the founder to exile that row to a spreadsheet — is splitting the company. That is not this system. Same family as [legal paper cannot promote](#house-rule-legal-paper-cannot-promote). Exile (“not a 0-1 idea / point at a spreadsheet”) is rejected.
+
+**Meaning.** One founder control plane. **Primary** is the customer bet only: journey rungs + gate + constraint + missing artifacts + a named-group kill line (they pay or they use, or you kill it). **Supporting** is advisor/FAST, investor/SAFE, counsel, contractor, partner — same company snapshot, no rungs, cannot promote. **Engagements** are named accounts under the primary (NDA, quote, pilot SOW, plant run). They are not extra journeys. An NDA is not Try. Paid or use in their environment is Try. Admission is what is being proven, not a keyword list. Mere mention of “employee” or “SAFE” inside a real product why does not move the class. `create_idea` and a primary phase write still reject when the primary object is a person or an instrument — write that row as supporting. Recon may patch supporting, the constraint, and progress. Recon may not Advance the primary. An advisor on a mentee company is supporting (FAST), not a 5-rung card. Do not invent founder Advance.
+
+| | Do this | Not this |
+|--|---------|----------|
+| **Primary** | Operators who already pay for dispatch — kill if they do not use the weekly report. That is a named-group kill line. Rungs, gate, constraint, missing artifacts live here. | “Hire a contractor.” “Close the SAFE.” “The idea is the investor.” Those are supporting. Opening a 5-rung card for them is rejected. |
+| **Supporting** | Write role, state (promise / clock / done / dead), clock date or —, next action, last observed fact on the same snapshot. No journeyPhase. | Exile the row to a spreadsheet. Pretend FAST or a hire can Advance. Recon Advances the primary. |
+| **Engagements** | Named account + instrument kind + state under the primary. Plant paid or used the slice in their environment = Try. | A second journey for the NDA. Treating the NDA as Try. |
+
+This rule is **not** a third clock, **not** Day 0 homework, and **not** a People OS. Stored integers 1–9 / 1–7 stay. The implicit loop from 2.8.17 stays.
+
+Same family: [legal paper cannot promote](#house-rule-legal-paper-cannot-promote). [Advisor ride-along is assumed, not observed](#house-rule-advisor-ride-along-is-assumed-not-observed).
 
 ### House rule: unpaid weeks cannot promote
 
@@ -1509,6 +1526,7 @@ Every company should maintain its own list. Starter prompts:
 - A handful survey as optimal price, a CAC/LTV model at 0→1 as proof, or last decade's SaaS playbook as the aim — see [there is no optimal price until people have paid and stayed](#house-rule-there-is-no-optimal-price-until-people-have-paid-and-stayed)  
 - Automating the playbook, or an agent team to skip a step with no named owner — see [do not automate a step that should not exist](#house-rule-do-not-automate-a-step-that-should-not-exist)  
 - Cap table, SAFE, or lawyer emails as proof the product works — see [legal paper cannot promote](#house-rule-legal-paper-cannot-promote)  
+- Opening a 5-rung card for an advisor FAST, a SAFE, or a hire — or exiling that row to a spreadsheet — see [one founder control plane](#house-rule-one-founder-control-plane)  
 - An advisor says stay exclusive, then a prospect asks to pay, and the founder delays them — see [advisor ride-along is assumed, not observed](#house-rule-advisor-ride-along-is-assumed-not-observed)  
 - Free work for a company after the first conversation — see [unpaid weeks cannot promote](#house-rule-unpaid-weeks-cannot-promote)
 - Commissioning custom legal agreements before revenue — see [starter legal templates](#starter-legal-templates)
@@ -1564,7 +1582,7 @@ Accuracy numbers perish with the model checkpoint. Mechanism findings last until
 - Bisbee et al., 2024, *Political Analysis*. Task: silicon sampling / prompt variance and drift. Finding: too-tight variance and same-prompt drift make a pass unusable.
 - Brand, Israeli, and Ngwe, HBS 23-062 rev. 2026, §3.3. Task: willingness-to-pay and cross-category fine-tune (laptop → tablet). Finding: direct dollar WTP from GPT was useless; fine-tune failed on a new category. They still used conjoint with prices in the profile and reported $. They did not write “never produce a dollar” or “one condition change.”
 
-Everything else in the research method is adjacent literature or a **house rule**. House rules (epistemology, not a paper): observed wins a clash; a spoken yes cannot promote; do not seed from a demographic one-liner (demo-only role-play is the weak case); several ideas are allowed (each its own board; do not hide a second idea to look focused); [marketing volume cannot promote](#house-rule-marketing-volume-cannot-promote); [a security program cannot promote](#house-rule-a-security-program-cannot-promote); [there is no optimal price until people have paid and stayed](#house-rule-there-is-no-optimal-price-until-people-have-paid-and-stayed); [do not automate a step that should not exist](#house-rule-do-not-automate-a-step-that-should-not-exist); [legal paper cannot promote](#house-rule-legal-paper-cannot-promote); [advisor ride-along is assumed, not observed](#house-rule-advisor-ride-along-is-assumed-not-observed); [unpaid weeks cannot promote](#house-rule-unpaid-weeks-cannot-promote).
+Everything else in the research method is adjacent literature or a **house rule**. House rules (epistemology, not a paper): observed wins a clash; a spoken yes cannot promote; do not seed from a demographic one-liner (demo-only role-play is the weak case); several ideas are allowed (each its own board; do not hide a second idea to look focused); [marketing volume cannot promote](#house-rule-marketing-volume-cannot-promote); [a security program cannot promote](#house-rule-a-security-program-cannot-promote); [there is no optimal price until people have paid and stayed](#house-rule-there-is-no-optimal-price-until-people-have-paid-and-stayed); [do not automate a step that should not exist](#house-rule-do-not-automate-a-step-that-should-not-exist); [legal paper cannot promote](#house-rule-legal-paper-cannot-promote); [one founder control plane](#house-rule-one-founder-control-plane); [advisor ride-along is assumed, not observed](#house-rule-advisor-ride-along-is-assumed-not-observed); [unpaid weeks cannot promote](#house-rule-unpaid-weeks-cannot-promote).
 
 ## Changelog (high level)
 
@@ -1597,6 +1615,7 @@ Everything else in the research method is adjacent literature or a **house rule*
 | 2.8.15 | Clock shrink: five journey rungs (Write the bet / Filter cheaply / Ground it / Build tiny slice / Try with real people) and three loop weeks (Ask / Do / Write back). Old 8 Learn and old 9 Grow deleted as clock steps; grow is an after-proof pack after Try. Make / Check / Hear are not loop weeks. Stored integers 1–9 / 1–7 still valid (no schema bump); spoken/rendered uses the [keep-doing map](#keep-doing-map-stored-integers--spoken). 8 or 9 stay at Try until founder Advance. Fifteen cells + [end-to-end path](#end-to-end-path) land here. Speaking rule from 2.8.14 stays. Decision methods essay unchanged. Filter is not Ground. Build is not Try. Ask does not Ground. Do at Build is not Try. No invented Advance. Writing: [Say it once. Link. No filler.](#how-this-os-may-change-stability-contract). |
 | 2.8.16 | Teaching page: [clock examples](clock-examples.md) — fifteen cells for one fictional household-jobs company (parents who already pay a cleaner vs founder butler vs our house). Teaching, not a live board. Do not copy onto a real company. Do not Advance from an example. Locked 2.8.15 clocks and 2.8.14 Decision methods stay. No schema bump. No invented Advance. Writing: [Say it once. Link. No filler.](#how-this-os-may-change-stability-contract). |
 | 2.8.17 | Implicit loop: Ask / Do / Write back is a quality bar on the week’s artifact, not a stored week verb and not card position. Founder gates journey only (Advance / Iterate / Hold / Kill). `loopStage` mutations are rejected (omit or identical no-op only). Spoken labels are not where-we-are. Missing Write back is said from artifacts, never invented as `loopStage` 7. [clock-examples](clock-examples.md) stays teaching. No schema bump. No invented Advance. Writing: [Say it once. Link. No filler.](#how-this-os-may-change-stability-contract). |
+| 2.8.18 | House rule: [one founder control plane](#house-rule-one-founder-control-plane). Primary is the customer bet. Supporting (advisor/FAST, investor/SAFE, counsel, contractor, partner) stays on the same snapshot — no rungs, cannot promote. Engagements are named accounts under primary. Exile to a spreadsheet is rejected. NDA is not Try. No third clock. No schema bump 1–9 / 1–7. Implicit loop from 2.8.17 stays. Writing: [Say it once. Link. No filler.](#how-this-os-may-change-stability-contract). |
 
 ---
 

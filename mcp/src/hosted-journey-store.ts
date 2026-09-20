@@ -13,12 +13,14 @@ import {
 import {
   MemoryJourneyStore,
   normalizeSlug,
+  type EngagementRow,
   type GateDecision,
   type GateEnrichment,
   type JourneyStore,
   type KillPostmortem,
   type PortfolioScore,
   type Scoreboard,
+  type SupportingRow,
 } from "./journey.js";
 import {
   LOOP_STAGE_MUTATION_REJECTED,
@@ -26,6 +28,10 @@ import {
   loopStageMutationRejected,
   spokenLoopWriteRejected,
 } from "./loop-freeze.js";
+import {
+  admitPrimaryPhaseWhy,
+  admitPrimaryWhy,
+} from "./control-plane.js";
 
 function supabaseUrl(): string | undefined {
   return process.env.BOOTSTRAP_SUPABASE_URL || process.env.SUPABASE_URL || undefined;
@@ -253,6 +259,10 @@ export class SupabaseJourneyStore implements JourneyStore {
       client?: string;
     },
   ): Promise<unknown> {
+    const admitted = admitPrimaryWhy(input.why);
+    if (!admitted.ok) {
+      return { ok: false, error: admitted.error };
+    }
     const hit = await this.rpc("bootstrap_os_create_idea", {
       p_company: input.companySlug,
       p_idea: input.ideaSlug,
@@ -281,10 +291,18 @@ export class SupabaseJourneyStore implements JourneyStore {
       gateEnrichment?: GateEnrichment;
       killPostmortem?: Omit<KillPostmortem, "why"> & { why?: string };
       portfolioScore?: PortfolioScore;
+      supporting?: SupportingRow[];
+      engagements?: EngagementRow[];
     },
   ): Promise<unknown> {
     if (spokenLoopWriteRejected(input) || spokenLoopWriteRejected(input.scoreboard)) {
       return { ok: false, error: SPOKEN_LOOP_WRITE_REJECTED };
+    }
+    if (input.journeyPhase !== undefined) {
+      const admitted = admitPrimaryPhaseWhy(input.why, input.founderYes);
+      if (!admitted.ok) {
+        return { ok: false, error: admitted.error };
+      }
     }
     const idea = input.ideaSlug ?? "default";
     if (input.loopStage !== undefined) {
@@ -310,6 +328,8 @@ export class SupabaseJourneyStore implements JourneyStore {
         ? { killPostmortem: { why: input.why, ...input.killPostmortem } }
         : {}),
       ...(input.portfolioScore ? { portfolioScore: input.portfolioScore } : {}),
+      ...(input.supporting ? { supporting: input.supporting } : {}),
+      ...(input.engagements ? { engagements: input.engagements } : {}),
     };
     const hit = await this.rpc("bootstrap_os_put_journey", {
       p_company: input.companySlug,

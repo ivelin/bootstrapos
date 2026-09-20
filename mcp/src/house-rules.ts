@@ -24,6 +24,7 @@ export const HOUSE_RULE_LINES = [
   "Do not automate a step that should not exist. Every requirement has a person's name. Delete the step before you simplify it. Automate last. An agent team is automation. Name the one bottleneck this week and work that. Several ideas may attack that same bottleneck. Challenge a fun side quest dressed as the bottleneck. Founder still decides; the agent does not rubber-stamp.",
   "Legal paper cannot promote.",
   "Advisor ride-along is assumed, not observed. An advisor's opinion is a tip, not proof customers will pay. Write down who said it.",
+  "One founder control plane. Primary is the customer bet (rungs, gate, constraint, missing artifacts, kill line). Supporting (advisor/FAST, investor/SAFE, counsel, contractor, partner) stays on the same snapshot — no rungs, cannot promote. Engagements are named accounts under primary. Exile to a spreadsheet is rejected. NDA is not Try.",
   "SaaS 1.0 playbooks may be outdated. Stay current.",
   "AI never advances a journey phase without founder Advance / Iterate / Hold / Kill.",
   "Empty context with no founder update: do not invent their stage, a price, or an LTV number. Write unknown / none yet.",
@@ -124,6 +125,16 @@ export function advisorRideAlongIsObserved(): false {
   return false;
 }
 
+/** Supporting rows cannot Advance the primary. */
+export function supportingMayPromote(): false {
+  return false;
+}
+
+/** Engagements (NDA, quote, SOW) cannot Advance. NDA is not Try. */
+export function engagementMayPromote(): false {
+  return false;
+}
+
 /**
  * A new landing page is not the bottleneck when no one has talked to customers,
  * unless the founder overrides with a written decision.
@@ -175,6 +186,11 @@ export const HOUSE_RULE_PINS = [
     id: "advisor-ride-along-2.8.11",
     pin: "Advisor ride-along is assumed, not observed. An advisor's opinion is a tip, not proof customers will pay. Write down who said it.",
     url: "https://github.com/ivelin/bootstrap/blob/main/company-os/operating-system.md#house-rule-advisor-ride-along-is-assumed-not-observed",
+  },
+  {
+    id: "one-control-plane-2.8.18",
+    pin: "One founder control plane. Primary is the customer bet. Supporting stays on the same snapshot — no rungs, cannot promote. Exile is rejected.",
+    url: "https://github.com/ivelin/bootstrap/blob/main/company-os/operating-system.md#house-rule-one-founder-control-plane",
   },
   {
     id: "unpaid-weeks-2.8.13",

@@ -855,7 +855,12 @@ function registerJourneyTools(server: McpServer, ctx: HostedRequestContext) {
       founderYes: z
         .boolean()
         .describe("True only after an explicit founder yes in their agent chat"),
-      why: z.string().optional().describe("Short why this is a separate 0-1 bet"),
+      why: z
+        .string()
+        .optional()
+        .describe(
+          "Why this is a separate customer bet. A person, hire, or instrument as the primary object is supporting — not a 5-rung card.",
+        ),
       client: z.string().optional().describe("Which client wrote. Stored on the audit row."),
     },
     async (input) => {
@@ -947,6 +952,30 @@ function registerJourneyTools(server: McpServer, ctx: HostedRequestContext) {
         .describe(
           "Weekly Impact/Evidence/Leverage labels (1–5) plus required short why. Prefer put_portfolio_score. Does not Advance or Kill. Skipped on single-idea or killed boards.",
         ),
+      supporting: z
+        .array(
+          z.object({
+            role: z.enum(["advisor", "investor", "counsel", "contractor", "partner"]),
+            state: z.enum(["promise", "clock", "done", "dead"]),
+            clock: z.string().max(32).optional(),
+            nextAction: z.string().max(280),
+            lastObservedFact: z.string().max(280),
+          }),
+        )
+        .optional()
+        .describe(
+          "Same company snapshot. No rungs. Cannot promote. Recon may patch. Advisor/FAST is supporting, not a 5-rung card.",
+        ),
+      engagements: z
+        .array(
+          z.object({
+            account: z.string().max(280),
+            kind: z.enum(["nda", "quote", "pilot-sow", "plant-run"]),
+            state: z.enum(["promise", "clock", "done", "dead"]),
+          }),
+        )
+        .optional()
+        .describe("Named accounts under the primary. NDA is not Try. No journeyPhase."),
     },
     async (input) => {
       const store = storeOf();
@@ -975,6 +1004,11 @@ function registerJourneyTools(server: McpServer, ctx: HostedRequestContext) {
             gateEnrichment: input.gateEnrichment,
             killPostmortem: input.killPostmortem,
             portfolioScore: input.portfolioScore,
+            supporting: input.supporting?.map((row) => ({
+              ...row,
+              clock: row.clock?.trim() || "—",
+            })),
+            engagements: input.engagements,
           }),
         );
       } catch (e) {

@@ -248,7 +248,7 @@ describe("journey views + tools (memory store)", () => {
         openQuestions: ["who already has this job"],
         progress: ["thesis draft"],
       },
-      why: "founder yes in chat",
+      why: "operators who already pay for dispatch — kill if they do not use the weekly report",
       founderYes: true,
       gateEnrichment: GATE_ENR,
     });
@@ -299,7 +299,7 @@ describe("journey views + tools (memory store)", () => {
     await store.putJourney(founder, {
       companySlug: "corehaul",
       journeyPhase: 2,
-      why: "founder yes",
+      why: "operators who already pay for dispatch — kill if they do not use the weekly report",
       founderYes: true,
       client: "cursor-agent",
       gateEnrichment: GATE_ENR,
@@ -517,7 +517,7 @@ describe("journey views + tools (memory store)", () => {
     const wrote = await store.putJourney(founder, {
       companySlug: "corehaul",
       journeyPhase: 2,
-      why: "founder yes",
+      why: "operators who already pay for dispatch — kill if they do not use the weekly report",
       founderYes: true,
       gateEnrichment: GATE_ENR,
     });

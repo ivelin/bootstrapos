@@ -73,9 +73,9 @@ Cos sets Vercel secrets **once** on `bootstrap-os-mcp` production: `BOOTSTRAP_BO
 
 | Tool | Who | Notes |
 |------|-----|--------|
-| `get_journey` | founder / advisor on the allowlist | Company query → every idea. Company/idea → one idea. Surfaces `constraint_this_week`, ACL `owners`, stored `portfolioScore` on live ideas, and `portfolio` ranked by impact+evidence+leverage when ≥2 live ideas. Never invents missing scores. |
-| `create_idea` | founder + founder-authorized | New 0-1 board under a held company. Empty clocks (Write the bet / hold; stored 1 / 1). Founder yes in chat. Does not invent stage. Ask / Do / Write back is a quality bar, not a card. |
-| `put_journey` | founder + founder-authorized | Overwrite journey/gate/jsonb including `constraint_this_week` and scoreboard (hypothesis, open questions) on an **existing** idea. Missing slug → `idea not found; call create_idea first`. Phase or gate needs founder yes in chat. `loopStage` mutations and spoken Ask/Do/Write back writes are rejected. |
+| `get_journey` | founder / advisor on the allowlist | Company query → every idea. Company/idea → one idea. Speak primary → supporting → engagements. Surfaces `constraint_this_week`, ACL `owners`, stored `portfolioScore` on live ideas, `supporting` (no rungs), `engagements` (NDA is not Try), and `portfolio` ranked by impact+evidence+leverage when ≥2 live ideas. Never invents missing scores. |
+| `create_idea` | founder + founder-authorized | New 0-1 primary board under a held company. Empty clocks (Write the bet / hold; stored 1 / 1). A person or instrument as the primary object is rejected — write supporting[]. Founder yes in chat. Does not invent stage. Ask / Do / Write back is a quality bar, not a card. |
+| `put_journey` | founder + founder-authorized | Overwrite journey/gate/jsonb including `constraint_this_week`, scoreboard, `supporting[]`, and `engagements[]` on an **existing** idea. Missing slug → `idea not found; call create_idea first`. Primary phase needs founder yes and a product bet-class why. Recon may patch supporting + constraint + progress; recon may not Advance primary. `loopStage` mutations and spoken Ask/Do/Write back writes are rejected. |
 | `post_comment` | advisors | Side table. Never a gate. |
 | `subscribe_board` | founder + founder-authorized | Grant webhook (+ email opt-in enqueue) to an ACL member. Cos / adapter furniture — not the founder path. |
 | `unsubscribe_board` | founder + founder-authorized | Remove a subscriber. |
