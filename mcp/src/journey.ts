@@ -2099,11 +2099,12 @@ export class MemoryJourneyStore implements JourneyStore {
   }
 }
 
-/** PGlite fixture principals. Synthetic. Real FAST emails are not in git. */
+/** Memory fixture principals. PGlite seeds dyeconverter + corehaul only. Synthetic. Real FAST emails are not in git. */
 export const JOURNEY_FIXTURE = {
   companies: [
     { id: "co-dye", slug: "dyeconverter", label: "DyeConverter" },
     { id: "co-core", slug: "corehaul", label: "CoreHaul" },
+    { id: "co-mic", slug: "micdots", label: "MicDots" },
   ] satisfies CompanyRow[],
   acl: [
     {
@@ -2142,6 +2143,12 @@ export const JOURNEY_FIXTURE = {
       principalKind: "email" as const,
       role: "founder_authorized" as const,
     },
+    {
+      companyId: "co-mic",
+      principal: "founder-mic@example.test",
+      principalKind: "email" as const,
+      role: "founder" as const,
+    },
   ] satisfies AclRow[],
   ideas: [
     {
@@ -2162,6 +2169,16 @@ export const JOURNEY_FIXTURE = {
       journeyPhase: 1,
       loopStage: 1,
       currentGate: "hold" as const,
+      scoreboard: defaultScoreboard(),
+    },
+    {
+      id: "idea-mic",
+      companyId: "co-mic",
+      slug: "micdots",
+      name: "MicDots",
+      journeyPhase: 1,
+      loopStage: 1,
+      currentGate: "iterate" as const,
       scoreboard: defaultScoreboard(),
     },
   ] satisfies IdeaRow[],
