@@ -172,6 +172,37 @@ def fmt(value: object) -> str:
     return str(value)
 
 
+def supporting_lines(raw: object) -> list[str]:
+    if not isinstance(raw, list) or not raw:
+        return ["  (none)"]
+    lines: list[str] = []
+    for item in raw:
+        if not isinstance(item, dict):
+            continue
+        role = fmt(item.get("role"))
+        st = fmt(item.get("state"))
+        clock = fmt(item.get("clock") if item.get("clock") not in (None, "") else "—")
+        nxt = fmt(item.get("nextAction") or item.get("next_action"))
+        fact = fmt(item.get("lastObservedFact") or item.get("last_observed_fact"))
+        lines.append(f"  {role} · {st} · clock {clock} · next {nxt} · last {fact}")
+    return lines or ["  (none)"]
+
+
+def engagement_lines(raw: object) -> list[str]:
+    if not isinstance(raw, list) or not raw:
+        return ["  (none)"]
+    lines: list[str] = []
+    for item in raw:
+        if not isinstance(item, dict):
+            continue
+        account = fmt(item.get("account"))
+        kind = fmt(item.get("kind"))
+        st = fmt(item.get("state"))
+        nda = " (NDA is not Try)" if str(item.get("kind") or "").lower() == "nda" else ""
+        lines.append(f"  {account} · {kind} · {st}{nda}")
+    return lines or ["  (none)"]
+
+
 def snapshot(state: dict) -> str:
     phase = state.get("journeyPhase")
     stage = state.get("loopStage")
@@ -209,6 +240,14 @@ def snapshot(state: dict) -> str:
         ),
         "  Ask / Do / Write back is a quality bar on the week's artifact, not a card.",
         "  Do not invent Write back from stored loopStage 7.",
+        "",
+        "PRIMARY (customer bet — rungs, gate, constraint, missing artifacts, kill line)",
+        "",
+        "SUPPORTING (same snapshot; no rungs; cannot promote)",
+        *supporting_lines(state.get("supporting")),
+        "",
+        "ENGAGEMENTS (named accounts under primary; NDA is not Try)",
+        *engagement_lines(state.get("engagements")),
         "",
         f"AUTONOMY           {fmt(state.get('autonomyPosture'))}",
         f"  {POSTURE_PLAIN.get(posture, 'Say how free the AI is this week (Strict / Auto / Dangerous).')}",

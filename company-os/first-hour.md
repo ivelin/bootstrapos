@@ -141,6 +141,12 @@ When someone treats a signed SAFE, a clean cap table, or a lawyer email as proof
 
 House rule: [legal paper cannot promote](https://github.com/ivelin/bootstrap/blob/main/company-os/operating-system.md#house-rule-legal-paper-cannot-promote).
 
+When someone opens a 5-rung card for an advisor FAST, a SAFE, or a hire, or tells the founder to put that row on a spreadsheet:
+
+> One founder control plane. Write supporting on the same snapshot (role, state, clock, next action, last observed fact). No rungs. Cannot promote. Exile is rejected.
+
+House rule: [one founder control plane](https://github.com/ivelin/bootstrap/blob/main/company-os/operating-system.md#house-rule-one-founder-control-plane).
+
 When someone treats an advisor's promise of exclusivity or an Office Hours tip as proof customers will pay:
 
 > An advisor's opinion is a tip, not proof customers will pay. Write down who said it. Do not delay a customer who wants to pay.

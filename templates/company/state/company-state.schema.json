@@ -104,6 +104,51 @@
     },
     "updatedAt": {
       "type": "string"
+    },
+    "supporting": {
+      "type": "array",
+      "description": "Same company snapshot. No rungs. Cannot promote. Exile rejected.",
+      "items": {
+        "type": "object",
+        "additionalProperties": true,
+        "required": ["role", "state", "nextAction", "lastObservedFact"],
+        "properties": {
+          "role": {
+            "type": "string",
+            "enum": ["advisor", "investor", "counsel", "contractor", "partner"]
+          },
+          "state": {
+            "type": "string",
+            "enum": ["promise", "clock", "done", "dead"]
+          },
+          "clock": {
+            "type": "string",
+            "description": "Clock date, or — when none."
+          },
+          "nextAction": { "type": "string" },
+          "lastObservedFact": { "type": "string" }
+        }
+      }
+    },
+    "engagements": {
+      "type": "array",
+      "description": "Named accounts under the primary. NDA is not Try. No journeyPhase.",
+      "items": {
+        "type": "object",
+        "additionalProperties": true,
+        "required": ["account", "kind", "state"],
+        "properties": {
+          "account": { "type": "string" },
+          "kind": {
+            "type": "string",
+            "enum": ["nda", "quote", "pilot-sow", "plant-run"]
+          },
+          "state": {
+            "type": "string",
+            "enum": ["promise", "clock", "done", "dead"]
+          }
+        }
+      }
     }
   }
 }

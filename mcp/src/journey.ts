@@ -19,6 +19,21 @@ import {
   spokenLoopWriteRejected,
   writeBackMissingFromArtifacts,
 } from "./loop-freeze.js";
+import {
+  CONTROL_PLANE_ORDER,
+  admitPrimaryPhaseWhy,
+  admitPrimaryWhy,
+  companySupportingOf,
+  controlPlaneSnapshotLines,
+  engagementsOf,
+  normalizeEngagements,
+  normalizeSupporting,
+  type EngagementRow,
+  type SupportingRow,
+} from "./control-plane.js";
+
+export type { EngagementRow, SupportingRow };
+export { CONTROL_PLANE_ORDER };
 import type { JourneyAclRole, JourneyActor } from "./journey-auth.js";
 import {
   enqueueBoardNotify,
@@ -66,6 +81,10 @@ export type Scoreboard = {
   killPostmortem?: KillPostmortem;
   /** Founder/advisor weekly labels. Never invent on read. Never auto-promote. */
   portfolioScore?: PortfolioScore;
+  /** Company-level supporting rows. Same snapshot. No rungs. Cannot promote. */
+  supporting?: SupportingRow[];
+  /** Named accounts under this primary. No journeyPhase. NDA ≠ Try. */
+  engagements?: EngagementRow[];
 };
 
 /** Weekly Impact / Evidence / Leverage labels. Integers 1–5. OS never auto-promotes. */
@@ -374,6 +393,8 @@ export type CompanyRow = {
   id: string;
   slug: string;
   label: string;
+  /** Same company snapshot. No rungs. Cannot promote. */
+  supporting?: SupportingRow[];
 };
 
 export type AclRow = {
@@ -715,6 +736,7 @@ export function twoMinuteSnapshot(
   idea: IdeaRow,
   events: GateEventRow[],
   owners: JourneyOwner[] = [],
+  extras: { supporting?: SupportingRow[]; engagements?: EngagementRow[] } = {},
 ): string {
   const last = events.slice().sort((a, b) => a.at.localeCompare(b.at)).at(-1);
   const questions = idea.scoreboard.openQuestions ?? [];
@@ -727,6 +749,8 @@ export function twoMinuteSnapshot(
   const writeBackMissing = writeBackMissingFromArtifacts({
     scoreboard: idea.scoreboard as Record<string, unknown>,
   });
+  const supporting = extras.supporting ?? companySupportingOf(company, [idea]);
+  const engagements = extras.engagements ?? engagementsOf(idea.scoreboard);
   return [
     `${company.label} / ${idea.name} — two-minute read`,
     `Owner (from ACL): ${ownerLine}`,
@@ -747,6 +771,7 @@ export function twoMinuteSnapshot(
     `Ready for human eyes: ${eyes} (not demand, not PMF)`,
     questions.length ? `Open questions: ${questions.join("; ")}` : "Open questions: none yet",
     "Company and idea are separate. This is a view, not a second app.",
+    ...controlPlaneSnapshotLines({ supporting, engagements }),
   ]
     .filter((line) => line !== undefined && line !== "")
     .join("\n");
@@ -795,7 +820,10 @@ export function meetingDocView(
   return [
     `# Where we are — ${company.label} / ${idea.name}`,
     "",
-    twoMinuteSnapshot(company, idea, events, owners),
+    twoMinuteSnapshot(company, idea, events, owners, {
+      supporting: companySupportingOf(company, [idea]),
+      engagements: engagementsOf(idea.scoreboard),
+    }),
     "",
     "## Progress",
     progress,
@@ -834,6 +862,8 @@ export type JourneyIdeaPayload = {
   lastTransitions: GateEventRow[];
   visualFlow: string;
   snapshot: string;
+  /** Named accounts under this primary. No rungs. */
+  engagements: EngagementRow[];
   meetingDoc?: string;
   comments?: CommentRow[];
 };
@@ -845,6 +875,7 @@ export function ideaPayload(
   comments: CommentRow[],
   expandMeetingDoc: boolean,
   owners: JourneyOwner[] = [],
+  extras: { supporting?: SupportingRow[] } = {},
 ): JourneyIdeaPayload {
   const lastTransitions = events
     .filter((e) => e.ideaId === idea.id)
@@ -854,6 +885,8 @@ export function ideaPayload(
     .filter((c) => c.ideaId === idea.id)
     .slice()
     .sort((a, b) => a.at.localeCompare(b.at));
+  const supporting = extras.supporting ?? companySupportingOf(company, [idea]);
+  const engagements = engagementsOf(idea.scoreboard);
   const payload: JourneyIdeaPayload = {
     slug: idea.slug,
     name: idea.name,
@@ -863,7 +896,11 @@ export function ideaPayload(
     scoreboard: idea.scoreboard,
     lastTransitions,
     visualFlow: visualFlowMermaid(idea, lastTransitions),
-    snapshot: twoMinuteSnapshot(company, idea, lastTransitions, owners),
+    snapshot: twoMinuteSnapshot(company, idea, lastTransitions, owners, {
+      supporting,
+      engagements,
+    }),
+    engagements,
   };
   const storedScore = portfolioScoreOf(idea);
   if (storedScore) {
@@ -928,6 +965,8 @@ export type JourneyStore = {
       gateEnrichment?: GateEnrichment;
       killPostmortem?: Omit<KillPostmortem, "why"> & { why?: string };
       portfolioScore?: PortfolioScore;
+      supporting?: SupportingRow[];
+      engagements?: EngagementRow[];
     },
   ): Promise<unknown>;
   putPortfolioScore(
@@ -1115,12 +1154,23 @@ export class MemoryJourneyStore implements JourneyStore {
     }
     const owners = ownersFromAcl(this.acl, company.id);
     const allIdeas = this.ideasFor(company.id);
+    const supporting = companySupportingOf(company, allIdeas);
+    const engagements = ideas.flatMap((idea) => engagementsOf(idea.scoreboard));
     return {
       ok: true,
-      company: { slug: company.slug, label: company.label },
+      company: { slug: company.slug, label: company.label, supporting },
       owners,
       acl: companyAclView(this.acl, company.id),
       digest: JOURNEY_DIGEST_CONTRACT,
+      controlPlaneOrder: CONTROL_PLANE_ORDER,
+      supporting,
+      engagements,
+      primary: ideas.map((idea) => ({
+        slug: idea.slug,
+        name: idea.name,
+        clocks: clocksOf(idea),
+        constraintThisWeek: constraintThisWeekOf(idea),
+      })),
       portfolio: portfolioViewOf(allIdeas),
       ideas: ideas.map((idea) =>
         ideaPayload(
@@ -1130,10 +1180,11 @@ export class MemoryJourneyStore implements JourneyStore {
           this.comments,
           Boolean(query.expandMeetingDoc),
           owners,
+          { supporting },
         ),
       ),
       audit: this.auditFor(company.id, query.ideaSlug ? ideas[0]?.id : undefined),
-      note: `Same payload for team / advisor / board / investor prep. Views are generated. Owner comes from ACL — do not invent. Prefer webhook notify over polling. Comments never mutate gates or Advance. constraint_this_week is the honest biggest bottleneck, not a fun side quest. ${CONSTRAINT_TEACHING_PICTURE} Audit is append-only. Portfolio scores are founder/advisor labels — they cannot Advance or Kill. Not ~/.bootstrap-os.`,
+      note: `Same payload for team / advisor / board / investor prep. Views are generated. Owner comes from ACL — do not invent. Prefer webhook notify over polling. Comments never mutate gates or Advance. constraint_this_week is the honest biggest bottleneck, not a fun side quest. ${CONSTRAINT_TEACHING_PICTURE} Audit is append-only. Portfolio scores are founder/advisor labels — they cannot Advance or Kill. Control plane order is primary → supporting → engagements. Supporting cannot promote. Not ~/.bootstrap-os.`,
     };
   }
 
@@ -1156,6 +1207,10 @@ export class MemoryJourneyStore implements JourneyStore {
     }
     if (!isIdeaSlug(input.ideaSlug)) {
       return forbidden("invalid idea slug");
+    }
+    const admitted = admitPrimaryWhy(input.why);
+    if (!admitted.ok) {
+      return forbidden(admitted.error);
     }
     const company = this.companyBySlug(input.companySlug);
     if (!company || !canWriteJourney(this.acl, actor, company.id)) {
@@ -1214,6 +1269,8 @@ export class MemoryJourneyStore implements JourneyStore {
       gateEnrichment?: GateEnrichment;
       killPostmortem?: Omit<KillPostmortem, "why"> & { why?: string };
       portfolioScore?: PortfolioScore;
+      supporting?: SupportingRow[];
+      engagements?: EngagementRow[];
     },
   ): Promise<unknown> {
     if (!actor.authenticated || !actor.principal) {
@@ -1223,6 +1280,12 @@ export class MemoryJourneyStore implements JourneyStore {
       input.journeyPhase !== undefined || input.currentGate !== undefined;
     if (journeyOrGateChange && !input.founderYes) {
       return forbidden("founder yes required in the agent chat — not a form, not mail");
+    }
+    if (input.journeyPhase !== undefined) {
+      const admitted = admitPrimaryPhaseWhy(input.why, input.founderYes);
+      if (!admitted.ok) {
+        return forbidden(admitted.error);
+      }
     }
     if (!input.why.trim()) {
       return forbidden("why required");
@@ -1258,6 +1321,25 @@ export class MemoryJourneyStore implements JourneyStore {
       if (!("portfolioScore" in incoming) && idea.scoreboard.portfolioScore) {
         nextScoreboard.portfolioScore = idea.scoreboard.portfolioScore;
       }
+      if (!("supporting" in incoming) && idea.scoreboard.supporting) {
+        nextScoreboard.supporting = idea.scoreboard.supporting;
+      }
+      if (!("engagements" in incoming) && idea.scoreboard.engagements) {
+        nextScoreboard.engagements = idea.scoreboard.engagements;
+      }
+    }
+    const incomingSupporting = input.supporting ?? input.scoreboard?.supporting;
+    if (incomingSupporting !== undefined) {
+      const rows = normalizeSupporting(incomingSupporting);
+      if (!rows.ok) return forbidden(rows.error);
+      nextScoreboard = { ...nextScoreboard, supporting: rows.value };
+      company.supporting = rows.value;
+    }
+    const incomingEngagements = input.engagements ?? input.scoreboard?.engagements;
+    if (incomingEngagements !== undefined) {
+      const rows = normalizeEngagements(incomingEngagements);
+      if (!rows.ok) return forbidden(rows.error);
+      nextScoreboard = { ...nextScoreboard, engagements: rows.value };
     }
     if (input.constraintThisWeek !== undefined) {
       const normalized = normalizeConstraintThisWeek(input.constraintThisWeek);
@@ -1352,6 +1434,8 @@ export class MemoryJourneyStore implements JourneyStore {
       input.gateEnrichment ||
       input.killPostmortem ||
       incomingScore !== undefined ||
+      incomingSupporting !== undefined ||
+      incomingEngagements !== undefined ||
       clocksChanged
     ) {
       idea.scoreboard = nextScoreboard;
@@ -1397,10 +1481,13 @@ export class MemoryJourneyStore implements JourneyStore {
       who: actor.principal,
       summary: summarizeBoardNotify({ event: "put_journey", why: input.why }),
     });
+    const supporting = companySupportingOf(company, this.ideasFor(company.id));
     return {
       ok: true,
-      company: { slug: company.slug, label: company.label },
+      company: { slug: company.slug, label: company.label, supporting },
       owners: ownersFromAcl(this.acl, company.id),
+      controlPlaneOrder: CONTROL_PLANE_ORDER,
+      supporting,
       idea: ideaPayload(
         company,
         idea,
@@ -1408,6 +1495,7 @@ export class MemoryJourneyStore implements JourneyStore {
         this.comments,
         false,
         ownersFromAcl(this.acl, company.id),
+        { supporting },
       ),
       portfolio: portfolioViewOf(this.ideasFor(company.id)),
       ...(portfolioSkip ? { portfolioSkip } : {}),

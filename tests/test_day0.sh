@@ -1157,7 +1157,7 @@ if grep -q '### Founder checkpoints (when human judgment is the work)' company-o
   && grep -q 'founder checkpoint, not a new clock' company-os/first-hour.md \
   && grep -q 'Checkpoint kind' templates/traces/decisions/TEMPLATE.md \
   && grep -q 'If Alpha' templates/traces/decisions/TEMPLATE.md \
-  && grep -q 'OS_VERSION = "2.8.17"' mcp/src/constants.ts; then
+  && grep -q 'OS_VERSION = "2.8.18"' mcp/src/constants.ts; then
   ok "OS 2.8.12 founder-checkpoints pack is pinned"
 else
   not_ok "2.8.12 founder-checkpoints strings must exist in OS, runtime, pins, and tests"
@@ -1219,7 +1219,7 @@ if grep -q '### House rule: unpaid weeks cannot promote' company-os/operating-sy
   && grep -q 'house-rule-unpaid-weeks-cannot-promote' company-os/ai-instructions.md \
   && grep -q 'unpaid-weeks-2.8.13' mcp/src/house-rules.ts \
   && grep -q 'house-rule-unpaid-weeks-cannot-promote' mcp/src/house-rules.ts \
-  && grep -q 'OS_VERSION = "2.8.17"' mcp/src/constants.ts \
+  && grep -q 'OS_VERSION = "2.8.18"' mcp/src/constants.ts \
   && grep -q '2.8.12' company-os/operating-system.md; then
   ok "OS 2.8.13 unpaid-weeks house-rule section has full rule, table, and card strings"
 else
@@ -1323,11 +1323,11 @@ if grep -q '| 2.8.15 |' company-os/operating-system.md \
   && grep -q 'Fifteen cells' templates/applied-here.md \
   && grep -q 'End-to-end path' templates/applied-here.md \
   && grep -q '3–6' company-os/operating-system.md \
-  && grep -q 'v2.8.17' company-os/ai-instructions.md \
-  && grep -q 'Honor OS 2.8.17' AGENTS.md \
-  && grep -q 'OS_VERSION = "2.8.17"' mcp/src/constants.ts \
-  && grep -q '2.8.17' company-os/live-runtime.md \
-  && grep -q '2.8.17' company-os/ready-for-human-eyes.md \
+  && grep -q 'v2.8.18' company-os/ai-instructions.md \
+  && grep -q 'Honor OS 2.8.18' AGENTS.md \
+  && grep -q 'OS_VERSION = "2.8.18"' mcp/src/constants.ts \
+  && grep -q '2.8.18' company-os/live-runtime.md \
+  && grep -q '2.8.18' company-os/ready-for-human-eyes.md \
   && grep -q 'spokenJourneyOf' mcp/src/clock-map.ts \
   && grep -q 'No invented Advance' mcp/src/clock-map.ts \
   && grep -q 'Do not merge Filter + Ground' company-os/operating-system.md \
@@ -1365,8 +1365,8 @@ if [ -s company-os/clock-examples.md ] \
   && ! grep -q 'Ask / Make / Check / Hear' company-os/clock-examples.md \
   && grep -q '"clock-examples"' mcp/src/constants.ts \
   && grep -q 'clock-examples": "company-os/clock-examples.md"' mcp/src/constants.ts \
-  && grep -q 'OS_VERSION = "2.8.17"' mcp/src/constants.ts \
-  && grep -Fq '**Version:** 2.8.17' company-os/operating-system.md \
+  && grep -q 'OS_VERSION = "2.8.18"' mcp/src/constants.ts \
+  && grep -Fq '**Version:** 2.8.18' company-os/operating-system.md \
   && grep -q '| 2.8.16 |' company-os/operating-system.md \
   && grep -q '| 2.8.15 |' company-os/operating-system.md \
   && grep -q '| 2.8.14 |' company-os/operating-system.md \
@@ -1379,8 +1379,8 @@ if [ -s company-os/clock-examples.md ] \
   && grep -q 'clock-examples.md' company-os/ai-instructions.md \
   && grep -q 'Do not copy those scenes onto my board' company-os/ai-instructions.md \
   && grep -q 'Do not Advance from an example' company-os/ai-instructions.md \
-  && grep -q 'Honor OS 2.8.17' AGENTS.md \
-  && grep -q 'v2.8.17' README.md \
+  && grep -q 'Honor OS 2.8.18' AGENTS.md \
+  && grep -q 'v2.8.18' README.md \
   && grep -q 'clock-examples.md' company-os/operating-system.md \
   && grep -q 'clock-examples' docs/install-bill.md; then
   ok "OS 2.8.16 clock-examples teaching page is pinned (household jobs only; Day 0 not bloated)"
@@ -1400,20 +1400,20 @@ fi
 # Founder gates journey only. loopStage mutations rejected. No schema bump.
 # Keep 2.8.16 clock-examples teaching + 2.8.15 clocks + 2.8.14 Decision methods.
 if grep -q '| 2.8.17 |' company-os/operating-system.md \
-  && grep -Fq '**Version:** 2.8.17' company-os/operating-system.md \
+  && grep -Fq '**Version:** 2.8.18' company-os/operating-system.md \
   && grep -q 'quality bar on the week' company-os/operating-system.md \
   && grep -q 'not a stored week verb' company-os/operating-system.md \
   && grep -q 'never invented as `loopStage` 7' company-os/operating-system.md \
   && grep -q 'quality bar' company-os/live-runtime.md \
   && grep -q 'Do not write `loopStage`' company-os/live-runtime.md \
-  && grep -q 'v2.8.17' company-os/ai-instructions.md \
+  && grep -q 'v2.8.18' company-os/ai-instructions.md \
   && grep -q 'quality bar, not where-we-are' company-os/ai-instructions.md \
   && grep -q 'Refuse to treat the week as that station' company-os/ai-instructions.md \
   && grep -q 'not a card' company-os/first-hour.md \
   && grep -q 'Write back missing' company-os/first-hour.md \
-  && grep -q 'Honor OS 2.8.17' AGENTS.md \
+  && grep -q 'Honor OS 2.8.18' AGENTS.md \
   && grep -q 'reject `loopStage` mutations' AGENTS.md \
-  && grep -q 'OS_VERSION = "2.8.17"' mcp/src/constants.ts \
+  && grep -q 'OS_VERSION = "2.8.18"' mcp/src/constants.ts \
   && grep -q 'loopStage mutations are rejected' mcp/src/loop-freeze.ts \
   && grep -q 'spoken Ask/Do/Write back are not card fields' mcp/src/loop-freeze.ts \
   && grep -q 'Quality bar this week (not a card)' templates/applied-here.md \
@@ -1424,7 +1424,7 @@ if grep -q '| 2.8.17 |' company-os/operating-system.md \
   && grep -q '| 2.8.16 |' company-os/operating-system.md \
   && grep -q '| 2.8.15 |' company-os/operating-system.md \
   && grep -q 'Use IESER, in this order' company-os/operating-system.md \
-  && grep -q 'v2.8.17' README.md; then
+  && grep -q 'v2.8.18' README.md; then
   ok "OS 2.8.17 implicit loop is pinned (quality bar, not card; no schema bump)"
 else
   not_ok "2.8.17 implicit-loop strings must exist; keep 2.8.14+2.8.15+2.8.16; reject loopStage writes"
@@ -1435,6 +1435,40 @@ if ! printf '%s\n' "$done_when" | grep -q 'loopStage' \
   ok "2.8.17 implicit loop is not Day 0 Done when homework"
 else
   not_ok "do not put loopStage / quality bar in the Day 0 Done when checklist"
+fi
+
+# --- z7) OS 2.8.18: one founder control plane ---
+# Primary + supporting + engagements. Exile rejected. No schema bump.
+# Keep 2.8.17 implicit loop + 2.8.16 clock-examples + 2.8.15 clocks.
+if grep -q '| 2.8.18 |' company-os/operating-system.md \
+  && grep -Fq '**Version:** 2.8.18' company-os/operating-system.md \
+  && grep -q '### House rule: one founder control plane' company-os/operating-system.md \
+  && grep -q 'Exile' company-os/operating-system.md \
+  && grep -q 'NDA is not Try' company-os/operating-system.md \
+  && grep -q 'house-rule-one-founder-control-plane' company-os/ai-instructions.md \
+  && grep -q 'house-rule-one-founder-control-plane' company-os/first-hour.md \
+  && grep -q 'Honor OS 2.8.18' AGENTS.md \
+  && grep -q 'OS_VERSION = "2.8.18"' mcp/src/constants.ts \
+  && grep -q 'one-control-plane-2.8.18' mcp/src/house-rules.ts \
+  && grep -q 'CONTROL_PLANE_ORDER' mcp/src/control-plane.ts \
+  && grep -q 'supportingMayPromote' mcp/src/house-rules.ts \
+  && grep -q 'PRIMARY (customer bet' templates/company/state/where-are-we.py \
+  && grep -q 'SUPPORTING (same snapshot' templates/company/state/where-are-we.py \
+  && grep -q 'ENGAGEMENTS (named accounts' templates/company/state/where-are-we.py \
+  && grep -q 'Do not migrate/seed/live-probe supabase-pirin-ai' mcp/supabase/migrations/20260925_bootstrap_os_one_control_plane.sql \
+  && grep -q '| 2.8.17 |' company-os/operating-system.md \
+  && grep -q 'v2.8.18' README.md \
+  && ! grep -q 'instrument tracker / cap table / matching sheet' company-os/operating-system.md; then
+  ok "OS 2.8.18 one founder control plane is pinned (exile rejected; no schema bump)"
+else
+  not_ok "2.8.18 one-control-plane strings must exist; keep 2.8.17 implicit loop; reject exile"
+fi
+done_when=$(sed -n '/^## Done when$/,/^## After this hour$/p' company-os/first-hour.md)
+if ! printf '%s\n' "$done_when" | grep -q 'supporting' \
+  && ! printf '%s\n' "$done_when" | grep -q 'control plane'; then
+  ok "2.8.18 one control plane is not Day 0 Done when homework"
+else
+  not_ok "do not put supporting / control plane in the Day 0 Done when checklist"
 fi
 
 # --- w) Bootstrap Bill install docs (invite-only; not Path 1) ---
