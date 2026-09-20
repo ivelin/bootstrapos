@@ -5,7 +5,7 @@ description: Pin published OS house rules by link. Use for spoken yes / GTM, vol
 
 # House-rule pins
 
-When to use: GTM; spoken yes; volume; security program; second idea; optimal price; handful WTP; LTV/CAC at 0-1; old SaaS playbook; automate the playbook; agent team with no named owner; one bottleneck this week; fun side quest; new landing page; BANT; MEDDIC; MEDDPICC; listed price; unpaid trial; hire / FAST as a 5-rung card.
+When to use: GTM; spoken yes; volume; security; second idea; price; WTP; LTV/CAC; old SaaS playbook; automate the playbook; agent team; one bottleneck this week; fun side quest; new landing page; BANT; MEDDIC; unpaid trial; hire / FAST as a 5-rung card.
 
 Full text lives in the OS. Refuse. Cite the link.
 

@@ -1004,7 +1004,10 @@ function registerJourneyTools(server: McpServer, ctx: HostedRequestContext) {
             gateEnrichment: input.gateEnrichment,
             killPostmortem: input.killPostmortem,
             portfolioScore: input.portfolioScore,
-            supporting: input.supporting,
+            supporting: input.supporting?.map((row) => ({
+              ...row,
+              clock: row.clock?.trim() || "—",
+            })),
             engagements: input.engagements,
           }),
         );

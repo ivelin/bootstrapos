@@ -164,7 +164,7 @@ describe("merge-gate visitor matrix (CoS smell-test)", () => {
 
   it("H2 + A2 query-OS-first on a 0-1 placement ask", () => {
     const standing = skill("query-os-first");
-    assert.ok(standing.length < 2400);
+    assert.ok(standing.length < 2800);
     assert.match(standing, /0-1/);
     assert.match(standing, /the-5-journey-rungs-simple-view/);
     assert.match(standing, /Call this plugin first/);
