@@ -1,7 +1,15 @@
 import fs from "node:fs";
 import path from "node:path";
 import { resolveStatePath, resolveTracesDir } from "./paths.js";
-import { formatSpokenJourney, formatSpokenLoop } from "./constants.js";
+import { formatSpokenJourney } from "./constants.js";
+import {
+  LOOP_STAGE_MUTATION_REJECTED,
+  SPOKEN_LOOP_WRITE_REJECTED,
+  loopStageMutationRejected,
+  missingWriteBackLine,
+  spokenLoopWriteRejected,
+  writeBackMissingFromArtifacts,
+} from "./loop-freeze.js";
 
 export type AutonomyPosture = "strict" | "auto" | "dangerous";
 export type ReadyStatus = "unknown" | "blocked" | "green";
@@ -60,6 +68,16 @@ export function patchState(
   const state = readState();
   const warnings: string[] = [];
 
+  if (spokenLoopWriteRejected(patch)) {
+    throw new Error(SPOKEN_LOOP_WRITE_REJECTED);
+  }
+  if (loopStageMutationRejected(state.loopStage, patch.loopStage)) {
+    throw new Error(LOOP_STAGE_MUTATION_REJECTED);
+  }
+  if (patch.loopStage !== undefined) {
+    delete patch.loopStage;
+  }
+
   if (patch.journeyPhase !== undefined && patch.journeyPhase !== state.journeyPhase) {
     if (!options.allowPhaseAdvance) {
       warnings.push(
@@ -99,14 +117,16 @@ export function patchState(
 
 export function whereAreWePlain(state: CompanyState): string {
   const phase = state.journeyPhase;
-  const stage = state.loopStage;
   const phaseLabel = formatSpokenJourney(phase);
-  const stageLabel = formatSpokenLoop(stage);
   const eyes = state.readyForHumanEyes?.status ?? "unknown";
   const posture = state.autonomyPosture ?? "strict";
   const weekly = state.lastWeeklySnapshotAt
     ? `last weekly snapshot ${state.lastWeeklySnapshotAt}`
     : "weekly control-plane snapshot missing or not recorded";
+  const writeBackMissing = writeBackMissingFromArtifacts({
+    lastWeeklySnapshotAt: state.lastWeeklySnapshotAt,
+    scoreboard: state as unknown as Record<string, unknown>,
+  });
 
   const questions = (state.openQuestions ?? []).slice(0, 5);
   const qBlock =
@@ -121,9 +141,12 @@ export function whereAreWePlain(state: CompanyState): string {
     `Hypothesis: ${state.hypothesis}`,
     "",
     `Journey: ${phaseLabel}`,
-    `Live loop: ${stageLabel}`,
-    `AI freedom (autonomy): ${posture} (Strict = pause on strategy/spend/live sends; Auto = more routine autonomy; Dangerous = high risk)`,
     `Gate status: ${state.gateStatus}`,
+    writeBackMissing
+      ? `Missing artifacts: ${missingWriteBackLine()}`
+      : "Missing artifacts: none recorded",
+    "Ask / Do / Write back is a quality bar on the week's artifact, not a card.",
+    `AI freedom (autonomy): ${posture} (Strict = pause on strategy/spend/live sends; Auto = more routine autonomy; Dangerous = high risk)`,
     `Ready for human eyes: ${eyes} (green only means cold happy path works — not demand or PMF)`,
     eyes === "blocked" && state.readyForHumanEyes?.blockers?.length
       ? `  Blockers: ${state.readyForHumanEyes.blockers.join("; ")}`

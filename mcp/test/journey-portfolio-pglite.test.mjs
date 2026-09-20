@@ -38,6 +38,13 @@ const PORTFOLIO_SQL = path.join(
   "migrations",
   "20260922_bootstrap_os_portfolio_score.sql",
 );
+const IMPLICIT_LOOP_SQL = path.join(
+  __dirname,
+  "..",
+  "supabase",
+  "migrations",
+  "20260923_bootstrap_os_implicit_loop.sql",
+);
 
 const HARNESS = `
 DO $$ BEGIN
@@ -156,6 +163,7 @@ describe("PGlite portfolio scores (isolated, never prod)", { concurrency: false 
     await db.exec(fs.readFileSync(SUBSCRIBERS_SQL, "utf8"));
     await db.exec(fs.readFileSync(PROVENANCE_SQL, "utf8"));
     await db.exec(fs.readFileSync(PORTFOLIO_SQL, "utf8"));
+    await db.exec(fs.readFileSync(IMPLICIT_LOOP_SQL, "utf8"));
     await db.exec(SEED);
   });
 
@@ -389,5 +397,57 @@ describe("PGlite portfolio scores (isolated, never prod)", { concurrency: false 
        WHERE c.slug = 'alpha' AND o.payload->>'summary' = 'portfolio score'`,
     );
     assert.equal(outbox.rows[0].n, 0);
+  });
+
+  it("put_journey rejects loop_stage change; constraint-only write succeeds", async () => {
+    const mutated = (
+      await asJwt(
+        { email: "founder@example.test" },
+        "SELECT public.bootstrap_os_put_journey($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) AS body",
+        ["alpha", "default", "move the week verb", true, null, 3, null, null, null, null],
+      )
+    )[0].body;
+    assert.equal(mutated.ok, false);
+    assert.match(String(mutated.error), /loopStage mutations are rejected/);
+
+    const spoken = (
+      await asJwt(
+        { email: "founder@example.test" },
+        "SELECT public.bootstrap_os_put_journey($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) AS body",
+        [
+          "alpha",
+          "default",
+          "spoken label",
+          true,
+          null,
+          null,
+          null,
+          null,
+          null,
+          { schema_version: 1, loopSpoken: "Ask" },
+        ],
+      )
+    )[0].body;
+    assert.equal(spoken.ok, false);
+    assert.match(String(spoken.error), /not card fields/);
+
+    const constraint = (
+      await asJwt(
+        { email: "founder@example.test" },
+        "SELECT public.bootstrap_os_put_journey($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) AS body",
+        ["alpha", "default", "recon patch", false, null, null, null, "need one operator who already pays", null, null],
+      )
+    )[0].body;
+    assert.equal(constraint.ok, true);
+
+    const phaseNo = (
+      await asJwt(
+        { email: "founder@example.test" },
+        "SELECT public.bootstrap_os_put_journey($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) AS body",
+        ["alpha", "default", "no founder yes", false, 2, null, null, null, null, null],
+      )
+    )[0].body;
+    assert.equal(phaseNo.ok, false);
+    assert.match(String(phaseNo.error), /founder yes required/);
   });
 });

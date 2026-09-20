@@ -67,7 +67,7 @@ python3 company/state/where-are-we.py
 
 That read uses `company/state/company-state.json` (and its schema).
 
-On Day 0 you should hear something like: **Write the bet**, **Ask**, gate open, autonomy **Strict**, Ready for human eyes **unknown**, three groups on **hold**, no proof.
+On Day 0 you should hear something like: **Write the bet**, gate open, autonomy **Strict**, Ready for human eyes **unknown**, three groups on **hold**, no proof, Write back missing (no dated stated block). **Ask** / Do / Write back is a quality bar on the week’s artifact, not a card.
 
 ---
 
@@ -97,7 +97,7 @@ Path 1 is still `https://github.com/ivelin/bootstrap` as the free install source
 
 Follow the [near-term checklist](https://github.com/ivelin/bootstrap/blob/main/company-os/operating-system.md#near-term-checklist-any-startup). Next real work is usually honest research across those groups — not a platform.
 
-The live loop is three weeks: **Ask** (question + kill line) → **Do** (the work this station allows) → **Write back** (change memory; never skip; never Advance). Do takes the station’s shape. It is not a synonym for Build. Make / Check / Hear are not loop weeks.
+The live loop is a quality bar, not a card: **Ask** (question + kill line) → **Do** (the work this station allows) → **Write back** (change memory; never skip; never Advance). Do takes the station’s shape. It is not a synonym for Build. Make / Check / Hear are not loop weeks. Refuse station work without the artifact. Teaching scenes: [clock-examples](clock-examples.md).
 
 Fifteen cells (not this hour — labels first). Teaching scenes: [clock-examples](clock-examples.md). Locked table and End-to-end path: [operating-system — Fifteen cells](https://github.com/ivelin/bootstrap/blob/main/company-os/operating-system.md#fifteen-cells-journey-rung--loop-week).
 

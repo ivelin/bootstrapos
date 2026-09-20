@@ -98,11 +98,13 @@ describe("journey views + tools (memory store)", () => {
     const idea = basic.ideas[0];
     assert.match(idea.visualFlow, /mermaid/);
     assert.match(idea.visualFlow, /subgraph journey \[Journey\]/);
-    assert.match(idea.visualFlow, /subgraph loop \[Loop\]/);
     assert.match(idea.visualFlow, /Write the bet/);
-    assert.match(idea.visualFlow, /Ask/);
+    assert.doesNotMatch(idea.visualFlow, /subgraph loop \[Loop\]/);
+    assert.match(idea.visualFlow, /Missing artifacts/);
     assert.match(idea.snapshot, /Journey: Write the bet \(1\)/);
-    assert.match(idea.snapshot, /Loop: Ask \(1\)/);
+    assert.doesNotMatch(idea.snapshot, /Loop: Ask/);
+    assert.match(idea.snapshot, /Missing artifacts: Write back/);
+    assert.match(idea.snapshot, /quality bar/);
     assert.equal(idea.clocks.journeySpoken, "Write the bet");
     assert.equal(idea.clocks.loopSpoken, "Ask");
     assert.match(idea.snapshot, /two-minute read/);
@@ -240,7 +242,6 @@ describe("journey views + tools (memory store)", () => {
     const ok = await store.putJourney(founder, {
       companySlug: "corehaul",
       journeyPhase: 2,
-      loopStage: 2,
       currentGate: "advance",
       scoreboard: {
         schema_version: 1,
@@ -549,11 +550,11 @@ describe("journey views + tools (memory store)", () => {
     });
     const afterRevoke = await store.putJourney(founder, {
       companySlug: "corehaul",
-      loopStage: 2,
+      constraintThisWeek: "need one operator who already pays",
       why: "after revoke",
       founderYes: true,
-      gateEnrichment: GATE_ENR,
     });
+    assert.equal(afterRevoke.ok, true);
     assert.equal(afterRevoke.notify.webhook, 0);
   });
 

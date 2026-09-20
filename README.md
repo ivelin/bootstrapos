@@ -8,7 +8,7 @@ Use this repo as the **source of truth** for process and control. Point your AI 
 
 | | |
 |--|--|
-| **Version** | Blueprint + live runtime **v2.8.16** · optional local MCP **v0.2** (path 3) |
+| **Version** | Blueprint + live runtime **v2.8.17** · optional local MCP **v0.2** (path 3) |
 | **License** | Apache-2.0 |
 | **Audience** | Independent solo founders; mentors (Founder Institute, SCORE, …); AI helpers |
 | **Maintainer** | [Ivelin Ivanov](https://github.com/ivelin) · [Pirin.ai](https://pirin.ai) |
@@ -23,7 +23,7 @@ Use this repo as the **source of truth** for process and control. Point your AI 
 BLUEPRINT (how to decide)              LIVE RUNTIME (how to learn every week)
 company-os/operating-system.md         company-os/live-runtime.md
   five journey rungs                     persistent state (personas, traces, scores…)
-  founder gates + honest evidence        three-week loop → Write back → Ask again
+  founder gates + honest evidence        weekly quality bar → Write back → Ask again
   reward/risk + virtual office           git remembers; day tools may feed it
   (cards stay; jobs optional)            optional: founder-day + skill-capture
 ```
@@ -80,7 +80,7 @@ Optional. Script or hand copy — [Install](#install-in-your-company). Optional 
 
 ### 3. Self-hosted MCP (optional — several ideas)
 
-Several ideas are allowed. Do not hide a second thesis to look focused. Optional local MCP under [`mcp/`](mcp/) keeps each idea on its own board — `company-state.json` + `where-are-we.py` — without importing this tree into every product repo. Same founder gates. Same evidence rules (OS 2.8.16). Rank and kill per board. Markdown remains the constitution.
+Several ideas are allowed. Do not hide a second thesis to look focused. Optional local MCP under [`mcp/`](mcp/) keeps each idea on its own board — `company-state.json` + `where-are-we.py` — without importing this tree into every product repo. Same founder gates. Same evidence rules (OS 2.8.17). Rank and kill per board. Markdown remains the constitution.
 
 Not required. Path 1 (point an AI) and path 2 (optional files + workflows) stay enough.
 
@@ -127,7 +127,7 @@ Local CI is `./scripts/ci.sh`.
 | Clock | Question | Changes when |
 |-------|----------|--------------|
 | **Bootstrap journey** (five rungs: Bet / Filter / Ground / Build / Try) | Where is this bet on the prove-it path? | Founder **Advance / Iterate / Hold / Kill** |
-| **Live loop** (three weeks: Ask / Do / Write) | What are we learning this week? | Continuous; many cycles inside one journey rung |
+| **Live loop** (quality bar: Ask / Do / Write) | What artifact does this week need? | Continuous; many cycles inside one journey rung. Not a card. |
 
 AI never advances a journey phase alone. Evidence beats narrative. Waitlists and synthetic research are filters, not product–market fit.
 
@@ -165,18 +165,21 @@ Treat promotion into this template as rare, deliberate work — not a continuous
 
 | Doc | Current |
 |-----|---------|
-| Operating system blueprint | **v2.8.16** |
-| Live runtime | **v2.8.16** |
+| Operating system blueprint | **v2.8.17** |
+| Live runtime | **v2.8.17** |
 | Optional local MCP (path 3) | **v0.2** — adapter only; not a second OS. HTTP read transport is preview. |
 | Preview plugin | **0.1.1** — [`plugin/`](plugin/). Skills hyperlink this pack. Team Import from Repo only — not a public catalog submit. Not mentee-ready hosted boards. |
 
 ### Recent portable additions
 
+**v2.8.17 — implicit loop (quality bar, not card)**  
+Ask / Do / Write back is a quality bar on the week’s artifact, not a stored week verb and not card position. Founder gates journey only. `loopStage` mutations are rejected. Missing Write back is said from artifacts. [clock-examples.md](company-os/clock-examples.md) stays teaching. No schema bump.
+
 **v2.8.16 — clock examples (teaching 5 × 3)**  
 Teaching page only. Fifteen cells for one fictional household-jobs company. Not a live board. Do not copy onto a real company. Do not Advance from an example. Locked 2.8.15 clocks and 2.8.14 Decision methods stay. Full text: [clock-examples.md](company-os/clock-examples.md).
 
 **v2.8.15 — clock shrink (five rungs + three weeks)**  
-Spoken journey: Write the bet / Filter cheaply / Ground it / Build tiny slice / Try with real people. Spoken loop: Ask / Do / Write back. Stored integers 1–9 / 1–7 stay (no schema bump). Full text: [operating-system.md](company-os/operating-system.md#the-5-journey-rungs-simple-view--formal-aliases).
+Spoken journey: Write the bet / Filter cheaply / Ground it / Build tiny slice / Try with real people. Ask / Do / Write back is a quality bar, not a card. Stored integers 1–9 / 1–7 stay (no schema bump). Full text: [operating-system.md](company-os/operating-system.md#the-5-journey-rungs-simple-view--formal-aliases).
 
 **v2.8.14 — Decision methods (IESER + FIRAC Bind-class)**  
 Aliases, not a third clock. Full text: [operating-system.md](company-os/operating-system.md#decision-methods-aliases-not-a-third-clock).

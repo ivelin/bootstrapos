@@ -39,9 +39,15 @@ describe("phase advance gate", () => {
     assert.ok(warnings.some((w) => /founderApprovedPhaseChange/i.test(w)));
   });
 
-  it("allows loopStage without founder phase flag", () => {
-    const { state } = patchState({ loopStage: 3 }, { allowPhaseAdvance: false });
-    assert.equal(state.loopStage, 3);
+  it("rejects loopStage mutation; identical no-op is allowed", () => {
+    const before = readState();
+    assert.throws(
+      () => patchState({ loopStage: 3 }, { allowPhaseAdvance: false }),
+      /loopStage mutations are rejected/,
+    );
+    assert.equal(readState().loopStage, before.loopStage);
+    const { state } = patchState({ loopStage: before.loopStage }, { allowPhaseAdvance: false });
+    assert.equal(state.loopStage, before.loopStage);
     assert.equal(state.journeyPhase, 1);
   });
 
@@ -49,7 +55,9 @@ describe("phase advance gate", () => {
     const plain = whereAreWePlain(readState());
     assert.match(plain, /charlie/i);
     assert.match(plain, /Journey: Write the bet \(1\)/);
-    assert.match(plain, /Live loop: Ask \(1\)/);
+    assert.doesNotMatch(plain, /Live loop: Ask/);
+    assert.match(plain, /Missing artifacts: Write back/);
+    assert.match(plain, /quality bar/);
     assert.match(plain, /not demand or PMF/i);
     assert.match(plain, /observed wins/i);
     assert.match(plain, /Spoken yes cannot promote/i);

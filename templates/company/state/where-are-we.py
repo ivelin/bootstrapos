@@ -27,6 +27,7 @@ JOURNEY = {
     9: "Try with real people",
 }
 
+# Stored 1–7 stay for back-compat. Not where-we-are. Quality bar only.
 LOOP = {
     1: "Ask",
     2: "Ask",
@@ -50,13 +51,13 @@ JOURNEY_PLAIN = {
 }
 
 LOOP_PLAIN = {
-    1: "This week’s loop is Ask — write the question and the kill line.",
-    2: "This week’s loop is Ask — write the question and the kill line.",
-    3: "This week’s loop is Do — run the work this station allows against that line. Do is not a synonym for Build.",
-    4: "This week’s loop is Do — run the work this station allows against that line. Do is not a synonym for Build.",
-    5: "This week’s loop is Do — run the work this station allows against that line. Do is not a synonym for Build.",
-    6: "This week’s loop is Do — run the work this station allows against that line. Do is not a synonym for Build.",
-    7: "This week’s loop is Write back — change company memory. Never skip. Never Advance.",
+    1: "Quality bar Ask — kill line + groups. Not a card. clock-examples is teaching only.",
+    2: "Quality bar Ask — kill line + groups. Not a card. clock-examples is teaching only.",
+    3: "Quality bar Do — one-page thesis (or this station’s artifact). Not a card. Do is not a synonym for Build.",
+    4: "Quality bar Do — one-page thesis (or this station’s artifact). Not a card. Do is not a synonym for Build.",
+    5: "Quality bar Do — one-page thesis (or this station’s artifact). Not a card. Do is not a synonym for Build.",
+    6: "Quality bar Do — one-page thesis (or this station’s artifact). Not a card. Do is not a synonym for Build.",
+    7: "Quality bar Write back — dated stated + what we will not do. Never invent this from stored 7.",
 }
 
 POSTURE_PLAIN = {
@@ -180,6 +181,9 @@ def snapshot(state: dict) -> str:
     eyes_status = str(eyes.get("status") or "unknown").lower()
     scores = state.get("scores") or {}
     questions = state.get("openQuestions") or []
+    snapshot_at = state.get("lastWeeklySnapshotAt")
+    write_back_missing = not snapshot_at
+    constraint = state.get("constraintThisWeek") or state.get("constraint_this_week") or ""
 
     lines = [
         "WHERE ARE WE?  (plain language, under two minutes)",
@@ -191,11 +195,20 @@ def snapshot(state: dict) -> str:
         f"JOURNEY (slow)     {JOURNEY.get(phase, '(unknown phase)')} ({fmt(phase)})",
         f"  {JOURNEY_PLAIN.get(phase, 'Say in one sentence how far you are on proving the business.')}",
         "",
-        f"LIVE LOOP (fast)   {LOOP.get(stage, '(unknown stage)')} ({fmt(stage)})",
-        f"  {LOOP_PLAIN.get(stage, 'Say in one sentence what the weekly loop is doing.')}",
-        "",
         f"GATE               {fmt(state.get('gateStatus'))}",
         f"  {GATE_PLAIN.get(gate, 'Say whether the next gate is open, waiting for you, or blocked.')}",
+        "",
+        f"CONSTRAINT         {fmt(constraint) if constraint else 'none yet'}",
+        "  Honest biggest bottleneck this week. Not a card. Not a fun side quest.",
+        "",
+        "MISSING ARTIFACTS",
+        (
+            "  Write back (no dated stated block + what we will not do)"
+            if write_back_missing
+            else "  none recorded"
+        ),
+        "  Ask / Do / Write back is a quality bar on the week's artifact, not a card.",
+        "  Do not invent Write back from stored loopStage 7.",
         "",
         f"AUTONOMY           {fmt(state.get('autonomyPosture'))}",
         f"  {POSTURE_PLAIN.get(posture, 'Say how free the AI is this week (Strict / Auto / Dangerous).')}",

@@ -1,6 +1,6 @@
-/** Portable journey + loop labels (aligned to company-os v2.8.16). */
+/** Portable journey + loop labels (aligned to company-os v2.8.17). */
 
-export const OS_VERSION = "2.8.16";
+export const OS_VERSION = "2.8.17";
 export const MCP_VERSION = "0.3.5";
 
 /** Published constitution. Hosted read adapter fetches from here; do not embed copies. */

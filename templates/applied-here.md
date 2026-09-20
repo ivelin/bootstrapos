@@ -29,7 +29,7 @@ Optional path 3 (local MCP, several ideas): the same `company-state.json` + `whe
 Grow is an after-proof pack after Try, not a sixth rung. Stored integers 1–9 still map (1 or 2 → Write the bet; 8 or 9 stay at Try until founder Advance).
 
 **Current journey:** [Write the bet / Filter cheaply / Ground it / Build tiny slice / Try with real people]  
-**Current loop week:** [Ask / Do / Write back]  
+**Quality bar this week (not a card):** [Ask / Do / Write back] — artifact present? missing Write back is said from artifacts, never invented as loopStage 7  
 **Gate:** OPEN | WAITING | BLOCKED  
 **Autonomy posture:** Strict (default) | Auto | Dangerous  
 **Ready for human eyes:** unknown | blocked | green
