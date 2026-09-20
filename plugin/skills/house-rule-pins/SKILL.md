@@ -17,6 +17,7 @@ Full text lives in the OS. Refuse. Cite the link.
 - Do not automate a step that should not exist (2.8.9) — https://github.com/ivelin/bootstrap/blob/main/company-os/operating-system.md#house-rule-do-not-automate-a-step-that-should-not-exist
 - Legal paper cannot promote (2.8.10) — https://github.com/ivelin/bootstrap/blob/main/company-os/operating-system.md#house-rule-legal-paper-cannot-promote
 - One founder control plane (2.8.18) — https://github.com/ivelin/bootstrap/blob/main/company-os/operating-system.md#house-rule-one-founder-control-plane
+- Initiative report card (2.8.19) — https://github.com/ivelin/bootstrap/blob/main/company-os/operating-system.md#initiative-report-card
 - Advisor ride-along is assumed, not observed (2.8.11) — https://github.com/ivelin/bootstrap/blob/main/company-os/operating-system.md#house-rule-advisor-ride-along-is-assumed-not-observed
 - Unpaid weeks cannot promote (2.8.13) — https://github.com/ivelin/bootstrap/blob/main/company-os/operating-system.md#house-rule-unpaid-weeks-cannot-promote
 - LTV:CAC 3x / T2D3 stale — https://github.com/ivelin/bootstrap/blob/main/company-os/after-proof-efficiency.md

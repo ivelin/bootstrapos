@@ -147,6 +147,12 @@ When someone opens a 5-rung card for an advisor FAST, a SAFE, or a hire, or tell
 
 House rule: [supporting stays on the same snapshot](https://github.com/ivelin/bootstrap/blob/main/company-os/operating-system.md#house-rule-one-founder-control-plane).
 
+When someone asks Where are we after Day 0:
+
+> Company header, then bottleneck #1, then customer checks with nested engagements, then other initiatives in the footer. Ask / Do is not a card.
+
+Card: [initiative report card](https://github.com/ivelin/bootstrap/blob/main/company-os/operating-system.md#initiative-report-card).
+
 When someone treats an advisor's promise of exclusivity or an Office Hours tip as proof customers will pay:
 
 > An advisor's opinion is a tip, not proof customers will pay. Write down who said it. Do not delay a customer who wants to pay.

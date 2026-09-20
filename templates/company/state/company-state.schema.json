@@ -149,6 +149,57 @@
           }
         }
       }
+    },
+    "initiatives": {
+      "type": "array",
+      "description": "OS 2.8.19 report card rows. New writes. Dual-read supporting / engagements / constraintThisWeek when empty. No journeyPhase.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "kind",
+          "premise",
+          "measure",
+          "killLine",
+          "status",
+          "last",
+          "next",
+          "outcome",
+          "impact",
+          "evidence"
+        ],
+        "properties": {
+          "id": { "type": "string", "minLength": 1 },
+          "kind": {
+            "type": "string",
+            "enum": ["customer_check", "engagement", "capital", "legal", "advisor"]
+          },
+          "premise": { "type": "string" },
+          "measure": { "type": "string" },
+          "killLine": { "type": "string" },
+          "status": {
+            "type": "string",
+            "enum": ["proposed", "active", "waiting", "closed"]
+          },
+          "last": { "type": "string" },
+          "next": { "type": "string" },
+          "outcome": {
+            "type": "string",
+            "enum": ["none", "learned", "delivered", "killed"]
+          },
+          "impact": {
+            "type": "string",
+            "enum": ["none", "learning", "revenue", "obligation", "clock"]
+          },
+          "evidence": {
+            "type": "string",
+            "enum": ["stated", "synthetic", "observed"]
+          },
+          "clock": { "type": "string" },
+          "parentId": { "type": "string" }
+        }
+      }
     }
   }
 }

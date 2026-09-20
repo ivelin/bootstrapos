@@ -83,7 +83,50 @@
           "What experiment makes community contribution tangible (not only stars/views)?"
         ],
         "lastAction": "hold_fixture_empty_board",
-        "constraint_this_week": "Community engagement that produces tangible project progress — not only stars, views, or cool-topic interest."
+        "constraint_this_week": "Community engagement that produces tangible project progress — not only stars, views, or cool-topic interest.",
+        "initiatives": [
+          {
+            "id": "alpha-check-1",
+            "kind": "customer_check",
+            "premise": "operators who already pay for dispatch at bravo plant — one conversation by 2026-10-03",
+            "measure": "one paid weekly report used in their shop",
+            "killLine": "kill if they do not use the weekly report",
+            "status": "active",
+            "last": "hold fixture empty board",
+            "next": "named operator conversation with a date",
+            "outcome": "none",
+            "impact": "none",
+            "evidence": "stated",
+            "clock": "2026-10-03"
+          },
+          {
+            "id": "alpha-eng-1",
+            "kind": "engagement",
+            "premise": "bravo plant NDA",
+            "measure": "signed paper is not Try",
+            "killLine": "NDA is not Try",
+            "status": "waiting",
+            "last": "nda sent",
+            "next": "paid or use in their environment",
+            "outcome": "none",
+            "impact": "obligation",
+            "evidence": "stated",
+            "parentId": "alpha-check-1"
+          },
+          {
+            "id": "alpha-legal-1",
+            "kind": "legal",
+            "premise": "side file for counsel notes",
+            "measure": "paper cannot promote",
+            "killLine": "legal paper cannot promote",
+            "status": "proposed",
+            "last": "none",
+            "next": "keep off the title",
+            "outcome": "none",
+            "impact": "clock",
+            "evidence": "stated"
+          }
+        ]
       },
       "events": [
         {

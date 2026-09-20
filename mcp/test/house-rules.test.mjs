@@ -19,6 +19,7 @@ import {
   advisorRideAlongIsObserved,
   supportingMayPromote,
   engagementMayPromote,
+  initiativeMappingMayAdvance,
   newLandingPageMayBeBottleneckWhenNoOneHasTalkedToCustomers,
 } from "../dist/house-rules.js";
 import { PHASE_GATES, STAGE_GATES } from "../dist/gates.js";
@@ -64,6 +65,8 @@ describe("OS house rules (adapter reminders)", () => {
     assert.match(pins, /house-rule-legal-paper-cannot-promote/);
     assert.match(pins, /house-rule-one-founder-control-plane/);
     assert.match(pins, /one-control-plane-2.8.18/);
+    assert.match(pins, /initiative-report-card-2.8.19/);
+    assert.equal(initiativeMappingMayAdvance(), false);
     assert.match(pins, /house-rule-advisor-ride-along-is-assumed-not-observed/);
     assert.match(pins, /house-rule-unpaid-weeks-cannot-promote/);
     assert.match(pins, /unpaid-weeks-2.8.13/);

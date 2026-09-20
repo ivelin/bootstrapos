@@ -80,7 +80,7 @@ function alphaStore() {
 
 describe("OS 2.8.18 one founder control plane", () => {
   it("pins pack version and class helpers", () => {
-    assert.equal(OS_VERSION, "2.8.18");
+    assert.equal(OS_VERSION, "2.8.19");
     assert.deepEqual([...CONTROL_PLANE_ORDER], ["primary", "supporting", "engagements"]);
     assert.equal(supportingMayPromote(), false);
     assert.equal(engagementMayPromote(), false);
