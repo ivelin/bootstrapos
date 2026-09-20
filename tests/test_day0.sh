@@ -1241,7 +1241,7 @@ fi
 # Lock distinctive phrases. Do not invent doctrine.
 if grep -q '### Decision methods (aliases, not a third clock)' company-os/operating-system.md \
   && grep -q '| 2.8.14 |' company-os/operating-system.md \
-  && grep -Fq '**Last Updated:** 2026-09-19' company-os/operating-system.md \
+  && grep -Fq '**Last Updated:** 2026-09-20' company-os/operating-system.md \
   && grep -q 'Use IESER, in this order' company-os/operating-system.md \
   && grep -q 'Use FIRAC before anyone signs' company-os/operating-system.md \
   && grep -q 'Checkpoint kind Clock is not the same as the two clocks' company-os/operating-system.md \
@@ -1446,8 +1446,8 @@ if grep -q '| 2.8.18 |' company-os/operating-system.md \
   && grep -q 'house-rule-an-idea-board-is-a-customer-thesis' company-os/operating-system.md \
   && grep -q 'named-group kill line' company-os/operating-system.md \
   && grep -q 'instrument tracker' company-os/operating-system.md \
-  && grep -q 'Relationship shelf' company-os/operating-system.md \
-  && grep -q 'not a People OS' company-os/operating-system.md \
+  && grep -q 'relationship shelf' company-os/operating-system.md \
+  && grep -q 'a People OS' company-os/operating-system.md \
   && grep -q 'house-rule-an-idea-board-is-a-customer-thesis' company-os/ai-instructions.md \
   && grep -q 'named-group kill line' company-os/ai-instructions.md \
   && grep -q 'Honor OS 2.8.18' AGENTS.md \

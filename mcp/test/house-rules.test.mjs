@@ -47,7 +47,7 @@ describe("OS house rules (adapter reminders)", () => {
     assert.match(blob, /Legal paper cannot promote/);
     assert.match(blob, /Advisor ride-along is assumed, not observed/);
     assert.match(blob, /An idea board is a customer thesis/);
-    assert.match(blob, /Named-group kill line/);
+    assert.match(blob, /named-group kill line/);
     assert.match(blob, /SaaS 1\.0 playbooks may be outdated/);
     assert.match(blob, /Stay current/);
     assert.match(blob, /do not invent their stage/i);

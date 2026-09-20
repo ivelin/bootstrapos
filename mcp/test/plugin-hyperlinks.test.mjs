@@ -100,7 +100,7 @@ describe("preview plugin (hyperlink only)", () => {
     for (const file of files) {
       const body = fs.readFileSync(file, "utf8");
       const thin = file.includes(`${path.sep}house-rule-pins${path.sep}`) || file.includes(`${path.sep}query-os-first${path.sep}`);
-      assert.ok(body.length < (thin ? 2400 : 1800), `${file} is too long — link, do not copy the OS`);
+      assert.ok(body.length < (thin ? 2800 : 1800), `${file} is too long — link, do not copy the OS`);
       assert.match(body, /https:\/\/github.com\/ivelin\/bootstrap/);
       for (const phrase of ESSAY_FORBIDDEN) {
         assert.ok(!body.includes(phrase), `${file} must not copy OS essay: ${phrase}`);

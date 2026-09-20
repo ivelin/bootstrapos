@@ -122,6 +122,27 @@ describe("OS 2.8.18 idea-board admission (bet class)", () => {
       why: CHANNEL_BET,
     });
     assert.equal(channel.ok, false);
+
+    const phaseHire = await store.putJourney(founder, {
+      companySlug: "alpha",
+      ideaSlug: "default",
+      journeyPhase: 2,
+      why: HIRE_BET,
+      founderYes: true,
+      gateEnrichment: GATE_ENR,
+    });
+    assert.equal(phaseHire.ok, false);
+    assert.match(String(phaseHire.error), /relationship book \/ instrument tracker/);
+
+    const phasePaper = await store.putJourney(founder, {
+      companySlug: "alpha",
+      ideaSlug: "default",
+      journeyPhase: 2,
+      why: SAFE_BET,
+      founderYes: true,
+      gateEnrichment: GATE_ENR,
+    });
+    assert.equal(phasePaper.ok, false);
   });
 
   it("named-group kill line (pay or use) succeeds; keywords in a product why do not reject", async () => {
