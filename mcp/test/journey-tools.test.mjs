@@ -174,7 +174,7 @@ describe("journey views + tools (memory store)", () => {
       ideaSlug: "second-bet",
       name: "Second bet",
       founderYes: true,
-      why: "separate 0-1 board",
+      why: "operators who already pay for dispatch — kill if they do not use the weekly report",
     });
     assert.equal(created.ok, true);
     assert.equal(created.ideas.length, 1);
@@ -188,6 +188,7 @@ describe("journey views + tools (memory store)", () => {
       companySlug: "corehaul",
       ideaSlug: "second-bet",
       founderYes: true,
+      why: "operators who already pay for dispatch — kill if they do not use the weekly report",
     });
     assert.equal(dup.ok, false);
     assert.match(String(dup.error), /already exists/);
@@ -248,7 +249,7 @@ describe("journey views + tools (memory store)", () => {
         openQuestions: ["who already has this job"],
         progress: ["thesis draft"],
       },
-      why: "founder yes in chat",
+      why: "operators who already pay for dispatch — kill if they do not use the weekly report",
       founderYes: true,
       gateEnrichment: GATE_ENR,
     });
@@ -299,7 +300,7 @@ describe("journey views + tools (memory store)", () => {
     await store.putJourney(founder, {
       companySlug: "corehaul",
       journeyPhase: 2,
-      why: "founder yes",
+      why: "operators who already pay for dispatch — kill if they do not use the weekly report",
       founderYes: true,
       client: "cursor-agent",
       gateEnrichment: GATE_ENR,
@@ -517,7 +518,7 @@ describe("journey views + tools (memory store)", () => {
     const wrote = await store.putJourney(founder, {
       companySlug: "corehaul",
       journeyPhase: 2,
-      why: "founder yes",
+      why: "operators who already pay for dispatch — kill if they do not use the weekly report",
       founderYes: true,
       gateEnrichment: GATE_ENR,
     });
@@ -643,7 +644,7 @@ describe("journey views + tools (memory store)", () => {
       companySlug: "corehaul",
       ideaSlug: "retired-bet",
       founderYes: true,
-      why: "second 0-1 board",
+      why: "operators who already pay for dispatch — kill if they do not use the weekly report",
     });
     assert.equal(created.ok, true);
 
@@ -826,7 +827,7 @@ describe("journey views + tools (memory store)", () => {
       companySlug: "alpha",
       ideaSlug: "second-bet",
       founderYes: true,
-      why: "second live idea",
+      why: "operators who already pay for dispatch — kill if they do not use the weekly report",
     });
     assert.equal(created.ok, true);
 

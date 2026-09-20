@@ -855,7 +855,12 @@ function registerJourneyTools(server: McpServer, ctx: HostedRequestContext) {
       founderYes: z
         .boolean()
         .describe("True only after an explicit founder yes in their agent chat"),
-      why: z.string().optional().describe("Short why this is a separate 0-1 bet"),
+      why: z
+        .string()
+        .optional()
+        .describe(
+          "Named-group kill line (pay or use). Required. A person, hire, or instrument is not an idea board.",
+        ),
       client: z.string().optional().describe("Which client wrote. Stored on the audit row."),
     },
     async (input) => {

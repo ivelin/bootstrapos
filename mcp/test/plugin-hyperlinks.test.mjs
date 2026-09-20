@@ -113,6 +113,7 @@ describe("preview plugin (hyperlink only)", () => {
     assert.match(pins, /house-rule-do-not-automate-a-step-that-should-not-exist/);
     assert.match(pins, /house-rule-legal-paper-cannot-promote/);
     assert.match(pins, /house-rule-advisor-ride-along-is-assumed-not-observed/);
+    assert.match(pins, /house-rule-an-idea-board-is-a-customer-thesis/);
     assert.match(pins, /old SaaS playbook/);
     assert.match(pins, /automate the playbook/);
     assert.match(pins, /one bottleneck this week/);

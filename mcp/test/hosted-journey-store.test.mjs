@@ -81,6 +81,7 @@ describe("hosted membership journey store", () => {
       companySlug: "alpha",
       ideaSlug: "second-bet",
       founderYes: true,
+      why: "operators who already pay for dispatch — kill if they do not use the weekly report",
     });
     assert.equal(created.ok, true);
     assert.equal(created.ideas[0].slug, "second-bet");

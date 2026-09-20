@@ -172,6 +172,25 @@ def fmt(value: object) -> str:
     return str(value)
 
 
+def relationship_shelf(text: str) -> bool:
+    """Positive relationship/instrument primary object. Not keyword spam."""
+    t = " ".join((text or "").split())
+    if not t:
+        return False
+    if " who " in f" {t.lower()} " and "kill" in t.lower() and (
+        "pay" in t.lower() or "use" in t.lower()
+    ):
+        return False
+    low = t.lower()
+    if low.startswith(("hire ", "hiring ", "recruit ", "recruiting ")):
+        return True
+    if any(low.startswith(p) for p in ("close the safe", "file the 83", "sign the safe", "sign a safe")):
+        return True
+    if "is the bet" in low or "as the bet" in low:
+        return True
+    return False
+
+
 def snapshot(state: dict) -> str:
     phase = state.get("journeyPhase")
     stage = state.get("loopStage")
@@ -184,6 +203,8 @@ def snapshot(state: dict) -> str:
     snapshot_at = state.get("lastWeeklySnapshotAt")
     write_back_missing = not snapshot_at
     constraint = state.get("constraintThisWeek") or state.get("constraint_this_week") or ""
+    hypo = str(state.get("hypothesis") or "")
+    shelf = relationship_shelf(hypo)
 
     lines = [
         "WHERE ARE WE?  (plain language, under two minutes)",
@@ -192,8 +213,16 @@ def snapshot(state: dict) -> str:
         f"Hypothesis:  {fmt(state.get('hypothesis'))}",
         "             (hypothesis — subject to evidence)",
         "",
-        f"JOURNEY (slow)     {JOURNEY.get(phase, '(unknown phase)')} ({fmt(phase)})",
-        f"  {JOURNEY_PLAIN.get(phase, 'Say in one sentence how far you are on proving the business.')}",
+        (
+            "RELATIONSHIP SHELF — not a journey. Hold in the founder's instrument tracker / cap table / matching sheet."
+            if shelf
+            else f"JOURNEY (slow)     {JOURNEY.get(phase, '(unknown phase)')} ({fmt(phase)})"
+        ),
+        (
+            "  Measure instrument state + Clock date + next action + last observed fact — not a journey, not an Ask-Do card, not portfolio I-E-L."
+            if shelf
+            else f"  {JOURNEY_PLAIN.get(phase, 'Say in one sentence how far you are on proving the business.')}"
+        ),
         "",
         f"GATE               {fmt(state.get('gateStatus'))}",
         f"  {GATE_PLAIN.get(gate, 'Say whether the next gate is open, waiting for you, or blocked.')}",

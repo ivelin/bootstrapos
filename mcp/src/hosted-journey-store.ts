@@ -26,6 +26,11 @@ import {
   loopStageMutationRejected,
   spokenLoopWriteRejected,
 } from "./loop-freeze.js";
+import {
+  IDEA_BOARD_ADMISSION_REJECTED,
+  admitIdeaBoardWhy,
+  isRelationshipShelf,
+} from "./idea-board-admission.js";
 
 function supabaseUrl(): string | undefined {
   return process.env.BOOTSTRAP_SUPABASE_URL || process.env.SUPABASE_URL || undefined;
@@ -253,6 +258,10 @@ export class SupabaseJourneyStore implements JourneyStore {
       client?: string;
     },
   ): Promise<unknown> {
+    const admitted = admitIdeaBoardWhy(input.why);
+    if (!admitted.ok) {
+      return { ok: false, error: admitted.error };
+    }
     const hit = await this.rpc("bootstrap_os_create_idea", {
       p_company: input.companySlug,
       p_idea: input.ideaSlug,
@@ -287,6 +296,21 @@ export class SupabaseJourneyStore implements JourneyStore {
       return { ok: false, error: SPOKEN_LOOP_WRITE_REJECTED };
     }
     const idea = input.ideaSlug ?? "default";
+    if (input.journeyPhase !== undefined) {
+      const admitted = admitIdeaBoardWhy(input.why);
+      if (!admitted.ok) {
+        return { ok: false, error: admitted.error };
+      }
+      const current = await this.getJourney(_actor, {
+        companySlug: input.companySlug,
+        ideaSlug: idea,
+      });
+      const row = (current as { ideas?: Array<{ name?: string; scoreboard?: { hypothesis?: string }; relationshipShelf?: boolean }> })
+        ?.ideas?.[0];
+      if (row?.relationshipShelf || isRelationshipShelf(row ?? {}, undefined)) {
+        return { ok: false, error: IDEA_BOARD_ADMISSION_REJECTED };
+      }
+    }
     if (input.loopStage !== undefined) {
       const current = await this.getJourney(_actor, {
         companySlug: input.companySlug,

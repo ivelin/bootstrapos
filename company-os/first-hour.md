@@ -147,6 +147,12 @@ When someone treats an advisor's promise of exclusivity or an Office Hours tip a
 
 House rule: [advisor ride-along is assumed, not observed](https://github.com/ivelin/bootstrap/blob/main/company-os/operating-system.md#house-rule-advisor-ride-along-is-assumed-not-observed).
 
+When someone opens a journey board for a hire, a SAFE, an investor, or a channel partner as the bet:
+
+> An idea board is a customer thesis. Write a named-group kill line (pay or use). Hold the person or the paper in the instrument tracker.
+
+House rule: [an idea board is a customer thesis](https://github.com/ivelin/bootstrap/blob/main/company-os/operating-system.md#house-rule-an-idea-board-is-a-customer-thesis).
+
 When a company or person asks for more work after the first conversation, and they have not paid for that next session:
 
 > The first conversation is free. The next working session is paid, or you stop. A long buying cycle is not a reason to keep working for free.

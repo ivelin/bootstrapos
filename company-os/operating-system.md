@@ -1,8 +1,8 @@
 # Company Operating System  
 ## For Solo Founders in Bootstrapping Mode
 
-**Version:** 2.8.17  
-**Last Updated:** 2026-09-19  
+**Version:** 2.8.18  
+**Last Updated:** 2026-09-20  
 **Status:** Living guideline (blueprint — not any one company’s live runtime)  
 **Audience:** Independent solo founders; mentors (e.g. Founder Institute, SCORE); AI helpers instructed to follow this system  
 **Isolation:** Portable across startups. Each company keeps its filled instance outside this template (see `../templates/applied-here.md`).  
@@ -72,7 +72,7 @@ This is a Day 0 / Path 1 question. It is **not** a house rule and **not** a thir
 
 2. **Do not fall in love with your first idea.**  
    The system exists to force an honest process: form a thesis, test it hard, learn, and be willing to change or kill it.  
-   Several ideas are allowed. Each idea is its own thesis, instance, and scorecard. Do not hide a second idea to look focused. Rank and kill per board. Do not blend them into one story.
+   Several ideas are allowed. Each idea is its own thesis, instance, and scorecard. Do not hide a second idea to look focused. Rank and kill per board. Do not blend them into one story. They must still be product ideas — a named-group kill line (pay or use). A relationship or instrument row is not an idea board.
 
 3. **Stay small until it works.**  
    Build the tiniest version that can prove people will pay or get clear value. Expand only after you have real proof.
@@ -91,6 +91,7 @@ This is a Day 0 / Path 1 question. It is **not** a house rule and **not** a thir
    House rule: [do not automate a step that should not exist](#house-rule-do-not-automate-a-step-that-should-not-exist).  
    House rule: [legal paper cannot promote](#house-rule-legal-paper-cannot-promote).  
    House rule: [advisor ride-along is assumed, not observed](#house-rule-advisor-ride-along-is-assumed-not-observed).  
+   House rule: [an idea board is a customer thesis](#house-rule-an-idea-board-is-a-customer-thesis).  
    House rule: [unpaid weeks cannot promote](#house-rule-unpaid-weeks-cannot-promote).
 
 7. **Build evaluation-first when you build.**  
@@ -1213,7 +1214,23 @@ Someone saying an advisor's promise of exclusivity, or an Office Hours tip about
 
 **Implement.** Write down who said what. Check that first before you write exclusivity language. A week of only lawyer emails and advisor meetings = stay put. A named person who wants to pay can move you.
 
-Same family: [legal paper cannot promote](#house-rule-legal-paper-cannot-promote). [There is no optimal price until people have paid and stayed](#house-rule-there-is-no-optimal-price-until-people-have-paid-and-stayed). [Unpaid weeks cannot promote](#house-rule-unpaid-weeks-cannot-promote).
+Same family: [legal paper cannot promote](#house-rule-legal-paper-cannot-promote). [There is no optimal price until people have paid and stayed](#house-rule-there-is-no-optimal-price-until-people-have-paid-and-stayed). [Unpaid weeks cannot promote](#house-rule-unpaid-weeks-cannot-promote). [An idea board is a customer thesis](#house-rule-an-idea-board-is-a-customer-thesis).
+
+### House rule: an idea board is a customer thesis
+
+Someone opening a journey board for a hire, a SAFE, an investor, or a channel partner as the bet is asking for a **People OS**. That is not this system. Same family as [legal paper cannot promote](#house-rule-legal-paper-cannot-promote) and [advisor ride-along is assumed, not observed](#house-rule-advisor-ride-along-is-assumed-not-observed).
+
+**Meaning.** An idea board is a customer thesis. The why is a named-group kill line — they pay or they use, or you kill it. Several ideas are still allowed. Each must still be a product idea. A person, a hire, FAST / SAFE / SOPA / 83(b), an investor, a contractor, an employee, a consultant, or a channel-partner-as-the-bet is not an idea board. Hold that row in the founder’s instrument tracker / cap table / matching sheet. Measure instrument state + Clock date + next action + last observed fact — not a journey, not an Ask-Do card, not portfolio I-E-L. Mere mention of those words inside a real product why does not move the class.
+
+| | Do this | Not this |
+|--|---------|----------|
+| **Product why** | Operators who already pay for dispatch — kill if they do not use the weekly report. That is a named-group kill line. | “Hire a contractor.” “Close the SAFE.” “The idea is the investor.” Those are relationship or instrument rows. |
+| **Hold on the shelf** | Write the instrument state, the Clock date, the next action, and the last observed fact on the matching sheet. Stay off the journey. | Open a 0-1 board so the hire or the paper can Advance. Recon must not `put_journey` phase on that class. |
+| **Existing slug** | If an old slug is detectable as that class, say relationship shelf / not a journey. Reject new phase writes. Do not auto-delete. Do not invent a migration. | Pretend it is a product journey. Soft-ignore the class. Soft-keyword spam that rejects a real product why because it said “employee.” |
+
+This rule is **not** a third clock, **not** Day 0 homework, and **not** a People OS. Relationship rows are not idea boards.
+
+Same family: [legal paper cannot promote](#house-rule-legal-paper-cannot-promote). [Advisor ride-along is assumed, not observed](#house-rule-advisor-ride-along-is-assumed-not-observed).
 
 ### House rule: unpaid weeks cannot promote
 
@@ -1510,6 +1527,7 @@ Every company should maintain its own list. Starter prompts:
 - Automating the playbook, or an agent team to skip a step with no named owner — see [do not automate a step that should not exist](#house-rule-do-not-automate-a-step-that-should-not-exist)  
 - Cap table, SAFE, or lawyer emails as proof the product works — see [legal paper cannot promote](#house-rule-legal-paper-cannot-promote)  
 - An advisor says stay exclusive, then a prospect asks to pay, and the founder delays them — see [advisor ride-along is assumed, not observed](#house-rule-advisor-ride-along-is-assumed-not-observed)  
+- Opening a journey board for a hire, a SAFE, an investor, or a channel partner as the bet — see [an idea board is a customer thesis](#house-rule-an-idea-board-is-a-customer-thesis)  
 - Free work for a company after the first conversation — see [unpaid weeks cannot promote](#house-rule-unpaid-weeks-cannot-promote)
 - Commissioning custom legal agreements before revenue — see [starter legal templates](#starter-legal-templates)
 
@@ -1564,7 +1582,7 @@ Accuracy numbers perish with the model checkpoint. Mechanism findings last until
 - Bisbee et al., 2024, *Political Analysis*. Task: silicon sampling / prompt variance and drift. Finding: too-tight variance and same-prompt drift make a pass unusable.
 - Brand, Israeli, and Ngwe, HBS 23-062 rev. 2026, §3.3. Task: willingness-to-pay and cross-category fine-tune (laptop → tablet). Finding: direct dollar WTP from GPT was useless; fine-tune failed on a new category. They still used conjoint with prices in the profile and reported $. They did not write “never produce a dollar” or “one condition change.”
 
-Everything else in the research method is adjacent literature or a **house rule**. House rules (epistemology, not a paper): observed wins a clash; a spoken yes cannot promote; do not seed from a demographic one-liner (demo-only role-play is the weak case); several ideas are allowed (each its own board; do not hide a second idea to look focused); [marketing volume cannot promote](#house-rule-marketing-volume-cannot-promote); [a security program cannot promote](#house-rule-a-security-program-cannot-promote); [there is no optimal price until people have paid and stayed](#house-rule-there-is-no-optimal-price-until-people-have-paid-and-stayed); [do not automate a step that should not exist](#house-rule-do-not-automate-a-step-that-should-not-exist); [legal paper cannot promote](#house-rule-legal-paper-cannot-promote); [advisor ride-along is assumed, not observed](#house-rule-advisor-ride-along-is-assumed-not-observed); [unpaid weeks cannot promote](#house-rule-unpaid-weeks-cannot-promote).
+Everything else in the research method is adjacent literature or a **house rule**. House rules (epistemology, not a paper): observed wins a clash; a spoken yes cannot promote; do not seed from a demographic one-liner (demo-only role-play is the weak case); several ideas are allowed (each its own board; do not hide a second idea to look focused); [marketing volume cannot promote](#house-rule-marketing-volume-cannot-promote); [a security program cannot promote](#house-rule-a-security-program-cannot-promote); [there is no optimal price until people have paid and stayed](#house-rule-there-is-no-optimal-price-until-people-have-paid-and-stayed); [do not automate a step that should not exist](#house-rule-do-not-automate-a-step-that-should-not-exist); [legal paper cannot promote](#house-rule-legal-paper-cannot-promote); [advisor ride-along is assumed, not observed](#house-rule-advisor-ride-along-is-assumed-not-observed); [an idea board is a customer thesis](#house-rule-an-idea-board-is-a-customer-thesis); [unpaid weeks cannot promote](#house-rule-unpaid-weeks-cannot-promote).
 
 ## Changelog (high level)
 
@@ -1597,6 +1615,7 @@ Everything else in the research method is adjacent literature or a **house rule*
 | 2.8.15 | Clock shrink: five journey rungs (Write the bet / Filter cheaply / Ground it / Build tiny slice / Try with real people) and three loop weeks (Ask / Do / Write back). Old 8 Learn and old 9 Grow deleted as clock steps; grow is an after-proof pack after Try. Make / Check / Hear are not loop weeks. Stored integers 1–9 / 1–7 still valid (no schema bump); spoken/rendered uses the [keep-doing map](#keep-doing-map-stored-integers--spoken). 8 or 9 stay at Try until founder Advance. Fifteen cells + [end-to-end path](#end-to-end-path) land here. Speaking rule from 2.8.14 stays. Decision methods essay unchanged. Filter is not Ground. Build is not Try. Ask does not Ground. Do at Build is not Try. No invented Advance. Writing: [Say it once. Link. No filler.](#how-this-os-may-change-stability-contract). |
 | 2.8.16 | Teaching page: [clock examples](clock-examples.md) — fifteen cells for one fictional household-jobs company (parents who already pay a cleaner vs founder butler vs our house). Teaching, not a live board. Do not copy onto a real company. Do not Advance from an example. Locked 2.8.15 clocks and 2.8.14 Decision methods stay. No schema bump. No invented Advance. Writing: [Say it once. Link. No filler.](#how-this-os-may-change-stability-contract). |
 | 2.8.17 | Implicit loop: Ask / Do / Write back is a quality bar on the week’s artifact, not a stored week verb and not card position. Founder gates journey only (Advance / Iterate / Hold / Kill). `loopStage` mutations are rejected (omit or identical no-op only). Spoken labels are not where-we-are. Missing Write back is said from artifacts, never invented as `loopStage` 7. [clock-examples](clock-examples.md) stays teaching. No schema bump. No invented Advance. Writing: [Say it once. Link. No filler.](#how-this-os-may-change-stability-contract). |
+| 2.8.18 | House rule: [an idea board is a customer thesis](#house-rule-an-idea-board-is-a-customer-thesis). Admission by bet class — named-group kill line (pay or use). A person, hire, FAST/SAFE/SOPA/83(b), investor, contractor, employee, consultant, or channel-partner-as-the-bet is not an idea board. Hold in the instrument tracker. No third clock. No schema bump. Implicit loop from 2.8.17 stays. Writing: [Say it once. Link. No filler.](#how-this-os-may-change-stability-contract). |
 
 ---
 

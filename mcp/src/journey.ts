@@ -19,6 +19,12 @@ import {
   spokenLoopWriteRejected,
   writeBackMissingFromArtifacts,
 } from "./loop-freeze.js";
+import {
+  IDEA_BOARD_ADMISSION_REJECTED,
+  RELATIONSHIP_SHELF_LINE,
+  admitIdeaBoardWhy,
+  isRelationshipShelf,
+} from "./idea-board-admission.js";
 import type { JourneyAclRole, JourneyActor } from "./journey-auth.js";
 import {
   enqueueBoardNotify,
@@ -209,9 +215,9 @@ export type PortfolioView = {
   unscored: Array<{ slug: string; name: string }>;
 };
 
-/** Live ideas only. Rank = impact + evidence + leverage. Never invent missing scores. */
+/** Live product ideas only. Relationship shelf is not portfolio I-E-L. Never invent missing scores. */
 export function portfolioViewOf(ideas: IdeaRow[]): PortfolioView {
-  const live = ideas.filter(isLiveIdea);
+  const live = ideas.filter((idea) => isLiveIdea(idea) && !isRelationshipShelf(idea));
   if (live.length < 2) {
     return {
       applies: false,
@@ -669,6 +675,18 @@ export function auditEventsMayBeUpdated(): boolean {
 }
 
 export function visualFlowMermaid(idea: IdeaRow, events: GateEventRow[]): string {
+  const lastWhy = events
+    .slice()
+    .sort((a, b) => a.at.localeCompare(b.at))
+    .at(-1)?.why;
+  if (isRelationshipShelf(idea, lastWhy)) {
+    return [
+      "```mermaid",
+      "flowchart TB",
+      `  shelf["${escapeMermaid(RELATIONSHIP_SHELF_LINE)}"]`,
+      "```",
+    ].join("\n");
+  }
   const journey = spokenJourneyOf(idea.journeyPhase);
   const phaseNodes = Array.from({ length: 5 }, (_, i) => {
     const n = i + 1;
@@ -727,6 +745,8 @@ export function twoMinuteSnapshot(
   const writeBackMissing = writeBackMissingFromArtifacts({
     scoreboard: idea.scoreboard as Record<string, unknown>,
   });
+  const lastWhy = events.slice().sort((a, b) => a.at.localeCompare(b.at)).at(-1)?.why;
+  const shelf = isRelationshipShelf(idea, lastWhy);
   return [
     `${company.label} / ${idea.name} — two-minute read`,
     `Owner (from ACL): ${ownerLine}`,
@@ -734,8 +754,8 @@ export function twoMinuteSnapshot(
     CONSTRAINT_TEACHING_PICTURE,
     "Not a fun side quest. Preference / “this is interesting” cannot name it.",
     challenge,
-    `Journey: ${formatSpokenJourney(idea.journeyPhase)}`,
-    `Gate: ${idea.currentGate}`,
+    shelf ? RELATIONSHIP_SHELF_LINE : `Journey: ${formatSpokenJourney(idea.journeyPhase)}`,
+    shelf ? "Not a journey." : `Gate: ${idea.currentGate}`,
     writeBackMissing
       ? `Missing artifacts: ${missingWriteBackLine()}`
       : "Missing artifacts: none recorded",
@@ -762,7 +782,9 @@ export function meetingDocView(
   const progress =
     idea.scoreboard.progress?.length
       ? idea.scoreboard.progress.map((x) => `- ${x}`).join("\n")
-      : `- Journey ${formatSpokenJourney(idea.journeyPhase)}, gate ${idea.currentGate}.`;
+      : isRelationshipShelf(idea, events.slice().sort((a, b) => a.at.localeCompare(b.at)).at(-1)?.why)
+        ? `- ${RELATIONSHIP_SHELF_LINE}`
+        : `- Journey ${formatSpokenJourney(idea.journeyPhase)}, gate ${idea.currentGate}.`;
   const challenges =
     idea.scoreboard.challenges?.length
       ? idea.scoreboard.challenges.map((x) => `- ${x}`).join("\n")
@@ -834,6 +856,8 @@ export type JourneyIdeaPayload = {
   lastTransitions: GateEventRow[];
   visualFlow: string;
   snapshot: string;
+  /** Detectable relationship/instrument row. Not a product journey. */
+  relationshipShelf?: boolean;
   meetingDoc?: string;
   comments?: CommentRow[];
 };
@@ -865,6 +889,9 @@ export function ideaPayload(
     visualFlow: visualFlowMermaid(idea, lastTransitions),
     snapshot: twoMinuteSnapshot(company, idea, lastTransitions, owners),
   };
+  if (isRelationshipShelf(idea, lastTransitions.at(-1)?.why)) {
+    payload.relationshipShelf = true;
+  }
   const storedScore = portfolioScoreOf(idea);
   if (storedScore) {
     payload.portfolioScore = storedScore;
@@ -1157,6 +1184,10 @@ export class MemoryJourneyStore implements JourneyStore {
     if (!isIdeaSlug(input.ideaSlug)) {
       return forbidden("invalid idea slug");
     }
+    const admitted = admitIdeaBoardWhy(input.why);
+    if (!admitted.ok) {
+      return forbidden(admitted.error);
+    }
     const company = this.companyBySlug(input.companySlug);
     if (!company || !canWriteJourney(this.acl, actor, company.id)) {
       return forbidden("founder or founder-authorized only");
@@ -1173,7 +1204,10 @@ export class MemoryJourneyStore implements JourneyStore {
       journeyPhase: 1,
       loopStage: 1,
       currentGate: "hold",
-      scoreboard: defaultScoreboard(),
+      scoreboard: {
+        ...defaultScoreboard(),
+        hypothesis: input.why?.trim(),
+      },
     };
     this.ideas.push(idea);
     this.emitAudit({
@@ -1241,6 +1275,21 @@ export class MemoryJourneyStore implements JourneyStore {
     }
     if (loopStageMutationRejected(idea.loopStage, input.loopStage)) {
       return forbidden(LOOP_STAGE_MUTATION_REJECTED);
+    }
+    const lastWhy = this.events
+      .filter((e) => e.ideaId === idea.id)
+      .slice()
+      .sort((a, b) => a.at.localeCompare(b.at))
+      .at(-1)?.why;
+    const storedShelf = isRelationshipShelf(idea, lastWhy);
+    if (input.journeyPhase !== undefined) {
+      if (storedShelf) {
+        return forbidden(IDEA_BOARD_ADMISSION_REJECTED);
+      }
+      const admitted = admitIdeaBoardWhy(input.why);
+      if (!admitted.ok) {
+        return forbidden(admitted.error);
+      }
     }
     const before = ideaBoardSnapshot(idea);
     let nextScoreboard: Scoreboard = { ...idea.scoreboard };

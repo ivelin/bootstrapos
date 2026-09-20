@@ -24,6 +24,7 @@ export const HOUSE_RULE_LINES = [
   "Do not automate a step that should not exist. Every requirement has a person's name. Delete the step before you simplify it. Automate last. An agent team is automation. Name the one bottleneck this week and work that. Several ideas may attack that same bottleneck. Challenge a fun side quest dressed as the bottleneck. Founder still decides; the agent does not rubber-stamp.",
   "Legal paper cannot promote.",
   "Advisor ride-along is assumed, not observed. An advisor's opinion is a tip, not proof customers will pay. Write down who said it.",
+  "An idea board is a customer thesis. Admit a named-group kill line (pay or use). A person, hire, FAST/SAFE/SOPA/83(b), investor, contractor, employee, consultant, or channel-partner-as-the-bet is not an idea board — hold it in the instrument tracker.",
   "SaaS 1.0 playbooks may be outdated. Stay current.",
   "AI never advances a journey phase without founder Advance / Iterate / Hold / Kill.",
   "Empty context with no founder update: do not invent their stage, a price, or an LTV number. Write unknown / none yet.",
@@ -124,6 +125,11 @@ export function advisorRideAlongIsObserved(): false {
   return false;
 }
 
+/** A relationship or instrument row is not an idea board. */
+export function relationshipRowMayBeIdeaBoard(): false {
+  return false;
+}
+
 /**
  * A new landing page is not the bottleneck when no one has talked to customers,
  * unless the founder overrides with a written decision.
@@ -175,6 +181,11 @@ export const HOUSE_RULE_PINS = [
     id: "advisor-ride-along-2.8.11",
     pin: "Advisor ride-along is assumed, not observed. An advisor's opinion is a tip, not proof customers will pay. Write down who said it.",
     url: "https://github.com/ivelin/bootstrap/blob/main/company-os/operating-system.md#house-rule-advisor-ride-along-is-assumed-not-observed",
+  },
+  {
+    id: "idea-board-admission-2.8.18",
+    pin: "An idea board is a customer thesis. Named-group kill line (pay or use). Relationship and instrument rows are not idea boards.",
+    url: "https://github.com/ivelin/bootstrap/blob/main/company-os/operating-system.md#house-rule-an-idea-board-is-a-customer-thesis",
   },
   {
     id: "unpaid-weeks-2.8.13",
