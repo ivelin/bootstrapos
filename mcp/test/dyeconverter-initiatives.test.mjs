@@ -219,6 +219,8 @@ describe("PR1.1 dyeconverter Heavy-locked initiatives map", () => {
     assert.match(seen.ideas[0].snapshot, /WHERE ARE WE — DyeConverter/);
     assert.match(seen.ideas[0].snapshot, /Oterra SKU\+site\+date only/);
     assert.match(seen.ideas[0].snapshot, /OTHER INITIATIVES/);
-    assert.doesNotMatch(seen.ideas[0].snapshot.split("OTHER INITIATIVES")[0], /SAFE|FAST/);
+    const cardLead = seen.ideas[0].snapshot.split("WHERE ARE WE — DyeConverter")[1].split("OTHER INITIATIVES")[0];
+    assert.match(cardLead, /#1 BOTTLENECK  dye-check-plant · Oterra SKU\+site\+date only/);
+    assert.doesNotMatch(cardLead, /SAFE|FAST/);
   });
 });
