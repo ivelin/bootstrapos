@@ -2,7 +2,7 @@
 ## For Solo Founders in Bootstrapping Mode
 
 **Version:** 2.8.17  
-**Last Updated:** 2026-09-20  
+**Last Updated:** 2026-09-19  
 **Status:** Living guideline (blueprint — not any one company’s live runtime)  
 **Audience:** Independent solo founders; mentors (e.g. Founder Institute, SCORE); AI helpers instructed to follow this system  
 **Isolation:** Portable across startups. Each company keeps its filled instance outside this template (see `../templates/applied-here.md`).  
