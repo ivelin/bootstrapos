@@ -1,0 +1,104 @@
+{
+  "note": "PR1 dyeconverter initiatives[] mapping. Cos live-board pack is ground truth. Test/fixture only — never apply to production or write a live board. Mapping cannot Advance. Stored clocks stay Write the bet / hold (spoken may say Ground on Oterra).",
+  "companySlug": "dyeconverter",
+  "ideaSlug": "dyeconverter",
+  "journeyPhase": 1,
+  "loopStage": 1,
+  "currentGate": "hold",
+  "scoreboard": {
+    "schema_version": 1,
+    "hypothesis": "Plants already buying pigment pay for conversion/tenancy on one SKU. Oterra is distribution.",
+    "readyForHumanEyes": { "status": "unknown" },
+    "autonomyPosture": "strict",
+    "openQuestions": [
+      "SAFE text after 20 Sep call?",
+      "Oterra past NDA?"
+    ],
+    "lastAction": "pr1_dyeconverter_initiatives_mapping",
+    "constraint_this_week": "Oterra plant tenancy — quote names SKU, site, date, or paid plant use",
+    "initiatives": [
+      {
+        "id": "dye-check-oterra",
+        "kind": "customer_check",
+        "premise": "Oterra plant tenancy — plants already buying pigment pay for conversion on one SKU",
+        "measure": "quote names one SKU, site, date, or paid plant use",
+        "killLine": "kill if no move past NDA",
+        "status": "active",
+        "last": "NDAs about 11 Sep",
+        "next": "SKU, site, date on a quote",
+        "outcome": "none",
+        "impact": "none",
+        "evidence": "stated"
+      },
+      {
+        "id": "dye-eng-oterra",
+        "kind": "engagement",
+        "premise": "Oterra NDA+quote",
+        "measure": "signed NDA is not Try",
+        "killLine": "NDA is not Try",
+        "status": "waiting",
+        "last": "NDAs about 11 Sep",
+        "next": "SKU, site, date on a quote",
+        "outcome": "none",
+        "impact": "obligation",
+        "evidence": "stated",
+        "parentId": "dye-check-oterra"
+      },
+      {
+        "id": "dye-capital-safe",
+        "kind": "capital",
+        "premise": "Founder Capital $25k SAFE",
+        "measure": "20 Sep terms 2.5% at $1M",
+        "killLine": "SAFE cannot promote",
+        "status": "waiting",
+        "last": "20 Sep terms 2.5% at $1M",
+        "next": "SAFE text after 20 Sep call",
+        "outcome": "none",
+        "impact": "clock",
+        "evidence": "stated",
+        "clock": "2026-09-20"
+      },
+      {
+        "id": "dye-advisor-fast",
+        "kind": "advisor",
+        "premise": "FAST 31 Aug 1% Expert — grant not on sheet",
+        "measure": "SOPA or grant before SAFE close",
+        "killLine": "advisor ride-along cannot promote",
+        "status": "waiting",
+        "last": "FAST 31 Aug 1% Expert; grant not on sheet",
+        "next": "SOPA or grant before SAFE close",
+        "outcome": "none",
+        "impact": "clock",
+        "evidence": "stated",
+        "clock": "2026-08-31"
+      },
+      {
+        "id": "dye-legal-seed",
+        "kind": "legal",
+        "premise": "SeedLegal founder paper defective; 83(b) on bad paper",
+        "measure": "partner cleanup of founder paper",
+        "killLine": "legal paper cannot promote",
+        "status": "waiting",
+        "last": "founder paper defective; 83(b) on bad paper",
+        "next": "partner cleanup",
+        "outcome": "none",
+        "impact": "clock",
+        "evidence": "stated"
+      },
+      {
+        "id": "dye-eng-supply-change",
+        "kind": "engagement",
+        "premise": "Supply Change / Rachel one call",
+        "measure": "done unless they return",
+        "killLine": "one call is not Try",
+        "status": "closed",
+        "last": "15 Sep one call",
+        "next": "done unless they return",
+        "outcome": "none",
+        "impact": "none",
+        "evidence": "stated",
+        "clock": "2026-09-15"
+      }
+    ]
+  }
+}
