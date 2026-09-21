@@ -185,7 +185,8 @@ describe("PR2.1 micdots Heavy-locked initiatives map", () => {
     assert.equal(footerIds.includes("mic-eng-granite"), false);
     const body = formatInitiativeCard(card).join("\n");
     assert.match(body, /WIP 1 on customer_check until paid use/);
-    assert.match(body, /intro is not Try/);
+    assert.match(body, /Granite Design intro/);
+    assert.equal(GRANITE.killLine, "intro is not Try");
     assert.doesNotMatch(body, /Ask \/ Do \/ Write back is a card/);
 
     const secondCheck = { ...GRANITE, id: "mic-check-granite", kind: "customer_check", status: "active" };
