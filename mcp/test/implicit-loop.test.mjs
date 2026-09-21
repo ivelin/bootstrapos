@@ -126,17 +126,20 @@ describe("OS 2.8.17 implicit loop (quality bar, not card)", () => {
     assert.equal(phaseYes.idea.clocks.loopStage, 1);
   });
 
-  it("founder snapshot is journey + gate + constraint + missing artifacts", async () => {
+  it("founder snapshot is spoken; clocks stay on ideas[].clocks", async () => {
     const store = fixtureJourneyStore();
     const founder = bearer("founder-core@example.test");
     const seen = await store.getJourney(founder, { companySlug: "corehaul" });
     const snap = seen.ideas[0].snapshot;
-    assert.match(snap, /Journey: Write the bet \(1\)/);
-    assert.match(snap, /Gate: hold/);
-    assert.match(snap, /Missing artifacts: Write back/);
+    assert.match(seen.spoken, /Bottleneck/);
+    assert.match(snap, /Bottleneck/);
+    assert.doesNotMatch(snap, /journey phase \d/);
+    assert.doesNotMatch(snap, /gate hold/i);
     assert.doesNotMatch(snap, /Loop: Ask/);
     assert.doesNotMatch(snap, /Loop: Do/);
     assert.doesNotMatch(snap, /Loop: Write back \(7\)/);
+    assert.equal(seen.ideas[0].clocks.journeyPhase, 1);
+    assert.equal(seen.ideas[0].clocks.currentGate, "hold");
     assert.equal(seen.ideas[0].clocks.loopStage, 1);
     assert.equal(seen.ideas[0].clocks.loopSpoken, "Ask");
     const rebuilt = twoMinuteSnapshot(

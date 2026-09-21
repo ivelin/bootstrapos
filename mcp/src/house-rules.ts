@@ -156,61 +156,61 @@ export const HOUSE_RULE_PINS = [
   {
     id: "observed-wins-spoken-yes",
     pin: "Weigh stated / synthetic / observed. Observed wins. A spoken yes cannot promote.",
-    url: "https://github.com/ivelin/bootstrap/blob/main/company-os/operating-system.md#how-to-do-honest-research--validation",
+    url: "https://github.com/ivelin/bootstrapos/blob/main/company-os/operating-system.md#how-to-do-honest-research--validation",
   },
   {
     id: "several-ideas",
     pin: "Several ideas are allowed. Rank and kill per board.",
-    url: "https://github.com/ivelin/bootstrap/blob/main/company-os/operating-system.md#core-beliefs",
+    url: "https://github.com/ivelin/bootstrapos/blob/main/company-os/operating-system.md#core-beliefs",
   },
   {
     id: "marketing-volume-2.8.6",
     pin: "Marketing volume cannot promote.",
-    url: "https://github.com/ivelin/bootstrap/blob/main/company-os/operating-system.md#house-rule-marketing-volume-cannot-promote",
+    url: "https://github.com/ivelin/bootstrapos/blob/main/company-os/operating-system.md#house-rule-marketing-volume-cannot-promote",
   },
   {
     id: "security-program-2.8.7",
     pin: "A security program cannot promote.",
-    url: "https://github.com/ivelin/bootstrap/blob/main/company-os/operating-system.md#house-rule-a-security-program-cannot-promote",
+    url: "https://github.com/ivelin/bootstrapos/blob/main/company-os/operating-system.md#house-rule-a-security-program-cannot-promote",
   },
   {
     id: "no-optimal-price-2.8.8",
     pin: "There is no optimal price until people have paid and stayed.",
-    url: "https://github.com/ivelin/bootstrap/blob/main/company-os/operating-system.md#house-rule-there-is-no-optimal-price-until-people-have-paid-and-stayed",
+    url: "https://github.com/ivelin/bootstrapos/blob/main/company-os/operating-system.md#house-rule-there-is-no-optimal-price-until-people-have-paid-and-stayed",
   },
   {
     id: "do-not-automate-2.8.9",
     pin: "Do not automate a step that should not exist. Automate last. An agent team is automation. Name the one bottleneck this week. Several ideas may attack that same bottleneck.",
-    url: "https://github.com/ivelin/bootstrap/blob/main/company-os/operating-system.md#house-rule-do-not-automate-a-step-that-should-not-exist",
+    url: "https://github.com/ivelin/bootstrapos/blob/main/company-os/operating-system.md#house-rule-do-not-automate-a-step-that-should-not-exist",
   },
   {
     id: "legal-paper-2.8.10",
     pin: "Legal paper cannot promote.",
-    url: "https://github.com/ivelin/bootstrap/blob/main/company-os/operating-system.md#house-rule-legal-paper-cannot-promote",
+    url: "https://github.com/ivelin/bootstrapos/blob/main/company-os/operating-system.md#house-rule-legal-paper-cannot-promote",
   },
   {
     id: "advisor-ride-along-2.8.11",
     pin: "Advisor ride-along is assumed, not observed. An advisor's opinion is a tip, not proof customers will pay. Write down who said it.",
-    url: "https://github.com/ivelin/bootstrap/blob/main/company-os/operating-system.md#house-rule-advisor-ride-along-is-assumed-not-observed",
+    url: "https://github.com/ivelin/bootstrapos/blob/main/company-os/operating-system.md#house-rule-advisor-ride-along-is-assumed-not-observed",
   },
   {
     id: "one-control-plane-2.8.18",
     pin: "One founder control plane. Primary is the customer bet. Supporting stays on the same snapshot — no rungs, cannot promote. Exile is rejected.",
-    url: "https://github.com/ivelin/bootstrap/blob/main/company-os/operating-system.md#house-rule-one-founder-control-plane",
+    url: "https://github.com/ivelin/bootstrapos/blob/main/company-os/operating-system.md#house-rule-one-founder-control-plane",
   },
   {
     id: "initiative-report-card-2.8.19",
     pin: "Initiative report card. Company header → bottleneck #1 → customer checks with nested engagements → other initiatives footer. customer_check ranks first until paid use. Ask / Do is not a card.",
-    url: "https://github.com/ivelin/bootstrap/blob/main/company-os/operating-system.md#initiative-report-card",
+    url: "https://github.com/ivelin/bootstrapos/blob/main/company-os/operating-system.md#initiative-report-card",
   },
   {
     id: "spoken-card-2.8.20",
     pin: "Spoken card (founder voice default). Start at the company name, then Bottleneck #1 in that company’s words. Then accounts: where it stands / next (nested under the customer check). Then “Also moving (not the bottleneck)” for capital / legal / advisor. Then open questions in plain words. Hide unless the human says “show clocks” or “show schema”. Engine keeps those rules. Spoken card does not print them. Clocks are storage.",
-    url: "https://github.com/ivelin/bootstrap/blob/main/company-os/operating-system.md#spoken-card-founder-voice-default",
+    url: "https://github.com/ivelin/bootstrapos/blob/main/company-os/operating-system.md#spoken-card-founder-voice-default",
   },
   {
     id: "unpaid-weeks-2.8.13",
     pin: "Unpaid weeks cannot promote.",
-    url: "https://github.com/ivelin/bootstrap/blob/main/company-os/operating-system.md#house-rule-unpaid-weeks-cannot-promote",
+    url: "https://github.com/ivelin/bootstrapos/blob/main/company-os/operating-system.md#house-rule-unpaid-weeks-cannot-promote",
   },
 ] as const;

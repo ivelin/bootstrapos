@@ -35,7 +35,9 @@ import {
   buildInitiativeCard,
   cardFromScoreboard,
   compactJourneyPayload,
+  applySpokenPayloadLead,
   formatInitiativeCard,
+  formatSpokenCard,
   scoreboardHasInitiatives,
   stripLegacyCardKeysWhenInitiatives,
   initiativesOf,
@@ -52,6 +54,8 @@ export {
   initiativesOf,
   cardFromScoreboard,
   compactJourneyPayload,
+  applySpokenPayloadLead,
+  formatSpokenCard,
   rankInitiatives,
   RANK_IS_COMPUTED_NOT_STORED,
   DUAL_READ_DEAD_FOR_CARD_LEAD,
@@ -946,10 +950,11 @@ export function ideaPayload(
     scoreboard: idea.scoreboard,
     lastTransitions,
     visualFlow: visualFlowMermaid(idea, lastTransitions),
-    snapshot: twoMinuteSnapshot(company, idea, lastTransitions, owners, {
-      supporting,
-      engagements,
+    snapshot: formatSpokenCard({
+      label: company.label,
       card,
+      constraintThisWeek: constraintThisWeekOf(idea),
+      openQuestions: idea.scoreboard.openQuestions,
     }),
     engagements,
     initiatives,
@@ -1567,7 +1572,7 @@ export class MemoryJourneyStore implements JourneyStore {
       gate: idea.currentGate,
       scoreboard: idea.scoreboard,
     });
-    return {
+    return applySpokenPayloadLead({
       ok: true,
       company: { slug: company.slug, label: company.label, supporting },
       owners: ownersFromAcl(this.acl, company.id),
@@ -1587,7 +1592,7 @@ export class MemoryJourneyStore implements JourneyStore {
       ...(portfolioSkip ? { portfolioSkip } : {}),
       audit,
       notify,
-    };
+    });
   }
 
   async putPortfolioScore(

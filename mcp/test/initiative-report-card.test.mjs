@@ -244,8 +244,11 @@ describe("OS 2.8.19 initiative report card", () => {
     const seen = await store.getJourney(founder, { companySlug: "alpha" });
     assert.equal(seen.ok, true);
     assert.equal(seen.card.bottleneck.kind, "customer_check");
-    assert.match(seen.ideas[0].snapshot, /WHERE ARE WE — alpha/);
+    assert.match(seen.spoken, /Bottleneck/);
+    assert.match(seen.ideas[0].snapshot, /Bottleneck/);
     assert.doesNotMatch(seen.ideas[0].snapshot, /called the plant/);
+    assert.doesNotMatch(seen.ideas[0].snapshot, /journey phase \d/);
+    assert.doesNotMatch(seen.ideas[0].snapshot, /gate hold/i);
     assert.equal(seen.ideas[0].card.customerChecks[0].engagements[0].kind, "engagement");
     assert.deepEqual(seen.audit, []);
   });
@@ -278,6 +281,7 @@ describe("OS 2.8.19 initiative report card", () => {
     assert.match(os, /Then open questions in plain words/);
     assert.match(os, /Hide unless the human says “show clocks” or “show schema”/);
     assert.match(os, /Engine keeps those rules\. Spoken card does not print them/);
+    assert.match(os, /Payload lead is spoken; snapshot is not a clock dump/);
     assert.match(os, /Clocks are storage/);
     assert.match(os, /\| 2\.8\.20 \|/);
     assert.match(os, /\*\*Version:\*\* 2\.8\.19/);
@@ -294,9 +298,11 @@ describe("OS 2.8.19 initiative report card", () => {
     assert.match(pins, /initiative-report-card-2\.8\.19/);
 
     assert.match(TOOL_GET_JOURNEY, /founder-facing spoken card without a clarification round/);
+    assert.match(TOOL_GET_JOURNEY, /Print spoken first/);
     assert.match(TOOL_GET_JOURNEY, /Also moving \(not the bottleneck\)/);
     assert.match(TOOL_GET_JOURNEY, /show clocks/);
     assert.match(TOOL_GET_JOURNEY, /Clocks are storage/);
+    assert.match(HOSTED_MCP_INSTRUCTIONS, /Print spoken first/);
     assert.match(HOSTED_MCP_INSTRUCTIONS, /founder-facing spoken card without a clarification round/);
     assert.match(HOSTED_MCP_INSTRUCTIONS, /Also moving \(not the bottleneck\)/);
     assert.match(HOSTED_MCP_INSTRUCTIONS, /show clocks/);

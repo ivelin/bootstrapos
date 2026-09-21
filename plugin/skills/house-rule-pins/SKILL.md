@@ -9,16 +9,16 @@ When to use: GTM; spoken yes; volume; security; second idea; price; WTP; LTV/CAC
 
 Full text lives in the OS. Refuse. Cite the link.
 
-- Observed wins; spoken yes cannot promote — https://github.com/ivelin/bootstrap/blob/main/company-os/operating-system.md#how-to-do-honest-research--validation
-- Several ideas are allowed — https://github.com/ivelin/bootstrap/blob/main/company-os/operating-system.md#core-beliefs
-- Marketing volume cannot promote (2.8.6) — https://github.com/ivelin/bootstrap/blob/main/company-os/operating-system.md#house-rule-marketing-volume-cannot-promote
-- A security program cannot promote (2.8.7) — https://github.com/ivelin/bootstrap/blob/main/company-os/operating-system.md#house-rule-a-security-program-cannot-promote
-- There is no optimal price until people have paid and stayed (2.8.8) — https://github.com/ivelin/bootstrap/blob/main/company-os/operating-system.md#house-rule-there-is-no-optimal-price-until-people-have-paid-and-stayed
-- Do not automate a step that should not exist (2.8.9) — https://github.com/ivelin/bootstrap/blob/main/company-os/operating-system.md#house-rule-do-not-automate-a-step-that-should-not-exist
-- Legal paper cannot promote (2.8.10) — https://github.com/ivelin/bootstrap/blob/main/company-os/operating-system.md#house-rule-legal-paper-cannot-promote
-- One founder control plane (2.8.18) — https://github.com/ivelin/bootstrap/blob/main/company-os/operating-system.md#house-rule-one-founder-control-plane
-- Initiative report card (2.8.19) — https://github.com/ivelin/bootstrap/blob/main/company-os/operating-system.md#initiative-report-card
-- Spoken card (founder voice default) (2.8.20) — https://github.com/ivelin/bootstrap/blob/main/company-os/operating-system.md#spoken-card-founder-voice-default
-- Advisor ride-along is assumed, not observed (2.8.11) — https://github.com/ivelin/bootstrap/blob/main/company-os/operating-system.md#house-rule-advisor-ride-along-is-assumed-not-observed
-- Unpaid weeks cannot promote (2.8.13) — https://github.com/ivelin/bootstrap/blob/main/company-os/operating-system.md#house-rule-unpaid-weeks-cannot-promote
-- LTV:CAC 3x / T2D3 stale — https://github.com/ivelin/bootstrap/blob/main/company-os/after-proof-efficiency.md
+- Observed wins; spoken yes cannot promote — https://github.com/ivelin/bootstrapos/blob/main/company-os/operating-system.md#how-to-do-honest-research--validation
+- Several ideas are allowed — https://github.com/ivelin/bootstrapos/blob/main/company-os/operating-system.md#core-beliefs
+- Marketing volume cannot promote (2.8.6) — https://github.com/ivelin/bootstrapos/blob/main/company-os/operating-system.md#house-rule-marketing-volume-cannot-promote
+- A security program cannot promote (2.8.7) — https://github.com/ivelin/bootstrapos/blob/main/company-os/operating-system.md#house-rule-a-security-program-cannot-promote
+- There is no optimal price until people have paid and stayed (2.8.8) — https://github.com/ivelin/bootstrapos/blob/main/company-os/operating-system.md#house-rule-there-is-no-optimal-price-until-people-have-paid-and-stayed
+- Do not automate a step that should not exist (2.8.9) — https://github.com/ivelin/bootstrapos/blob/main/company-os/operating-system.md#house-rule-do-not-automate-a-step-that-should-not-exist
+- Legal paper cannot promote (2.8.10) — https://github.com/ivelin/bootstrapos/blob/main/company-os/operating-system.md#house-rule-legal-paper-cannot-promote
+- One founder control plane (2.8.18) — https://github.com/ivelin/bootstrapos/blob/main/company-os/operating-system.md#house-rule-one-founder-control-plane
+- Initiative report card (2.8.19) — https://github.com/ivelin/bootstrapos/blob/main/company-os/operating-system.md#initiative-report-card
+- Spoken card (founder voice default) (2.8.20) — https://github.com/ivelin/bootstrapos/blob/main/company-os/operating-system.md#spoken-card-founder-voice-default
+- Advisor ride-along is assumed, not observed (2.8.11) — https://github.com/ivelin/bootstrapos/blob/main/company-os/operating-system.md#house-rule-advisor-ride-along-is-assumed-not-observed
+- Unpaid weeks cannot promote (2.8.13) — https://github.com/ivelin/bootstrapos/blob/main/company-os/operating-system.md#house-rule-unpaid-weeks-cannot-promote
+- LTV:CAC 3x / T2D3 stale — https://github.com/ivelin/bootstrapos/blob/main/company-os/after-proof-efficiency.md
