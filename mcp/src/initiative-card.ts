@@ -85,6 +85,8 @@ export type InitiativeCard = {
   customerChecks: CustomerCheckRow[];
   footer: Initiative[];
   warn?: string;
+  /** Display mark. Not a clock. Not a schema bump. */
+  killed?: boolean;
 };
 
 export const INITIATIVE_INVALID =
@@ -501,10 +503,21 @@ export function buildInitiativeCard(input: {
   killed?: boolean;
   allowPaperBottleneck?: boolean;
 }): InitiativeCard {
-  const ranked = rankInitiatives(input.initiatives, {
-    killed: Boolean(input.killed),
-    allowPaperBottleneck: Boolean(input.allowPaperBottleneck),
-  });
+  const killed = Boolean(input.killed);
+  const paper = { allowPaperBottleneck: Boolean(input.allowPaperBottleneck) };
+  const ranked = rankInitiatives(input.initiatives, { ...paper, killed });
+  let bottleneck = ranked.bottleneck;
+  if (killed) {
+    const prior = rankInitiatives(input.initiatives, { ...paper, killed: false }).bottleneck;
+    bottleneck = prior
+      ? {
+          ...prior,
+          status: "closed",
+          outcome: "killed",
+          measure: isActivePayOrUse(prior) ? "killed" : prior.measure,
+        }
+      : null;
+  }
   const stage = formatSpokenJourney(input.journeyPhase);
   return {
     company: {
@@ -513,12 +526,15 @@ export function buildInitiativeCard(input: {
       stage,
       gate: input.gate,
       wipLimit: 1,
-      bottleneckId: ranked.bottleneckId,
+      bottleneckId: bottleneck?.id ?? ranked.bottleneckId,
     },
-    bottleneck: ranked.bottleneck,
-    customerChecks: ranked.customerChecks,
+    bottleneck,
+    customerChecks: killed
+      ? ranked.customerChecks.filter((row) => row.id !== "legacy-constraint")
+      : ranked.customerChecks,
     footer: ranked.footer,
     ...(ranked.warn ? { warn: ranked.warn } : {}),
+    ...(killed ? { killed: true } : {}),
   };
 }
 
@@ -711,6 +727,28 @@ function footerLabelsForSpoken(input: {
   return out;
 }
 
+const SPOKEN_HIDE = [
+  /NDA is not Try/gi,
+  /SAFE is not proof/gi,
+  /stored clocks stay/gi,
+  /Ask \/ Do is not a card/gi,
+  /Write the bet \(\d+\)/g,
+];
+
+function sanitizeSpoken(text: string): string {
+  let out = text;
+  for (const re of SPOKEN_HIDE) {
+    out = out.replace(re, "");
+  }
+  return out.replace(/[ \t]+\n/g, "\n").replace(/\n{3,}/g, "\n\n");
+}
+
+export function alsoMovingBodyOf(text: string): string | null {
+  if (!/Also moving \(not the bottleneck\)/.test(String(text ?? ""))) return null;
+  const chunk = String(text).split("Also moving (not the bottleneck)")[1] ?? "";
+  return (chunk.split("Open questions")[0] ?? "").trim();
+}
+
 /** Founder-voice card. No journey integers, gate labels, WIP, OS version, or kind slugs. */
 export function formatSpokenCard(input: {
   label: string;
@@ -723,11 +761,12 @@ export function formatSpokenCard(input: {
   killed?: boolean;
   killedCard?: string;
   allowPaperBottleneck?: boolean;
+  alsoLive?: string[];
 }): string {
   const label = input.label.trim() || "company";
   const card = input.card;
   const opts: SpokenCardOpts = {
-    killed: Boolean(input.killed),
+    killed: Boolean(input.killed || card?.killed),
     allowPaperBottleneck: Boolean(input.allowPaperBottleneck),
   };
   const bottleneck = spokenBottleneckPremise(card, input.constraintThisWeek, opts);
@@ -738,7 +777,7 @@ export function formatSpokenCard(input: {
     lines.push("");
   }
   lines.push(`Bottleneck #1: ${bottleneck}`, "");
-  const checks = card?.customerChecks ?? [];
+  const checks = opts.killed ? [] : (card?.customerChecks ?? []);
   if (checks.length) {
     for (const check of checks) {
       lines.push(check.premise);
@@ -776,7 +815,12 @@ export function formatSpokenCard(input: {
       lines.push(`  ${question}`);
     }
   }
-  return lines.join("\n");
+  const alsoLive = (input.alsoLive ?? []).map((name) => name.trim()).filter(Boolean);
+  if (alsoLive.length) {
+    lines.push("");
+    lines.push(`Also live (separate boards): ${alsoLive.join(", ")}`);
+  }
+  return sanitizeSpoken(lines.join("\n"));
 }
 
 type CompactCompany = {
@@ -851,11 +895,29 @@ function enrichIdeaCard(
   });
 }
 
+function liveIdeaNames(payload: Record<string, unknown>): string[] {
+  const list = Array.isArray(payload.ideas)
+    ? payload.ideas
+    : payload.idea && typeof payload.idea === "object"
+      ? [payload.idea]
+      : [];
+  const names: string[] = [];
+  for (const idea of list) {
+    if (!idea || typeof idea !== "object" || Array.isArray(idea)) continue;
+    if (isKilledSource(idea)) continue;
+    const rec = idea as Record<string, unknown>;
+    const name = String(rec.name || rec.slug || "").trim();
+    if (name && !names.includes(name)) names.push(name);
+  }
+  return names;
+}
+
 function spokenInputFromIdea(
   idea: Record<string, unknown>,
   payload: Record<string, unknown>,
   fallbackLabel: string,
   card: InitiativeCard | undefined,
+  alsoLive?: string[],
 ): Parameters<typeof formatSpokenCard>[0] {
   const sb = scoreboardRecordOf(idea);
   const hasInit = scoreboardHasInitiatives(sb);
@@ -872,9 +934,10 @@ function spokenInputFromIdea(
     supporting: hasInit ? [] : supporting,
     engagements: hasInit ? [] : engagements,
     initiativesPresent: hasInit,
-    killed: isKilledSource(idea),
+    killed: isKilledSource(idea) || Boolean(card?.killed),
     killedCard: typeof idea.killedCard === "string" ? idea.killedCard : undefined,
     allowPaperBottleneck: allowPaperOf(sb),
+    alsoLive,
   };
 }
 
@@ -893,7 +956,8 @@ function applySpokenToIdea(
       : next.card && typeof next.card === "object"
         ? (next.card as InitiativeCard)
         : enrichIdeaCard(next, payload, fallbackLabel);
-  next.card = compactCardCompany(rebuilt, expand);
+  const compacted = compactCardCompany(rebuilt, expand);
+  next.card = rebuilt.killed ? { ...compacted, killed: true } : compacted;
   next.snapshot = formatSpokenCard(spokenInputFromIdea(next, payload, fallbackLabel, rebuilt));
   return next;
 }
@@ -939,12 +1003,18 @@ export function applySpokenPayloadLead(
   const spokenCard =
     (payload.card as InitiativeCard | undefined) ||
     (leadRec?.card && typeof leadRec.card === "object" ? (leadRec.card as InitiativeCard) : undefined);
+  const live = liveIdeaNames(payload);
+  const leadName = leadRec
+    ? String(leadRec.name || leadRec.slug || "").trim()
+    : "";
+  const alsoLive = live.length >= 2 ? live.filter((name) => name !== leadName) : [];
   const spoken = formatSpokenCard(
     leadRec
-      ? spokenInputFromIdea(leadRec, payload, fallbackLabel, spokenCard)
+      ? spokenInputFromIdea(leadRec, payload, fallbackLabel, spokenCard, alsoLive)
       : {
           label: fallbackLabel || spokenCard?.company?.label || "company",
           card: spokenCard,
+          alsoLive,
         },
   );
   if (Array.isArray(payload.ideas) && payload.ideas[0] && typeof payload.ideas[0] === "object") {
