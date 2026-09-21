@@ -18,4 +18,4 @@ jobs:
           cache: npm
           cache-dependency-path: mcp/package-lock.json
       - name: Day-0 + spoken-card eval
-        run: ./scripts/ci.sh
+        run: sh scripts/ci.sh
