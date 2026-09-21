@@ -149,9 +149,9 @@ House rule: [supporting stays on the same snapshot](https://github.com/ivelin/bo
 
 When someone asks Where are we after Day 0:
 
-> Company header, then bottleneck #1, then customer checks with nested engagements, then other initiatives in the footer. Ask / Do is not a card.
+> Start at the company name, then Bottleneck #1 in that company’s words. Then accounts: where it stands / next (nested under the customer check). Then “Also moving (not the bottleneck)” for capital / legal / advisor. Then open questions in plain words. Hide clocks and schema unless they say “show clocks” or “show schema”. Engine keeps those rules. Spoken card does not print them.
 
-Card: [initiative report card](https://github.com/ivelin/bootstrap/blob/main/company-os/operating-system.md#initiative-report-card).
+Card: [initiative report card](https://github.com/ivelin/bootstrap/blob/main/company-os/operating-system.md#initiative-report-card) · [spoken card (founder voice default)](https://github.com/ivelin/bootstrap/blob/main/company-os/operating-system.md#spoken-card-founder-voice-default).
 
 When someone treats an advisor's promise of exclusivity or an Office Hours tip as proof customers will pay:
 

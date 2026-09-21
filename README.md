@@ -172,6 +172,9 @@ Treat promotion into this template as rare, deliberate work — not a continuous
 
 ### Recent portable additions
 
+**v2.8.20 — spoken-card pin (founder voice default)**  
+Additive note on 2.8.19. Full text: [spoken card](company-os/operating-system.md#spoken-card-founder-voice-default). Start at the company name, then Bottleneck #1 in that company’s words. Then accounts: where it stands / next (nested under the customer check). Then “Also moving (not the bottleneck)” for capital / legal / advisor. Then open questions in plain words. Hide clocks and schema unless the human says “show clocks” or “show schema”. Engine keeps those rules. Spoken card does not print them. Clocks are storage. Version header stays 2.8.19. No third clock. No schema bump.
+
 **v2.8.19 — initiative report card**  
 Additive. Full text: [operating-system.md](company-os/operating-system.md#initiative-report-card). Company header → bottleneck #1 → customer checks with nested engagements → other initiatives footer. New writes → `initiatives[]`. Dual-read old supporting / engagements / constraintThisWeek. Mapping cannot Advance. Ask / Do is not a card. No third clock. No schema bump.
 

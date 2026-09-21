@@ -1503,6 +1503,39 @@ else
   not_ok "do not put initiative / customer_check in the Day 0 Done when checklist"
 fi
 
+# --- z9) OS 2.8.20: spoken-card pin (founder voice default) ---
+# Additive note on 2.8.19. No version header bump. No schema bump.
+if grep -q '| 2.8.20 |' company-os/operating-system.md \
+  && grep -q '### Spoken card (founder voice default)' company-os/operating-system.md \
+  && grep -q 'Start at the company name, then Bottleneck #1' company-os/operating-system.md \
+  && grep -q 'Also moving (not the bottleneck)' company-os/operating-system.md \
+  && grep -q 'show clocks' company-os/operating-system.md \
+  && grep -q 'Engine keeps those rules. Spoken card does not print them.' company-os/operating-system.md \
+  && grep -q 'Clocks are storage' company-os/operating-system.md \
+  && grep -Fq '**Version:** 2.8.19' company-os/operating-system.md \
+  && grep -q 'OS_VERSION = "2.8.19"' mcp/src/constants.ts \
+  && grep -q 'spoken-card-2.8.20' mcp/src/house-rules.ts \
+  && grep -q 'founder-facing spoken card without a clarification round' mcp/src/hosted-copy.ts \
+  && grep -q 'Also moving (not the bottleneck)' mcp/src/hosted-copy.ts \
+  && grep -q 'spoken-card default (founder voice' mcp/src/server.ts \
+  && grep -q 'spoken-card-founder-voice-default' company-os/ai-instructions.md \
+  && grep -q 'Also moving (not the bottleneck)' company-os/first-hour.md \
+  && grep -q 'Spoken card (founder voice default) (2.8.20)' plugin/skills/house-rule-pins/SKILL.md \
+  && grep -q 'Honor OS 2.8.19' AGENTS.md \
+  && grep -q 'v2.8.20' README.md \
+  && ! grep -q 'card-v1' company-os/operating-system.md; then
+  ok "OS 2.8.20 spoken-card pin is additive (founder voice default; no schema bump)"
+else
+  not_ok "2.8.20 spoken-card strings must exist; keep 2.8.19 version header; no schema bump"
+fi
+done_when=$(sed -n '/^## Done when$/,/^## After this hour$/p' company-os/first-hour.md)
+if ! printf '%s\n' "$done_when" | grep -q 'spoken card' \
+  && ! printf '%s\n' "$done_when" | grep -q 'Also moving'; then
+  ok "2.8.20 spoken-card pin is not Day 0 Done when homework"
+else
+  not_ok "do not put spoken card / Also moving in the Day 0 Done when checklist"
+fi
+
 # --- w) Bootstrap Bill install docs (invite-only; not Path 1) ---
 bill=docs/install-bill.md
 if [ -s "$bill" ] \

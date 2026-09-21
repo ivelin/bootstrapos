@@ -128,7 +128,7 @@ function membershipPayload(
 function registerReadTools(server: McpServer, surface: McpSurface, hosted?: HostedRequestContext) {
   server.tool(
     "bootstrap_os_info",
-    "Bootstrap OS version, house rules, how this connector works, and how to email support at bootstrap@pirin.ai.",
+    "Bootstrap OS version, house rules, spoken-card default (founder voice: company name, then Bottleneck #1 in that company’s words, then accounts, then Also moving, then open questions; clocks are storage; hide clocks and schema unless the human says show clocks or show schema), how this connector works, and how to email support at bootstrap@pirin.ai.",
     {},
     async () => {
       const common = {

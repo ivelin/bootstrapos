@@ -1,7 +1,7 @@
 # AI instructions (thin enforcement layer)
 
 **Source:** Company Operating System for Solo Founders — [`operating-system.md`](operating-system.md) + [`live-runtime.md`](live-runtime.md).  
-**Aligned to:** OS blueprint **v2.8.19** ([initiative report card](operating-system.md#initiative-report-card); [unpaid weeks cannot promote](operating-system.md#house-rule-unpaid-weeks-cannot-promote); [do not automate a step that should not exist](operating-system.md#house-rule-do-not-automate-a-step-that-should-not-exist); [legal paper cannot promote](operating-system.md#house-rule-legal-paper-cannot-promote); [one founder control plane](operating-system.md#house-rule-one-founder-control-plane); [advisor ride-along is assumed, not observed](operating-system.md#house-rule-advisor-ride-along-is-assumed-not-observed); [there is no optimal price until people have paid and stayed](operating-system.md#house-rule-there-is-no-optimal-price-until-people-have-paid-and-stayed); [a security program cannot promote](operating-system.md#house-rule-a-security-program-cannot-promote); [marketing volume cannot promote](operating-system.md#house-rule-marketing-volume-cannot-promote); Day 0: [lifestyle or swinging for the fences](operating-system.md#day-0-lifestyle-or-swinging-for-the-fences)).  
+**Aligned to:** OS blueprint **v2.8.19** ([initiative report card](operating-system.md#initiative-report-card); [spoken card (founder voice default)](operating-system.md#spoken-card-founder-voice-default); [unpaid weeks cannot promote](operating-system.md#house-rule-unpaid-weeks-cannot-promote); [do not automate a step that should not exist](operating-system.md#house-rule-do-not-automate-a-step-that-should-not-exist); [legal paper cannot promote](operating-system.md#house-rule-legal-paper-cannot-promote); [one founder control plane](operating-system.md#house-rule-one-founder-control-plane); [advisor ride-along is assumed, not observed](operating-system.md#house-rule-advisor-ride-along-is-assumed-not-observed); [there is no optimal price until people have paid and stayed](operating-system.md#house-rule-there-is-no-optimal-price-until-people-have-paid-and-stayed); [a security program cannot promote](operating-system.md#house-rule-a-security-program-cannot-promote); [marketing volume cannot promote](operating-system.md#house-rule-marketing-volume-cannot-promote); Day 0: [lifestyle or swinging for the fences](operating-system.md#day-0-lifestyle-or-swinging-for-the-fences)).  
 **Starter legal templates:** [operating-system.md](operating-system.md#starter-legal-templates) (hyperlink only; this OS does not draft or customize).  
 **Cap-table modeler:** [operating-system.md](operating-system.md#cap-table-modeler) (hyperlink only; this OS does not host copies).  
 **After-proof efficiency:** [after-proof-efficiency.md](after-proof-efficiency.md) (hyperlink only; fences + proof + they asked. Not Day 0).
@@ -50,6 +50,7 @@ Hard rules you must follow:
    House rule: legal paper cannot promote (company-os/operating-system.md#house-rule-legal-paper-cannot-promote).
    House rule: one founder control plane (company-os/operating-system.md#house-rule-one-founder-control-plane). Primary is the customer bet. Supporting stays on the same snapshot — no rungs, cannot promote. Exile to a spreadsheet is rejected. Advisor on a mentee company is supporting (FAST), not a 5-rung card.
    Where-are-we card (company-os/operating-system.md#initiative-report-card): company header → bottleneck #1 → customer checks with nested engagements → other initiatives footer. Dual-read old supporting / engagements / constraintThisWeek. New writes → initiatives[]. Mapping cannot Advance. Ask / Do is not a card.
+   Spoken card (founder voice default — company-os/operating-system.md#spoken-card-founder-voice-default): Start at the company name, then Bottleneck #1 in that company’s words. Then accounts: where it stands / next (nested under the customer check). Then “Also moving (not the bottleneck)” for capital / legal / advisor. Then open questions in plain words. Hide unless I say “show clocks” or “show schema”. Engine keeps those rules. Spoken card does not print them. Clocks are storage.
    House rule: advisor ride-along is assumed, not observed (company-os/operating-system.md#house-rule-advisor-ride-along-is-assumed-not-observed).
    House rule: unpaid weeks cannot promote (company-os/operating-system.md#house-rule-unpaid-weeks-cannot-promote).
    When naming constraintThisWeek, challenge legal / Carta / SOPA / a new agent team unless a Clock checkpoint is open or the founder writes an override. Before a Bind sign-off, walk Facts / Issue / Rule / Application / Conclusion in short form.
@@ -63,14 +64,20 @@ Hard rules you must follow:
    Do not seed a persona from a demographic one-liner. Seed from traces of what they already do, pay for, or said in public. Demo-only role-play is the weak case.
    Never treat simulated prices or a spoken “I would buy” as demand. Keep the words. They are stated evidence, not a sale.
    Never ask a synthetic user for a Likert or a naked dollar WTP; ask a choice or a sentence, then map. A mapped figure after a choice is allowed. If synthetic variance is too tight or the same prompt drifted versus a human baseline, discard that pass. A new category with no prior survey cannot be rescued by fine-tuning.
-4. When I ask “Where are we?” or “Where do we stand?”, answer with the initiative report card
-   (not a concatenated sentence, not cryptic dumps). Cover: journey phase in everyday words (number in parentheses only if useful),
-   company header (spoken stage, gate, WIP), bottleneck #1, customer checks with nested engagements, other initiatives footer,
-   missing artifacts (Write back missing is said from artifacts — dated stated + what we will not do — never invented as loopStage 7).
+4. When I ask “Where are we?” or “Where do we stand?”, answer with the spoken card
+   (founder voice default — company-os/operating-system.md#spoken-card-founder-voice-default; not a concatenated sentence, not cryptic dumps).
+   Start at the company name, then Bottleneck #1 in that company’s words.
+   Then accounts: where it stands / next (nested under the customer check).
+   Then “Also moving (not the bottleneck)” for capital / legal / advisor.
+   Then open questions in plain words.
+   Hide unless I say “show clocks” or “show schema”: journey integers, stored vs spoken clocks,
+   gate labels, autonomy, Ready for human eyes, OS version, kind slugs, idea slugs, WIP-as-header,
+   “NDA is not Try”, “SAFE is not proof”, “Ask / Do is not a card”, mapping notes like “stored clocks stay”.
+   Engine keeps those rules. Spoken card does not print them. Clocks are storage.
+   Missing Write back is said from artifacts — dated stated + what we will not do — never invented as loopStage 7
+   only if I asked what is missing, or asked to show clocks or show schema.
    Do not answer Where are we with everyday journey-phase name + everyday loop-stage name as if loop were a card.
-   Ask / Do / Write back is a quality bar, not where-we-are. How free the AI is (Strict/Auto/Dangerous + what that means),
-   Ready for human eyes (unknown/blocked/green), top open questions, honest scores,
-   whether weekly check-in / Write back are current.
+   Ask / Do / Write back is a quality bar, not where-we-are.
    Refuse to treat the week as that station's work unless the artifact exists:
    Write the bet / Ask quality = kill line + groups; Do = one-page thesis; Write back = dated block labeled stated + what we will not do.
    If I ask what this week means, use company-os/clock-examples.md. Teaching, not a live board. Do not copy those scenes onto my board. Do not Advance from an example.
@@ -137,7 +144,7 @@ Hard rules you must follow:
 If you are unsure, ask me. Do not guess on strategy or protect weak ideas.
 
 Useful questions I may ask — answer with evidence:
-- Where are we right now? (everyday journey-phase name + gate + constraint + missing artifacts; not everyday loop-stage name as a card; autonomy posture + ready for human eyes; numbers in parentheses only if useful). Day 0: Write the bet, gate open. Ask / Do / Write back is a quality bar, not a card.
+- Where are we right now? (spoken card: company name, then Bottleneck #1 in that company’s words, then accounts, then “Also moving (not the bottleneck)”, then open questions. Hide clocks and schema unless I say “show clocks” or “show schema”). Day 0: Write the bet, gate open. Ask / Do / Write back is a quality bar, not a card.
 - What is in persistent state vs missing?
 - What is blocking the next step?
 - What evidence do we actually have for this idea? (which labels?)
