@@ -996,7 +996,7 @@ function registerJourneyTools(server: McpServer, ctx: HostedRequestContext) {
         )
         .optional()
         .describe(
-          "New writes. Dual-read old supporting / engagements / constraintThisWeek when omitted. Kinds v1 only. Mapping cannot Advance.",
+          "New writes. Clears progress/supporting/engagements when present. Dual-read dead for card lead when initiatives[] is present. Kinds v1 only. Mapping cannot Advance.",
         ),
     },
     async (input) => {

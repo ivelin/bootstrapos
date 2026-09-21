@@ -238,13 +238,16 @@ describe("OS 2.8.19 initiative report card", () => {
     assert.equal(wrote.idea.clocks.journeyPhase, 1);
     assert.equal(wrote.card.bottleneck.kind, "customer_check");
     assert.equal(wrote.idea.scoreboard.initiatives[0].kind, "customer_check");
-    assert.deepEqual(wrote.idea.scoreboard.progress, ["called the plant"]);
+    assert.equal(wrote.idea.scoreboard.progress, undefined);
+    assert.equal("supporting" in wrote.idea.scoreboard, false);
+    assert.equal("engagements" in wrote.idea.scoreboard, false);
     const seen = await store.getJourney(founder, { companySlug: "alpha" });
     assert.equal(seen.ok, true);
     assert.equal(seen.card.bottleneck.kind, "customer_check");
     assert.match(seen.ideas[0].snapshot, /WHERE ARE WE — alpha/);
     assert.doesNotMatch(seen.ideas[0].snapshot, /called the plant/);
     assert.equal(seen.ideas[0].card.customerChecks[0].engagements[0].kind, "engagement");
+    assert.deepEqual(seen.audit, []);
   });
 
   it("wipLimit is 1 on customer_check until paid use", () => {

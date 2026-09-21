@@ -1,5 +1,5 @@
 {
-  "note": "PR1.1 dyeconverter Heavy-locked initiatives[] map. Fixture/test only — never apply to production or write a live board. Mapping cannot Advance. Stored clocks stay Write the bet / hold. Constraint this week is Oterra SKU+site+date only. customer_check premise is the plant beachhead thesis — never concat FAST/SAFE into the lead.",
+  "note": "PR2.2 dyeconverter Heavy-locked initiatives[] map. Fixture/test only — never apply to production or write a live board. Mapping cannot Advance. Stored clocks stay Write the bet / hold. Constraint this week is Oterra quote to SKU+site+date. customer_check premise is the plant beachhead thesis — never concat FAST/SAFE into the lead.",
   "companySlug": "dyeconverter",
   "ideaSlug": "dyeconverter",
   "journeyPhase": 1,
@@ -15,7 +15,7 @@
       "Oterra SKU+site+date?"
     ],
     "lastAction": "pr1_1_dyeconverter_heavy_locked",
-    "constraint_this_week": "Oterra SKU+site+date only",
+    "constraint_this_week": "Oterra quote to SKU+site+date",
     "initiatives": [
       {
         "id": "dye-check-plant",

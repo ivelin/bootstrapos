@@ -36,7 +36,7 @@ const CLOSED = ROWS.find((row) => row.id === "dye-capital-supply-change");
 const PLANT_PREMISE = "plants already buying pigment pay for conversion/tenancy on one SKU";
 const PLANT_MEASURE = "paid plant use or paid tenancy on one SKU";
 const PLANT_KILL = "kill beachhead if they will not run a paid plant trial or paid tenancy on one SKU";
-const CONSTRAINT = "Oterra SKU+site+date only";
+const CONSTRAINT = "Oterra quote to SKU+site+date";
 
 const CONCAT_LEAD = {
   ...CHECK,
@@ -72,7 +72,7 @@ describe("PR1.1 dyeconverter Heavy-locked initiatives map", () => {
     }
   });
 
-  it("dye-check-plant is the plant beachhead; constraint is Oterra SKU+site+date only", () => {
+  it("dye-check-plant is the plant beachhead; constraint is Oterra quote to SKU+site+date", () => {
     const hit = normalizeInitiatives(ROWS);
     assert.equal(hit.ok, true, hit.ok ? "" : hit.error);
     assert.ok(CHECK);
@@ -89,7 +89,7 @@ describe("PR1.1 dyeconverter Heavy-locked initiatives map", () => {
     assert.equal(CHECK.next, "SKU+site+date");
     assert.equal(FIXTURE.scoreboard.constraint_this_week, CONSTRAINT);
     assert.notEqual(CHECK.premise, CONSTRAINT);
-    assert.doesNotMatch(CHECK.premise, /Oterra SKU\+site\+date only/);
+    assert.doesNotMatch(CHECK.premise, /Oterra quote to SKU\+site\+date/);
     assert.doesNotMatch(CHECK.premise, /SAFE|FAST|83\s*\(?\s*b|SeedLegal/i);
     assert.doesNotMatch(FIXTURE.scoreboard.constraint_this_week, /SAFE|FAST/i);
     assert.equal(
@@ -108,7 +108,7 @@ describe("PR1.1 dyeconverter Heavy-locked initiatives map", () => {
     assert.equal(card.customerChecks[0].id, "dye-check-plant");
     assert.equal(card.bottleneck.premise, PLANT_PREMISE);
     assert.doesNotMatch(card.bottleneck.premise, /SAFE|FAST/i);
-    assert.doesNotMatch(card.bottleneck.premise, /Oterra SKU\+site\+date only/);
+    assert.doesNotMatch(card.bottleneck.premise, /Oterra quote to SKU\+site\+date/);
   });
 
   it("nests three engagements under dye-check-plant: Oterra, Turing Labs, Ocean Spray", () => {
@@ -254,7 +254,7 @@ describe("PR1.1 dyeconverter Heavy-locked initiatives map", () => {
     assert.equal(seen.ideas[0].clocks.journeyPhase, 1);
     assert.equal(seen.ideas[0].clocks.currentGate, "hold");
     assert.match(seen.ideas[0].snapshot, /WHERE ARE WE — DyeConverter/);
-    assert.match(seen.ideas[0].snapshot, /Oterra SKU\+site\+date only/);
+    assert.match(seen.ideas[0].snapshot, /Oterra quote to SKU\+site\+date/);
     assert.match(seen.ideas[0].snapshot, /plants already buying pigment pay for conversion\/tenancy on one SKU/);
     assert.match(seen.ideas[0].snapshot, /OTHER INITIATIVES/);
     const cardLead = seen.ideas[0].snapshot.split("WHERE ARE WE — DyeConverter")[1].split("OTHER INITIATIVES")[0];
