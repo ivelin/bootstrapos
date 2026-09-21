@@ -76,9 +76,9 @@ export type InitiativeCard = {
   company: {
     slug: string;
     label: string;
-    stage: string;
-    gate: string;
-    wipLimit: 1;
+    stage?: string;
+    gate?: string;
+    wipLimit?: 1;
     bottleneckId: string | null;
   };
   bottleneck: Initiative | null;
@@ -557,6 +557,184 @@ export function snapshotLeadOmitsProgress(snapshot: string, progress: string[] |
   return progress.every((note) => !lead.includes(note));
 }
 
+export const JOURNEY_PHASE_DUMP = /journey phase \d/;
+export const GATE_HOLD_DUMP = /gate hold/i;
+
+function plainWords(value: unknown): string {
+  const text = typeof value === "string" ? value.trim() : "";
+  return text || "none yet";
+}
+
+function openQuestionsOf(source: unknown): string[] {
+  if (!source || typeof source !== "object" || Array.isArray(source)) return [];
+  const raw = (source as { openQuestions?: unknown }).openQuestions;
+  if (!Array.isArray(raw)) return [];
+  return raw.filter((row): row is string => typeof row === "string" && row.trim().length > 0);
+}
+
+/** Founder-voice card. No journey integers, gate labels, WIP, OS version, or kind slugs. */
+export function formatSpokenCard(input: {
+  label: string;
+  card?: InitiativeCard | null;
+  constraintThisWeek?: string;
+  openQuestions?: string[];
+}): string {
+  const label = input.label.trim() || "company";
+  const card = input.card;
+  const bottleneck =
+    card?.bottleneck?.premise?.trim() ||
+    input.constraintThisWeek?.trim() ||
+    "none yet";
+  const lines = [label, "", `Bottleneck #1: ${bottleneck}`, ""];
+  const checks = card?.customerChecks ?? [];
+  if (checks.length) {
+    for (const check of checks) {
+      lines.push(check.premise);
+      lines.push(`  where it stands: ${plainWords(check.last)}`);
+      lines.push(`  next: ${plainWords(check.next)}`);
+      for (const child of check.engagements) {
+        lines.push(`    ${child.premise}`);
+        lines.push(`      where it stands: ${plainWords(child.last)}`);
+        lines.push(`      next: ${plainWords(child.next)}`);
+      }
+    }
+    lines.push("");
+  }
+  lines.push("Also moving (not the bottleneck)");
+  const footer = card?.footer ?? [];
+  if (!footer.length) {
+    lines.push("  none yet");
+  } else {
+    for (const row of footer) {
+      lines.push(`  ${row.premise}`);
+    }
+  }
+  lines.push("");
+  lines.push("Open questions");
+  const questions = input.openQuestions ?? [];
+  if (!questions.length) {
+    lines.push("  none yet");
+  } else {
+    for (const question of questions) {
+      lines.push(`  ${question}`);
+    }
+  }
+  return lines.join("\n");
+}
+
+type CompactCompany = {
+  slug: string;
+  label: string;
+  bottleneckId: string | null;
+};
+
+function compactCardCompany(
+  card: InitiativeCard,
+  expand: boolean,
+): InitiativeCard & { clocks?: { stage: string; gate: string; wipLimit: 1 } } {
+  const company = card.company;
+  const lead: CompactCompany = {
+    slug: company.slug,
+    label: company.label,
+    bottleneckId: company.bottleneckId,
+  };
+  const next: InitiativeCard & { clocks?: { stage: string; gate: string; wipLimit: 1 } } = {
+    ...card,
+    company: lead,
+  };
+  if (expand) {
+    next.clocks = {
+      stage: company.stage ?? "",
+      gate: company.gate ?? "",
+      wipLimit: company.wipLimit ?? 1,
+    };
+  }
+  return next;
+}
+
+function spokenFromIdea(idea: Record<string, unknown>, fallbackLabel: string): string {
+  const card = idea.card && typeof idea.card === "object" ? (idea.card as InitiativeCard) : undefined;
+  const scoreboard =
+    idea.scoreboard && typeof idea.scoreboard === "object"
+      ? (idea.scoreboard as { openQuestions?: unknown })
+      : undefined;
+  return formatSpokenCard({
+    label:
+      (card?.company?.label || fallbackLabel || "").trim() ||
+      String(idea.name ?? "").trim() ||
+      "company",
+    card,
+    constraintThisWeek:
+      typeof idea.constraintThisWeek === "string" ? idea.constraintThisWeek : undefined,
+    openQuestions: openQuestionsOf(scoreboard),
+  });
+}
+
+function applySpokenToIdea(
+  idea: unknown,
+  fallbackLabel: string,
+  expand: boolean,
+): Record<string, unknown> | unknown {
+  if (!idea || typeof idea !== "object" || Array.isArray(idea)) return idea;
+  const next = { ...(idea as Record<string, unknown>) };
+  if (next.card && typeof next.card === "object") {
+    next.card = compactCardCompany(next.card as InitiativeCard, expand);
+  }
+  next.snapshot = spokenFromIdea(
+    { ...next, card: (idea as { card?: InitiativeCard }).card },
+    fallbackLabel,
+  );
+  return next;
+}
+
+/** Payload lead is spoken. Snapshot is the same founder sentence, not a clock dump. */
+export function applySpokenPayloadLead(
+  raw: unknown,
+  opts: { expand?: boolean } = {},
+): unknown {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return raw;
+  const payload = { ...(raw as Record<string, unknown>) };
+  if (payload.ok !== true) return raw;
+  const expand = Boolean(opts.expand);
+  const company =
+    payload.company && typeof payload.company === "object"
+      ? (payload.company as { label?: string; slug?: string })
+      : undefined;
+  const fallbackLabel = (company?.label || company?.slug || "").trim();
+  if (Array.isArray(payload.ideas)) {
+    payload.ideas = payload.ideas.map((idea) => applySpokenToIdea(idea, fallbackLabel, expand));
+  }
+  if (payload.idea) {
+    payload.idea = applySpokenToIdea(payload.idea, fallbackLabel, expand);
+  }
+  if (payload.card && typeof payload.card === "object") {
+    payload.card = compactCardCompany(payload.card as InitiativeCard, expand);
+  }
+  const leadIdea =
+    (Array.isArray(payload.ideas) ? payload.ideas[0] : undefined) ||
+    (payload.idea && typeof payload.idea === "object" ? payload.idea : undefined);
+  const spoken = formatSpokenCard({
+    label:
+      fallbackLabel ||
+      ((payload.card as InitiativeCard | undefined)?.company?.label ?? ""),
+    card:
+      (payload.card as InitiativeCard | undefined) ||
+      (leadIdea && typeof leadIdea === "object"
+        ? ((leadIdea as { card?: InitiativeCard }).card)
+        : undefined),
+    constraintThisWeek:
+      leadIdea && typeof leadIdea === "object"
+        ? String((leadIdea as { constraintThisWeek?: string }).constraintThisWeek ?? "")
+        : undefined,
+    openQuestions:
+      leadIdea && typeof leadIdea === "object"
+        ? openQuestionsOf((leadIdea as { scoreboard?: unknown }).scoreboard)
+        : undefined,
+  });
+  const { ok: _ok, spoken: _drop, ...rest } = payload;
+  return { ok: true, spoken, ...rest };
+}
+
 export function compactJourneyPayload(
   raw: unknown,
   opts: { expandAudit?: boolean } = {},
@@ -568,5 +746,5 @@ export function compactJourneyPayload(
     payload.audit = [];
     payload.auditVia = AUDIT_VIA_PROVENANCE;
   }
-  return payload;
+  return applySpokenPayloadLead(payload, { expand: Boolean(opts.expandAudit) });
 }

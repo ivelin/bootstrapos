@@ -225,11 +225,10 @@ describe("OS 2.8.18 one founder control plane", () => {
     assert.equal(seen.engagements[0].kind, "nda");
     assert.equal(seen.ideas[0].engagements[0].account, "bravo plant");
     const snap = seen.ideas[0].snapshot;
-    const primaryAt = snap.indexOf("PRIMARY (customer bet");
-    const supportingAt = snap.indexOf("SUPPORTING (same snapshot");
-    const engagementsAt = snap.indexOf("ENGAGEMENTS (named accounts");
-    assert.ok(primaryAt >= 0 && supportingAt > primaryAt && engagementsAt > supportingAt);
-    assert.match(snap, /NDA is not Try/);
+    assert.match(seen.spoken, /Bottleneck/);
+    assert.match(snap, /Bottleneck/);
+    assert.doesNotMatch(snap, /journey phase \d/);
+    assert.doesNotMatch(snap, /PRIMARY \(customer bet/);
     assert.doesNotMatch(snap, /Relationship shelf/);
     assert.doesNotMatch(snap, /instrument tracker/);
   });

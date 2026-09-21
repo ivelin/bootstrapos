@@ -123,6 +123,8 @@ describe("preview plugin (hyperlink only)", () => {
       path.join(PLUGIN, "skills", "query-os-first", "SKILL.md"),
       "utf8",
     );
+    assert.match(standing, /spoken-card-founder-voice-default/);
+    assert.match(standing, /print spoken first/i);
     assert.match(standing, /0-1/);
     assert.match(standing, /spoken yes/);
     assert.match(standing, /do not invent their stage/);
@@ -155,6 +157,8 @@ describe("preview plugin (hyperlink only)", () => {
     assert.match(path1, /Do not upload mentee work to Ivelin.s GitHub/);
     assert.match(path1, /first-hour\.md#standing-rules/);
     assert.match(path1, /https:\/\/github.com\/ivelin\/bootstrap/);
+    assert.match(path1, /spoken-card-founder-voice-default/);
+    assert.match(path1, /print spoken first/i);
     assert.doesNotMatch(path1, /Grok Bot marketplace bot/);
     assert.match(standing, /Upload mentee work to Ivelin.s GitHub — refuse/);
     assert.match(standing, /first-hour\.md#standing-rules/);

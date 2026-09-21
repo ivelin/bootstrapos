@@ -9,6 +9,6 @@ When to use: ALL three — fences (not lifestyle), proof, and they asked about e
 
 Otherwise do not open this page. Two clocks. Lifestyle: do not send this page. No proof / 0-1: two clocks. No numbers.
 
-https://github.com/ivelin/bootstrap/blob/main/company-os/after-proof-efficiency.md
+https://github.com/ivelin/bootstrapos/blob/main/company-os/after-proof-efficiency.md
 
 LTV:CAC 3x or T2D3 as the aim is stale — cite that page.

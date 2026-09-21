@@ -57,7 +57,8 @@ describe("OS house rules (adapter reminders)", () => {
     assert.match(blob, /none yet/);
     assert.match(blob, /Do not invent after-proof efficiency metrics/);
     const pins = JSON.stringify(HOUSE_RULE_PINS);
-    assert.match(pins, /github.com\/ivelin\/bootstrap/);
+    assert.match(pins, /github.com\/ivelin\/bootstrapos/);
+    assert.doesNotMatch(pins, /github.com\/ivelin\/bootstrap\/blob/);
     assert.match(pins, /house-rule-marketing-volume-cannot-promote/);
     assert.match(pins, /house-rule-a-security-program-cannot-promote/);
     assert.match(pins, /house-rule-there-is-no-optimal-price-until-people-have-paid-and-stayed/);

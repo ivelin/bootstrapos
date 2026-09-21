@@ -101,24 +101,15 @@ describe("journey views + tools (memory store)", () => {
     assert.match(idea.visualFlow, /Write the bet/);
     assert.doesNotMatch(idea.visualFlow, /subgraph loop \[Loop\]/);
     assert.match(idea.visualFlow, /Missing artifacts/);
-    assert.match(idea.snapshot, /Journey: Write the bet \(1\)/);
+    assert.match(basic.spoken, /Bottleneck/);
+    assert.match(idea.snapshot, /Bottleneck/);
+    assert.doesNotMatch(idea.snapshot, /journey phase \d/);
+    assert.doesNotMatch(idea.snapshot, /gate hold/i);
     assert.doesNotMatch(idea.snapshot, /Loop: Ask/);
-    assert.match(idea.snapshot, /Missing artifacts: Write back/);
-    assert.match(idea.snapshot, /quality bar/);
     assert.equal(idea.clocks.journeySpoken, "Write the bet");
     assert.equal(idea.clocks.loopSpoken, "Ask");
-    assert.match(idea.snapshot, /two-minute read/);
-    assert.match(idea.snapshot, /Owner \(from ACL\): founder-core@example.test, sub-only-corehaul/);
-    assert.match(
-      idea.snapshot,
-      /Constraint this week \(honest biggest bottleneck; where help is required\): none yet/,
-    );
-    assert.match(idea.snapshot, /Not a fun side quest/);
-    assert.match(idea.snapshot, /Preference/);
-    assert.match(idea.snapshot, /Teaching picture, not extra law/);
-    assert.match(idea.snapshot, /weakest link/);
-    assert.match(idea.snapshot, /slowest soldier/);
-    assert.match(idea.snapshot, /not on that link is not progress/);
+    assert.match(idea.snapshot, /CoreHaul/);
+    assert.match(idea.snapshot, /Bottleneck #1: none yet/);
     assert.equal(idea.constraintThisWeek, "");
     assert.match(idea.visualFlow, /Constraint this week:/);
     assert.equal(idea.meetingDoc, undefined);
@@ -347,7 +338,8 @@ describe("journey views + tools (memory store)", () => {
 
     const empty = await store.getJourney(founder, { companySlug: "corehaul" });
     assert.equal(empty.ideas[0].constraintThisWeek, "");
-    assert.match(empty.ideas[0].snapshot, /where help is required/);
+    assert.match(empty.spoken, /Bottleneck/);
+    assert.match(empty.ideas[0].snapshot, /Bottleneck #1: none yet/);
 
     const tooLong = await store.putJourney(founder, {
       companySlug: "corehaul",
@@ -427,7 +419,7 @@ describe("journey views + tools (memory store)", () => {
     const stillEmpty = await store.getJourney(founder, { companySlug: "corehaul" });
     assert.equal(stillEmpty.ok, true);
     assert.equal(stillEmpty.ideas[0].constraintThisWeek, "");
-    assert.match(stillEmpty.ideas[0].snapshot, /honest biggest bottleneck/);
+    assert.match(stillEmpty.ideas[0].snapshot, /Bottleneck #1: none yet/);
 
     const written = await store.putJourney(founder, {
       companySlug: "corehaul",
@@ -445,8 +437,9 @@ describe("journey views + tools (memory store)", () => {
 
     const seen = await store.getJourney(founder, { companySlug: "corehaul" });
     assert.equal(seen.ideas[0].constraintThisWeek, "new landing page");
-    assert.match(seen.ideas[0].snapshot, /Challenge:/);
-    assert.match(seen.ideas[0].snapshot, /honest biggest bottleneck/);
+    assert.match(seen.ideas[0].snapshot, /Bottleneck #1: new landing page/);
+    assert.match(seen.spoken, /new landing page/);
+    assert.match(seen.ideas[0].constraintChallenge, /fun side quest/);
   });
 
   it("board notify: founder grants ACL members; mentee A cannot subscribe to B; webhook only to ACL; comments do not move gates", async () => {
@@ -680,7 +673,9 @@ describe("journey views + tools (memory store)", () => {
     assert.ok(retired);
     assert.equal(retired.clocks.currentGate, "kill");
     assert.equal(retired.killedCard, killed.idea.killedCard);
-    assert.match(retired.snapshot, /☠ Killed — operators already have a dispatcher they trust/);
+    assert.match(retired.snapshot, /Bottleneck/);
+    assert.doesNotMatch(retired.snapshot, /journey phase \d/);
+    assert.match(retired.killedCard, /☠ Killed — operators already have a dispatcher they trust/);
 
     const listed = await store.listKilledIdeas(founder, { companySlug: "corehaul" });
     assert.equal(listed.ok, true);

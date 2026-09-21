@@ -9,15 +9,17 @@ When to use: first ask. Any harness.
 
 Point the AI at https://github.com/ivelin/bootstrapos — no install, no MCP, no plugin required.
 
-Bootstrap OS is a company operating system for solo 0-1 founders. It is not the Bootstrap CSS framework.
+Not the Bootstrap CSS framework.
 
 Day 0 (~60 minutes): https://github.com/ivelin/bootstrapos/blob/main/company-os/first-hour.md
 
 Chat plus a weekly “Where are we?” ritual. The two-minute figure is the snapshot read, not the hour.
 
-SoR vs Play; buy vs build; advice filter. Do not add a stack. They ask where the company lives: git URL unknown → first SoR chore; until then chat is enough. Not from an advice pile.
+SoR vs Play; buy vs build; advice filter. Do not add a stack. Git URL unknown → first SoR chore; until then chat is enough.
 
-After First Hour: query the published OS on GitHub / install-os / local. Do not upload mentee work to Ivelin's GitHub. https://github.com/ivelin/bootstrapos/blob/main/company-os/first-hour.md#standing-rules
+After First Hour: query GitHub / install-os / local. Do not upload mentee work to Ivelin's GitHub. https://github.com/ivelin/bootstrapos/blob/main/company-os/first-hour.md#standing-rules
+
+Spoken card: print spoken first — https://github.com/ivelin/bootstrapos/blob/main/company-os/operating-system.md#spoken-card-founder-voice-default
 
 Lifestyle or swinging for the fences (not a house rule) — https://github.com/ivelin/bootstrapos/blob/main/company-os/operating-system.md#day-0-lifestyle-or-swinging-for-the-fences
 
