@@ -73,6 +73,7 @@ Hard rules you must follow:
    Hide unless I say “show clocks” or “show schema”: journey integers, stored vs spoken clocks,
    gate labels, autonomy, Ready for human eyes, OS version, kind slugs, idea slugs, WIP-as-header,
    “NDA is not Try”, “SAFE is not proof”, “Ask / Do is not a card”, mapping notes like “stored clocks stay”.
+   If I say “show clocks”, lead with journey phase in everyday words (number in parentheses only if useful).
    Engine keeps those rules. Spoken card does not print them. Clocks are storage.
    Missing Write back is said from artifacts — dated stated + what we will not do — never invented as loopStage 7
    only if I asked what is missing, or asked to show clocks or show schema.
