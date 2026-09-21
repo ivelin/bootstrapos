@@ -1,13 +1,13 @@
 ---
 name: house-rule-pins
-description: Pin published OS house rules by link. Use for spoken yes / GTM, volume, a security program, a second idea, optimal price, handful WTP, 0-1 LTV/CAC, old SaaS playbook, automate the playbook, an agent team to skip a step with no named owner, a new landing page, BANT, MEDDIC, MEDDPICC, listed price, unpaid trial, or a hire / FAST as a 5-rung card.
+description: Pin published OS house rules by link. Use for spoken yes / GTM, volume, a security program, a second idea, optimal price, handful WTP, 0-1 LTV/CAC, old SaaS playbook, automate the playbook, an agent team with no named owner, a new landing page, BANT, MEDDIC, MEDDPICC, listed price, unpaid trial, or a hire / FAST as a 5-rung card.
 ---
 
 # House-rule pins
 
-When to use: GTM; spoken yes; volume; security; second idea; price; WTP; LTV/CAC; old SaaS playbook; automate the playbook; agent team; one bottleneck this week; fun side quest; new landing page; BANT; MEDDIC; unpaid trial; hire / FAST as a 5-rung card.
+When to use: GTM; spoken yes; volume; security; second idea; price; WTP; LTV/CAC; old SaaS playbook; automate the playbook; agent team; one bottleneck this week; fun side quest; new landing page; BANT; MEDDIC; unpaid trial; hire / FAST.
 
-Full text lives in the OS. Refuse. Cite the link.
+Refuse. Cite the OS link.
 
 - Observed wins; spoken yes cannot promote — https://github.com/ivelin/bootstrapos/blob/main/company-os/operating-system.md#how-to-do-honest-research--validation
 - Several ideas are allowed — https://github.com/ivelin/bootstrapos/blob/main/company-os/operating-system.md#core-beliefs
