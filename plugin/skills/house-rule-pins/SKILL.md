@@ -1,6 +1,6 @@
 ---
 name: house-rule-pins
-description: Pin published OS house rules by link. Use for spoken yes / GTM, volume, a security program, a second idea, optimal price, handful WTP, 0-1 LTV/CAC, old SaaS playbook, automate the playbook, an agent team with no named owner, a new landing page, BANT, MEDDIC, MEDDPICC, listed price, unpaid trial, or a hire / FAST as a 5-rung card.
+description: Pin published OS house rules by link. Use for spoken yes / GTM, volume, a security program, a second idea, optimal price, handful WTP, 0-1 LTV/CAC, old SaaS playbook, automate the playbook, agent team to skip a step with no named owner, a new landing page, BANT, MEDDIC, listed price, unpaid trial, or a hire / FAST as a 5-rung card.
 ---
 
 # House-rule pins
