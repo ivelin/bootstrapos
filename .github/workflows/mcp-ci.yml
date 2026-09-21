@@ -9,6 +9,7 @@ on:
       - "company-os/**"
       - "templates/**"
       - ".github/workflows/mcp-ci.yml"
+      - "scripts/ci.sh"
   pull_request:
     paths:
       - "mcp/**"
@@ -16,6 +17,7 @@ on:
       - "company-os/**"
       - "templates/**"
       - ".github/workflows/mcp-ci.yml"
+      - "scripts/ci.sh"
 
 concurrency:
   group: mcp-ci-${{ github.workflow }}-${{ github.ref }}
@@ -60,6 +62,9 @@ jobs:
         if: matrix.node == '22'
         run: npm run test:coverage
 
+      - name: Spoken-card eval (format + grounding)
+        run: node --test test/spoken-card-eval.test.mjs
+
       - name: Cold-path smoke
         run: node test/cold-path.smoke.mjs
 
@@ -74,10 +79,11 @@ jobs:
           test -f dist/index.js
           test -f dist/policy.js
           test -f dist/companies.js
+          test -f dist/initiative-card.js
           ! test -d node_modules/.cache || true
 
   user-path:
-    name: user-path (stdio · http · role-play)
+    name: user-path (stdio · http · role-play · spoken-card eval)
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -118,8 +124,10 @@ jobs:
             company-os/after-proof-efficiency.md \
             docs/install-bill.md \
             templates/company/state/company-state.json \
+            templates/company/state/company-state.schema.json \
             templates/company/state/where-are-we.py \
-            templates/applied-here.md
+            templates/applied-here.md \
+            mcp/test/spoken-card-eval.test.mjs
           do
             test -s "$f"
             echo "ok $f"
@@ -130,7 +138,12 @@ jobs:
           for k in ("companyId", "journeyPhase", "loopStage", "readyForHumanEyes", "openQuestions"):
               assert k in s, k
           assert s["readyForHumanEyes"]["status"] == "unknown"
-          print("state template ok")
+          schema = json.load(open("templates/company/state/company-state.schema.json"))
+          assert "initiatives" in schema["properties"], "schema must define initiatives[]"
+          kinds = schema["properties"]["initiatives"]["items"]["properties"]["kind"]["enum"]
+          for kind in ("customer_check", "engagement", "capital", "legal", "advisor"):
+              assert kind in kinds, kind
+          print("state template + initiatives schema ok")
           PY
 
   # Hosted MCP only after merge. PRs stay on local stdio/http. Bounded GET /health + handshake.
