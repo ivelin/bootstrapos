@@ -11,7 +11,7 @@ Free docs are GitHub + [install-os](https://pirin.ai/install-os) + local — **n
 | Login / OAuth | **pirin.ai only.** Web Builder owns `/bootstrap-os/login` (authorize URL, authorization code + PKCE) and RFC 8414. This MCP origin serves RFC 9728; `authorization_servers` stay on pirin.ai. |
 | This repo | MCP resource server. Do **not** add a login UI. No second authorization server. |
 | Product | MCP client follows 401 → this origin's protected-resource metadata → pirin.ai authorize + PKCE. The client attaches the issued access token. This host never issues connector secrets. |
-| Prod database | Cloud agents on PRs do **not** migrate, seed, or live-probe the live pirin.ai project. Local / CI use **PGlite**. |
+| Prod database | PR / cloud agents must **not** migrate, seed, or live-probe the live pirin.ai project (or supabase-pirin-ai). Local / CI use **PGlite**. Admin company-label SQL is documented below — do not run it from a PR agent. |
 | Allowlist | A valid pirin.ai JWT is **not** enough. Hosted MCP whoami is `authenticated: true` only if email/`auth_user_id` is on `bootstrap_mcp_mentees` (user table, legacy name). Uninvited → `not_invited`; gated tools stay 401. First user is a SQL insert — [First user (rebuild from GitHub)](#first-user-rebuild-from-github). Later users + additional workspaces: [`INVITE.md`](INVITE.md) (`invite_member` / `accept_invite` / `bootstrap_mcp_verify_invite`). |
 | **Invite-only boards** | **Hard rule — invite-only company boards.** Company board/data access is invite-only. Unauthenticated or non-invited principals, and members of company A, must never receive company B rows (labels, comments, audit, scoreboard, owners, subscribers). Fail closed: HTTP **401/403 or empty** — never another company's rows. CI gate: [`../test/cross-tenant-leak.test.mjs`](../test/cross-tenant-leak.test.mjs). Board contract: [`JOURNEY.md`](JOURNEY.md#hard-rule--invite-only-company-boards). |
 | Env pin | Live on Vercel project `bootstrap-os-mcp`. Identity/invite Supabase adapters attach **only** when `VERCEL_ENV=production`. Preview/development must not use prod DB even if `BOOTSTRAP_SUPABASE_*` is set. Do **not** print those values. Invite-only collab pin is `https://mcp.bootstrap.pirin.ai/mcp` on `main`. Do not merge. Board watch (Bill): Cos sets `BOOTSTRAP_BOARD_WATCH_URL` (https), `BOOTSTRAP_BOARD_WATCH_PRINCIPAL`, optional `BOOTSTRAP_BOARD_WATCH_PRINCIPAL_KIND` once. Agents call `enable_board_watch` after invite. Founders never paste URLs. |
@@ -124,7 +124,7 @@ A valid pirin.ai JWT alone must **not** grant hosted MCP access. There is **no l
 On a rebuild (empty project / Cos applying migrations — **never from a PR cloud agent**):
 
 1. Apply identity migrations: `mcp/supabase/migrations/20260829_bootstrap_mcp_identity.sql`, `mcp/supabase/migrations/20260909_bootstrap_mcp_fail_closed_invite.sql`, `mcp/supabase/migrations/20260910_bootstrap_mcp_invite_accept.sql`, then `mcp/supabase/migrations/20260910_bootstrap_mcp_invite_qualify_label.sql`, then `mcp/supabase/migrations/20260911_bootstrap_mcp_invite_pgcrypto_search_path.sql`, then `mcp/supabase/migrations/20260911_bootstrap_mcp_invite_verify_email_outbox.sql`, then `mcp/supabase/migrations/20260912_bootstrap_mcp_invite_existing_member.sql` (CREATE OR REPLACE `bootstrap_mcp_invite_member` — existing user, second workspace, `already_member`, pending unique). PR CI uses `mcp/test/pglite/identity-schema.sql` — do **not** apply that fixture to prod.
-2. Insert the first user. The identity migration seeds a **fictional** template row (`founder@example.test` + labels `alpha`, `bravo`, `charlie`) so clones and PGlite never contain live instance names. Production first-user is a Cos-only SQL insert of the live maintainer (never committed as those emails or labels). Additional first-user SQL uses the same shape:
+2. Insert the first user. The identity migration seeds a **fictional** template row (`founder@example.test` + labels `alpha`, `bravo`, `charlie`) so clones and PGlite never contain live instance names. Production first-user is an **admin SQL insert** of the live maintainer (never committed as those emails or labels). Cos may apply it on admin instruction. Later company labels use the same table — Cos is not a required gate ([Admin company labels](#admin-company-labels)). Additional first-user SQL uses the same shape:
 
 ```sql
 INSERT INTO public.bootstrap_mcp_mentees (email)
@@ -141,6 +141,26 @@ WHERE m.email = lower('founder@example.com');
 
 Uninvited JWTs stay `authenticated: false` / `reason: not_invited`. Gated tools stay HTTP 401 except `accept_invite` (valid JWT + matching invite token; already-authenticated users may join another workspace). Missing token still 401s the collab handshake. Later users: [`INVITE.md`](INVITE.md).
 
+## Admin company labels
+
+Say it **once** here. Other files link. This is not a `create_company` MCP tool.
+
+A hosted company is a row on `bootstrap_company_labels` (team membership / whoami labels). `create_idea`, `get_journey`, and `put_journey` require an **existing held label** (`bootstrap_os_held_label`). They do not invent a company. Missing label fails closed (`company not visible` → HTTP 400-class / `journey_rpc_failed:400`). After the label exists, `list_companies` + `create_idea` + `put_journey` work.
+
+**Admin** (or Cos on admin instruction) may insert `bootstrap_company_labels`. **Cos is not a required gate** for every label. Do not wait for Cos to approve each company create. Do not treat Ready-for-human-eyes green as demand.
+
+PR / cloud agents must **not** migrate, seed, or live-probe prod. Document the SQL; do not run it from this PR. Fictional `alpha` / `bravo` / `charlie` only in git. Never commit live mentee names.
+
+```sql
+INSERT INTO public.bootstrap_company_labels (mentee_id, label)
+SELECT m.id, x.label
+FROM public.bootstrap_mcp_mentees m
+CROSS JOIN (VALUES ('bravo')) AS x(label)
+WHERE m.email = lower('founder@example.com');
+```
+
+CI: [`../test/admin-company-labels.test.mjs`](../test/admin-company-labels.test.mjs) — missing label fails closed; after the label exists, `create_idea` works.
+
 ## Tests (PGlite / isolated)
 
 | | |
@@ -152,6 +172,7 @@ Uninvited JWTs stay `authenticated: false` / `reason: not_invited`. Gated tools 
 | CTO/PM role-play matrix + draft prod synthetic SRE | [`E2E_ROLEPLAY.md`](E2E_ROLEPLAY.md) · `mcp/test/e2e-roleplay-matrix.test.mjs` |
 | Invite / accept / login-URL mail | [`INVITE.md`](INVITE.md) · `mcp/test/invite.test.mjs` + `invite-mail.test.mjs` + role-play P1–P4 + `identity-pglite.test.mjs` (SQL `invite_member` / `verify_invite`, no 42702 / no 42883; existing user second workspace; preview store refuse) |
 | **Invite-only company boards (cross-tenant)** | `mcp/test/cross-tenant-leak.test.mjs` — unauthenticated / stranger / invited-to-A-only vs B; `q=` / slug typo / idea slug / webhook / list; PGlite `held_label`. Fictional `alpha` / `bravo` / `charlie` / `delta` only. Fail the pipeline on any leak. |
+| **Admin company labels (Cos is not a blocker)** | `mcp/test/admin-company-labels.test.mjs` — missing label → `create_idea` fails closed; after admin insert of `bootstrap_company_labels`, `create_idea` works. Fictional `alpha` / `bravo` only. No live mentee writes. |
 
 Do not run `preview-live.mjs` on PR cloud agents. Draft prod synthetic checks are Cos-only — same doc.
 

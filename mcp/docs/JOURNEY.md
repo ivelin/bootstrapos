@@ -1,6 +1,6 @@
 # FAST 0-1 journey (hosted board)
 
-Invite-only collab pin: [`HOSTED_IDENTITY.md`](HOSTED_IDENTITY.md). After Cos applies journey SQL on pirin.ai, production `VERCEL_ENV=production` attaches the store. Preview never attaches. Tests are **PGlite only**. Login UI stays on pirin.ai. No migrate/seed/live-probe of supabase-pirin-ai from PR agents.
+Invite-only collab pin: [`HOSTED_IDENTITY.md`](HOSTED_IDENTITY.md). After Cos applies journey SQL on pirin.ai, production `VERCEL_ENV=production` attaches the store. Preview never attaches. Tests are **PGlite only**. Login UI stays on pirin.ai. PR / cloud agents must **not** migrate, seed, or live-probe supabase-pirin-ai / the live pirin.ai project.
 
 Ivelin yes 2026-09-01 (via Cos): one source of truth for a FAST mentee 0-1 journey. **Company and idea are separate abstractions**, not a flattened composite key.
 
@@ -19,6 +19,14 @@ See [`../supabase/migrations/20260902_bootstrap_os_journey.sql`](../supabase/mig
 Seed slugs exist **only** in the PGlite fixture: `dyeconverter`, `corehaul`. One default idea each. Fixture emails are synthetic `@example.test`. Real FAST emails are not in git.
 
 Allowlist in SQL, fail closed. Token `email` (fallback `sub`) → ACL. No FAST claim on the JWT.
+
+## Company labels (create_idea prerequisite)
+
+`create_idea` requires an **existing** company label on `bootstrap_company_labels`. It does not invent a company. Missing label fails closed (`company not visible` → HTTP 400-class / `journey_rpc_failed:400`). After the label exists, `list_companies` + `create_idea` + `put_journey` work.
+
+**Admin** (or Cos on admin instruction) may insert the label. **Cos is not a required gate** for every company create. SQL path — say once: [`HOSTED_IDENTITY.md`](HOSTED_IDENTITY.md#admin-company-labels). Do not treat Ready-for-human-eyes green as demand.
+
+PR / cloud agents must **not** migrate, seed, or live-probe prod. Fictional `alpha` / `bravo` only in tests. CI: [`../test/admin-company-labels.test.mjs`](../test/admin-company-labels.test.mjs).
 
 ## Hard rule — invite-only company boards
 
@@ -74,7 +82,7 @@ Cos sets Vercel secrets **once** on `bootstrap-os-mcp` production: `BOOTSTRAP_BO
 | Tool | Who | Notes |
 |------|-----|--------|
 | `get_journey` | founder / advisor on the allowlist | Company query → every idea. Company/idea → one idea. Print spoken first. Hide clocks/schema unless the human says show clocks. Render the founder-facing spoken card without a clarification round: company name, then Bottleneck #1 in that company’s words, then accounts (where it stands / next), then “Also moving (not the bottleneck)”, then open questions. Hide clocks and schema unless the human says “show clocks” or “show schema”. Clocks are storage. Payload lead is spoken; snapshot is not a clock dump. Surfaces top-level `card` from `initiatives[]`. When `initiatives[]` is present, dual-read of `progress[]` / `supporting[]` / `engagements[]` is dead for the card lead (empty `initiatives[]` still dual-reads old fields). Default payload is compact (no full audit — use `list_provenance`). ACL `owners`, stored `portfolioScore` on live ideas, and `portfolio` ranked by impact+evidence+leverage when ≥2 live ideas. Never invents missing scores. `progress[]` is not card body. |
-| `create_idea` | founder + founder-authorized | New 0-1 primary board under a held company. Empty clocks (Write the bet / hold; stored 1 / 1). A person or instrument as the primary object is rejected — write supporting[]. Founder yes in chat. Does not invent stage. Ask / Do / Write back is a quality bar, not a card. |
+| `create_idea` | founder + founder-authorized | New 0-1 primary board under a **held** company (label must already exist — Cos is not a required gate). Empty clocks (Write the bet / hold; stored 1 / 1). A person or instrument as the primary object is rejected — write supporting[]. Founder yes in chat. Does not invent stage or a company. Ask / Do / Write back is a quality bar, not a card. |
 | `put_journey` | founder + founder-authorized | Overwrite journey/gate/jsonb including `initiatives[]` on an **existing** idea. New writes prefer `initiatives[]` and clear `progress` / `supporting` / `engagements` (jsonb `-`; shallow `||` cannot delete). Dual-read is dead for the card lead when `initiatives[]` is present. Missing slug → `idea not found; call create_idea first`. Primary phase needs founder yes and a product bet-class why. Recon may patch initiatives + constraint; recon may not Advance primary. Mapping cannot Advance. `loopStage` mutations and spoken Ask/Do/Write back writes are rejected. |
 | `post_comment` | advisors | Side table. Never a gate. |
 | `subscribe_board` | founder + founder-authorized | Grant webhook (+ email opt-in enqueue) to an ACL member. Cos / adapter furniture — not the founder path. |
