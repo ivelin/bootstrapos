@@ -34,7 +34,10 @@ import {
 import {
   buildInitiativeCard,
   cardFromScoreboard,
+  compactJourneyPayload,
   formatInitiativeCard,
+  scoreboardHasInitiatives,
+  stripLegacyCardKeysWhenInitiatives,
   initiativesOf,
   normalizeInitiatives,
   type Initiative,
@@ -48,6 +51,13 @@ export {
   normalizeInitiatives,
   initiativesOf,
   cardFromScoreboard,
+  compactJourneyPayload,
+  rankInitiatives,
+  RANK_IS_COMPUTED_NOT_STORED,
+  DUAL_READ_DEAD_FOR_CARD_LEAD,
+  GET_JOURNEY_COMPACT_MAX,
+  stripLegacyCardKeysWhenInitiatives,
+  snapshotLeadOmitsProgress,
 } from "./initiative-card.js";
 import type { JourneyAclRole, JourneyActor } from "./journey-auth.js";
 import {
@@ -100,7 +110,7 @@ export type Scoreboard = {
   supporting?: SupportingRow[];
   /** Named accounts under this primary. No journeyPhase. NDA ≠ Try. */
   engagements?: EngagementRow[];
-  /** OS 2.8.19 report card rows. New writes prefer this. Dual-read old fields. */
+  /** OS 2.8.19 report card rows. New writes prefer this. Dual-read dead for card lead when this is present. */
   initiatives?: Initiative[];
 };
 
@@ -798,7 +808,9 @@ export function twoMinuteSnapshot(
     questions.length ? `Open questions: ${questions.join("; ")}` : "Open questions: none yet",
     "Company and idea are separate. This is a view, not a second app.",
     ...formatInitiativeCard(card),
-    ...controlPlaneSnapshotLines({ supporting, engagements }),
+    ...(scoreboardHasInitiatives(idea.scoreboard)
+      ? []
+      : controlPlaneSnapshotLines({ supporting, engagements })),
   ]
     .filter((line) => line !== undefined && line !== "")
     .join("\n");
@@ -891,7 +903,7 @@ export type JourneyIdeaPayload = {
   snapshot: string;
   /** Named accounts under this primary. No rungs. */
   engagements: EngagementRow[];
-  /** Dual-read + new writes. Card body is initiatives, not progress[]. */
+  /** Card body is initiatives. Dual-read is dead for card lead when this is present. */
   initiatives: Initiative[];
   card: InitiativeCard;
   meetingDoc?: string;
@@ -1208,7 +1220,7 @@ export class MemoryJourneyStore implements JourneyStore {
           scoreboard: lead.scoreboard,
         })
       : undefined;
-    return {
+    const payload = {
       ok: true,
       company: { slug: company.slug, label: company.label, supporting },
       owners,
@@ -1237,8 +1249,9 @@ export class MemoryJourneyStore implements JourneyStore {
         ),
       ),
       audit: this.auditFor(company.id, query.ideaSlug ? ideas[0]?.id : undefined),
-      note: `Same payload for team / advisor / board / investor prep. Views are generated. Owner comes from ACL — do not invent. Prefer webhook notify over polling. Comments never mutate gates or Advance. constraint_this_week is the honest biggest bottleneck, not a fun side quest. ${CONSTRAINT_TEACHING_PICTURE} Audit is append-only. Portfolio scores are founder/advisor labels — they cannot Advance or Kill. Control plane order is primary → supporting → engagements. Supporting cannot promote. Card is company header → bottleneck #1 → customer checks with nested engagements → other initiatives footer. progress[] is not card body. Not ~/.bootstrap-os.`,
+      note: `Same payload for team / advisor / board / investor prep. Views are generated. Owner comes from ACL — do not invent. Prefer webhook notify over polling. Comments never mutate gates or Advance. constraint_this_week is the honest biggest bottleneck, not a fun side quest. ${CONSTRAINT_TEACHING_PICTURE} Audit is append-only. Portfolio scores are founder/advisor labels — they cannot Advance or Kill. Control plane order is primary → supporting → engagements. Supporting cannot promote. Card is company header → bottleneck #1 → customer checks with nested engagements → other initiatives footer. When initiatives[] is present, dual-read of progress/supporting/engagements is dead for the card lead. progress[] is not card body. Default get_journey omits full audit (list_provenance). Not ~/.bootstrap-os.`,
     };
+    return compactJourneyPayload(payload, { expandAudit: Boolean(query.expandMeetingDoc) });
   }
 
   async createIdea(
@@ -1404,6 +1417,7 @@ export class MemoryJourneyStore implements JourneyStore {
       if (!rows.ok) return forbidden(rows.error);
       nextScoreboard = { ...nextScoreboard, initiatives: rows.value };
     }
+    nextScoreboard = stripLegacyCardKeysWhenInitiatives(nextScoreboard);
     if (input.constraintThisWeek !== undefined) {
       const normalized = normalizeConstraintThisWeek(input.constraintThisWeek);
       if (!normalized.ok) {

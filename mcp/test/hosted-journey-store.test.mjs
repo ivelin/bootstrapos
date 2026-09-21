@@ -70,12 +70,14 @@ describe("hosted membership journey store", () => {
     assert.ok(Array.isArray(after.ideas[0].lastTransitions));
     assert.ok(after.ideas[0].lastTransitions.length >= 1);
     assert.equal(after.ideas[0].lastTransitions[0].who, "founder@example.test");
-    assert.ok(Array.isArray(after.audit));
-    assert.ok(after.audit.length >= 1);
+    assert.deepEqual(after.audit, []);
+    assert.equal(after.auditVia, "list_provenance");
     const expanded = await store.getJourney(ivelin, {
       companySlug: "alpha",
       expandMeetingDoc: true,
     });
+    assert.ok(Array.isArray(expanded.audit));
+    assert.ok(expanded.audit.length >= 1);
     assert.equal(expanded.ideas[0].comments[0].body, "note");
     const created = await store.createIdea(ivelin, {
       companySlug: "alpha",

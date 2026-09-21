@@ -327,7 +327,7 @@ describe("journey views + tools (memory store)", () => {
     });
     assert.equal(advisorWriteAcl.ok, false);
 
-    const seen = await store.getJourney(advisor, { companySlug: "corehaul" });
+    const seen = await store.getJourney(advisor, { companySlug: "corehaul", expandMeetingDoc: true });
     assert.equal(seen.ok, true);
     const vias = seen.audit.map((a) => a.whatChanged.via).sort();
     assert.deepEqual(vias, ["acl", "post_comment", "put_journey"]);
@@ -336,7 +336,7 @@ describe("journey views + tools (memory store)", () => {
 
     const hidden = await store.getJourney(dye, { companySlug: "corehaul" });
     assert.equal(hidden.ok, false);
-    const dyeView = await store.getJourney(dye, { companySlug: "dyeconverter" });
+    const dyeView = await store.getJourney(dye, { companySlug: "dyeconverter", expandMeetingDoc: true });
     assert.equal(dyeView.audit.length, 0);
   });
 
@@ -503,7 +503,7 @@ describe("journey views + tools (memory store)", () => {
     const hiddenList = await store.listSubscribers(dye, { companySlug: "corehaul" });
     assert.equal(hiddenList.ok, false);
 
-    const advisorBoard = await store.getJourney(advisor, { companySlug: "corehaul" });
+    const advisorBoard = await store.getJourney(advisor, { companySlug: "corehaul", expandMeetingDoc: true });
     assert.equal(advisorBoard.ok, true);
     assert.doesNotMatch(JSON.stringify(advisorBoard.audit), /hooks\.example\.test|webhookUrl/);
     const advisorProv = await store.listProvenance(advisor, { companySlug: "corehaul" });

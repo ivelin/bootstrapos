@@ -106,6 +106,15 @@ describe("PGlite journey RLS (isolated, never prod)", { concurrency: false }, ()
     assert.match(implicitLoop, /spoken Ask\/Do\/Write back are not card fields/);
     assert.match(implicitLoop, /Do not migrate\/seed\/live-probe supabase-pirin-ai/);
     assert.doesNotMatch(implicitLoop, /supabase\.co/);
+    const dualRead = fs.readFileSync(
+      path.join(__dirname, "..", "supabase", "migrations", "20260927_bootstrap_os_dual_read_dead.sql"),
+      "utf8",
+    );
+    assert.match(dualRead, /scoreboard - 'progress' - 'supporting' - 'engagements'/);
+    assert.match(dualRead, /Dual-read dead/);
+    assert.match(dualRead, /Do not migrate\/seed\/live-probe supabase-pirin-ai/);
+    assert.doesNotMatch(dualRead, /supabase\.co/);
+    assert.doesNotMatch(dualRead, /dyeconverter|corehaul|micdots/);
   });
 
   it("seed is one default idea per company", async () => {

@@ -13,6 +13,7 @@ import {
 import {
   MemoryJourneyStore,
   cardFromScoreboard,
+  compactJourneyPayload,
   normalizeSlug,
   type EngagementRow,
   type GateDecision,
@@ -35,7 +36,7 @@ import {
   admitPrimaryWhy,
 } from "./control-plane.js";
 
-/** Scoreboard adapter: card from initiatives[] + dual-read. No prod SQL. */
+/** Scoreboard adapter: top-level card from initiatives[]. Dual-read dead for card lead when initiatives present. No prod SQL. */
 function attachCardFromScoreboard(raw: unknown): unknown {
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) return raw;
   const payload = raw as {
@@ -276,7 +277,9 @@ export class SupabaseJourneyStore implements JourneyStore {
       p_idea: query.ideaSlug ?? null,
     });
     if ("error" in hit) return { ok: false, error: hit.error };
-    return attachCardFromScoreboard(hit.raw);
+    return compactJourneyPayload(attachCardFromScoreboard(hit.raw), {
+      expandAudit: Boolean(query.expandMeetingDoc),
+    });
   }
 
   async createIdea(

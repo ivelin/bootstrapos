@@ -8,9 +8,17 @@
  * outcome, impact, evidence, clock?, parentId?
  * Kinds v1 ONLY: customer_check | engagement | capital | legal | advisor
  *
- * Dual-read old scoreboard.supporting / engagements / constraintThisWeek.
- * New writes → initiatives[]. Mapping cannot Advance. NDA ≠ Try.
- * Ask / Do is not a card. progress[] is not card body.
+ * Rank is computed by rankInitiatives, not stored. No priority integer.
+ * At journeyPhase 1 (Write the bet / Ground) the primary is the single
+ * active customer_check. Nested engagements inherit parentId and do not
+ * title. capital / legal / advisor / hire never title until paid use.
+ * After paid use, rank can change — do not invent that rule here.
+ *
+ * Dual-read of progress[] / supporting[] / engagements[] is dead for the
+ * card lead once initiatives[] is present. Empty initiatives[] still
+ * dual-reads old supporting / engagements / constraintThisWeek.
+ * New writes → initiatives[] and clear those legacy keys. Mapping cannot
+ * Advance. NDA ≠ Try. Ask / Do is not a card. progress[] is not card body.
  */
 
 import { formatSpokenJourney } from "./clock-map.js";
@@ -95,6 +103,33 @@ export const CLOCK_IMPACT_WARN =
 
 export const INITIATIVE_NO_JOURNEY_PHASE =
   "initiatives[] cannot carry journeyPhase — mapping cannot Advance";
+
+export const RANK_IS_COMPUTED_NOT_STORED =
+  "rank is computed by rankInitiatives, not stored — no priority integer. At journeyPhase 1 the primary is the single active customer_check. Nested engagements inherit parentId and do not title. capital / legal / advisor / hire never title until paid use. After paid use, do not invent a new rank rule.";
+
+export const DUAL_READ_DEAD_FOR_CARD_LEAD =
+  "when initiatives[] is present, dual-read of progress[] / supporting[] / engagements[] is dead for the card lead";
+
+export const GET_JOURNEY_COMPACT_MAX = 20_000;
+
+export const AUDIT_VIA_PROVENANCE = "list_provenance";
+
+export const LEGACY_CARD_KEYS = ["progress", "supporting", "engagements"] as const;
+
+export function scoreboardHasInitiatives(scoreboard: { initiatives?: unknown } | undefined): boolean {
+  return Array.isArray(scoreboard?.initiatives) && scoreboard.initiatives.length > 0;
+}
+
+export function stripLegacyCardKeysWhenInitiatives<T extends Record<string, unknown>>(
+  scoreboard: T,
+): T {
+  if (!scoreboardHasInitiatives(scoreboard)) return scoreboard;
+  const next = { ...scoreboard };
+  delete next.progress;
+  delete next.supporting;
+  delete next.engagements;
+  return next;
+}
 
 const KINDS = new Set<string>(INITIATIVE_KINDS);
 const STATUSES = new Set<string>(INITIATIVE_STATUSES);
@@ -270,7 +305,7 @@ function supportingImpact(state: SupportingRow["state"]): InitiativeImpact {
   return state === "clock" ? "clock" : "none";
 }
 
-/** Dual-read old scoreboard fields. Used only when initiatives[] is empty. */
+/** Dual-read old scoreboard fields. Dead for card lead when initiatives[] is present. */
 export function initiativesFromLegacy(scoreboard: {
   constraint_this_week?: unknown;
   supporting?: unknown;
@@ -352,6 +387,7 @@ export function initiativesOf(scoreboard: {
 }
 
 function pickBottleneck(rows: Initiative[]): Initiative | null {
+  // Rank is computed, not stored. Paper kinds never title until paid use.
   const openChecks = rows.filter(
     (row) => row.kind === "customer_check" && row.status !== "closed",
   );
@@ -364,6 +400,7 @@ function pickBottleneck(rows: Initiative[]): Initiative | null {
   return openChecks[0] ?? null;
 }
 
+/** Computed rank. Do not persist a priority integer. See RANK_IS_COMPUTED_NOT_STORED. */
 export function rankInitiatives(rows: Initiative[]): {
   bottleneck: Initiative | null;
   customerChecks: CustomerCheckRow[];
@@ -506,4 +543,30 @@ export function cardFromScoreboard(input: {
 export function cardBodyOmitsProgress(cardText: string, progress: string[] | undefined): boolean {
   if (!progress?.length) return true;
   return progress.every((note) => !cardText.includes(note));
+}
+
+/** Lead is WHERE ARE WE … through OTHER INITIATIVES. progress[] must not write it. */
+export function snapshotLeadOmitsProgress(snapshot: string, progress: string[] | undefined): boolean {
+  if (!progress?.length) return true;
+  const start = snapshot.indexOf("WHERE ARE WE —");
+  if (start < 0) {
+    return progress.every((note) => !snapshot.includes(note));
+  }
+  const end = snapshot.indexOf("OTHER INITIATIVES", start);
+  const lead = end >= 0 ? snapshot.slice(start, end) : snapshot.slice(start);
+  return progress.every((note) => !lead.includes(note));
+}
+
+export function compactJourneyPayload(
+  raw: unknown,
+  opts: { expandAudit?: boolean } = {},
+): unknown {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return raw;
+  const payload = { ...(raw as Record<string, unknown>) };
+  if (payload.ok !== true) return raw;
+  if (!opts.expandAudit) {
+    payload.audit = [];
+    payload.auditVia = AUDIT_VIA_PROVENANCE;
+  }
+  return payload;
 }
