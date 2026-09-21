@@ -12,6 +12,7 @@ import {
 } from "./journey-notify.js";
 import {
   MemoryJourneyStore,
+  applySpokenPayloadLead,
   cardFromScoreboard,
   compactJourneyPayload,
   normalizeSlug,
@@ -25,6 +26,7 @@ import {
   type Scoreboard,
   type SupportingRow,
 } from "./journey.js";
+import { scoreboardHasInitiatives } from "./initiative-card.js";
 import {
   LOOP_STAGE_MUTATION_REJECTED,
   SPOKEN_LOOP_WRITE_REJECTED,
@@ -42,27 +44,49 @@ function attachCardFromScoreboard(raw: unknown): unknown {
   const payload = raw as {
     ok?: boolean;
     card?: unknown;
-    company?: { slug?: string; label?: string };
+    company?: { slug?: string; label?: string; supporting?: unknown };
+    supporting?: unknown;
+    engagements?: unknown;
     ideas?: Array<{
       clocks?: { journeyPhase?: number; currentGate?: string };
       scoreboard?: Record<string, unknown>;
+      engagements?: unknown;
+      killed?: boolean;
+      card?: unknown;
     }>;
   };
-  if (!payload.ok || payload.card || !payload.ideas?.[0]) return raw;
+  if (!payload.ok || !payload.ideas?.[0]) return raw;
   const idea = payload.ideas[0];
   const slug = payload.company?.slug || "";
   const label = payload.company?.label || slug;
-  if (!idea.scoreboard) return raw;
-  return {
+  const sb = idea.scoreboard ?? {};
+  const merged = scoreboardHasInitiatives(sb)
+    ? sb
+    : {
+        ...sb,
+        supporting: sb.supporting ?? payload.supporting ?? payload.company?.supporting,
+        engagements: sb.engagements ?? idea.engagements ?? payload.engagements,
+      };
+  const card = idea.scoreboard
+    ? cardFromScoreboard({
+        slug,
+        label,
+        journeyPhase: Number(idea.clocks?.journeyPhase) || 1,
+        gate: String(idea.clocks?.currentGate || "hold"),
+        scoreboard: merged,
+        killed: idea.killed === true || idea.clocks?.currentGate === "kill",
+        allowPaperBottleneck: sb.allowPaperBottleneck === true,
+      })
+    : payload.card;
+  const ideas = payload.ideas.map((row, i) =>
+    i === 0 && card && !row.card ? { ...row, card } : row,
+  );
+  const next = {
     ...payload,
-    card: cardFromScoreboard({
-      slug,
-      label,
-      journeyPhase: Number(idea.clocks?.journeyPhase) || 1,
-      gate: String(idea.clocks?.currentGate || "hold"),
-      scoreboard: idea.scoreboard,
-    }),
+    ...(card ? { card } : {}),
+    ideas,
   };
+  return applySpokenPayloadLead(next);
 }
 
 function supabaseUrl(): string | undefined {
