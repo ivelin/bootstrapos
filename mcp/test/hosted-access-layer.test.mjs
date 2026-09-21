@@ -143,6 +143,10 @@ describe("hosted access layer (one login, many companies)", () => {
     assert.match(journey.description, /lastTransitions|decision log/i);
     assert.match(journey.description, /owners/);
     assert.match(journey.description, /constraintThisWeek|bottleneck/i);
+    assert.match(journey.description, /founder-facing spoken card/i);
+    assert.match(journey.description, /Also moving \(not the bottleneck\)/);
+    assert.match(journey.description, /show clocks/);
+    assert.match(journey.description, /Clocks are storage/);
     assert.doesNotMatch(journey.description, /swim/i);
     assert.doesNotMatch(journey.description, /state machine/i);
     const ideaParam = journey.inputSchema?.properties?.idea;

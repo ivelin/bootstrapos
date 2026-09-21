@@ -20,7 +20,8 @@ import {
   normalizeInitiatives,
 } from "../dist/initiative-card.js";
 import { OS_VERSION } from "../dist/constants.js";
-import { initiativeMappingMayAdvance } from "../dist/house-rules.js";
+import { HOUSE_RULE_LINES, HOUSE_RULE_PINS, initiativeMappingMayAdvance } from "../dist/house-rules.js";
+import { HOSTED_MCP_INSTRUCTIONS, TOOL_GET_JOURNEY } from "../dist/hosted-copy.js";
 import { REPO_ROOT } from "./helpers.mjs";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
@@ -260,6 +261,66 @@ describe("OS 2.8.19 initiative report card", () => {
     const ok = normalizeInitiatives([paid, second]);
     assert.equal(ok.ok, true);
     assert.equal(hasPaidUse(ok.value), true);
+  });
+
+  it("spoken-card pin is founder voice default; clocks are storage", () => {
+    const os = fs.readFileSync(
+      path.join(REPO_ROOT, "company-os/operating-system.md"),
+      "utf8",
+    );
+    assert.match(os, /### Spoken card \(founder voice default\)/);
+    assert.match(os, /Start at the company name, then Bottleneck #1 in that company’s words/);
+    assert.match(os, /Then accounts: where it stands \/ next \(nested under the customer check\)/);
+    assert.match(os, /Then “Also moving \(not the bottleneck\)” for capital \/ legal \/ advisor/);
+    assert.match(os, /Then open questions in plain words/);
+    assert.match(os, /Hide unless the human says “show clocks” or “show schema”/);
+    assert.match(os, /Engine keeps those rules\. Spoken card does not print them/);
+    assert.match(os, /Clocks are storage/);
+    assert.match(os, /\| 2\.8\.20 \|/);
+    assert.match(os, /\*\*Version:\*\* 2\.8\.19/);
+    assert.doesNotMatch(os, /card-v1/);
+
+    const lines = HOUSE_RULE_LINES.join("\n");
+    assert.match(lines, /Spoken card \(founder voice default\)/);
+    assert.match(lines, /Also moving \(not the bottleneck\)/);
+    assert.match(lines, /show clocks/);
+    assert.match(lines, /Clocks are storage/);
+    const pins = JSON.stringify(HOUSE_RULE_PINS);
+    assert.match(pins, /spoken-card-2\.8\.20/);
+    assert.match(pins, /spoken-card-founder-voice-default/);
+    assert.match(pins, /initiative-report-card-2\.8\.19/);
+
+    assert.match(TOOL_GET_JOURNEY, /founder-facing spoken card without a clarification round/);
+    assert.match(TOOL_GET_JOURNEY, /Also moving \(not the bottleneck\)/);
+    assert.match(TOOL_GET_JOURNEY, /show clocks/);
+    assert.match(TOOL_GET_JOURNEY, /Clocks are storage/);
+    assert.match(HOSTED_MCP_INSTRUCTIONS, /founder-facing spoken card without a clarification round/);
+    assert.match(HOSTED_MCP_INSTRUCTIONS, /Also moving \(not the bottleneck\)/);
+    assert.match(HOSTED_MCP_INSTRUCTIONS, /show clocks/);
+    assert.match(HOSTED_MCP_INSTRUCTIONS, /Clocks are storage/);
+
+    const infoDesc = fs.readFileSync(path.join(REPO_ROOT, "mcp/src/server.ts"), "utf8");
+    assert.match(infoDesc, /spoken-card default \(founder voice/);
+    assert.match(infoDesc, /clocks are storage/);
+    assert.match(infoDesc, /show clocks/);
+
+    const firstHour = fs.readFileSync(
+      path.join(REPO_ROOT, "company-os/first-hour.md"),
+      "utf8",
+    );
+    assert.match(firstHour, /Also moving \(not the bottleneck\)/);
+    assert.match(firstHour, /spoken-card-founder-voice-default/);
+    const ai = fs.readFileSync(path.join(REPO_ROOT, "company-os/ai-instructions.md"), "utf8");
+    assert.match(ai, /spoken-card-founder-voice-default/);
+    assert.match(ai, /Also moving \(not the bottleneck\)/);
+    const pinsSkill = fs.readFileSync(
+      path.join(REPO_ROOT, "plugin/skills/house-rule-pins/SKILL.md"),
+      "utf8",
+    );
+    assert.match(pinsSkill, /Spoken card \(founder voice default\) \(2\.8\.20\)/);
+
+    assert.equal(OS_VERSION, "2.8.19");
+    assert.equal(initiativeMappingMayAdvance(), false);
   });
 
   it("NDA cannot be written as delivered Try", () => {

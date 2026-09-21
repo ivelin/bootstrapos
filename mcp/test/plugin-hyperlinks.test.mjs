@@ -100,7 +100,7 @@ describe("preview plugin (hyperlink only)", () => {
     for (const file of files) {
       const body = fs.readFileSync(file, "utf8");
       const thin = file.includes(`${path.sep}house-rule-pins${path.sep}`) || file.includes(`${path.sep}query-os-first${path.sep}`);
-      assert.ok(body.length < (thin ? 2800 : 1800), `${file} is too long — link, do not copy the OS`);
+      assert.ok(body.length < (thin ? 3200 : 1800), `${file} is too long — link, do not copy the OS`);
       assert.match(body, /https:\/\/github.com\/ivelin\/bootstrap/);
       for (const phrase of ESSAY_FORBIDDEN) {
         assert.ok(!body.includes(phrase), `${file} must not copy OS essay: ${phrase}`);
@@ -113,6 +113,7 @@ describe("preview plugin (hyperlink only)", () => {
     assert.match(pins, /house-rule-do-not-automate-a-step-that-should-not-exist/);
     assert.match(pins, /house-rule-legal-paper-cannot-promote/);
     assert.match(pins, /house-rule-one-founder-control-plane/);
+    assert.match(pins, /spoken-card-founder-voice-default/);
     assert.match(pins, /house-rule-advisor-ride-along-is-assumed-not-observed/);
     assert.match(pins, /old SaaS playbook/);
     assert.match(pins, /automate the playbook/);

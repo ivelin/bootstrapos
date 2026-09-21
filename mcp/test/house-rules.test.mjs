@@ -66,6 +66,11 @@ describe("OS house rules (adapter reminders)", () => {
     assert.match(pins, /house-rule-one-founder-control-plane/);
     assert.match(pins, /one-control-plane-2.8.18/);
     assert.match(pins, /initiative-report-card-2.8.19/);
+    assert.match(pins, /spoken-card-2.8.20/);
+    assert.match(pins, /Also moving \(not the bottleneck\)/);
+    assert.match(pins, /show clocks/);
+    assert.match(pins, /Clocks are storage/);
+    assert.match(blob, /Spoken card \(founder voice default\)/);
     assert.equal(initiativeMappingMayAdvance(), false);
     assert.match(pins, /house-rule-advisor-ride-along-is-assumed-not-observed/);
     assert.match(pins, /house-rule-unpaid-weeks-cannot-promote/);
