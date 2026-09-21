@@ -39,7 +39,7 @@ describe("admin company labels (docs + fail-closed create_idea)", () => {
     const journey = fs.readFileSync(JOURNEY_DOC, "utf8");
     const qa = fs.readFileSync(QA_DOC, "utf8");
     for (const body of [hosted, journey, qa]) {
-      assert.match(body, /Admin \(or Cos on admin instruction\)/);
+      assert.match(body, /\*{0,2}Admin\*{0,2} \(or Cos on admin instruction\)/);
       assert.match(body, /Cos is not a required gate/);
       assert.doesNotMatch(body, /Cos must approve every (company create|label)/i);
     }
@@ -48,7 +48,7 @@ describe("admin company labels (docs + fail-closed create_idea)", () => {
     assert.match(hosted, /VALUES \('bravo'\)/);
     assert.match(hosted, /PR \/ cloud agents must \*\*not\*\* migrate, seed, or live-probe/);
     assert.match(hosted, /admin-company-labels\.test\.mjs/);
-    assert.match(journey, /create_idea requires an \*\*existing\*\* company label/);
+    assert.match(journey, /`create_idea` requires an \*\*existing\*\* company label/);
     assert.match(journey, /HOSTED_IDENTITY\.md#admin-company-labels/);
     assert.match(journey, /PR \/ cloud agents must \*\*not\*\* migrate, seed, or live-probe/);
     assert.match(qa, /admin-company-labels\.test\.mjs/);
