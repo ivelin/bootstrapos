@@ -933,13 +933,25 @@ export function ideaPayload(
     .sort((a, b) => a.at.localeCompare(b.at));
   const supporting = extras.supporting ?? companySupportingOf(company, [idea]);
   const engagements = engagementsOf(idea.scoreboard);
-  const initiatives = initiativesOf(idea.scoreboard);
+  const killed = idea.currentGate === "kill";
+  const allowPaper = Boolean(
+    (idea.scoreboard as { allowPaperBottleneck?: unknown }).allowPaperBottleneck,
+  );
+  const scoreboardForCard = scoreboardHasInitiatives(idea.scoreboard)
+    ? idea.scoreboard
+    : {
+        ...idea.scoreboard,
+        supporting: idea.scoreboard.supporting?.length ? idea.scoreboard.supporting : supporting,
+      };
+  const initiatives = initiativesOf(scoreboardForCard, { killed, allowPaperBottleneck: allowPaper });
   const card = buildInitiativeCard({
     slug: company.slug,
     label: company.label,
     journeyPhase: idea.journeyPhase,
     gate: idea.currentGate,
     initiatives,
+    killed,
+    allowPaperBottleneck: allowPaper,
   });
   const payload: JourneyIdeaPayload = {
     slug: idea.slug,
@@ -955,6 +967,12 @@ export function ideaPayload(
       card,
       constraintThisWeek: constraintThisWeekOf(idea),
       openQuestions: idea.scoreboard.openQuestions,
+      supporting: scoreboardHasInitiatives(idea.scoreboard) ? [] : supporting,
+      engagements: scoreboardHasInitiatives(idea.scoreboard) ? [] : engagements,
+      initiativesPresent: scoreboardHasInitiatives(idea.scoreboard),
+      killed,
+      killedCard: killed ? killedCardOf(idea) : undefined,
+      allowPaperBottleneck: allowPaper,
     }),
     engagements,
     initiatives,

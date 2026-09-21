@@ -146,6 +146,40 @@ const CONCAT_JOIN = /\s(?:\+|\/|;|and|plus)\s|\s[|/]\s/;
 const DATE_RE = /\b20\d{2}-\d{2}-\d{2}\b|\b20\d{2}\/\d{1,2}\/\d{1,2}\b/;
 const NAMED_ACCOUNT =
   /\b(?:[A-Za-z][A-Za-z0-9'/-]{1,24}\s+){0,4}(?:plant|shop|account|operator|founders?|owners?)\b/i;
+/** Paper instruments as bottleneck premise. All-caps SAFE/FAST so English “safe/fast” do not trip. */
+const PAPER_BOTTLENECK_TOKEN = /(?:^|[^\w])(?:SAFE|SOPA|FAST)(?:[^\w]|$)/;
+const ACTIVE_PAY_OR_USE = /\bpay or use\b/i;
+
+export type SpokenCardOpts = {
+  allowPaperBottleneck?: boolean;
+  killed?: boolean;
+};
+
+export function looksLikePaperBottleneck(text: string): boolean {
+  const t = normalize(text);
+  return PAPER_BOTTLENECK_TOKEN.test(t) || /(?:^|[^\w])sopa(?:[^\w]|$)/i.test(t);
+}
+
+export function isActivePayOrUse(row: { status?: string; measure?: string } | null | undefined): boolean {
+  if (!row) return false;
+  return row.status === "active" && ACTIVE_PAY_OR_USE.test(row.measure ?? "");
+}
+
+export function spokenBottleneckLineOf(text: string): string {
+  const m = String(text ?? "").match(/^Bottleneck #1:\s*(.*)$/m);
+  return m ? m[1].trim() : "";
+}
+
+function allowPaperOf(source: unknown): boolean {
+  if (!source || typeof source !== "object" || Array.isArray(source)) return false;
+  return (source as { allowPaperBottleneck?: unknown }).allowPaperBottleneck === true;
+}
+
+function isKilledSource(source: unknown): boolean {
+  if (!source || typeof source !== "object" || Array.isArray(source)) return false;
+  const rec = source as { killed?: unknown; clocks?: { currentGate?: unknown }; currentGate?: unknown };
+  return rec.killed === true || rec.clocks?.currentGate === "kill" || rec.currentGate === "kill";
+}
 
 function normalize(text: string): string {
   return text.replace(/\s+/g, " ").trim();
@@ -306,17 +340,21 @@ function supportingImpact(state: SupportingRow["state"]): InitiativeImpact {
 }
 
 /** Dual-read old scoreboard fields. Dead for card lead when initiatives[] is present. */
-export function initiativesFromLegacy(scoreboard: {
-  constraint_this_week?: unknown;
-  supporting?: unknown;
-  engagements?: unknown;
-}): Initiative[] {
+export function initiativesFromLegacy(
+  scoreboard: {
+    constraint_this_week?: unknown;
+    supporting?: unknown;
+    engagements?: unknown;
+  },
+  opts: SpokenCardOpts = {},
+): Initiative[] {
   const rows: Initiative[] = [];
   const constraint =
     typeof scoreboard.constraint_this_week === "string"
       ? scoreboard.constraint_this_week.trim()
       : "";
-  if (constraint) {
+  // Killed boards must not invent a live customer check with measure pay-or-use.
+  if (constraint && !opts.killed) {
     rows.push({
       id: "legacy-constraint",
       kind: "customer_check",
@@ -372,36 +410,42 @@ export function initiativesFromLegacy(scoreboard: {
   return rows;
 }
 
-export function initiativesOf(scoreboard: {
-  initiatives?: unknown;
-  constraint_this_week?: unknown;
-  supporting?: unknown;
-  engagements?: unknown;
-}): Initiative[] {
+export function initiativesOf(
+  scoreboard: {
+    initiatives?: unknown;
+    constraint_this_week?: unknown;
+    supporting?: unknown;
+    engagements?: unknown;
+  },
+  opts: SpokenCardOpts = {},
+): Initiative[] {
   const stored = scoreboard.initiatives;
   if (Array.isArray(stored) && stored.length) {
     const hit = normalizeInitiatives(stored);
     return hit.ok ? hit.value : [];
   }
-  return initiativesFromLegacy(scoreboard);
+  return initiativesFromLegacy(scoreboard, opts);
 }
 
-function pickBottleneck(rows: Initiative[]): Initiative | null {
+function pickBottleneck(rows: Initiative[], opts: SpokenCardOpts = {}): Initiative | null {
   // Rank is computed, not stored. Paper kinds never title until paid use.
+  // A killed idea has no live pay-or-use bottleneck.
+  if (opts.killed) return null;
   const openChecks = rows.filter(
     (row) => row.kind === "customer_check" && row.status !== "closed",
   );
-  const dated = openChecks.filter(
-    (row) => row.impact !== "clock" && hasNamedAccountWithDate(row),
-  );
+  const usable = opts.allowPaperBottleneck
+    ? openChecks
+    : openChecks.filter((row) => !looksLikePaperBottleneck(row.premise));
+  const dated = usable.filter((row) => row.impact !== "clock" && hasNamedAccountWithDate(row));
   if (dated[0]) return dated[0];
-  const operating = openChecks.filter((row) => row.impact !== "clock");
+  const operating = usable.filter((row) => row.impact !== "clock");
   if (operating[0]) return operating[0];
-  return openChecks[0] ?? null;
+  return usable[0] ?? null;
 }
 
 /** Computed rank. Do not persist a priority integer. See RANK_IS_COMPUTED_NOT_STORED. */
-export function rankInitiatives(rows: Initiative[]): {
+export function rankInitiatives(rows: Initiative[], opts: SpokenCardOpts = {}): {
   bottleneck: Initiative | null;
   customerChecks: CustomerCheckRow[];
   footer: Initiative[];
@@ -429,7 +473,7 @@ export function rankInitiatives(rows: Initiative[]): {
     if (nestedIds.has(row.id)) return false;
     return !row.parentId || !byId.has(row.parentId);
   });
-  const bottleneck = pickBottleneck(rows);
+  const bottleneck = pickBottleneck(rows, opts);
   const warn =
     bottleneck?.impact === "clock" ||
     open.some((row) => row.impact === "clock" && row.kind !== "customer_check")
@@ -452,8 +496,13 @@ export function buildInitiativeCard(input: {
   journeyPhase: number;
   gate: string;
   initiatives: Initiative[];
+  killed?: boolean;
+  allowPaperBottleneck?: boolean;
 }): InitiativeCard {
-  const ranked = rankInitiatives(input.initiatives);
+  const ranked = rankInitiatives(input.initiatives, {
+    killed: Boolean(input.killed),
+    allowPaperBottleneck: Boolean(input.allowPaperBottleneck),
+  });
   const stage = formatSpokenJourney(input.journeyPhase);
   return {
     company: {
@@ -529,14 +578,21 @@ export function cardFromScoreboard(input: {
     supporting?: unknown;
     engagements?: unknown;
     progress?: unknown;
+    allowPaperBottleneck?: unknown;
   };
+  killed?: boolean;
+  allowPaperBottleneck?: boolean;
 }): InitiativeCard {
+  const allowPaper = Boolean(input.allowPaperBottleneck) || allowPaperOf(input.scoreboard);
+  const killed = Boolean(input.killed);
   return buildInitiativeCard({
     slug: input.slug,
     label: input.label,
     journeyPhase: input.journeyPhase,
     gate: input.gate,
-    initiatives: initiativesOf(input.scoreboard),
+    initiatives: initiativesOf(input.scoreboard, { killed, allowPaperBottleneck: allowPaper }),
+    killed,
+    allowPaperBottleneck: allowPaper,
   });
 }
 
@@ -572,20 +628,114 @@ function openQuestionsOf(source: unknown): string[] {
   return raw.filter((row): row is string => typeof row === "string" && row.trim().length > 0);
 }
 
+function scoreboardRecordOf(source: unknown): Record<string, unknown> | undefined {
+  if (!source || typeof source !== "object" || Array.isArray(source)) return undefined;
+  const sb = (source as { scoreboard?: unknown }).scoreboard;
+  if (sb && typeof sb === "object" && !Array.isArray(sb)) return sb as Record<string, unknown>;
+  return source as Record<string, unknown>;
+}
+
+function asSupportingList(raw: unknown): SupportingRow[] {
+  return supportingOf({ supporting: raw });
+}
+
+function asEngagementList(raw: unknown): EngagementRow[] {
+  return engagementsOf({ engagements: raw });
+}
+
+/** Prefer idea/scoreboard rows; fall back to payload-level dual-read (hosted hole). */
+export function collectLegacyControlPlane(
+  payload: Record<string, unknown> | undefined,
+  idea: unknown,
+): { supporting: SupportingRow[]; engagements: EngagementRow[] } {
+  const sb = idea && typeof idea === "object" ? scoreboardRecordOf(idea) : undefined;
+  const company =
+    payload?.company && typeof payload.company === "object"
+      ? (payload.company as { supporting?: unknown })
+      : undefined;
+  const ideaEngagements =
+    idea && typeof idea === "object" ? (idea as { engagements?: unknown }).engagements : undefined;
+  const supporting = asSupportingList(sb?.supporting).length
+    ? asSupportingList(sb?.supporting)
+    : asSupportingList(company?.supporting).length
+      ? asSupportingList(company?.supporting)
+      : asSupportingList(payload?.supporting);
+  const engagements = asEngagementList(sb?.engagements).length
+    ? asEngagementList(sb?.engagements)
+    : asEngagementList(ideaEngagements).length
+      ? asEngagementList(ideaEngagements)
+      : asEngagementList(payload?.engagements);
+  return { supporting, engagements };
+}
+
+function spokenBottleneckPremise(
+  card: InitiativeCard | null | undefined,
+  constraintThisWeek: string | undefined,
+  opts: SpokenCardOpts = {},
+): string {
+  if (opts.killed) return "none yet";
+  const premise = card?.bottleneck?.premise?.trim() || "";
+  if (premise && (opts.allowPaperBottleneck || !looksLikePaperBottleneck(premise))) {
+    return premise;
+  }
+  const constraint = constraintThisWeek?.trim() || "";
+  if (constraint && (opts.allowPaperBottleneck || !looksLikePaperBottleneck(constraint))) {
+    if (!premise) return constraint;
+  }
+  return "none yet";
+}
+
+function footerLabelsForSpoken(input: {
+  card?: InitiativeCard | null;
+  supporting?: SupportingRow[];
+  engagements?: EngagementRow[];
+  initiativesPresent?: boolean;
+}): string[] {
+  const seen = new Set<string>();
+  const out: string[] = [];
+  const push = (value: string | undefined) => {
+    const t = (value ?? "").trim();
+    if (!t || seen.has(t)) return;
+    seen.add(t);
+    out.push(t);
+  };
+  for (const row of input.card?.footer ?? []) push(row.premise);
+  if (!input.initiativesPresent) {
+    for (const row of input.supporting ?? []) {
+      push(row.lastObservedFact || row.nextAction || row.role);
+    }
+    for (const row of input.engagements ?? []) push(row.account);
+  }
+  return out;
+}
+
 /** Founder-voice card. No journey integers, gate labels, WIP, OS version, or kind slugs. */
 export function formatSpokenCard(input: {
   label: string;
   card?: InitiativeCard | null;
   constraintThisWeek?: string;
   openQuestions?: string[];
+  supporting?: SupportingRow[];
+  engagements?: EngagementRow[];
+  initiativesPresent?: boolean;
+  killed?: boolean;
+  killedCard?: string;
+  allowPaperBottleneck?: boolean;
 }): string {
   const label = input.label.trim() || "company";
   const card = input.card;
-  const bottleneck =
-    card?.bottleneck?.premise?.trim() ||
-    input.constraintThisWeek?.trim() ||
-    "none yet";
-  const lines = [label, "", `Bottleneck #1: ${bottleneck}`, ""];
+  const opts: SpokenCardOpts = {
+    killed: Boolean(input.killed),
+    allowPaperBottleneck: Boolean(input.allowPaperBottleneck),
+  };
+  const bottleneck = spokenBottleneckPremise(card, input.constraintThisWeek, opts);
+  const lines = [label, ""];
+  if (opts.killed) {
+    const killLine = (input.killedCard ?? "").replace(/^☠\s*/, "").trim();
+    lines.push(killLine || "Kill");
+    lines.push("");
+  }
+  lines.push(`Bottleneck #1: ${bottleneck}`, "");
   const checks = card?.customerChecks ?? [];
   if (checks.length) {
     for (const check of checks) {
@@ -601,12 +751,17 @@ export function formatSpokenCard(input: {
     lines.push("");
   }
   lines.push("Also moving (not the bottleneck)");
-  const footer = card?.footer ?? [];
+  const footer = footerLabelsForSpoken({
+    card,
+    supporting: input.supporting,
+    engagements: input.engagements,
+    initiativesPresent: Boolean(input.initiativesPresent),
+  });
   if (!footer.length) {
     lines.push("  none yet");
   } else {
     for (const row of footer) {
-      lines.push(`  ${row.premise}`);
+      lines.push(`  ${row}`);
     }
   }
   lines.push("");
@@ -652,13 +807,58 @@ function compactCardCompany(
   return next;
 }
 
-function spokenFromIdea(idea: Record<string, unknown>, fallbackLabel: string): string {
-  const card = idea.card && typeof idea.card === "object" ? (idea.card as InitiativeCard) : undefined;
-  const scoreboard =
-    idea.scoreboard && typeof idea.scoreboard === "object"
-      ? (idea.scoreboard as { openQuestions?: unknown })
+function clocksOfIdea(idea: Record<string, unknown>): { journeyPhase: number; currentGate: string } {
+  const clocks =
+    idea.clocks && typeof idea.clocks === "object"
+      ? (idea.clocks as { journeyPhase?: unknown; currentGate?: unknown })
+      : {};
+  return {
+    journeyPhase: Number(clocks.journeyPhase) || 1,
+    currentGate: String(clocks.currentGate || idea.currentGate || "hold"),
+  };
+}
+
+function enrichIdeaCard(
+  idea: Record<string, unknown>,
+  payload: Record<string, unknown>,
+  fallbackLabel: string,
+): InitiativeCard {
+  const sb = scoreboardRecordOf(idea) ?? {};
+  const hasInit = scoreboardHasInitiatives(sb);
+  const { supporting, engagements } = collectLegacyControlPlane(payload, idea);
+  const scoreboard = hasInit
+    ? sb
+    : {
+        ...sb,
+        supporting: sb.supporting ?? supporting,
+        engagements: sb.engagements ?? engagements,
+      };
+  const clocks = clocksOfIdea(idea);
+  const company =
+    payload.company && typeof payload.company === "object"
+      ? (payload.company as { slug?: string; label?: string })
       : undefined;
-  return formatSpokenCard({
+  return cardFromScoreboard({
+    slug: company?.slug || "",
+    label: (company?.label || fallbackLabel || "").trim() || "company",
+    journeyPhase: clocks.journeyPhase,
+    gate: clocks.currentGate,
+    scoreboard,
+    killed: isKilledSource(idea) || clocks.currentGate === "kill",
+    allowPaperBottleneck: allowPaperOf(sb),
+  });
+}
+
+function spokenInputFromIdea(
+  idea: Record<string, unknown>,
+  payload: Record<string, unknown>,
+  fallbackLabel: string,
+  card: InitiativeCard | undefined,
+): Parameters<typeof formatSpokenCard>[0] {
+  const sb = scoreboardRecordOf(idea);
+  const hasInit = scoreboardHasInitiatives(sb);
+  const { supporting, engagements } = collectLegacyControlPlane(payload, idea);
+  return {
     label:
       (card?.company?.label || fallbackLabel || "").trim() ||
       String(idea.name ?? "").trim() ||
@@ -666,24 +866,33 @@ function spokenFromIdea(idea: Record<string, unknown>, fallbackLabel: string): s
     card,
     constraintThisWeek:
       typeof idea.constraintThisWeek === "string" ? idea.constraintThisWeek : undefined,
-    openQuestions: openQuestionsOf(scoreboard),
-  });
+    openQuestions: openQuestionsOf(sb),
+    supporting: hasInit ? [] : supporting,
+    engagements: hasInit ? [] : engagements,
+    initiativesPresent: hasInit,
+    killed: isKilledSource(idea),
+    killedCard: typeof idea.killedCard === "string" ? idea.killedCard : undefined,
+    allowPaperBottleneck: allowPaperOf(sb),
+  };
 }
 
 function applySpokenToIdea(
   idea: unknown,
+  payload: Record<string, unknown>,
   fallbackLabel: string,
   expand: boolean,
 ): Record<string, unknown> | unknown {
   if (!idea || typeof idea !== "object" || Array.isArray(idea)) return idea;
   const next = { ...(idea as Record<string, unknown>) };
-  if (next.card && typeof next.card === "object") {
-    next.card = compactCardCompany(next.card as InitiativeCard, expand);
-  }
-  next.snapshot = spokenFromIdea(
-    { ...next, card: (idea as { card?: InitiativeCard }).card },
-    fallbackLabel,
-  );
+  const sb = scoreboardRecordOf(next);
+  const rebuilt =
+    sb && (scoreboardHasInitiatives(sb) || sb.constraint_this_week || sb.supporting || sb.engagements)
+      ? enrichIdeaCard(next, payload, fallbackLabel)
+      : next.card && typeof next.card === "object"
+        ? (next.card as InitiativeCard)
+        : enrichIdeaCard(next, payload, fallbackLabel);
+  next.card = compactCardCompany(rebuilt, expand);
+  next.snapshot = formatSpokenCard(spokenInputFromIdea(next, payload, fallbackLabel, rebuilt));
   return next;
 }
 
@@ -701,11 +910,21 @@ export function applySpokenPayloadLead(
       ? (payload.company as { label?: string; slug?: string })
       : undefined;
   const fallbackLabel = (company?.label || company?.slug || "").trim();
+  const leadRaw =
+    (Array.isArray(payload.ideas) ? payload.ideas[0] : undefined) ||
+    (payload.idea && typeof payload.idea === "object" ? payload.idea : undefined);
+  if (leadRaw && typeof leadRaw === "object") {
+    const lead = leadRaw as Record<string, unknown>;
+    const sb = scoreboardRecordOf(lead);
+    if (sb || payload.supporting || payload.engagements || !payload.card) {
+      payload.card = enrichIdeaCard(lead, payload, fallbackLabel);
+    }
+  }
   if (Array.isArray(payload.ideas)) {
-    payload.ideas = payload.ideas.map((idea) => applySpokenToIdea(idea, fallbackLabel, expand));
+    payload.ideas = payload.ideas.map((idea) => applySpokenToIdea(idea, payload, fallbackLabel, expand));
   }
   if (payload.idea) {
-    payload.idea = applySpokenToIdea(payload.idea, fallbackLabel, expand);
+    payload.idea = applySpokenToIdea(payload.idea, payload, fallbackLabel, expand);
   }
   if (payload.card && typeof payload.card === "object") {
     payload.card = compactCardCompany(payload.card as InitiativeCard, expand);
@@ -713,24 +932,25 @@ export function applySpokenPayloadLead(
   const leadIdea =
     (Array.isArray(payload.ideas) ? payload.ideas[0] : undefined) ||
     (payload.idea && typeof payload.idea === "object" ? payload.idea : undefined);
-  const spoken = formatSpokenCard({
-    label:
-      fallbackLabel ||
-      ((payload.card as InitiativeCard | undefined)?.company?.label ?? ""),
-    card:
-      (payload.card as InitiativeCard | undefined) ||
-      (leadIdea && typeof leadIdea === "object"
-        ? ((leadIdea as { card?: InitiativeCard }).card)
-        : undefined),
-    constraintThisWeek:
-      leadIdea && typeof leadIdea === "object"
-        ? String((leadIdea as { constraintThisWeek?: string }).constraintThisWeek ?? "")
-        : undefined,
-    openQuestions:
-      leadIdea && typeof leadIdea === "object"
-        ? openQuestionsOf((leadIdea as { scoreboard?: unknown }).scoreboard)
-        : undefined,
-  });
+  const leadRec =
+    leadIdea && typeof leadIdea === "object" ? (leadIdea as Record<string, unknown>) : undefined;
+  const spokenCard =
+    (payload.card as InitiativeCard | undefined) ||
+    (leadRec?.card && typeof leadRec.card === "object" ? (leadRec.card as InitiativeCard) : undefined);
+  const spoken = formatSpokenCard(
+    leadRec
+      ? spokenInputFromIdea(leadRec, payload, fallbackLabel, spokenCard)
+      : {
+          label: fallbackLabel || spokenCard?.company?.label || "company",
+          card: spokenCard,
+        },
+  );
+  if (Array.isArray(payload.ideas) && payload.ideas[0] && typeof payload.ideas[0] === "object") {
+    payload.ideas[0] = { ...(payload.ideas[0] as Record<string, unknown>), snapshot: spoken };
+  }
+  if (payload.idea && typeof payload.idea === "object") {
+    payload.idea = { ...(payload.idea as Record<string, unknown>), snapshot: spoken };
+  }
   const { ok: _ok, spoken: _drop, ...rest } = payload;
   return { ok: true, spoken, ...rest };
 }

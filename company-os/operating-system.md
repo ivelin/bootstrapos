@@ -1262,7 +1262,7 @@ Additive on 2.8.19. Default Where-are-we speech. Print this. Clients that read t
 
 **Hide** unless the human says “show clocks” or “show schema”: journey integers, stored vs spoken clocks, gate labels, autonomy, Ready for human eyes, OS version, kind slugs, idea slugs, WIP-as-header, “NDA is not Try”, “SAFE is not proof”, “Ask / Do is not a card”, mapping notes like “stored clocks stay”.
 
-Engine keeps those rules. Spoken card does not print them. Payload lead is spoken; snapshot is not a clock dump.
+Engine keeps those rules. Spoken card does not print them. Payload lead is spoken; snapshot is not a clock dump. Eval is CI. Spoken footer cannot drop supporting/engagements. Snapshot matches spoken bottleneck line.
 
 | | Do this | Not this |
 |--|---------|----------|
