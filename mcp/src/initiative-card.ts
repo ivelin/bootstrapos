@@ -306,7 +306,9 @@ export function normalizeInitiatives(
   if (!paid && activeCustomerChecks(rows).length > 1) {
     return { ok: false, error: CUSTOMER_CHECK_WIP };
   }
-  const leadCandidate = pickBottleneck(rows);
+  // Write-time still sees paper+pay concat so Clock/Operating lead is rejected.
+  // Display rank filters paper unless allowPaperBottleneck.
+  const leadCandidate = pickBottleneck(rows, { allowPaperBottleneck: true });
   if (leadCandidate && isConcatenatedClockOperatingLead(leadText(leadCandidate))) {
     return { ok: false, error: CONCATENATED_LEAD_REJECTED };
   }
