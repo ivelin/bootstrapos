@@ -108,7 +108,7 @@ describe("journey views + tools (memory store)", () => {
     assert.doesNotMatch(idea.snapshot, /Loop: Ask/);
     assert.equal(idea.clocks.journeySpoken, "Write the bet");
     assert.equal(idea.clocks.loopSpoken, "Ask");
-    assert.match(idea.snapshot, /corehaul/);
+    assert.match(idea.snapshot, /CoreHaul/);
     assert.match(idea.snapshot, /Bottleneck #1: none yet/);
     assert.equal(idea.constraintThisWeek, "");
     assert.match(idea.visualFlow, /Constraint this week:/);
@@ -673,7 +673,9 @@ describe("journey views + tools (memory store)", () => {
     assert.ok(retired);
     assert.equal(retired.clocks.currentGate, "kill");
     assert.equal(retired.killedCard, killed.idea.killedCard);
-    assert.match(retired.snapshot, /☠ Killed — operators already have a dispatcher they trust/);
+    assert.match(retired.snapshot, /Bottleneck/);
+    assert.doesNotMatch(retired.snapshot, /journey phase \d/);
+    assert.match(retired.killedCard, /☠ Killed — operators already have a dispatcher they trust/);
 
     const listed = await store.listKilledIdeas(founder, { companySlug: "corehaul" });
     assert.equal(listed.ok, true);
