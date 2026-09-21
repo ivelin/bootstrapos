@@ -6,7 +6,7 @@
 export const AFTER_PROOF_EFFICIENCY_DOC = "after-proof-efficiency" as const;
 
 export const AFTER_PROOF_EFFICIENCY_URL =
-  "https://github.com/ivelin/bootstrap/blob/main/company-os/after-proof-efficiency.md";
+  "https://github.com/ivelin/bootstrapos/blob/main/company-os/after-proof-efficiency.md";
 
 export type AfterProofEfficiencyOpenInput = {
   choseFences: boolean;
