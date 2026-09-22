@@ -36,4 +36,4 @@ Bill may quote a [clock-examples](../company-os/clock-examples.md) cell to expla
 
 ## 4. Feedback
 
-Email [bootstrap@pirin.ai](mailto:bootstrap@pirin.ai). Say what you tried and what failed. Do not send mentee names, customer lists, or secrets.
+Two paths. Default, and anything that might include PII, names, emails, or deal or customer detail: email [bootstrap@pirin.ai](mailto:bootstrap@pirin.ai) via Bill approve-card. Exact preview. Nothing sends until approve. Dismiss means no send. Cos does not own this card. A public GitHub issue is OK when there is no PII and you know this is an open-source public repo (https://github.com/ivelin/bootstrap). Do not file PII on GitHub. Say what you tried and what failed. Do not send mentee names, customer lists, or secrets.

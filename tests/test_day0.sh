@@ -627,10 +627,21 @@ assert "0-1" in readme
 assert "## Feedback" in readme
 assert "escalation to Ivelin" in readme
 assert "not a public suggestion box" in readme
-assert "ivelin@pirin.ai" in readme
-assert readme.count("ivelin@pirin.ai") == 1
-assert "public GitHub issue on ivelin/bootstrap" in readme
-assert "Either path is fine" in readme
+assert "bootstrap@pirin.ai" in readme
+assert "Bill approve-card" in readme
+assert "Exact preview" in readme
+assert "Nothing sends until approve" in readme
+assert "Cos does not own this card" in readme
+assert "public GitHub issue is OK" in readme
+assert "no PII" in readme
+assert "open-source public repo" in readme
+assert "Do not file PII on GitHub" in readme
+assert "no public GitHub issue" not in readme
+assert "Do not wire SpaceXAI SendFeedback" in readme
+assert "ivelin@pirin.ai" not in readme
+assert "public GitHub issue on ivelin/bootstrap" not in readme
+assert "Either path is fine" not in readme
+assert "Cos brings it to him" not in readme
 assert "No mentee names" in readme
 assert "GitHub issue is not the escalate path" not in readme
 assert "Feedback does not auto-change house rules" in readme
@@ -1547,6 +1558,14 @@ if [ -s "$bill" ] \
   && grep -Fq 'https://github.com/ivelin/bootstrapos' "$bill" \
   && grep -Fq 'https://pirin.ai/bootstrap-os' "$bill" \
   && grep -Fq 'bootstrap@pirin.ai' "$bill" \
+  && grep -Fq 'Bill approve-card' "$bill" \
+  && grep -Fq 'Exact preview' "$bill" \
+  && grep -Fq 'Nothing sends until approve' "$bill" \
+  && grep -Fq 'public GitHub issue is OK' "$bill" \
+  && grep -Fq 'open-source public repo' "$bill" \
+  && grep -Fq 'Do not file PII on GitHub' "$bill" \
+  && ! grep -Fq 'no public GitHub issue' "$bill" \
+  && ! grep -Fq 'ivelin@pirin.ai' "$bill" \
   && grep -q 'Bill checks your board weekly' "$bill" \
   && grep -q 'Bill watches the board when Cos turns it on' "$bill" \
   && grep -q 'board updates' "$bill" \
