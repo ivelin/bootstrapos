@@ -8,7 +8,7 @@ Use this repo as the **source of truth** for process and control. Point your AI 
 
 | | |
 |--|--|
-| **Version** | Blueprint + live runtime **v2.8.19** · optional local MCP **v0.2** (path 3) |
+| **Version** | Blueprint + live runtime **v2.8.19** · hosted pin is the Pirin write plane · OSS `mcp/` is the self-host kit |
 | **License** | Apache-2.0 |
 | **Audience** | Independent solo founders; mentors (Founder Institute, SCORE, …); AI helpers |
 | **Maintainer** | [Ivelin Ivanov](https://github.com/ivelin) · [Pirin.ai](https://pirin.ai) |
@@ -46,7 +46,7 @@ company-os/operating-system.md         company-os/live-runtime.md
 | [`templates/`](templates/) | Blank files to copy into *your* company repo when you instantiate |
 | [`examples/`](examples/) | Pointers to public live instances (illustration only) |
 | [`.grok/workflows/`](.grok/workflows/) | Optional Grok Build workflows (path 2) — company-operating-loop, user-research, ready-for-human-eyes |
-| [`mcp/`](mcp/) | **Optional path 3** — local MCP adapter (one connector, isolated instances). Not a second OS. HTTP read transport is preview only. |
+| [`mcp/`](mcp/) | **OSS self-host kit** (stdio on your disk, or your own Vercel + Supabase). Not the Pirin mentee source of record. The hosted pin is the Pirin write plane. |
 | [`plugin/`](plugin/) | **Preview** Cursor/Grok Agent Plugin — skills hyperlink this pack. Team Import from Repo only — not a public catalog submit. |
 
 This repo is **template only**. Filled company state never lives here.
@@ -78,23 +78,21 @@ Hands-on page: [Install Bootstrap OS](https://pirin.ai/bootstrap-os).
 
 Optional. Script or hand copy — [Install](#install-in-your-company). Optional Grok Build workflows live in [`.grok/workflows/`](.grok/workflows/) (`company-operating-loop`, `user-research`, `ready-for-human-eyes`) if present — same rung, not the only front door. One idea per repo is fine; several ideas each get their own board.
 
-### 3. Self-hosted MCP (optional — several ideas)
+### 3. Self-host kit (optional)
 
-Several ideas are allowed. Do not hide a second thesis to look focused. Optional local MCP under [`mcp/`](mcp/) keeps each idea on its own board — `company-state.json` + `where-are-we.py` — without importing this tree into every product repo. Same founder gates. Same evidence rules (OS 2.8.19). Rank and kill per board. Markdown remains the constitution.
-
-Not required. Path 1 (point an AI) and path 2 (optional files + workflows) stay enough.
+Fork and run [`mcp/`](mcp/) yourself: stdio on your disk (`initCompany()` / `~/.bootstrap-os`) or your own Vercel + Supabase. That kit is not the Pirin-supported mentee source of record. Path 1 and path 2 stay enough. Several ideas are allowed; rank and kill per board. Markdown remains the constitution. MCP never writes `company-os/` template files.
 
 ```bash
 cd mcp && npm install && npm run build
 ```
 
-One stdio connector, many `companyId`s: [`mcp/README.md`](mcp/README.md). MCP never writes `company-os/` template files.
+Disk bootstrap: [`mcp/README.md`](mcp/README.md).
 
-### 4. Hosted MCP (preview — not mentee-ready)
+### 4. Hosted MCP (Pirin product write plane)
 
-A **preview** plugin lives in [`plugin/`](plugin/): thin skills that hyperlink this repo, plus an optional Streamable HTTP **read** adapter in [`mcp/`](mcp/). Team Import from Repo only — not a public catalog submit. It is not a second front door. Path 1 stays default.
+Pin `https://mcp.bootstrap.pirin.ai/mcp`. A super admin calls `create_company`, then `create_idea`. Login is `/bootstrap-os/login` on pirin.ai (Web Builder; not this repo). The pin 401s the handshake. Gated tools return 401 + `WWW-Authenticate` to this MCP origin RFC 9728 (`authorization_servers` = pirin.ai login). Free docs are GitHub + [install-os](https://pirin.ai/bootstrap-os) + local — not a hosted MCP connector. Path 1 markdown stays the constitution. Contract: [`mcp/docs/HOSTED_IDENTITY.md`](mcp/docs/HOSTED_IDENTITY.md).
 
-The hosted slice is invite-only collab: OS info, docs, house-rule pins. Pin `https://mcp.bootstrap.pirin.ai/mcp` 401s the handshake. Free docs are GitHub + [install-os](https://pirin.ai/bootstrap-os) + local — not a hosted MCP connector. The Vercel production Host is the same 401, not a silent 200 alias. Gated whoami + labels return 401 + `WWW-Authenticate` to this MCP origin RFC 9728 (`authorization_servers` = pirin.ai login); login is `/bootstrap-os/login` (Web Builder; not this repo). Contract: [`mcp/docs/HOSTED_IDENTITY.md`](mcp/docs/HOSTED_IDENTITY.md). Markdown on GitHub remains the constitution. Founder `company-state` stays on path 3 local stdio — not on a shared server.
+A **preview** plugin lives in [`plugin/`](plugin/): thin skills that hyperlink this repo. Team Import from Repo only — not a public catalog submit. It is not a second front door. The Vercel production Host is the same 401, not a silent 200 alias. Git-branch previews are not mentee-ready boards.
 
 There is a **preview** git-branch read adapter on `*.vercel.app` (not mentee-ready boards, not a public catalog submit, not pirin.ai, not a Path 1 pin). `plugin/mcp.json` pins the collab host; `${BOOTSTRAP_MCP_URL}` can override. No day-one SaaS boards. Do not use `mcp.pirin.ai` (dead).
 
@@ -167,7 +165,7 @@ Treat promotion into this template as rare, deliberate work — not a continuous
 |-----|---------|
 | Operating system blueprint | **v2.8.19** |
 | Live runtime | **v2.8.19** |
-| Optional local MCP (path 3) | **v0.2** — adapter only; not a second OS. HTTP read transport is preview. |
+| OSS `mcp/` self-host kit | Disk bootstrap via `initCompany()`, or your own Vercel + Supabase. Not the Pirin mentee source of record. |
 | Preview plugin | **0.1.1** — [`plugin/`](plugin/). Skills hyperlink this pack. Team Import from Repo only — not a public catalog submit. Not mentee-ready hosted boards. |
 
 ### Recent portable additions
@@ -249,7 +247,7 @@ Light synthetic product sandbox + real interest tests before heavy build.
 - Hands-on install: [Install Bootstrap OS](https://pirin.ai/bootstrap-os)
 - Invite-only: [Install Bootstrap Bill](docs/install-bill.md)  
 - Public live instances (illustration only): see [`examples/`](examples/)
-- Optional local MCP (path 3): [`mcp/README.md`](mcp/README.md)
+- OSS self-host kit: [`mcp/README.md`](mcp/README.md). Pirin write plane: `https://mcp.bootstrap.pirin.ai/mcp`.
 - Preview plugin (team Import from Repo only — not a public catalog submit): [`plugin/`](plugin/)
 - Starter legal templates (hyperlink only): [operating-system.md](company-os/operating-system.md#starter-legal-templates)
 - Cap-table modeler (hyperlink only): [operating-system.md](company-os/operating-system.md#cap-table-modeler)

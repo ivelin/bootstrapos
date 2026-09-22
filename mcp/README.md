@@ -1,15 +1,15 @@
-# Bootstrap OS MCP (optional path 3)
+# Bootstrap OS MCP (self-host kit and hosted pin)
 
-**What this is / is not:** see root [`ROADMAP.md` §0](../ROADMAP.md) — MCP is optional adapter furniture to the control plane, not a second OS, harness, memory product, or hosted service.
+**What this is / is not:** see root [`ROADMAP.md` §0](../ROADMAP.md) — MCP is adapter furniture to the control plane, not a second OS, harness, or memory product.
 
-**Markdown is the constitution.** Front door is still **path 1**: point an AI at https://github.com/ivelin/bootstrap — no install. Path 2 is optional instance files / CLI + `.grok/workflows`. **This package is path 3 (stdio writes) plus a preview HTTP read adapter.** Several ideas are allowed. Each `companyId` is its own board. Do not hide a second idea to look focused. Rank and kill per board. There is no public mentee-ready host.
+**Markdown is the constitution.** Front door is still **path 1**: point an AI at https://github.com/ivelin/bootstrapos — no install. Path 2 is optional instance files / CLI + `.grok/workflows`. **This package is the OSS self-host kit** (stdio on your disk via `initCompany()`, or deploy `mcp/` on your own Vercel + Supabase). It is not the Pirin-supported mentee source of record. The Pirin write plane is the hosted pin. Several ideas are allowed. Each company is its own board. Rank and kill per board.
 
 | Path | Who it is for | Dependency |
 |------|----------------|------------|
-| **1. Point an AI** | Everyone (default) | None |
-| **2. Optional instance / CLI** | When you want files in your repo | `./scripts/install-instance.sh` |
-| **3. Local MCP (this package)** | Several ideas, isolated boards | Node 20+, this package, local data root |
-| **4. Hosted MCP** | Preview only | HTTP read adapter. Invite-only collab pin `https://mcp.bootstrap.pirin.ai/mcp` (handshake 401). Free docs = GitHub + install-os + local — not a hosted MCP connector. Git-branch previews on `*.vercel.app` (same 401 as collab, not a silent 200). Contract: [`docs/HOSTED_IDENTITY.md`](docs/HOSTED_IDENTITY.md). Not mentee-ready boards. No public catalog submit (team Import from Repo only). Not pirin.ai. |
+| **1. Point an AI** | Everyone (default). Constitution. | None |
+| **2. Optional instance / CLI** | Notes in your repo. Not the source of record. | `./scripts/install-instance.sh` |
+| **Self-host kit (this package)** | Your own disk or your own Vercel + Supabase | Node 20+, this package |
+| **Hosted MCP** | Pirin-supported mentees | Pin `https://mcp.bootstrap.pirin.ai/mcp` (handshake 401). Super admin calls `create_company`, then `create_idea`. Free docs = GitHub + install-os + local — not a hosted MCP connector. Git-branch previews on `*.vercel.app` (same 401 as collab, not a silent 200, not mentee-ready boards). Contract: [`docs/HOSTED_IDENTITY.md`](docs/HOSTED_IDENTITY.md). No public catalog submit (team Import from Repo only). Not pirin.ai. |
 
 Same state as markdown: `company-state.json` + `where-are-we.py`. Isolation is hard: no shared phase/evidence across `companyId`. MCP never writes `company-os/` template files.
 
@@ -67,7 +67,9 @@ Product code stays in its own repo. Point the agent at this connector once.
 
 | Tool | Purpose |
 |------|---------|
-| `bootstrap_whoami` | Who is signed in and which **companies** they can open. [`INVITE.md`](docs/INVITE.md). |
+| `bootstrap_whoami` | Who is signed in, which **companies** they can open, and `role` (`member`, `super_admin`, or `unset`). [`INVITE.md`](docs/INVITE.md). |
+| `create_company` | Super admin creates a company (membership only). Then `create_idea`. Duplicate slug is 409. Others get 403 with an empty body. |
+| `grant_super_admin` / `revoke_super_admin` | Live super admin grants or revokes another login. No self-grant. Revoke is immediate. |
 | `bootstrap_list_companies` | Same company list. (`bootstrap_list_company_labels` is a one-release alias.) |
 | `bootstrap_use_company` | This chat is about one company the user already belongs to. |
 | `invite_member` | Invite someone to a company you can open. Same email may join several companies. Email outbox for pirin-ai (`bootstrap@pirin.ai`; production sends). [`INVITE.md`](docs/INVITE.md). |
@@ -147,9 +149,9 @@ See [`config/mcp.stdio.example.json`](config/mcp.stdio.example.json).
 
 Same package. Production entry is the Vercel request handler (`api/mcp.ts` + `api/health.ts`). `npm run start:http` is a local helper only.
 
-Same public read tool names as today (`bootstrap_os_info`, docs, house-rule pins, `bootstrap_support`). Fetches the published GitHub repo (`BOOTSTRAP_OS_DOCS_SOURCE=published`). Invite-only collab host 401s cookie-less `initialize` / `tools/list` / GET SSE; public OS tools stay listed **after** auth. Does **not** host founder `company-state`. Write / init / use-company stay stdio. Free docs are GitHub + install-os + local — not this host.
+Same public read tool names as today (`bootstrap_os_info`, docs, house-rule pins, `bootstrap_support`). Fetches the published GitHub repo (`BOOTSTRAP_OS_DOCS_SOURCE=published`). Invite-only collab host 401s cookie-less `initialize` / `tools/list` / GET SSE; public OS tools stay listed **after** auth. The pin is the Pirin write plane. Hosted callers do not call `bootstrap_init_company`. Free docs are GitHub + install-os + local — not this host as a docs CDN.
 
-Optional gated tools on this host only: `bootstrap_whoami`, `bootstrap_list_companies` (alias `bootstrap_list_company_labels`), `bootstrap_use_company`, `invite_member`, and `accept_invite`. Unauthenticated calls return HTTP 401 + `WWW-Authenticate` pointing at this MCP origin RFC 9728 (`authorization_servers` = pirin.ai login). Login UI is `/bootstrap-os/login` (Web Builder), not this repo. Accept path is in-chat; outsider signup is `?invite=` — [`docs/INVITE.md`](docs/INVITE.md). Companies this login can open — not founder boards. Contract: [`docs/HOSTED_IDENTITY.md`](docs/HOSTED_IDENTITY.md).
+Optional gated tools on this host only: `bootstrap_whoami` (includes `role`), `bootstrap_list_companies` (alias `bootstrap_list_company_labels`), `bootstrap_use_company`, `invite_member`, `accept_invite`, `create_company`, `grant_super_admin`, and `revoke_super_admin`. Unauthenticated calls return HTTP 401 + `WWW-Authenticate` pointing at this MCP origin RFC 9728 (`authorization_servers` = pirin.ai login). Login UI is `/bootstrap-os/login` (Web Builder), not this repo. Accept path is in-chat; outsider signup is `?invite=` — [`docs/INVITE.md`](docs/INVITE.md). A super admin calls `create_company`, then `create_idea`. Contract: [`docs/HOSTED_IDENTITY.md`](docs/HOSTED_IDENTITY.md).
 
 Invite-only collab / Grok pin is `https://mcp.bootstrap.pirin.ai/mcp`. Git-branch public preview is `*.vercel.app` (undeclared deploy-only, not a pin). Project `bootstrap-os-mcp` under `ivelins-projects-9f9b7132`. Not mentee-ready boards. No public catalog submit (team Import from Repo only). Not pirin.ai. Path 1 stays the front door.
 
@@ -166,25 +168,25 @@ Never deploy this adapter to `v0-pirin-ai-founder-studio` or any pirin.ai host.
 
 ## Privacy
 
-| Data | Local MCP (path 3) | Hosted read (preview) |
-|------|--------------------|-------------------------|
+| Data | Self-host kit | Hosted pin |
+|------|----------------|------------|
 | Blueprint | Read from your clone | Fetch published GitHub repo (no login) |
-| Company state | Disk under data root, **per company** | **Not hosted** |
-| Identity | None (local files) | Optional. Whoami + labels on existing pirin.ai Supabase + RLS |
+| Company state | Disk under data root, **per company**, via `initCompany()` | Hosted boards for invited companies. `create_company` then `create_idea`. |
+| Identity | None (local files) | Whoami + labels + `role` on pirin.ai Supabase + RLS |
 | Cross-tenant | **Denied** | **Denied** (RLS + pirin.ai access token). Tests lock it. |
 | Leaderboards | Out of scope | Never |
 
 ---
 
-## Hosted vs local (same names, different write path)
+## Hosted vs self-host
 
-| | Local (path 3) | Hosted pin |
+| | Self-host kit | Hosted pin |
 |--|----------------|------------|
-| Public OS tool names | Same | Same. Unauthenticated on the Path 1 alias; listed after auth on the collab host. |
-| Writes / init / use-company | Founder-owned files under `BOOTSTRAP_DATA_ROOT` | **Not on the host.** Path 3 only. |
+| Public OS tool names | Same | Same. Listed after auth on the collab host. |
+| Writes | `bootstrap_init_company` on your disk, or your own deploy of `mcp/` | `create_company` (super admin) then `create_idea`. Do not call `bootstrap_init_company`. |
 | Replaces Path 1? | No | No |
-| Replaces Path 3? | This is Path 3 | No |
-| First-user fixture | Local instances if they init them | Can list three **labels** (`alpha`, `bravo`, `charlie`) after allowlist invite + login. First user is a SQL insert — [`HOSTED_IDENTITY.md`](docs/HOSTED_IDENTITY.md#first-user-rebuild-from-github). Later members: in-chat [`INVITE.md`](docs/INVITE.md). Template seed is fictional. |
+| Pirin mentee source of record? | No | Yes, for invited companies on the pin |
+| First-user fixture | Local instances if they init them | Can list three **labels** (`alpha`, `bravo`, `charlie`) after allowlist invite + login. First user is a SQL insert — [`HOSTED_IDENTITY.md`](docs/HOSTED_IDENTITY.md#first-user-rebuild-from-github). Later members: in-chat [`INVITE.md`](docs/INVITE.md). Template seed is fictional `founder@example.test` as `member`. |
 
 ---
 
@@ -194,7 +196,7 @@ Never deploy this adapter to `v0-pirin-ai-founder-studio` or any pirin.ai host.
 - Auto-advancing journey phases
 - Blended multi-idea scoreboard
 - Writing into `company-os/` template files
-- Public mentee-ready hosted boards (preview read adapter only)
+- Treating `~/.bootstrap-os` as the Pirin mentee source of record
 - Weekly market-radar jobs
 - Seeding personas from a demographic one-liner
 - Likert or naked-dollar WTP from a sim

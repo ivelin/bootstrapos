@@ -2,7 +2,7 @@
   "mcpServers": {
     "bootstrap-os-hosted-read": {
       "url": "https://mcp.bootstrap.pirin.ai/mcp",
-      "_comment": "Invite-only collab / Grok pin on mcp.bootstrap.pirin.ai (handshake 401). Free Path 1 is GitHub + local/plugin — not a hosted MCP connector. Git-branch previews stay on *.vercel.app (undeclared deploy-only, not a pin). Override with BOOTSTRAP_MCP_URL if needed. DEAD do-not-use: https://mcp.pirin.ai/bootstrap-os. Write/init/use-company stays path 3 stdio. Not mentee-ready hosted boards."
+      "_comment": "Invite-only collab / Grok pin on mcp.bootstrap.pirin.ai (handshake 401). This pin is the Pirin write plane: create_company (super admin) then create_idea. Do not call bootstrap_init_company here. Free Path 1 is GitHub + local/plugin — not a hosted MCP connector. Git-branch previews stay on *.vercel.app (undeclared deploy-only, not a pin, not mentee-ready boards). Override with BOOTSTRAP_MCP_URL if needed. DEAD do-not-use: https://mcp.pirin.ai/bootstrap-os. OSS mcp/ on your own host is the self-host kit."
     }
   }
 }

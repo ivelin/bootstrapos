@@ -18,7 +18,7 @@ This is a **preview package**. Not mentee-ready hosted boards. Path 1 stays the 
 | OS 2.8.8 house rule (once) | `company-os/operating-system.md` | Full text of *there is no optimal price until people have paid and stayed*. Pointers only elsewhere. |
 | OS 2.8.9 house rule (once) | `company-os/operating-system.md` | Full text of *do not automate a step that should not exist*. One bottleneck this week. Pointers only elsewhere. |
 | Day 0 question (once) | `company-os/operating-system.md` | Full text of *lifestyle or swinging for the fences*. First-hour / Path 1 keep a short pin + link. |
-| After First Hour standing rules (once) | `company-os/first-hour.md` | Full line: Path 1 is GitHub + install-os + local — not a hosted MCP connector; invite-only collab / Grok / whoami `https://mcp.bootstrap.pirin.ai/mcp`. Do not upload mentee work to Ivelin's GitHub. Path 1 stays `https://github.com/ivelin/bootstrap`. Skills / plugin README pin + link only. |
+| After First Hour standing rules (once) | `company-os/first-hour.md` | Full line: Path 1 is GitHub + install-os — not a hosted MCP connector; the pin `https://mcp.bootstrap.pirin.ai/mcp` is the Pirin write plane (`create_company` then `create_idea`). Do not upload mentee work to Ivelin's GitHub. Path 1 stays `https://github.com/ivelin/bootstrap`. Skills / plugin README pin + link only. |
 | Hosted-read surface (local) | `mcp` unit + HTTP smoke | `/health` → `ok`. Public read tools. Gated whoami/labels 401 + WWW-Authenticate. No company-state. `marketplace: false`. |
 | Optional identity + RLS | `identity.test.mjs` + `identity-rls.test.mjs` + `identity-pglite.test.mjs` | 401 + exact pirin.ai challenge. PGlite FORCE RLS (never the live project). Ivelin fixture labels. |
 | Skill OS links | plugin-hyperlinks unit | Skills only hyperlink the published OS. |
@@ -33,7 +33,7 @@ This is a **preview package**. Not mentee-ready hosted boards. Path 1 stays the 
 | Public Cursor catalog / `/add-plugin` GitHub URL | We have **not** submitted. Do not expect it. |
 | Git-branch Vercel preview as the production pin | Collab pin stays `https://mcp.bootstrap.pirin.ai/mcp` on `main`. Do not advertise `bootstrap-os-mcp.vercel.app` as a Path 1 pin. Do not promote this branch to the collab hostname. |
 | Production `bootstrap_os_info.pluginPreview.version` already `0.1.1` | Draft PR. Prod still serves the last production deploy until merge + Vercel production. |
-| Mentee-ready hosted boards / founder `company-state` on the host | Out. Path 3 local stdio only. |
+| Git-branch preview as a mentee board | Out. The production pin is the Pirin write plane (`create_company` then `create_idea`). OSS `mcp/` is the self-host kit. |
 | Non-maintainer MCP cold path (M2) | Still open. Human-eyes for hosted boards stays **unknown**. |
 | A human actually signed in as Ivelin and called whoami on the live pin | File/fixture lock only. Do not claim a paste that is not in this PR. |
 | pirin.ai `/bootstrap-os/login` | Contract in `mcp/docs/HOSTED_IDENTITY.md`. Login + OAuth + protected-resource metadata live on pirin.ai (Web Builder). This host returns 401 + `WWW-Authenticate`. Not this repo. Do not add a login UI here. |

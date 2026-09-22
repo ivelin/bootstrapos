@@ -34,11 +34,12 @@ cd mcp && npm ci && npm run ci
 5. Markdown path (point-an-AI / optional install) works with **zero** MCP usage.
 6. Stdio MCP protocol serves the full tool surface to a real client.
 7. OS house rules (through 2.8.13; current pack 2.8.19; spoken-card pin 2.8.20): stated / synthetic / observed (observed wins); spoken yes cannot promote; no demographic one-liner seed; no Likert / naked dollar WTP; several ideas allowed (rank and kill per board); marketing volume cannot promote; there is no optimal price until people have paid and stayed; do not automate a step that should not exist; legal paper cannot promote; one founder control plane (primary + supporting + engagements; exile rejected); advisor ride-along is assumed, not observed. Initiative report card: company header → bottleneck #1 → customer checks with nested engagements → other initiatives footer. Spoken card (founder voice default): company name, then Bottleneck #1 in that company’s words, then accounts, then “Also moving (not the bottleneck)”, then open questions; hide clocks and schema unless the human says “show clocks” or “show schema”; clocks are storage. Ask / Do / Write back is a quality bar, not a card. Clock examples are teaching only — not a live board.
-8. Same state furniture: instance gets `company-state.json` + `where-are-we.py` (and schema). Hosted read adapter is preview only — no founder state on a shared server.
+8. Same state furniture: a self-host or path-2 instance gets `company-state.json` + `where-are-we.py` (and schema). Pirin boards are the hosted pin (`create_company` then `create_idea`). Git-branch previews are not mentee-ready boards.
 9. **No instance secrets in the template.** Specific company names, theses, scores, decision traces, and local paths stay out of OS / MCP fixtures / evals. Fictional `alpha` / `bravo` / `charlie` + `founder@example.test` only. Smell test: `test/no-instance-secrets.test.mjs`.
 10. **create_idea** starts a new 0-1 board. `put_journey` does not invent a missing slug. Cos applies `20260918_bootstrap_os_create_idea.sql` on the live project — not from a PR agent.
 11. **Board subscribers** persist via `public.bootstrap_os_subscribe_board` / `unsubscribe_board` / `list_subscribers` / `change_acl`. Material writes POST the JOURNEY.md webhook payload. Cos applies `20260920_bootstrap_os_board_subscribers.sql` on supabase-pirin-ai — not from a PR agent. Email stays enqueue-only. Founder-facing path is `enable_board_watch` (Cos sets `BOOTSTRAP_BOARD_WATCH_*` on Vercel once; agents call after invite; founders never paste URLs).
 12. **Invite-only company boards.** Unauthenticated, non-invited, or invited-to-A-only principals must not receive company B rows (labels, comments, audit, scoreboard, owners, subscribers). Fail closed (401/403 or empty). CI gate: `test/cross-tenant-leak.test.mjs`.
+13. **`create_company` / super admin.** Live `super_admin` only. Member, revoked admin, self-grant, and grant-without-admin are 403. Duplicate slug is 409. Create of company C must not leak company B. Audit rows for grant and create. `whoami.role` is `member` | `super_admin` | `unset`. Committed seed is `founder@example.test` as `member` only. Cos applies `20260928_bootstrap_os_roles.sql` and the sole super_admin row — not from a PR agent. CI: `test/company-admin-pglite.test.mjs`.
 
 ## Manual (before ready-for-review)
 
@@ -61,8 +62,8 @@ Ready-for-human-eyes for invite links: this host never sends. pirin-ai productio
 
 ## SRE / ops notes
 
-- **Runtime:** Node ≥20. Stdio is the write path. `npm run start:http` is a preview read adapter (no company-state).
-- **State:** founder-owned disk under `BOOTSTRAP_DATA_ROOT` (default `~/.bootstrap-os`).
+- **Runtime:** Node ≥20. The hosted pin is the Pirin write plane. Stdio `initCompany()` is the self-host disk kit. `npm run start:http` is the local HTTP helper.
+- **State:** self-host disk under `BOOTSTRAP_DATA_ROOT` (default `~/.bootstrap-os`). Pirin boards are not that directory.
 - **Failure modes:** missing state file, unknown companyId, template demo mode when no instance — tools return structured errors, not silent success.
 - **Secrets:** do not put API keys in company state; traces may be shared carefully (no PII). Identity tests use PGlite. Supabase env is live on `bootstrap-os-mcp` — do not print it. Never service role.
 - **Rollback:** Vercel → Deployments → Redeploy / previous production on `bootstrap-os-mcp`. Path 1 (point an AI) remains the default forever; disable MCP client config to fall back. Hosted read adapter is preview only. Logs: Vercel project logs. Liveness: `GET /health`.

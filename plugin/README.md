@@ -139,7 +139,7 @@ Thin when-to-use + links to the published OS. They do not copy the constitution.
 
 `mcp.json` pins the invite-only collab / Grok Streamable HTTP host `https://mcp.bootstrap.pirin.ai/mcp`. Free Path 1 is GitHub + install-os + local — not a hosted MCP connector. `${BOOTSTRAP_MCP_URL}` may override (default is the collab pin). Git-branch previews stay on `*.vercel.app` (undeclared deploy-only, not a pin). Not mentee-ready boards. Not a public catalog. Do not use `mcp.pirin.ai`. Contract: [`mcp/docs/HOSTED_IDENTITY.md`](../mcp/docs/HOSTED_IDENTITY.md).
 
-Collab host: cookie-less handshake 401; public OS tools stay listed after auth. Gated `bootstrap_whoami` / company labels return 401 + `WWW-Authenticate` to this MCP origin RFC 9728 (`authorization_servers` = pirin.ai login). Login is `/bootstrap-os/login` on pirin.ai (Web Builder; not this repo). Founder `company-state` stays path 3 local stdio.
+Collab host: cookie-less handshake 401; public OS tools stay listed after auth. Gated `bootstrap_whoami` / company labels return 401 + `WWW-Authenticate` to this MCP origin RFC 9728 (`authorization_servers` = pirin.ai login). Login is `/bootstrap-os/login` on pirin.ai (Web Builder; not this repo). The pin is the Pirin write plane (`create_company`, then `create_idea`). `~/.bootstrap-os` is a self-host kit, not the Pirin mentee path.
 
 Deploy recipe (new Vercel project `bootstrap-os-mcp` only):
 

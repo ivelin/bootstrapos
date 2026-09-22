@@ -16,7 +16,7 @@ This folder is the **Bootstrap OS** blueprint and runtime shape. It is not any o
 **Repo overview & adopt order:** [`../README.md`](../README.md) — path 1 point-an-AI, path 2 optional install.
 
 Optional Grok Build workflows live in [`../.grok/workflows/`](../.grok/workflows/).  
-Optional local MCP (path 3, several ideas only): [`../mcp/README.md`](../mcp/README.md). Not required. Preview plugin: [`../plugin/`](../plugin/). Hosted read adapter is preview only — no public mentee-ready host.
+OSS self-host kit (not the Pirin mentee path): [`../mcp/README.md`](../mcp/README.md). Hosted pin `https://mcp.bootstrap.pirin.ai/mcp` is the Pirin write plane. Path 1 stays the front door. Preview plugin: [`../plugin/`](../plugin/). Git-branch previews are not mentee-ready boards.
 
 ### Mental model
 

@@ -1,5 +1,6 @@
 /**
- * Multi-company registry: one MCP connector, many isolated instances.
+ * Self-host disk registry: one MCP connector, many isolated instances.
+ * initCompany() bootstraps state on this machine. Hosted Pirin boards use create_company.
  * Never merge state across companyId.
  */
 
@@ -173,7 +174,7 @@ export function useCompany(companyIdRaw: string): {
   const rec = reg.companies[companyId];
   if (!rec) {
     throw new Error(
-      `Unknown company "${companyId}". Call bootstrap_list_companies or bootstrap_init_company first.`,
+      `Unknown company "${companyId}" on this self-host disk. Call bootstrap_init_company to bootstrap it here. On the hosted Pirin connector, a super admin calls create_company, then create_idea — or ask an admin / email bootstrap@pirin.ai.`,
     );
   }
   if (!fs.existsSync(rec.instanceRoot)) {
@@ -240,6 +241,7 @@ function blankState(companyId: string, hypothesis: string): Record<string, unkno
   };
 }
 
+/** Self-host disk bootstrap under BOOTSTRAP_DATA_ROOT. Not the hosted Pirin create path. */
 export function initCompany(input: {
   companyId: string;
   displayName?: string;

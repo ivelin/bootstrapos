@@ -1,6 +1,6 @@
 # M1 — MCP client connect checklist
 
-Optional **path 3** only. Path 1 (point an AI at the GitHub pack) stays the front door. Invite-only hosted MCP: [`HOSTED_IDENTITY.md`](HOSTED_IDENTITY.md). No public mentee-ready host.
+Self-host kit (stdio on your disk). Not the Pirin-supported mentee source of record. Path 1 (point an AI at the GitHub pack) stays the front door. Hosted pin: [`HOSTED_IDENTITY.md`](HOSTED_IDENTITY.md) — `create_company` then `create_idea`. Git-branch previews are not mentee-ready boards.
 
 Automated companion: `npm run test:stdio` (spawns server + official SDK client over stdio).
 

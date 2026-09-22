@@ -197,6 +197,7 @@ describe("hosted identity (resource server, gated)", () => {
     );
     assert.equal(who.authenticated, true);
     assert.equal(who.email, IVELIN_SEED_EMAIL);
+    assert.equal(who.role, "member");
     assert.deepEqual(who.companies, [...IVELIN_SEED_LABELS]);
     assert.deepEqual(who.labels, [...IVELIN_SEED_LABELS]);
     const blob = JSON.stringify(who);
@@ -237,7 +238,19 @@ describe("hosted identity (resource server, gated)", () => {
     );
     assert.equal(invited.authenticated, true);
     assert.equal(invited.email, IVELIN_SEED_EMAIL);
+    assert.equal(invited.role, "unset");
     assert.deepEqual(invited.labels, [...IVELIN_SEED_LABELS]);
+    const admin = whoamiFromLabelsRpc(
+      IVELIN_SEED_EMAIL,
+      {
+        authenticated: true,
+        email: IVELIN_SEED_EMAIL,
+        labels: ["alpha"],
+        role: "super_admin",
+      },
+      true,
+    );
+    assert.equal(admin.role, "super_admin");
 
     const uninvited = whoamiFromLabelsRpc(
       "stranger@example.test",

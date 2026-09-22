@@ -7,10 +7,17 @@
 import { createHash, timingSafeEqual } from "node:crypto";
 import { isJwtAccessToken } from "./oauth.js";
 
+export type HostedRole = "member" | "super_admin" | "unset";
+
+export function parseHostedRole(raw: unknown): HostedRole {
+  return raw === "member" || raw === "super_admin" || raw === "unset" ? raw : "unset";
+}
+
 export type HostedWhoami = {
   authenticated: boolean;
   email?: string;
   labels: string[];
+  role?: HostedRole;
   reason?: string;
   note?: string;
   identityStore?: "supabase" | "memory" | "unset";
@@ -22,6 +29,7 @@ export type MenteeRecord = {
   authUserId: string | null;
   labels: string[];
   tokenHashes: string[];
+  role?: HostedRole;
 };
 
 export interface IdentityStore {
@@ -80,6 +88,7 @@ export function whoamiFromMentee(mentee: MenteeRecord | undefined, store: Hosted
     authenticated: true,
     email: mentee.email,
     labels: [...mentee.labels].sort(),
+    role: mentee.role ?? "unset",
     note: "Companies this login can open. A company may have several ideas; each idea is its own 0-1 board.",
     identityStore: store,
   };
@@ -89,6 +98,7 @@ export type LabelsRpcBody = {
   authenticated?: unknown;
   email?: unknown;
   labels?: unknown;
+  role?: unknown;
   reason?: unknown;
   note?: unknown;
 };
@@ -125,6 +135,7 @@ export function whoamiFromLabelsRpc(
     authenticated: true,
     email,
     labels,
+    role: parseHostedRole(raw.role),
     note:
       typeof raw.note === "string" && raw.note
         ? raw.note
@@ -159,6 +170,7 @@ export function ivelinMemoryFixture(token: string): MemoryIdentityStore {
       email: IVELIN_SEED_EMAIL,
       authUserId: "auth-ivelin",
       labels: [...IVELIN_SEED_LABELS],
+      role: "member",
       tokenHashes: [hashMcpToken(token)],
     },
     {
@@ -166,6 +178,7 @@ export function ivelinMemoryFixture(token: string): MemoryIdentityStore {
       email: "other@example.test",
       authUserId: "auth-other",
       labels: ["secret-other"],
+      role: "unset",
       tokenHashes: [hashMcpToken("bos_other_token_fixture_xx")],
     },
   ]);

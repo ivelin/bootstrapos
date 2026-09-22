@@ -2,7 +2,7 @@
 
 This host is the **resource server only**. There is **one** invite-only hosted MCP pin: `https://mcp.bootstrap.pirin.ai/mcp`. Cookie-less `initialize` / GET SSE / `tools/list` **401** so an MCP client (Grok Bot is one example) can start OAuth. Gated tools accept **access tokens issued by pirin.ai login**. This draft also gates journey tools — contract: [`JOURNEY.md`](JOURNEY.md).
 
-Free docs are GitHub + [install-os](https://pirin.ai/install-os) + local — **not** a hosted MCP connector. Do not invent `os.bootstrap.pirin.ai` or a second public Path 1 hostname. Path 3 local stdio stays the write path.
+Free docs are GitHub + [install-os](https://pirin.ai/install-os) + local — **not** a hosted MCP connector. Do not invent `os.bootstrap.pirin.ai` or a second public Path 1 hostname. This pin is the Pirin product write plane: a super admin calls `create_company`, then `create_idea`. Hosted callers do not call `bootstrap_init_company`. OSS `mcp/` on your own Vercel and Supabase is the self-host alternative. Path 1 markdown stays the constitution.
 
 ## Founder lock
 
