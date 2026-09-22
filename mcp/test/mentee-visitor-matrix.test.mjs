@@ -151,15 +151,19 @@ describe("merge-gate visitor matrix (CoS smell-test)", () => {
     assert.match(readme, /## Feedback/);
     assert.match(readme, /escalation to Ivelin/i);
     assert.match(readme, /not a public suggestion box/);
-    assert.match(readme, /ivelin@pirin\.ai/);
-    assert.match(readme, /public GitHub issue on ivelin\/bootstrap/);
-    assert.match(readme, /Either path is fine/);
+    assert.match(readme, /bootstrap@pirin\.ai/);
+    assert.match(readme, /Bill approve-card/);
+    assert.match(readme, /no public GitHub issue/);
+    assert.match(readme, /Cos does not own this card/);
+    assert.match(readme, /Do not wire SpaceXAI SendFeedback/);
     assert.match(readme, /No mentee names/);
     assert.match(readme, /no secret sauce/);
-    assert.match(readme, /Cos brings it to him/);
     assert.match(readme, /Feedback does not auto-change house rules/);
+    assert.doesNotMatch(readme, /ivelin@pirin\.ai/);
+    assert.doesNotMatch(readme, /public GitHub issue on ivelin\/bootstrap/);
+    assert.doesNotMatch(readme, /Either path is fine/);
+    assert.doesNotMatch(readme, /Cos brings it to him/);
     assert.doesNotMatch(readme, /GitHub issue is not the escalate path/);
-    assert.equal((readme.match(/ivelin@pirin\.ai/g) || []).length, 1);
   });
 
   it("H2 + A2 query-OS-first on a 0-1 placement ask", () => {

@@ -627,10 +627,15 @@ assert "0-1" in readme
 assert "## Feedback" in readme
 assert "escalation to Ivelin" in readme
 assert "not a public suggestion box" in readme
-assert "ivelin@pirin.ai" in readme
-assert readme.count("ivelin@pirin.ai") == 1
-assert "public GitHub issue on ivelin/bootstrap" in readme
-assert "Either path is fine" in readme
+assert "bootstrap@pirin.ai" in readme
+assert "Bill approve-card" in readme
+assert "no public GitHub issue" in readme
+assert "Cos does not own this card" in readme
+assert "Do not wire SpaceXAI SendFeedback" in readme
+assert "ivelin@pirin.ai" not in readme
+assert "public GitHub issue on ivelin/bootstrap" not in readme
+assert "Either path is fine" not in readme
+assert "Cos brings it to him" not in readme
 assert "No mentee names" in readme
 assert "GitHub issue is not the escalate path" not in readme
 assert "Feedback does not auto-change house rules" in readme

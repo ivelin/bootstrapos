@@ -116,7 +116,7 @@ Copy this `plugin/` folder to `~/.cursor/plugins/local/bootstrap-os`. Restart Cu
 
 ## Feedback
 
-This is an escalation to Ivelin, not a public suggestion box. If a rule is unclear or a milestone feels wrong, send the published OS URL, what you tried, and why it failed — email ivelin@pirin.ai or open a public GitHub issue on ivelin/bootstrap. Either path is fine. No mentee names, no customer names or lists, no personal, family, or business PII, no secret sauce. Cos brings it to him. Feedback does not auto-change house rules.
+This is an escalation to Ivelin, not a public suggestion box. If a rule is unclear or a milestone feels wrong, send the published OS URL, what you tried, and why it failed. The sink is mailbox bootstrap@pirin.ai via Bill approve-card. Not GitHub — no public GitHub issue. The public repo is not PII-safe. Bill drafts the exact note, then the approve card: on approve, mail bootstrap@pirin.ai only. Dismiss means no send. Cos does not own this card. Do not wire SpaceXAI SendFeedback. Keep PII out of GitHub issues. No mentee names, no customer names or lists, no personal, family, or business PII, no secret sauce. Feedback does not auto-change house rules.
 
 ## What stays in this folder
 

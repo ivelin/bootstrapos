@@ -36,4 +36,4 @@ Bill may quote a [clock-examples](../company-os/clock-examples.md) cell to expla
 
 ## 4. Feedback
 
-Email [bootstrap@pirin.ai](mailto:bootstrap@pirin.ai). Say what you tried and what failed. Do not send mentee names, customer lists, or secrets.
+Email [bootstrap@pirin.ai](mailto:bootstrap@pirin.ai) via Bill approve-card. Bill drafts the exact note; on approve, mail that address only. Dismiss means no send. Not a public GitHub issue. Say what you tried and what failed. Do not send mentee names, customer lists, or secrets.
