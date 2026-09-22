@@ -1500,7 +1500,7 @@ if grep -q '| 2.8.19 |' company-os/operating-system.md \
   && grep -q 'initiative-report-card-2.8.19' mcp/src/house-rules.ts \
   && grep -q 'initiativeMappingMayAdvance' mcp/src/house-rules.ts \
   && grep -q 'WHERE ARE WE —' templates/company/state/where-are-we.py \
-  && grep -q 'CUSTOMER CHECKS' templates/company/state/where-are-we.py \
+  && grep -q 'CUSTOMER BETS' templates/company/state/where-are-we.py \
   && grep -q 'OTHER INITIATIVES' templates/company/state/where-are-we.py \
   && grep -q 'Do not migrate/seed/live-probe supabase-pirin-ai' mcp/supabase/migrations/20260926_bootstrap_os_initiative_report_card.sql \
   && grep -q '| 2.8.18 |' company-os/operating-system.md \
@@ -1552,6 +1552,29 @@ if ! printf '%s\n' "$done_when" | grep -q 'spoken card' \
   ok "2.8.20 spoken-card pin is not Day 0 Done when homework"
 else
   not_ok "do not put spoken card / Also moving in the Day 0 Done when checklist"
+fi
+
+# --- z10) OS 2.8.21: spoken label customer bet (enum stays customer_check) ---
+# Additive note on 2.8.19. No version header bump. No schema bump. No enum rename.
+if grep -q '| 2.8.21 |' company-os/operating-system.md \
+  && grep -Fq '**Version:** 2.8.19' company-os/operating-system.md \
+  && grep -q 'OS_VERSION = "2.8.19"' mcp/src/constants.ts \
+  && grep -q 'customer bets with nested engagements' company-os/operating-system.md \
+  && grep -q 'nested under the customer bet' company-os/operating-system.md \
+  && grep -q 'CUSTOMER BETS' mcp/src/initiative-card.ts \
+  && grep -q 'CUSTOMER BETS' templates/company/state/where-are-we.py \
+  && grep -q 'customer_check' company-os/operating-system.md \
+  && grep -q 'customer_check' mcp/src/initiative-card.ts \
+  && grep -q 'spoken-label-customer-bet-2.8.21' mcp/src/house-rules.ts \
+  && grep -q 'Spoken label: customer bet (2.8.21)' plugin/skills/house-rule-pins/SKILL.md \
+  && grep -q 'v2.8.21' README.md \
+  && grep -q 'customer bets with nested engagements' AGENTS.md \
+  && ! grep -q 'CUSTOMER CHECKS' mcp/src/initiative-card.ts \
+  && ! grep -q 'CUSTOMER CHECKS' templates/company/state/where-are-we.py \
+  && ! grep -q 'card-v1' company-os/operating-system.md; then
+  ok "OS 2.8.21 spoken label is customer bet (enum stays customer_check; header stays 2.8.19)"
+else
+  not_ok "2.8.21 spoken-label strings must exist; keep customer_check; keep 2.8.19 version header"
 fi
 
 # --- w) Bootstrap Bill install docs (invite-only; not Path 1) ---

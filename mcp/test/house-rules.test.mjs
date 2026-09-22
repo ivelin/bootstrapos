@@ -68,6 +68,9 @@ describe("OS house rules (adapter reminders)", () => {
     assert.match(pins, /one-control-plane-2.8.18/);
     assert.match(pins, /initiative-report-card-2.8.19/);
     assert.match(pins, /spoken-card-2.8.20/);
+    assert.match(pins, /spoken-label-customer-bet-2.8.21/);
+    assert.match(pins, /CUSTOMER BETS/);
+    assert.match(pins, /customer_check ranks first/);
     assert.match(pins, /Also moving \(not the bottleneck\)/);
     assert.match(pins, /show clocks/);
     assert.match(pins, /Clocks are storage/);

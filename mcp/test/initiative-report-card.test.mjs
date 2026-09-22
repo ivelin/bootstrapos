@@ -130,7 +130,8 @@ describe("OS 2.8.19 initiative report card", () => {
     const body = formatInitiativeCard(card).join("\n");
     assert.match(body, /WHERE ARE WE — alpha/);
     assert.match(body, /#1 BOTTLENECK/);
-    assert.match(body, /CUSTOMER CHECKS/);
+    assert.match(body, /CUSTOMER BETS/);
+    assert.doesNotMatch(body, /CUSTOMER CHECKS/);
     assert.match(body, /OTHER INITIATIVES/);
     assert.match(body, /NDA is not Try/);
     assert.doesNotMatch(body, /Ask \/ Do \/ Write back is a card/);
@@ -276,7 +277,12 @@ describe("OS 2.8.19 initiative report card", () => {
     );
     assert.match(os, /### Spoken card \(founder voice default\)/);
     assert.match(os, /Start at the company name, then Bottleneck #1 in that company’s words/);
-    assert.match(os, /Then accounts: where it stands \/ next \(nested under the customer check\)/);
+    assert.match(os, /Then accounts: where it stands \/ next \(nested under the customer bet\)/);
+    assert.match(os, /customer bets with nested engagements/);
+    assert.match(os, /Card heading: CUSTOMER BETS/);
+    assert.match(os, /Stored kind enum stays `customer_check`/);
+    assert.match(os, /\| 2\.8\.21 \|/);
+    assert.doesNotMatch(os, /customer check/);
     assert.match(os, /Then “Also moving \(not the bottleneck\)” for capital \/ legal \/ advisor/);
     assert.match(os, /Then open questions in plain words/);
     assert.match(os, /Hide unless the human says “show clocks” or “show schema”/);
