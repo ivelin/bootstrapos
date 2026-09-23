@@ -93,7 +93,7 @@ After First Hour, the constitution stays on GitHub and [install-os](https://piri
 
 Do **not** upload mentee work to Ivelin's GitHub.
 
-Path 1 is still `https://github.com/ivelin/bootstrapos` as the free install source. Team Import from Repo is optional. Invite-only collab uses that MCP pin. **Not** a public catalog submit. **Not** mentee boards on our host for git-branch previews — the pin is the write plane. **Not** a Grok Bot marketplace bot.
+Path 1 is still `https://github.com/ivelin/bootstrapos` as the free install source. Team Import from Repo is optional. Invite-only collab uses that MCP pin. **Not** a public catalog submit. Git-branch `*.vercel.app` previews are **Not** mentee boards on our host. The invite-only pin is the Pirin-supported write plane (`create_company`, then `create_idea`). **Not** a Grok Bot marketplace bot.
 
 Follow the [near-term checklist](https://github.com/ivelin/bootstrapos/blob/main/company-os/operating-system.md#near-term-checklist-any-startup). Next real work is usually honest research across those groups — not a platform.
 
