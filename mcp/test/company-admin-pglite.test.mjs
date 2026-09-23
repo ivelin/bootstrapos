@@ -205,13 +205,24 @@ describe("hosted create_company + super_admin (PGlite, never prod)", () => {
   it("reader role cannot insert a super_admin row", async () => {
     await db.exec("RESET ROLE");
     await db.exec("SET ROLE mentee_reader");
+    const denied = /permission denied|row-level security/i;
     await assert.rejects(
       () =>
         db.exec(
           "INSERT INTO bootstrap_os_roles (id, mentee_id, role) VALUES ('hack', 'mentee-a', 'super_admin')",
         ),
-      /permission denied|row-level security/i,
+      denied,
     );
+    const tables = ["bootstrap_os_roles", "bootstrap_os_companies", "bootstrap_os_admin_audit"];
+    const updates = {
+      bootstrap_os_roles: "UPDATE bootstrap_os_roles SET revoked_at = now()",
+      bootstrap_os_companies: "UPDATE bootstrap_os_companies SET display_name = display_name",
+      bootstrap_os_admin_audit: "UPDATE bootstrap_os_admin_audit SET why = why",
+    };
+    for (const table of tables) {
+      await assert.rejects(() => db.query(`SELECT * FROM ${table}`), denied, `${table} SELECT`);
+      await assert.rejects(() => db.exec(updates[table]), denied, `${table} UPDATE`);
+    }
     await db.exec("RESET ROLE");
   });
 });
