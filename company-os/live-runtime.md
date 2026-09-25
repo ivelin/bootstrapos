@@ -275,7 +275,7 @@ Synthetic runs and real jobs should emit **decision traces with the same core fi
 Prioritize failures, novel objections, and successful recoveries:
 
 1. Update reward/risk notes and persona attributes (**Write back**)  
-2. **Seed a permanent stress scenario** in the eval harness when the failure is repeatable or high-cost  
+2. **Seed a permanent stress scenario** in the eval harness when the failure is repeatable or high-cost. Same failure twice, patch the workflow here. Stop after two failures on the same problem. A checked harness failure first gets a short instruction or a denial at the step before the failure ([failure becomes a small runtime policy](operating-system.md#house-rule-failure-becomes-a-small-runtime-policy)). Rewrite the whole workflow only if that small fix fails.  
 3. Promote successful patterns into playbooks / agent instructions only after the eval gate still passes. First time you do a repeatable task together: write a short skill; every later steer updates it ([skill-capture](operating-system.md#skill-capture-first-time--skill)).  
 
 Do not let high-value traces die in chat history.

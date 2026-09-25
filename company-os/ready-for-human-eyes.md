@@ -3,6 +3,7 @@
 **Part of:** [Company Operating System](operating-system.md) **v2.8.19**  
 **Purpose:** Fail-closed gate before asking mentors, betas, or strangers to use a product link.  
 **Not:** Proof of demand, payment, or product–market fit. This gate is not a crowd — [marketing volume cannot promote](operating-system.md#house-rule-marketing-volume-cannot-promote).  
+**Also:** Before a merge, a deploy, or an outside claim, evidence must match this exact artifact. That rule does not replace this gate — [evidence bound to the exact artifact](operating-system.md#house-rule-evidence-bound-to-the-exact-artifact).  
 **Template edits:** Approval-gated — see root [README](../README.md#template-change-policy).
 
 ---

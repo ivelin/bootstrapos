@@ -92,7 +92,11 @@ This is a Day 0 / Path 1 question. It is **not** a house rule and **not** a thir
    House rule: [legal paper cannot promote](#house-rule-legal-paper-cannot-promote).  
    House rule: [one founder control plane](#house-rule-one-founder-control-plane).  
    House rule: [advisor ride-along is assumed, not observed](#house-rule-advisor-ride-along-is-assumed-not-observed).  
-   House rule: [unpaid weeks cannot promote](#house-rule-unpaid-weeks-cannot-promote).
+   House rule: [unpaid weeks cannot promote](#house-rule-unpaid-weeks-cannot-promote).  
+   House rule: [re-ground before advising](#house-rule-re-ground-before-advising).  
+   House rule: [evidence bound to the exact artifact](#house-rule-evidence-bound-to-the-exact-artifact).  
+   House rule: [failure becomes a small runtime policy](#house-rule-failure-becomes-a-small-runtime-policy).  
+   House rule: [synthetic-consumer pretests are not customer evidence](#house-rule-synthetic-consumer-pretests-are-not-customer-evidence).
 
 7. **Build evaluation-first when you build.**  
    Spec success criteria and a harness before (or with) the implementation — not after a big unmeasured build.
@@ -1324,6 +1328,34 @@ This rule is **not** Day 0 homework, **not** a tenth phase, **not** a third cloc
 
 Same family: [legal paper cannot promote](#house-rule-legal-paper-cannot-promote). [There is no optimal price until people have paid and stayed](#house-rule-there-is-no-optimal-price-until-people-have-paid-and-stayed).
 
+### House rule: re-ground before advising
+
+Before you give the next move, re-read the live board. That means the journey, the bottleneck, and the deny list. Read them with `bootstrap_where_are_we`. Do not rely on what the chat still remembers. The failure this prevents is called direction drift.
+
+Source: [arXiv:2609.27606](https://arxiv.org/abs/2609.27606).
+
+### House rule: evidence bound to the exact artifact
+
+Before a merge, a deploy, or a claim to someone outside, require three things: evidence tied to that exact artifact or commit, a frozen policy baseline (the rules you checked, frozen as they were), and current dependencies. This does not replace [Ready for human eyes](#ready-for-human-eyes-ship-gate-before-external-feedback). That gate still decides whether a stranger can try the product.
+
+Source: [arXiv:2609.28216](https://arxiv.org/abs/2609.28216).
+
+### House rule: failure becomes a small runtime policy
+
+After a harness failure you have checked, first add a short instruction, or deny that action, at the step just before the failure. Rewrite the whole workflow only if that small fix fails.
+
+This complements the existing practice: the same failure twice, patch the workflow ([seed a stress scenario](live-runtime.md#high-value-traces--stress-scenarios-and-playbooks)). It also complements stop after two failures on the same problem. A small instruction or denial comes first. Do not start with a new workflow, and do not keep looping.
+
+Source: [arXiv:2609.26048](https://arxiv.org/abs/2609.26048).
+
+### House rule: synthetic-consumer pretests are not customer evidence
+
+An AI “synthetic consumer” test of a logo, an ad, or packaging cannot promote a growth decision. It is not customer evidence. Synthetic work may still rank or kill. It cannot promote. Observed use or pay can.
+
+Source: [arXiv:2609.25677](https://arxiv.org/abs/2609.25677).
+
+Same family: [how to do honest research](#how-to-do-honest-research--validation). [Marketing volume cannot promote](#house-rule-marketing-volume-cannot-promote).
+
 ### Decision methods (aliases, not a third clock)
 
 Two jobs. Do not mix them.
@@ -1367,7 +1399,7 @@ I stay in final control of strategy, journey phase changes, and important decisi
 
 Hard rules you must follow:
 1. Never advance a journey phase without my explicit approval.
-2. Never treat an early idea or customer group as proven on stated preference or synthetic work alone. Weigh stated, synthetic, and observed. House rule: when stated and observed disagree, observed wins. A spoken yes cannot promote a group. Marketing volume cannot promote. A security program cannot promote. There is no optimal price until people have paid and stayed. Do not automate a step that should not exist.
+2. Never treat an early idea or customer group as proven on stated preference or synthetic work alone. Weigh stated, synthetic, and observed. House rule: when stated and observed disagree, observed wins. A spoken yes cannot promote a group. Marketing volume cannot promote. A security program cannot promote. There is no optimal price until people have paid and stayed. Do not automate a step that should not exist. Re-ground before advising: re-read the live board with bootstrap_where_are_we. Before a merge, deploy, or outside claim, tie evidence to that exact artifact. After a checked harness failure, add a short denial before you rewrite the workflow. An AI pretest of a logo, ad, or packaging cannot promote a growth decision.
 3. Label claims honestly: outside facts, company signals, assumed capability, or needs real-world proof.
    Also label research inputs: stated (their words) | synthetic (sim after a condition change) | observed (time or money).
    Never treat simulated prices or a spoken “I would buy” as demand. Keep the words. They are stated evidence, not a sale.
@@ -1571,6 +1603,10 @@ Every company should maintain its own list. Starter prompts:
 - Opening a 5-rung card for an advisor FAST, a SAFE, or a hire — or exiling that row to a spreadsheet — see [one founder control plane](#house-rule-one-founder-control-plane)  
 - An advisor says stay exclusive, then a prospect asks to pay, and the founder delays them — see [advisor ride-along is assumed, not observed](#house-rule-advisor-ride-along-is-assumed-not-observed)  
 - Free work for a company after the first conversation — see [unpaid weeks cannot promote](#house-rule-unpaid-weeks-cannot-promote)
+- Next-move advice from chat memory — see [re-ground before advising](#house-rule-re-ground-before-advising)
+- A merge, deploy, or outside claim whose evidence is not tied to that exact artifact — see [evidence bound to the exact artifact](#house-rule-evidence-bound-to-the-exact-artifact)
+- Rewriting the whole workflow after one checked harness failure — see [failure becomes a small runtime policy](#house-rule-failure-becomes-a-small-runtime-policy)
+- An AI pretest of a logo, ad, or packaging treated as customer evidence — see [synthetic-consumer pretests are not customer evidence](#house-rule-synthetic-consumer-pretests-are-not-customer-evidence)
 - Commissioning custom legal agreements before revenue — see [starter legal templates](#starter-legal-templates)
 
 ---
@@ -1626,6 +1662,8 @@ Accuracy numbers perish with the model checkpoint. Mechanism findings last until
 
 Everything else in the research method is adjacent literature or a **house rule**. House rules (epistemology, not a paper): observed wins a clash; a spoken yes cannot promote; do not seed from a demographic one-liner (demo-only role-play is the weak case); several ideas are allowed (each its own board; do not hide a second idea to look focused); [marketing volume cannot promote](#house-rule-marketing-volume-cannot-promote); [a security program cannot promote](#house-rule-a-security-program-cannot-promote); [there is no optimal price until people have paid and stayed](#house-rule-there-is-no-optimal-price-until-people-have-paid-and-stayed); [do not automate a step that should not exist](#house-rule-do-not-automate-a-step-that-should-not-exist); [legal paper cannot promote](#house-rule-legal-paper-cannot-promote); [one founder control plane](#house-rule-one-founder-control-plane); [advisor ride-along is assumed, not observed](#house-rule-advisor-ride-along-is-assumed-not-observed); [unpaid weeks cannot promote](#house-rule-unpaid-weeks-cannot-promote).
 
+Also house rules, each with a paper: [re-ground before advising](#house-rule-re-ground-before-advising) ([arXiv:2609.27606](https://arxiv.org/abs/2609.27606)); [evidence bound to the exact artifact](#house-rule-evidence-bound-to-the-exact-artifact) ([arXiv:2609.28216](https://arxiv.org/abs/2609.28216)); [failure becomes a small runtime policy](#house-rule-failure-becomes-a-small-runtime-policy) ([arXiv:2609.26048](https://arxiv.org/abs/2609.26048)); [synthetic-consumer pretests are not customer evidence](#house-rule-synthetic-consumer-pretests-are-not-customer-evidence) ([arXiv:2609.25677](https://arxiv.org/abs/2609.25677)).
+
 ## Changelog (high level)
 
 | Version | Notes |
@@ -1660,6 +1698,7 @@ Everything else in the research method is adjacent literature or a **house rule*
 | 2.8.18 | House rule: [one founder control plane](#house-rule-one-founder-control-plane). Primary is the customer bet. Supporting (advisor/FAST, investor/SAFE, counsel, contractor, partner) stays on the same snapshot — no rungs, cannot promote. Engagements are named accounts under primary. Exile to a spreadsheet is rejected. NDA is not Try. No third clock. No schema bump 1–9 / 1–7. Implicit loop from 2.8.17 stays. Writing: [Say it once. Link. No filler.](#how-this-os-may-change-stability-contract). |
 | 2.8.19 | Additive: [Initiative report card](#initiative-report-card). Company header → bottleneck #1 → customer checks with nested engagements → other initiatives footer. `initiatives[]` kinds v1 only (`customer_check` \| `engagement` \| `capital` \| `legal` \| `advisor`). When `initiatives[]` is present, dual-read of progress/supporting/engagements is dead for the card lead. Rank is computed, not stored. New writes → `initiatives[]`. Mapping cannot Advance. `wipLimit` 1 on customer_check until paid use. `impact=clock` may warn, not title. Closed = footer. `progress[]` is not card body. Ask / Do is not a card. No third clock. No schema bump 1–9 / 1–7. Writing: [Say it once. Link. No filler.](#how-this-os-may-change-stability-contract). |
 | 2.8.20 | Additive spoken-card pin on [Initiative report card](#initiative-report-card) / [Spoken card (founder voice default)](#spoken-card-founder-voice-default). Start at the company name, then Bottleneck #1 in that company’s words. Then accounts: where it stands / next (nested under the customer check). Then “Also moving (not the bottleneck)” for capital / legal / advisor. Then open questions in plain words. Hide unless the human says “show clocks” or “show schema”. Engine keeps those rules. Spoken card does not print them. Clocks are storage. Mapping cannot Advance. No third clock. No schema bump 1–9 / 1–7. Version header stays 2.8.19. Writing: [Say it once. Link. No filler.](#how-this-os-may-change-stability-contract). |
+| pins | Additive house-rule pins. No version bump. No schema bump. Version header stays 2.8.19. [Re-ground before advising](#house-rule-re-ground-before-advising). [Evidence bound to the exact artifact](#house-rule-evidence-bound-to-the-exact-artifact). [Failure becomes a small runtime policy](#house-rule-failure-becomes-a-small-runtime-policy). [Synthetic-consumer pretests are not customer evidence](#house-rule-synthetic-consumer-pretests-are-not-customer-evidence). Writing: [Say it once. Link. No filler.](#how-this-os-may-change-stability-contract). |
 
 ---
 

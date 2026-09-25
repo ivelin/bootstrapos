@@ -666,7 +666,12 @@ assert required <= found, found
 for skill in (root / "skills").glob("*/SKILL.md"):
     body = skill.read_text()
     assert "https://github.com/ivelin/bootstrap" in body, skill
-    limit = 2800 if skill.parent.name in {"house-rule-pins", "query-os-first"} else 1800
+    if skill.parent.name == "house-rule-pins":
+        limit = 4000
+    elif skill.parent.name == "query-os-first":
+        limit = 2800
+    else:
+        limit = 1800
     assert len(body) < limit, (skill, len(body), limit)
     for phrase in forbidden:
         assert phrase not in body, (skill, phrase)

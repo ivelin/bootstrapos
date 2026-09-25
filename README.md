@@ -170,6 +170,9 @@ Treat promotion into this template as rare, deliberate work — not a continuous
 
 ### Recent portable additions
 
+**House-rule pins (no version bump)**  
+Four short pins. Version header stays 2.8.19. No schema bump. [Re-ground before advising](company-os/operating-system.md#house-rule-re-ground-before-advising). [Evidence bound to the exact artifact](company-os/operating-system.md#house-rule-evidence-bound-to-the-exact-artifact) — cross-reference Ready for human eyes; do not copy that gate. [Failure becomes a small runtime policy](company-os/operating-system.md#house-rule-failure-becomes-a-small-runtime-policy). [Synthetic-consumer pretests are not customer evidence](company-os/operating-system.md#house-rule-synthetic-consumer-pretests-are-not-customer-evidence).
+
 **v2.8.20 — spoken-card pin (founder voice default)**  
 Additive note on 2.8.19. Full text: [spoken card](company-os/operating-system.md#spoken-card-founder-voice-default). Start at the company name, then Bottleneck #1 in that company’s words. Then accounts: where it stands / next (nested under the customer check). Then “Also moving (not the bottleneck)” for capital / legal / advisor. Then open questions in plain words. Hide clocks and schema unless the human says “show clocks” or “show schema”. Engine keeps those rules. Spoken card does not print them. Clocks are storage. Version header stays 2.8.19. No third clock. No schema bump.
 

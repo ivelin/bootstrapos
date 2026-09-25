@@ -1,11 +1,11 @@
 ---
 name: house-rule-pins
-description: Pin published OS house rules by link. Use for spoken yes / GTM, volume, a security program, a second idea, optimal price, handful WTP, 0-1 LTV/CAC, old SaaS playbook, automate the playbook, agent team to skip a step with no named owner, a new landing page, BANT, MEDDIC, listed price, unpaid trial, or a hire / FAST as a 5-rung card.
+description: Pin published OS house rules by link. Use for spoken yes / GTM, volume, a security program, a second idea, optimal price, handful WTP, 0-1 LTV/CAC, old SaaS playbook, automate the playbook, agent team to skip a step with no named owner, a new landing page, BANT, MEDDIC, listed price, unpaid trial, a hire / FAST as a 5-rung card, re-ground before the next move, evidence for a merge or deploy, a harness failure, or an AI pretest of a logo, ad, or packaging.
 ---
 
 # House-rule pins
 
-When to use: GTM; spoken yes; volume; security; second idea; price; WTP; LTV/CAC; old SaaS playbook; automate the playbook; agent team; one bottleneck this week; fun side quest; new landing page; BANT; MEDDIC; unpaid trial; hire / FAST.
+When to use: GTM; spoken yes; volume; security; second idea; price; WTP; LTV/CAC; old SaaS playbook; automate the playbook; agent team; one bottleneck this week; fun side quest; new landing page; BANT; MEDDIC; unpaid trial; hire / FAST; re-ground; exact artifact; harness failure; synthetic consumer pretest.
 
 Refuse. Cite the OS link.
 
@@ -21,4 +21,8 @@ Refuse. Cite the OS link.
 - Spoken card (founder voice default) (2.8.20) — https://github.com/ivelin/bootstrapos/blob/main/company-os/operating-system.md#spoken-card-founder-voice-default
 - Advisor ride-along is assumed, not observed (2.8.11) — https://github.com/ivelin/bootstrapos/blob/main/company-os/operating-system.md#house-rule-advisor-ride-along-is-assumed-not-observed
 - Unpaid weeks cannot promote (2.8.13) — https://github.com/ivelin/bootstrapos/blob/main/company-os/operating-system.md#house-rule-unpaid-weeks-cannot-promote
+- Re-ground before advising — https://github.com/ivelin/bootstrapos/blob/main/company-os/operating-system.md#house-rule-re-ground-before-advising
+- Evidence bound to the exact artifact — https://github.com/ivelin/bootstrapos/blob/main/company-os/operating-system.md#house-rule-evidence-bound-to-the-exact-artifact
+- Failure becomes a small runtime policy — https://github.com/ivelin/bootstrapos/blob/main/company-os/operating-system.md#house-rule-failure-becomes-a-small-runtime-policy
+- Synthetic-consumer pretests are not customer evidence — https://github.com/ivelin/bootstrapos/blob/main/company-os/operating-system.md#house-rule-synthetic-consumer-pretests-are-not-customer-evidence
 - LTV:CAC 3x / T2D3 stale — https://github.com/ivelin/bootstrapos/blob/main/company-os/after-proof-efficiency.md
