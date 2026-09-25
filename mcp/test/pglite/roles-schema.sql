@@ -252,6 +252,15 @@ BEGIN
     RETURN jsonb_build_object('ok', false, 'status', 403);
   END IF;
 
+  -- Serialize every revoke before the live-admin count.
+  -- Lock key 202609281 is bootstrap_os_revoke_super_admin only. Do not reuse.
+  -- Advisory xact lock, not SELECT ... FOR UPDATE: under READ COMMITTED a
+  -- second revoke can count live super_admins before it waits on row locks,
+  -- so both transactions can see two live admins and each remove one. Both
+  -- paths take this lock first, so the waiter re-counts after the first
+  -- commit and cannot leave zero live super_admins.
+  PERFORM pg_advisory_xact_lock(202609281);
+
   -- Refuse before any role or audit write. The last live super_admin stays.
   SELECT count(*) INTO admins
   FROM bootstrap_os_roles
@@ -363,6 +372,7 @@ REVOKE ALL ON FUNCTION bootstrap_os_admin_gate() FROM PUBLIC, mentee_reader;
 REVOKE ALL ON FUNCTION bootstrap_os_create_company(text, text, boolean, text) FROM PUBLIC;
 REVOKE ALL ON FUNCTION bootstrap_os_grant_super_admin(text) FROM PUBLIC;
 REVOKE ALL ON FUNCTION bootstrap_os_revoke_super_admin(text) FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION bootstrap_mcp_my_labels() FROM PUBLIC;
 
 GRANT EXECUTE ON FUNCTION bootstrap_os_create_company(text, text, boolean, text) TO mentee_reader;
 GRANT EXECUTE ON FUNCTION bootstrap_os_grant_super_admin(text) TO mentee_reader;
