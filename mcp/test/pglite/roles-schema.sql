@@ -234,6 +234,7 @@ DECLARE
   caller text;
   caller_email text;
   target text;
+  admins bigint := 0;
   revoked int := 0;
 BEGIN
   gate := bootstrap_os_admin_gate();
@@ -249,6 +250,19 @@ BEGIN
   SELECT id INTO target FROM bootstrap_mcp_mentees WHERE email = v_email;
   IF target IS NULL THEN
     RETURN jsonb_build_object('ok', false, 'status', 403);
+  END IF;
+
+  -- Refuse before any role or audit write. The last live super_admin stays.
+  SELECT count(*) INTO admins
+  FROM bootstrap_os_roles
+  WHERE role = 'super_admin' AND revoked_at IS NULL;
+  IF admins <= 1 AND EXISTS (
+    SELECT 1 FROM bootstrap_os_roles
+    WHERE mentee_id = target
+      AND role = 'super_admin'
+      AND revoked_at IS NULL
+  ) THEN
+    RETURN jsonb_build_object('ok', false, 'status', 409, 'error', 'last_super_admin');
   END IF;
 
   UPDATE bootstrap_os_roles
@@ -341,6 +355,14 @@ BEGIN
   );
 END;
 $$;
+
+-- mentee_reader is the authenticated analog. anon does not exist in this twin.
+-- Internal helpers stay owner-only. The three RPCs and whoami match the prod grants.
+REVOKE ALL ON FUNCTION bootstrap_os_live_role(text) FROM PUBLIC, mentee_reader;
+REVOKE ALL ON FUNCTION bootstrap_os_admin_gate() FROM PUBLIC, mentee_reader;
+REVOKE ALL ON FUNCTION bootstrap_os_create_company(text, text, boolean, text) FROM PUBLIC;
+REVOKE ALL ON FUNCTION bootstrap_os_grant_super_admin(text) FROM PUBLIC;
+REVOKE ALL ON FUNCTION bootstrap_os_revoke_super_admin(text) FROM PUBLIC;
 
 GRANT EXECUTE ON FUNCTION bootstrap_os_create_company(text, text, boolean, text) TO mentee_reader;
 GRANT EXECUTE ON FUNCTION bootstrap_os_grant_super_admin(text) TO mentee_reader;

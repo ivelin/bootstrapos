@@ -24,10 +24,17 @@ const FORBIDDEN_ERRORS = new Set([
   "ask_admin",
 ]);
 
-/** Fail-closed shape. 403 drops anything that is not an allow-listed error code. */
+const CONFLICT_ERRORS = new Set(["slug_taken", "last_super_admin"]);
+
+/** Fail-closed shape. 403 and 409 drop anything that is not an allow-listed error code. */
 export function publicAdminResult(raw: AdminResult): AdminResult {
-  if (raw.status === 409 || (raw.ok === false && raw.error === "slug_taken")) {
-    return { ok: false, status: 409, error: "slug_taken" };
+  if (
+    raw.status === 409 ||
+    (raw.ok === false && typeof raw.error === "string" && CONFLICT_ERRORS.has(raw.error))
+  ) {
+    const error =
+      typeof raw.error === "string" && CONFLICT_ERRORS.has(raw.error) ? raw.error : "slug_taken";
+    return { ok: false, status: 409, error };
   }
   if (!raw.ok) {
     if (raw.status === 403 && raw.error && FORBIDDEN_ERRORS.has(raw.error)) {
@@ -160,6 +167,12 @@ export class MemoryCompanyAdminStore implements CompanyAdminStore {
       (row) => row.email === target && row.role === "super_admin" && row.revokedAt === null,
     );
     if (!live) return closed();
+    const liveAdmins = this.roles.filter(
+      (row) => row.role === "super_admin" && row.revokedAt === null,
+    );
+    if (liveAdmins.length <= 1) {
+      return { ok: false, status: 409, error: "last_super_admin" };
+    }
     live.revokedAt = new Date().toISOString();
     if (this.liveRole(target) === null) {
       this.roles.push({ email: target, role: "member", revokedAt: null });

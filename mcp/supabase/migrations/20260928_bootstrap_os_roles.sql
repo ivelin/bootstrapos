@@ -229,6 +229,7 @@ DECLARE
   caller uuid;
   caller_email text;
   target uuid;
+  admins bigint := 0;
   revoked int := 0;
 BEGIN
   gate := public.bootstrap_os_admin_gate();
@@ -244,6 +245,19 @@ BEGIN
   SELECT id INTO target FROM public.bootstrap_mcp_mentees WHERE email = v_email;
   IF target IS NULL THEN
     RETURN jsonb_build_object('ok', false, 'status', 403);
+  END IF;
+
+  -- Refuse before any role or audit write. The last live super_admin stays.
+  SELECT count(*) INTO admins
+  FROM public.bootstrap_os_roles
+  WHERE role = 'super_admin' AND revoked_at IS NULL;
+  IF admins <= 1 AND EXISTS (
+    SELECT 1 FROM public.bootstrap_os_roles
+    WHERE mentee_id = target
+      AND role = 'super_admin'
+      AND revoked_at IS NULL
+  ) THEN
+    RETURN jsonb_build_object('ok', false, 'status', 409, 'error', 'last_super_admin');
   END IF;
 
   UPDATE public.bootstrap_os_roles

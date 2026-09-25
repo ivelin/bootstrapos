@@ -83,6 +83,20 @@ describe("company admin result shape", () => {
       status: 409,
       error: "slug_taken",
     });
+    assert.deepEqual(
+      publicAdminResult({
+        ok: false,
+        status: 409,
+        error: "last_super_admin",
+        email: "founder@example.test",
+        slug: "bravo",
+      }),
+      { ok: false, status: 409, error: "last_super_admin" },
+    );
+    assert.deepEqual(
+      publicAdminResult({ ok: false, status: 409, error: "internal_detail", slug: "bravo" }),
+      { ok: false, status: 409, error: "slug_taken" },
+    );
     assert.deepEqual(askAdminResult(), { ok: false, status: 403, error: "ask_admin" });
   });
 
@@ -140,6 +154,16 @@ describe("company admin result shape", () => {
     assert.equal(dup.status, 409);
     assert.ok(admin.audit.some((row) => row.op === "grant_super_admin"));
     assert.ok(admin.audit.some((row) => row.op === "create_company" && row.slug === "delta"));
+
+    const auditBefore = admin.audit.length;
+    const last = await admin.revokeSuperAdmin("founder@example.test", "founder@example.test");
+    assert.deepEqual(last, { ok: false, status: 409, error: "last_super_admin" });
+    assert.equal(admin.audit.length, auditBefore);
+    const still = await admin.createCompany("founder@example.test", {
+      slug: "foxtrot",
+      founderYes: true,
+    });
+    assert.equal(still.ok, true);
   });
 
   it("supabase client fail-closes HTTP errors and strips 403 bodies", async () => {

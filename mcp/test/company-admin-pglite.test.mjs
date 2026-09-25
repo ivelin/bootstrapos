@@ -34,6 +34,7 @@ async function asUser(email, uid) {
   await db.exec("RESET ROLE");
   await db.exec(`SELECT set_config('app.auth_uid', '${uid}', false)`);
   await db.exec(`SELECT set_config('app.auth_email', '${email}', false)`);
+  await db.exec("SET ROLE mentee_reader");
 }
 
 async function createCompany(slug, founderYes = true, why = "new company") {
@@ -112,12 +113,13 @@ describe("hosted create_company + super_admin (PGlite, never prod)", () => {
   });
 
   it("self-grant → 403", async () => {
-    await asUser(FOUNDER, FOUNDER_UID);
+    await db.exec("RESET ROLE");
     await db.exec(`
       UPDATE bootstrap_os_roles SET revoked_at = now() WHERE id = 'role-founder-member';
       INSERT INTO bootstrap_os_roles (id, mentee_id, role, granted_by, granted_at)
       VALUES ('role-founder-admin', 'mentee-ivelin', 'super_admin', 'mentee-ivelin', now());
     `);
+    await asUser(FOUNDER, FOUNDER_UID);
     const who = (await db.query("SELECT bootstrap_mcp_my_labels() AS body")).rows[0].body;
     assert.equal(who.role, "super_admin");
     const self = (
@@ -147,6 +149,52 @@ describe("hosted create_company + super_admin (PGlite, never prod)", () => {
     assert.equal(who.role, "member");
     assert.notEqual(who.role, "super_admin");
     assertEmpty403(await createCompany("echo"), "revoked admin create");
+  });
+
+  it("revoking the last super_admin is refused, the role stays, and no audit row is written", async () => {
+    await db.exec("RESET ROLE");
+    const before = await db.query(
+      "SELECT count(*)::int AS n FROM bootstrap_os_admin_audit WHERE op = 'revoke_super_admin'",
+    );
+    const liveBefore = await db.query(
+      `SELECT m.email
+       FROM bootstrap_os_roles r
+       JOIN bootstrap_mcp_mentees m ON m.id = r.mentee_id
+       WHERE r.role = 'super_admin' AND r.revoked_at IS NULL
+       ORDER BY m.email`,
+    );
+    assert.deepEqual(
+      liveBefore.rows.map((row) => row.email),
+      [FOUNDER],
+      "precondition: founder is the only live super_admin",
+    );
+
+    await asUser(FOUNDER, FOUNDER_UID);
+    const refused = (
+      await db.query("SELECT bootstrap_os_revoke_super_admin($1) AS body", [FOUNDER])
+    ).rows[0].body;
+    assert.equal(refused.ok, false);
+    assert.equal(refused.status, 409);
+    assert.equal(refused.error, "last_super_admin");
+    assert.doesNotMatch(JSON.stringify(refused), new RegExp(CANARY));
+
+    const who = (await db.query("SELECT bootstrap_mcp_my_labels() AS body")).rows[0].body;
+    assert.equal(who.role, "super_admin");
+
+    await db.exec("RESET ROLE");
+    const liveAfter = await db.query(
+      `SELECT r.role
+       FROM bootstrap_os_roles r
+       JOIN bootstrap_mcp_mentees m ON m.id = r.mentee_id
+       WHERE m.email = $1 AND r.revoked_at IS NULL`,
+      [FOUNDER],
+    );
+    assert.equal(liveAfter.rows.length, 1);
+    assert.equal(liveAfter.rows[0].role, "super_admin");
+    const after = await db.query(
+      "SELECT count(*)::int AS n FROM bootstrap_os_admin_audit WHERE op = 'revoke_super_admin'",
+    );
+    assert.equal(after.rows[0].n, before.rows[0].n);
   });
 
   it("create company C does not leak company B", async () => {
@@ -223,6 +271,16 @@ describe("hosted create_company + super_admin (PGlite, never prod)", () => {
       await assert.rejects(() => db.query(`SELECT * FROM ${table}`), denied, `${table} SELECT`);
       await assert.rejects(() => db.exec(updates[table]), denied, `${table} UPDATE`);
     }
+    await assert.rejects(
+      () => db.query("SELECT bootstrap_os_live_role($1)", ["mentee-ivelin"]),
+      denied,
+      "live_role",
+    );
+    await assert.rejects(
+      () => db.query("SELECT bootstrap_os_admin_gate()"),
+      denied,
+      "admin_gate",
+    );
     await db.exec("RESET ROLE");
   });
 });
