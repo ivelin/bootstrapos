@@ -14,6 +14,11 @@ import {
   type DocKey,
 } from "./constants.js";
 import { enableBoardWatch } from "./board-watch.js";
+import {
+  askAdminResult,
+  publicAdminResult,
+  resolveCompanyAdminStore,
+} from "./company-admin.js";
 import { parseJourneyQuery, resolveJourneyStore } from "./journey.js";
 import { loadOsDoc, loadOsDocList, resolveDocsBaseUrl, resolveDocsSource } from "./docs.js";
 import {
@@ -53,7 +58,10 @@ import {
   NOTE_OS_INFO_HOSTED,
   SUPPORT_HOWTO,
   TOOL_ACCEPT_INVITE,
+  TOOL_CREATE_COMPANY,
   TOOL_GET_JOURNEY,
+  TOOL_GRANT_SUPER_ADMIN,
+  TOOL_REVOKE_SUPER_ADMIN,
   TOOL_INVITE_MEMBER,
   TOOL_CREATE_IDEA,
   TOOL_POST_COMMENT,
@@ -101,23 +109,37 @@ function activeScopeNote() {
   };
 }
 
-function adoptionOrder() {
-  return {
-    path1: `Point an AI at ${PUBLISHED_REPO} — no install, no MCP. Default front door.`,
-    path2: "Optional instance files / ./scripts/install-instance.sh + optional .grok/workflows.",
-    path3: "Local stdio MCP (optional, several ideas). Same company-state.json + where-are-we.py. Write/init/use-company stays here.",
+function adoptionOrder(surface: McpSurface) {
+  const shared = {
+    path1: `Point an AI at ${PUBLISHED_REPO} — constitution, no install. Default front door.`,
+    path2: "Optional notes in your repo (./scripts/install-instance.sh). Not the source of record.",
     path4Hosted: PATH4_HONESTY,
+  };
+  if (surface === "hosted-read") {
+    return {
+      ...shared,
+      hostedWrite:
+        "This pin is the Pirin write plane. A super admin calls create_company, then create_idea. If that is refused, ask an admin or email bootstrap@pirin.ai.",
+      selfHost:
+        "Fork and deploy mcp/ on your own Vercel and Supabase. That kit is not the Pirin-supported path.",
+    };
+  }
+  return {
+    ...shared,
+    path3:
+      "Self-host kit: one stdio server; bootstrap_init_company / list / use_company; state under BOOTSTRAP_DATA_ROOT/instances/<id>. Not the Pirin-supported mentee source of record.",
   };
 }
 
 function membershipPayload(
-  who: { authenticated: boolean; email?: string; labels: string[] },
+  who: { authenticated: boolean; email?: string; labels: string[]; role?: "member" | "super_admin" | "unset" },
   sessionKey?: string,
 ) {
   const companies = [...who.labels].sort();
   return {
     authenticated: who.authenticated,
     email: who.authenticated ? who.email ?? null : null,
+    role: who.authenticated ? who.role ?? "unset" : "unset",
     companies,
     labels: companies,
     activeCompany: sessionKey ? getActiveCompany(sessionKey) ?? null : null,
@@ -136,7 +158,7 @@ function registerReadTools(server: McpServer, surface: McpSurface, hosted?: Host
         mcpVersion: MCP_VERSION,
         surface,
         publishedRepo: PUBLISHED_REPO,
-        adoptionOrder: adoptionOrder(),
+        adoptionOrder: adoptionOrder(surface),
         hardRules: [
           "AI never advances journey phase without founder approval",
           "Ready for human eyes green is not demand or PMF",
@@ -174,13 +196,13 @@ function registerReadTools(server: McpServer, surface: McpSurface, hosted?: Host
       return text({
         ...common,
         connectorModel:
-          "Optional path 3 adapter: one MCP connector, many isolated company instances. Not a second OS. Markdown is the constitution.",
+          "Self-host kit: one MCP connector, many isolated company instances on this disk. Not the Pirin mentee source of record. Markdown is the constitution.",
         docsSource: resolveDocsSource(),
         modes: {
           markdownOnly:
             "Path 1–2. Use company-os/*.md and templates/ with no MCP. Full ownership, offline.",
           localMcpMultiCompany:
-            "Path 3. One stdio server; bootstrap_init_company / list / use_company; state under BOOTSTRAP_DATA_ROOT/instances/<id>.",
+            "Self-host disk. One stdio server; bootstrap_init_company / list / use_company; state under BOOTSTRAP_DATA_ROOT/instances/<id>. Not the Pirin mentee path.",
           localMcpSingleEnv:
             "Optional BOOTSTRAP_INSTANCE_ROOT pins one company (backward compatible).",
           hostedReadPreview: PATH4_HONESTY,
@@ -335,6 +357,77 @@ function registerGatedIdentityTools(server: McpServer, ctx: HostedRequestContext
         companies: [...who.labels].sort(),
         note: `This chat is about ${chosen}. Invite and later status use this company unless you name another.`,
       });
+    },
+  );
+
+  const adminStoreOf = () => resolveCompanyAdminStore(ctx.accessToken);
+  const adminEmail = () => ctx.whoami.email;
+
+  server.tool(
+    "create_company",
+    TOOL_CREATE_COMPANY,
+    {
+      slug: z.string().describe("Company slug. Letters, numbers, hyphen, underscore."),
+      displayName: z.string().optional().describe("Human label. Defaults to the slug."),
+      founderYes: z
+        .boolean()
+        .describe("True only after an explicit founder yes in this chat"),
+      why: z.string().optional().describe("Why this company exists. Stored on the audit row."),
+    },
+    async (input) => {
+      if (!ctx.whoami.authenticated || !adminEmail()) return err(NOTE_NOT_SIGNED_IN);
+      const store = adminStoreOf();
+      if (!store) return text(askAdminResult());
+      try {
+        return text(
+          publicAdminResult(
+            await store.createCompany(adminEmail()!, {
+              slug: input.slug,
+              displayName: input.displayName,
+              founderYes: input.founderYes,
+              why: input.why,
+            }),
+          ),
+        );
+      } catch (e) {
+        return err(e instanceof Error ? e.message : String(e));
+      }
+    },
+  );
+
+  server.tool(
+    "grant_super_admin",
+    TOOL_GRANT_SUPER_ADMIN,
+    {
+      email: z.string().describe("Login email to grant. Cannot be your own email."),
+    },
+    async ({ email }) => {
+      if (!ctx.whoami.authenticated || !adminEmail()) return err(NOTE_NOT_SIGNED_IN);
+      const store = adminStoreOf();
+      if (!store) return text(askAdminResult());
+      try {
+        return text(publicAdminResult(await store.grantSuperAdmin(adminEmail()!, email)));
+      } catch (e) {
+        return err(e instanceof Error ? e.message : String(e));
+      }
+    },
+  );
+
+  server.tool(
+    "revoke_super_admin",
+    TOOL_REVOKE_SUPER_ADMIN,
+    {
+      email: z.string().describe("Login email whose super admin access ends now."),
+    },
+    async ({ email }) => {
+      if (!ctx.whoami.authenticated || !adminEmail()) return err(NOTE_NOT_SIGNED_IN);
+      const store = adminStoreOf();
+      if (!store) return text(askAdminResult());
+      try {
+        return text(publicAdminResult(await store.revokeSuperAdmin(adminEmail()!, email)));
+      } catch (e) {
+        return err(e instanceof Error ? e.message : String(e));
+      }
     },
   );
 }

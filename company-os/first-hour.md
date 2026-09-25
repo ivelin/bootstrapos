@@ -34,7 +34,7 @@ If you cannot write a kill line, you are already protecting the idea.
 
 [Day 0: lifestyle or swinging for the fences](https://github.com/ivelin/bootstrapos/blob/main/company-os/operating-system.md#day-0-lifestyle-or-swinging-for-the-fences).
 
-If you have **more than one idea**, write each as its own thesis. Do not fold the second into the first to look focused. Rank and kill per board. Path 1 (chat) is enough for one idea; optional path 3 (local MCP) keeps several ideas isolated.
+If you have **more than one idea**, write each as its own thesis. Do not fold the second into the first to look focused. Rank and kill per board. Path 1 (chat) is enough for one idea. Pirin-supported boards live on the hosted connector, not a local install.
 
 ---
 
@@ -89,11 +89,11 @@ On Day 0 you should hear something like: **Write the bet**, gate open, autonomy 
 
 Not another Day 0 checkbox. This hour stays thesis, ≥3 groups, one snapshot.
 
-After First Hour, query the published OS on GitHub, [install-os](https://pirin.ai/install-os), or local. Free Path 1 does not use a hosted MCP connector. Invite-only collab / Grok / whoami: `https://mcp.bootstrap.pirin.ai/mcp` ([hosted identity](https://github.com/ivelin/bootstrapos/blob/main/mcp/docs/HOSTED_IDENTITY.md)).
+After First Hour, the constitution stays on GitHub and [install-os](https://pirin.ai/install-os). Free Path 1 does not use a hosted MCP connector. Pirin-supported company boards are the invite-only pin `https://mcp.bootstrap.pirin.ai/mcp` ([hosted identity](https://github.com/ivelin/bootstrapos/blob/main/mcp/docs/HOSTED_IDENTITY.md)): a super admin calls `create_company`, then `create_idea`. Do not keep that company on a local install.
 
 Do **not** upload mentee work to Ivelin's GitHub.
 
-Path 1 is still `https://github.com/ivelin/bootstrapos` as the free install source. Team Import from Repo is optional. Invite-only collab uses that MCP pin. **Not** a public catalog submit. **Not** mentee boards on our host. **Not** a Grok Bot marketplace bot.
+Path 1 is still `https://github.com/ivelin/bootstrapos` as the free install source. Team Import from Repo is optional. Invite-only collab uses that MCP pin. **Not** a public catalog submit. Git-branch `*.vercel.app` previews are **Not** mentee boards on our host. The invite-only pin is the Pirin-supported write plane (`create_company`, then `create_idea`). **Not** a Grok Bot marketplace bot.
 
 Follow the [near-term checklist](https://github.com/ivelin/bootstrapos/blob/main/company-os/operating-system.md#near-term-checklist-any-startup). Next real work is usually honest research across those groups — not a platform.
 

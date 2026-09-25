@@ -6,7 +6,7 @@
 
 Replace every placeholder with *your* company. Do not import another founder’s market.
 
-Optional path 3 (local MCP, several ideas): the same `company-state.json` + `where-are-we.py` may live under `$BOOTSTRAP_DATA_ROOT/instances/<id>/`. Do not keep a second diverging copy.
+Self-host kit only: the same `company-state.json` + `where-are-we.py` may live under `$BOOTSTRAP_DATA_ROOT/instances/<id>/`. That disk is not the Pirin mentee source of record. Do not keep a second diverging copy.
 
 ---
 

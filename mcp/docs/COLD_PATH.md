@@ -3,7 +3,7 @@
 **Goal:** On a clean machine, go from zero → working multi-company control plane in under 15 minutes.  
 **Pass criteria for gate M2:** someone who did **not** write this code completes the path and records evidence below.
 
-This is **optional path 3**. Path 1 is still point an AI at https://github.com/ivelin/bootstrap (no install, no hosted MCP URL). Path 2 is optional instance/CLI. Invite-only hosted MCP is [`HOSTED_IDENTITY.md`](HOSTED_IDENTITY.md) — not a Path 1 door. No public mentee-ready host.
+This is the **self-host kit** (stdio / `~/.bootstrap-os`, `initCompany()`). It is not the Pirin-supported mentee source of record. Path 1 is still point an AI at https://github.com/ivelin/bootstrapos (no install). Path 2 is optional notes in your repo. The Pirin write plane is [`HOSTED_IDENTITY.md`](HOSTED_IDENTITY.md) — `create_company` then `create_idea`. Git-branch previews are not mentee-ready boards.
 
 ---
 
@@ -119,7 +119,7 @@ No `mcp/` usage required. Gate: can answer "where are we?" from state + OS docs 
 | Symptom | Likely cause | Fix |
 |---------|--------------|-----|
 | Client shows 0 tools | Wrong path to `dist/index.js`; not built | `npm run build`; use absolute paths |
-| `Company state not found` | No init / wrong data root | `bootstrap_init_company` or set `BOOTSTRAP_DATA_ROOT` |
+| `Company state not found` | No disk bootstrap / wrong data root | On this self-host kit: `bootstrap_init_company` or set `BOOTSTRAP_DATA_ROOT`. On the hosted pin: ask a super admin to call `create_company`, then `create_idea`, or email bootstrap@pirin.ai. |
 | Phase jumps unexpectedly | Client bug or wrong flag | Must require `founderApprovedPhaseChange=true` |
 | Companies bleed together | Shared `BOOTSTRAP_INSTANCE_ROOT` | Unset it; use multi-company data root |
 | Works in CI, fails in client | Client env not passed | Mirror `env` block from example JSON |

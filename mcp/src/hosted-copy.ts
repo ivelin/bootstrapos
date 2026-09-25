@@ -9,7 +9,8 @@ export const HOSTED_MCP_INSTRUCTIONS = `You are connected to Bootstrap OS for on
 
 A company is a team (alpha, bravo, charlie). An idea is one 0-1 bet under that company. Clocks, bottleneck, mermaid, and the decision log are per idea. Never blend two ideas into one story or one diagram. Process docs (operating-system, first-hour, clock-examples) are not companies.
 
-To see who is signed in and which companies they can open, call bootstrap_whoami or bootstrap_list_companies.
+To see who is signed in, which companies they can open, and whether they are a super admin, call bootstrap_whoami or bootstrap_list_companies.
+A new company on this connector is create_company (super admin, founder yes in this chat), then create_idea for the first bet. If create_company is refused, ask an admin or email bootstrap@pirin.ai. Do not call bootstrap_init_company here.
 When the user says where are we, show the company board, show company X ideas, show my idea board, where are we with company X and its ideas, status, a diagram or picture of the journey, the decision log, who did what, the bottleneck, or who is on the team — that is get_journey / bootstrap_where_are_we:
 1. Call bootstrap_use_company if no company is active.
 2. Call get_journey or bootstrap_where_are_we with company and optional idea (omit idea for every idea under the company).
@@ -43,7 +44,16 @@ export function hostedInstructionsForClient(input: {
 }
 
 export const TOOL_WHOAMI =
-  "Who is signed in, and which companies they can open. Use when the user asks who they are or what companies they have access to."
+  "Who is signed in, which companies they can open, and their role (member, super admin, or unset). Use when the user asks who they are or what companies they have access to."
+
+export const TOOL_CREATE_COMPANY =
+  "Create a company on this hosted board. Super admin only. Needs founder yes in this chat and a short why. Does not create an idea — call create_idea next. A duplicate name is refused. If this is refused, ask an admin or email bootstrap@pirin.ai."
+
+export const TOOL_GRANT_SUPER_ADMIN =
+  "Grant super admin to someone who already has a login. Live super admin only. You cannot grant it to yourself."
+
+export const TOOL_REVOKE_SUPER_ADMIN =
+  "Revoke super admin immediately. Live super admin only."
 
 export const TOOL_LIST_COMPANIES =
   "List companies this login can open. Use when the user asks what companies or teams they have."

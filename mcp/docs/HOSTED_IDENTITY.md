@@ -2,7 +2,7 @@
 
 This host is the **resource server only**. There is **one** invite-only hosted MCP pin: `https://mcp.bootstrap.pirin.ai/mcp`. Cookie-less `initialize` / GET SSE / `tools/list` **401** so an MCP client (Grok Bot is one example) can start OAuth. Gated tools accept **access tokens issued by pirin.ai login**. This draft also gates journey tools — contract: [`JOURNEY.md`](JOURNEY.md).
 
-Free docs are GitHub + [install-os](https://pirin.ai/install-os) + local — **not** a hosted MCP connector. Do not invent `os.bootstrap.pirin.ai` or a second public Path 1 hostname. Path 3 local stdio stays the write path.
+Free docs are GitHub + [install-os](https://pirin.ai/install-os) + local — **not** a hosted MCP connector. Do not invent `os.bootstrap.pirin.ai` or a second public Path 1 hostname. This pin is the Pirin product write plane: a super admin calls `create_company`, then `create_idea`. Hosted callers do not call `bootstrap_init_company`. OSS `mcp/` on your own Vercel and Supabase is the self-host alternative. Path 1 markdown stays the constitution.
 
 ## Founder lock
 
@@ -140,6 +140,33 @@ WHERE m.email = lower('founder@example.com');
 3. That person signs in at pirin.ai `/bootstrap-os/login`. OAuth then works. `bootstrap_mcp_my_labels` binds `auth_user_id` on the first email match.
 
 Uninvited JWTs stay `authenticated: false` / `reason: not_invited`. Gated tools stay HTTP 401 except `accept_invite` (valid JWT + matching invite token; already-authenticated users may join another workspace). Missing token still 401s the collab handshake. Later users: [`INVITE.md`](INVITE.md).
+
+## First super admin (hosted install)
+
+Say it **once** here. Other files link.
+
+A first-time hosted install must name a real super_admin email contact. That address is an operator input. Real contact addresses are never committed to this repo.
+
+Apply `mcp/supabase/migrations/20260928_bootstrap_os_roles.sql` first (operator, not a PR agent). The migration does not create a super_admin. `grant_super_admin` cannot create the first one: it requires a caller who is already a live super_admin. After that migration is applied, the operator inserts the first super_admin row by hand, outside git. The person must already be a `bootstrap_mcp_mentees` row (the first-user insert above). If that insert matches no row, nothing is written.
+
+Template and test fixtures use `founder@example.test` as an illustrative `member` only, not a super_admin.
+
+```sql
+-- Operator only. Not a migration. Substitute <super-admin-email> outside git.
+UPDATE public.bootstrap_os_roles
+SET revoked_at = now()
+WHERE mentee_id = (
+  SELECT id FROM public.bootstrap_mcp_mentees WHERE email = lower('<super-admin-email>')
+)
+AND revoked_at IS NULL;
+
+INSERT INTO public.bootstrap_os_roles (mentee_id, role, granted_at)
+SELECT m.id, 'super_admin', now()
+FROM public.bootstrap_mcp_mentees m
+WHERE m.email = lower('<super-admin-email>');
+```
+
+Later grants and revokes use `grant_super_admin` / `revoke_super_admin`. Revoking the last live super_admin is refused (409 `last_super_admin`, no audit row).
 
 ## Tests (PGlite / isolated)
 
