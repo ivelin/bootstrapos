@@ -69,7 +69,7 @@ Product code stays in its own repo. Point the agent at this connector once.
 |------|---------|
 | `bootstrap_whoami` | Who is signed in, which **companies** they can open, and `role` (`member`, `super_admin`, or `unset`). [`INVITE.md`](docs/INVITE.md). |
 | `create_company` | Super admin creates a company (membership only). Then `create_idea`. Duplicate slug is 409. Others get 403 with an empty body. |
-| `grant_super_admin` / `revoke_super_admin` | Live super admin grants or revokes another login. No self-grant. Revoke is immediate. |
+| `grant_super_admin` / `revoke_super_admin` | Live super admin grants or revokes another login. No self-grant. Revoke is immediate. The first super_admin is an operator hand seed after the roles migration (`<super-admin-email>` stays out of git) — [`docs/HOSTED_IDENTITY.md`](docs/HOSTED_IDENTITY.md#first-super-admin-hosted-install). |
 | `bootstrap_list_companies` | Same company list. (`bootstrap_list_company_labels` is a one-release alias.) |
 | `bootstrap_use_company` | This chat is about one company the user already belongs to. |
 | `invite_member` | Invite someone to a company you can open. Same email may join several companies. Email outbox for pirin-ai (`bootstrap@pirin.ai`; production sends). [`INVITE.md`](docs/INVITE.md). |
@@ -186,7 +186,7 @@ Never deploy this adapter to `v0-pirin-ai-founder-studio` or any pirin.ai host.
 | Writes | `bootstrap_init_company` on your disk, or your own deploy of `mcp/` | `create_company` (super admin) then `create_idea`. Do not call `bootstrap_init_company`. |
 | Replaces Path 1? | No | No |
 | Pirin mentee source of record? | No | Yes, for invited companies on the pin |
-| First-user fixture | Local instances if they init them | Can list three **labels** (`alpha`, `bravo`, `charlie`) after allowlist invite + login. First user is a SQL insert — [`HOSTED_IDENTITY.md`](docs/HOSTED_IDENTITY.md#first-user-rebuild-from-github). Later members: in-chat [`INVITE.md`](docs/INVITE.md). Template seed is fictional `founder@example.test` as `member`. |
+| First-user fixture | Local instances if they init them | Can list three **labels** (`alpha`, `bravo`, `charlie`) after allowlist invite + login. First user is a SQL insert — [`HOSTED_IDENTITY.md`](docs/HOSTED_IDENTITY.md#first-user-rebuild-from-github). Later members: in-chat [`INVITE.md`](docs/INVITE.md). Template and test fixtures use fictional `founder@example.test` as an illustrative `member` only, not a super_admin. Real contact addresses are never committed. The first hosted super_admin is a hand seed — [`HOSTED_IDENTITY.md`](docs/HOSTED_IDENTITY.md#first-super-admin-hosted-install). |
 
 ---
 
