@@ -165,6 +165,30 @@ When a company or person asks for more work after the first conversation, and th
 
 House rule: [unpaid weeks cannot promote](https://github.com/ivelin/bootstrapos/blob/main/company-os/operating-system.md#house-rule-unpaid-weeks-cannot-promote).
 
+When you are about to give the next move from what the chat still remembers:
+
+> Re-read the live board first. Journey, bottleneck, and the deny list. Use bootstrap_where_are_we. The failure this prevents is direction drift.
+
+House rule: [re-ground before advising](https://github.com/ivelin/bootstrapos/blob/main/company-os/operating-system.md#house-rule-re-ground-before-advising).
+
+When someone wants to merge, deploy, or tell an outsider the product is ready, and the proof is from a different commit:
+
+> The evidence has to match this exact artifact or commit, the rules you checked (frozen as they were), and the dependencies as they are now. Ready for human eyes still decides whether a stranger can try it.
+
+House rule: [evidence bound to the exact artifact](https://github.com/ivelin/bootstrapos/blob/main/company-os/operating-system.md#house-rule-evidence-bound-to-the-exact-artifact).
+
+When a checked harness failure shows up and the next idea is to rewrite the whole workflow:
+
+> First add a short instruction, or deny that action, at the step just before the failure. Rewrite the workflow only if that small fix fails. Same failure twice, patch the workflow. Stop after two failures on the same problem.
+
+House rule: [failure becomes a small runtime policy](https://github.com/ivelin/bootstrapos/blob/main/company-os/operating-system.md#house-rule-failure-becomes-a-small-runtime-policy).
+
+When an AI “synthetic consumer” test of a logo, an ad, or packaging is treated as proof of a growth decision:
+
+> That pretest cannot promote. It is not customer evidence.
+
+House rule: [synthetic-consumer pretests are not customer evidence](https://github.com/ivelin/bootstrapos/blob/main/company-os/operating-system.md#house-rule-synthetic-consumer-pretests-are-not-customer-evidence).
+
 ### SoR / buy vs build / advice (not this hour)
 
 Not Day 0 homework. The hour stays thesis, ≥3 groups, one snapshot.
