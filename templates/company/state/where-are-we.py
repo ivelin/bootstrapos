@@ -299,7 +299,7 @@ def _card_lines(state: dict) -> list[str]:
             if bottleneck
             else "#1 BOTTLENECK  none yet"
         ),
-        "CUSTOMER CHECKS",
+        "CUSTOMER BETS",
     ]
     if not open_checks:
         lines.append("  (none)")

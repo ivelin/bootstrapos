@@ -357,7 +357,7 @@ export function initiativesFromLegacy(
     typeof scoreboard.constraint_this_week === "string"
       ? scoreboard.constraint_this_week.trim()
       : "";
-  // Killed boards must not invent a live customer check with measure pay-or-use.
+  // Killed boards must not invent a live customer bet with measure pay-or-use.
   if (constraint && !opts.killed) {
     rows.push({
       id: "legacy-constraint",
@@ -561,7 +561,7 @@ export function formatInitiativeCard(card: InitiativeCard): string[] {
       ? `#1 BOTTLENECK  ${card.bottleneck.id} · ${card.bottleneck.premise}`
       : "#1 BOTTLENECK  none yet",
     card.warn,
-    "CUSTOMER CHECKS",
+    "CUSTOMER BETS",
   ].filter((line): line is string => Boolean(line));
   if (!card.customerChecks.length) {
     lines.push("  (none)");

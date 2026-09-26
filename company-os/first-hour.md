@@ -149,7 +149,7 @@ House rule: [supporting stays on the same snapshot](https://github.com/ivelin/bo
 
 When someone asks Where are we after Day 0:
 
-> Start at the company name, then Bottleneck #1 in that company’s words. Then accounts: where it stands / next (nested under the customer check). Then “Also moving (not the bottleneck)” for capital / legal / advisor. Then open questions in plain words. Hide clocks and schema unless they say “show clocks” or “show schema”. Engine keeps those rules. Spoken card does not print them.
+> Start at the company name, then Bottleneck #1 in that company’s words. Then accounts: where it stands / next (nested under the customer bet). Then “Also moving (not the bottleneck)” for capital / legal / advisor. Then open questions in plain words. Hide clocks and schema unless they say “show clocks” or “show schema”. Engine keeps those rules. Spoken card does not print them.
 
 Card: [initiative report card](https://github.com/ivelin/bootstrapos/blob/main/company-os/operating-system.md#initiative-report-card) · [spoken card (founder voice default)](https://github.com/ivelin/bootstrapos/blob/main/company-os/operating-system.md#spoken-card-founder-voice-default).
 

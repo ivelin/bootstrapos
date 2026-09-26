@@ -17,7 +17,7 @@ Refuse. Cite the OS link.
 - Do not automate a step that should not exist (2.8.9) — https://github.com/ivelin/bootstrapos/blob/main/company-os/operating-system.md#house-rule-do-not-automate-a-step-that-should-not-exist
 - Legal paper cannot promote (2.8.10) — https://github.com/ivelin/bootstrapos/blob/main/company-os/operating-system.md#house-rule-legal-paper-cannot-promote
 - One founder control plane (2.8.18) — https://github.com/ivelin/bootstrapos/blob/main/company-os/operating-system.md#house-rule-one-founder-control-plane
-- Initiative report card (2.8.19) — https://github.com/ivelin/bootstrapos/blob/main/company-os/operating-system.md#initiative-report-card
+- Report card (2.8.19). Spoken label: customer bet (2.8.21) — https://github.com/ivelin/bootstrapos/blob/main/company-os/operating-system.md#initiative-report-card
 - Spoken card (founder voice default) (2.8.20) — https://github.com/ivelin/bootstrapos/blob/main/company-os/operating-system.md#spoken-card-founder-voice-default
 - Advisor ride-along is assumed, not observed (2.8.11) — https://github.com/ivelin/bootstrapos/blob/main/company-os/operating-system.md#house-rule-advisor-ride-along-is-assumed-not-observed
 - Unpaid weeks cannot promote (2.8.13) — https://github.com/ivelin/bootstrapos/blob/main/company-os/operating-system.md#house-rule-unpaid-weeks-cannot-promote
