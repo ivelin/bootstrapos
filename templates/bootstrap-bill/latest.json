@@ -1,0 +1,25 @@
+{
+  "version": 17,
+  "published": "2026-09-25",
+  "whatsNew": "Bill now adapts to you: when you have to ask, clarify, or correct it about your board, it fixes the thing, remembers the lesson, and writes an approved idea's first customer bet right away so the card is never blank.",
+  "skills": {
+    "bootstrap-bill-onboarding": {
+      "sha256": "dd2e842332b10c54ee6e088fa3a9932e951897fb4b53fe511a022ff6a35c6808",
+      "path": "templates/bootstrap-bill/skills/bootstrap-bill-onboarding/SKILL.md"
+    },
+    "bootstrap-bill-whats-new": {
+      "sha256": "752be220397e78053bf19c583f8a806f377e01654c9e2e72e61eea00e6e94051",
+      "path": "templates/bootstrap-bill/skills/bootstrap-bill-whats-new/SKILL.md"
+    },
+    "bootstrap-bill-frictionless-founder": {
+      "sha256": "e95285a6374055416b59ec6e95db74df04a0605fd88bf6b777c3c69ed6eda67f",
+      "path": "templates/bootstrap-bill/skills/bootstrap-bill-frictionless-founder/SKILL.md"
+    },
+    "bootstrap-board-status-visualization": {
+      "sha256": "8948570e25a9d0487b7afb6aee91bea9e5a583d090d9d92f3a46ea9f1cf4a724",
+      "path": "templates/bootstrap-bill/skills/bootstrap-board-status-visualization/SKILL.md"
+    }
+  },
+  "routinesChanged": false,
+  "memoriesChanged": false
+}
