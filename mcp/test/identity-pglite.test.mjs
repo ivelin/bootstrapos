@@ -330,3 +330,124 @@ $$;
     assert.deepEqual(again, { ok: false, reason: "already_member" });
   });
 });
+
+const MIGRATIONS = path.join(__dirname, "..", "supabase", "migrations");
+
+function latestAcceptInviteMigration() {
+  const files = fs.readdirSync(MIGRATIONS).filter((name) => name.endsWith(".sql")).sort();
+  let hit = null;
+  for (const file of files) {
+    const sql = fs.readFileSync(path.join(MIGRATIONS, file), "utf8");
+    const re =
+      /CREATE OR REPLACE FUNCTION public\.bootstrap_mcp_accept_invite\(p_token text\)[\s\S]*?\n\$\$;/g;
+    let match;
+    while ((match = re.exec(sql))) {
+      hit = { file, sql, fn: match[0] };
+    }
+  }
+  if (!hit) throw new Error("no bootstrap_mcp_accept_invite migration");
+  return hit;
+}
+
+function menteeVarFromMigration(fn) {
+  const into = fn.match(
+    /SELECT id INTO ([a-z_][a-z0-9_]*)\s+FROM public\.bootstrap_mcp_mentees\s+WHERE email = invite\.invitee_email/,
+  );
+  if (!into) throw new Error("accept_invite is missing SELECT id INTO … mentees");
+  return into[1];
+}
+
+function pgliteAcceptWithMigrationVar(varName) {
+  if (!/^[a-z_][a-z0-9_]*$/.test(varName)) {
+    throw new Error(`unsafe accept_invite variable ${varName}`);
+  }
+  const schema = fs.readFileSync(SCHEMA, "utf8");
+  const match = schema.match(
+    /CREATE OR REPLACE FUNCTION bootstrap_mcp_accept_invite\(p_token text\)[\s\S]*?\n\$\$;/,
+  );
+  if (!match) throw new Error("pglite bootstrap_mcp_accept_invite missing");
+  if (!match[0].includes("found_mentee_id")) {
+    throw new Error("pglite accept analog no longer uses found_mentee_id");
+  }
+  return match[0].replaceAll("found_mentee_id", varName);
+}
+
+describe("PGlite accept_invite mentee_id (isolated, never prod)", () => {
+  let acceptDb;
+
+  before(async () => {
+    acceptDb = new PGlite();
+    await acceptDb.exec(fs.readFileSync(SCHEMA, "utf8"));
+  });
+
+  after(async () => {
+    await acceptDb?.close();
+  });
+
+  it("accept_invite binds founder@example.test to alpha without 42702", async () => {
+    const latest = latestAcceptInviteMigration();
+    assert.match(latest.fn, /RETURNS jsonb/);
+    assert.match(latest.fn, /LANGUAGE plpgsql/);
+    assert.match(latest.fn, /SECURITY DEFINER/);
+    assert.match(latest.fn, /SET search_path = public/);
+    assert.match(
+      latest.sql,
+      /REVOKE ALL ON FUNCTION public\.bootstrap_mcp_accept_invite\(text\) FROM PUBLIC, anon/,
+    );
+    assert.match(
+      latest.sql,
+      /GRANT EXECUTE ON FUNCTION public\.bootstrap_mcp_accept_invite\(text\) TO authenticated/,
+    );
+    assert.doesNotMatch(
+      latest.sql,
+      /GRANT EXECUTE ON FUNCTION public\.bootstrap_mcp_accept_invite\(text\) TO anon/,
+    );
+    assert.doesNotMatch(latest.sql, /supabase\.co/);
+
+    const menteeVar = menteeVarFromMigration(latest.fn);
+    await acceptDb.exec(pgliteAcceptWithMigrationVar(menteeVar));
+
+    const token = "inv_example_test_token_alpha";
+    await acceptDb.query(
+      `INSERT INTO bootstrap_mcp_invites (
+         id, invitee_email, company_label, invited_by_mentee_id, invited_by_email, token_hash, expires_at
+       ) VALUES (
+         'invite-founder-alpha', 'founder@example.test', 'alpha', 'mentee-ivelin', 'founder@example.test',
+         bootstrap_mcp_hash_token($1), now() + interval '7 days'
+       )`,
+      [token],
+    );
+    await acceptDb.exec("RESET ROLE");
+    await acceptDb.exec(
+      "SELECT set_config('app.auth_uid', '33333333-3333-3333-3333-333333333333', false)",
+    );
+    await acceptDb.exec("SELECT set_config('app.auth_email', 'founder@example.test', false)");
+
+    let accepted;
+    try {
+      accepted = (
+        await acceptDb.query("SELECT bootstrap_mcp_accept_invite($1) AS body", [token])
+      ).rows[0].body;
+    } catch (e) {
+      assert.fail(`accept_invite raised ${e.code}: ${e.message}`);
+    }
+    assert.equal(accepted.ok, true, JSON.stringify(accepted));
+    assert.equal(accepted.email, "founder@example.test");
+    assert.equal(accepted.companyWorkspace, "alpha");
+    assert.deepEqual(accepted.labels, ["alpha", "bravo", "charlie"]);
+    assert.doesNotMatch(JSON.stringify(accepted), /42702|ambiguous/);
+    assert.notEqual(menteeVar, "mentee_id");
+
+    const row = (
+      await acceptDb.query(
+        "SELECT accepted_at IS NOT NULL AS used FROM bootstrap_mcp_invites WHERE id = 'invite-founder-alpha'",
+      )
+    ).rows[0];
+    assert.equal(row.used, true);
+
+    const replay = (
+      await acceptDb.query("SELECT bootstrap_mcp_accept_invite($1) AS body", [token])
+    ).rows[0].body;
+    assert.deepEqual(replay, { ok: false, reason: "invite_already_used" });
+  });
+});
