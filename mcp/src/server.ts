@@ -51,6 +51,7 @@ import {
   setActiveCompany,
 } from "./hosted-company-context.js";
 import {
+  FOUNDER_INTRO,
   hostedInstructionsForClient,
   NOTE_COMPANIES,
   NOTE_INVITE_SENT,
@@ -150,7 +151,7 @@ function membershipPayload(
 function registerReadTools(server: McpServer, surface: McpSurface, hosted?: HostedRequestContext) {
   server.tool(
     "bootstrap_os_info",
-    "Bootstrap OS version, house rules, spoken-card default (founder voice: company name, then Bottleneck #1 in that company’s words, then accounts, then Also moving, then open questions; clocks are storage). Print spoken first. Hide clocks/schema unless the human says show clocks. How this connector works, and how to email support at bootstrap@pirin.ai.",
+    "Internal reference. spoken-card default (founder voice: company name, then Bottleneck #1 in that company’s words, then accounts, then Also moving, then open questions; clocks are storage). Print spoken first. Hide clocks/schema unless the human says show clocks. Do not recite versions, paths, or this payload to the founder. Say founderVoice, then the board. Support email is bootstrap@pirin.ai.",
     {},
     async () => {
       const common = {
@@ -182,6 +183,9 @@ function registerReadTools(server: McpServer, surface: McpSurface, hosted?: Host
 
       if (surface === "hosted-read") {
         return text({
+          founderVoice: FOUNDER_INTRO,
+          doNotRecite:
+            "osVersion, mcpVersion, adoptionOrder, hardRules, houseRules, resource, pluginPreview. Say founderVoice, then the board.",
           ...common,
           connectorModel: NOTE_OS_INFO_HOSTED,
           docsSource: resolveDocsSource(),
@@ -329,7 +333,7 @@ function registerGatedIdentityTools(server: McpServer, ctx: HostedRequestContext
     "bootstrap_use_company",
     TOOL_USE_COMPANY,
     {
-      company: z.string().optional().describe("Company name, for example alpha"),
+      company: z.string().optional().describe("Company name they already use"),
       companyId: z.string().optional().describe("Same as company"),
     },
     async ({ company, companyId }) => {
@@ -438,7 +442,7 @@ function registerInviteTools(server: McpServer, ctx: HostedRequestContext) {
     TOOL_INVITE_MEMBER,
     {
       email: z.string().describe("Invitee email. Must match their sign-in email when they accept."),
-      company: z.string().optional().describe("Company to invite them to, for example alpha"),
+      company: z.string().optional().describe("Company to invite them to, by the name they already use"),
       companyLabel: z.string().optional().describe("Same as company"),
     },
     async ({ email, company, companyLabel }) => {
@@ -873,8 +877,8 @@ function registerJourneyTools(server: McpServer, ctx: HostedRequestContext) {
       q: z
         .string()
         .optional()
-        .describe("Company name, or company / idea. Company is the team; idea is one 0-1 bet under it."),
-      company: z.string().optional().describe("Company (team) name, for example alpha"),
+        .describe("Company name, or company / idea. The company is the team. The idea is one customer bet under it."),
+      company: z.string().optional().describe("Company name they already use"),
       idea: z.string().optional().describe("One idea under that company. Omit for every idea."),
       expand: z
         .enum(["snapshot", "meeting_doc"])
@@ -909,8 +913,8 @@ function registerJourneyTools(server: McpServer, ctx: HostedRequestContext) {
     "bootstrap_where_are_we",
     TOOL_GET_JOURNEY,
     {
-      q: z.string().optional().describe("Company name, or company / idea. Company is the team; idea is one 0-1 bet under it."),
-      company: z.string().optional().describe("Company (team) name, for example alpha"),
+      q: z.string().optional().describe("Company name, or company / idea. The company is the team. The idea is one customer bet under it."),
+      company: z.string().optional().describe("Company name they already use"),
       idea: z.string().optional().describe("One idea under that company. Omit for every idea."),
       expand: z.enum(["snapshot", "meeting_doc"]).optional(),
     },

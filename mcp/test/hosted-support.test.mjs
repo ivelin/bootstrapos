@@ -9,6 +9,7 @@ import path from "node:path";
 import { handleHostedReadFetch } from "../dist/hosted-handler.js";
 import { HOSTED_GATED_TOOL_NAMES, HOSTED_READ_TOOL_NAMES } from "../dist/constants.js";
 import {
+  FOUNDER_INTRO,
   HOSTED_MCP_INSTRUCTIONS,
   SUPPORT_EMAIL,
   SUPPORT_HOWTO,
@@ -70,6 +71,13 @@ describe("hosted MCP support escape hatch", () => {
     assert.match(HOSTED_MCP_INSTRUCTIONS, /not an auto-fix/i);
     assert.doesNotMatch(HOSTED_MCP_INSTRUCTIONS, /webhook|resend/i);
     assert.match(HOSTED_MCP_INSTRUCTIONS, /Feedback and support[\s\S]*bootstrap@pirin\.ai/);
+    assert.match(HOSTED_MCP_INSTRUCTIONS, new RegExp(FOUNDER_INTRO.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
+    assert.match(HOSTED_MCP_INSTRUCTIONS, /They are not an engineer/);
+    assert.match(HOSTED_MCP_INSTRUCTIONS, /Do not show them a manual/);
+    assert.match(HOSTED_MCP_INSTRUCTIONS, /No tool names/);
+    assert.match(HOSTED_MCP_INSTRUCTIONS, /no table of tools/);
+    assert.match(HOSTED_MCP_INSTRUCTIONS, /Do not invent a sample company/);
+    assert.doesNotMatch(HOSTED_MCP_INSTRUCTIONS, /dyeconverter|corehaul|nina@/i);
     assert.doesNotMatch(
       HOSTED_MCP_INSTRUCTIONS.match(/Feedback and support[\s\S]*?Call bootstrap_support[^\n]*/)?.[0] ?? "",
       /Bill/i,
@@ -121,6 +129,8 @@ describe("hosted MCP support escape hatch", () => {
 
     const info = parseTool(await rpc("tools/call", { name: "bootstrap_os_info", arguments: {} }, 3));
     assert.equal(info.surface, "hosted-read");
+    assert.equal(info.founderVoice, FOUNDER_INTRO);
+    assert.match(String(info.doNotRecite), /adoptionOrder/);
     assertHowto(info.support);
 
     const howto = parseTool(await rpc("tools/call", { name: "bootstrap_support", arguments: {} }, 4));

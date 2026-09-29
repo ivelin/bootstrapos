@@ -133,7 +133,8 @@ async function assertPublicPin(origin) {
   const info = parseTool(infoRaw);
   assert.equal(info.surface, "hosted-read");
   assert.equal(info.marketplace, false);
-  assert.match(String(info.companyState), /shared 0-1 board|Not hosted/i);
+  assert.match(String(info.companyState), /board for each company|Not hosted/i);
+  assert.match(String(info.founderVoice), /board for your company/);
   assert.match(JSON.stringify(info.adoptionOrder), /not mentee-ready boards/);
   assert.match(JSON.stringify(info.adoptionOrder), /Not pirin\.ai/);
   assert.ok(!info.paths?.statePath, "live pin must not expose founder state paths");
