@@ -113,4 +113,4 @@ export const SUPPORT_HOWTO = {
 } as const;
 
 export const NOTE_INVITE_SENT =
-  "They'll get an email at that address. They must sign in as that email, then accept the invite in their chat. You can also send them the sign-in link."
+  "They'll get an email at that address. Tell them to open it on their agent's computer, fill Email and Password on the form card in the chat, press Continue, then Accept invite. You can also send them the sign-in link."

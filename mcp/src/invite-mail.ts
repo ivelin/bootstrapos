@@ -10,7 +10,7 @@ export const INVITE_MAIL_FROM = "bootstrap@pirin.ai";
 export const INVITE_SIGNUP_QUERY = "invite";
 
 export const INVITE_MAIL_NOTE =
-  "Universal path for any agentic client. Web Builder owns /bootstrap-os/login. Sign in as this email if you already have a pirin.ai account; otherwise create the account for this invitee email only. Then accept_invite with the same token. pirin-ai sends From bootstrap@pirin.ai on production.";
+  "Open the signup URL on your agent's computer and fill the form card in the chat. The fields are Email and Password. Press Continue, then Accept invite. This is the universal path for any agentic client. Sign in or create the account for this invitee email only, then accept_invite with the same token. pirin-ai sends From bootstrap@pirin.ai on production.";
 
 export type InviteMailMode = "off" | "dry-run";
 
@@ -137,10 +137,11 @@ export function buildInviteMail(input: InviteMailInput): InviteMail {
     `QR payload (same as signup URL): ${signupUrl}`,
     `Expires: ${input.expiresAt}`,
     "",
-    "Sign in or create the account for this invitee email only (Web Builder).",
-    "If you already have a pirin.ai account, sign in as this email — do not register a second one.",
-    "After you have a pirin.ai JWT as that email, call accept_invite with the same token.",
-    "Any MCP client that already has that Bearer can call accept_invite directly.",
+    "Open the signup URL on your agent's computer and fill the form card in the chat.",
+    "The fields are Email and Password. Press Continue, then Accept invite.",
+    "Sign in or create the account for this invitee email only.",
+    "Continue uses the existing password when this email already has an account.",
+    "After a pirin.ai login exists for that email, call accept_invite with the same token.",
     "",
     INVITE_MAIL_NOTE,
   ].join("\n");
