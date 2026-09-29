@@ -50,6 +50,8 @@ The raw token is shown **once** on the Accept card (and on the sign-in Auth card
 
 Auth card `action` is **Sign in or create account** (valid for first-time and returning users). Do not enumerate to the inviter whether the email is already a Bootstrap OS user.
 
+Invite mail and this card tell the invitee to open the signup URL on their agent's computer and fill the form card in the chat. The page is one step: **Email**, **Password**, **Continue**, then **Accept invite**. The password stays on that card. This host does not take a password in a tool argument.
+
 ## Token
 
 Single-use. Expires in 7 days. Hash only in `bootstrap_mcp_invites`. Fail closed on wrong email, expired, replay, or unknown token. Inviter cannot grant a workspace they do not belong to (cross-company). Invitee who **already belongs** to that workspace → `already_member` (not a leak of their other teams). One pending invite per `(email, workspace)`; re-invite to the same workspace rotates the token. A **different** workspace for the same email is allowed.
