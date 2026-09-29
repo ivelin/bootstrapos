@@ -73,9 +73,9 @@ describe("hosted MCP support escape hatch", () => {
     assert.match(HOSTED_MCP_INSTRUCTIONS, /Feedback and support[\s\S]*bootstrap@pirin\.ai/);
     assert.match(HOSTED_MCP_INSTRUCTIONS, new RegExp(FOUNDER_INTRO.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
     assert.match(HOSTED_MCP_INSTRUCTIONS, /They are not an engineer/);
-    assert.match(HOSTED_MCP_INSTRUCTIONS, /Do not show them a manual/);
-    assert.match(HOSTED_MCP_INSTRUCTIONS, /No tool names/);
-    assert.match(HOSTED_MCP_INSTRUCTIONS, /no table of tools/);
+    assert.match(HOSTED_MCP_INSTRUCTIONS, /Which companies/);
+    assert.match(HOSTED_MCP_INSTRUCTIONS, /Do not print email, role, or a table/);
+    assert.match(HOSTED_MCP_INSTRUCTIONS, /print the boards field and stop/);
     assert.match(HOSTED_MCP_INSTRUCTIONS, /Do not invent a sample company/);
     assert.doesNotMatch(HOSTED_MCP_INSTRUCTIONS, /dyeconverter|corehaul|nina@/i);
     assert.doesNotMatch(

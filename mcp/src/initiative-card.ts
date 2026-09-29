@@ -177,6 +177,43 @@ function allowPaperOf(source: unknown): boolean {
   return (source as { allowPaperBottleneck?: unknown }).allowPaperBottleneck === true;
 }
 
+function boardDirectoryLine(idea: Record<string, unknown>): { name: string; text: string; killed: boolean } | null {
+  const name = String(idea.name || "").trim();
+  if (!name) return null;
+  const killed = isKilledSource(idea);
+  if (killed) {
+    const card =
+      typeof idea.killedCard === "string"
+        ? idea.killedCard.replace(/^☠\s*/, "").replace(/^Killed\s+[—-]\s*/, "").trim()
+        : "";
+    const post =
+      idea.killPostmortem && typeof idea.killPostmortem === "object"
+        ? String((idea.killPostmortem as { lessonsLearned?: unknown }).lessonsLearned || "").trim()
+        : "";
+    return { name, text: card || post || "Stopped.", killed: true };
+  }
+  const snap = typeof idea.snapshot === "string" ? idea.snapshot : "";
+  const stuck = spokenBottleneckLineOf(snap);
+  return { name, text: stuck || "none yet", killed: false };
+}
+
+/** Plain list for "show all boards". Names and what is stuck. No slug, no gate. */
+export function formatBoardDirectory(ideas: unknown): string {
+  if (!Array.isArray(ideas)) return "";
+  const live: string[] = [];
+  const stopped: string[] = [];
+  for (const idea of ideas) {
+    if (!idea || typeof idea !== "object" || Array.isArray(idea)) continue;
+    const row = boardDirectoryLine(idea as Record<string, unknown>);
+    if (!row) continue;
+    if (row.killed) stopped.push(`${row.name} — ${row.text}`);
+    else live.push(`${row.name}\nWhat's stuck: ${row.text}`);
+  }
+  const parts = [...live];
+  if (stopped.length) parts.push(["Stopped", ...stopped].join("\n"));
+  return parts.join("\n\n").trim();
+}
+
 function isKilledSource(source: unknown): boolean {
   if (!source || typeof source !== "object" || Array.isArray(source)) return false;
   const rec = source as { killed?: unknown; clocks?: { currentGate?: unknown }; currentGate?: unknown };
@@ -1023,8 +1060,9 @@ export function applySpokenPayloadLead(
   if (payload.idea && typeof payload.idea === "object") {
     payload.idea = { ...(payload.idea as Record<string, unknown>), snapshot: spoken };
   }
-  const { ok: _ok, spoken: _drop, ...rest } = payload;
-  return { ok: true, spoken, ...rest };
+  const boards = formatBoardDirectory(payload.ideas);
+  const { ok: _ok, spoken: _drop, boards: _boards, ...rest } = payload;
+  return { ok: true, spoken, boards, ...rest };
 }
 
 export function compactJourneyPayload(
