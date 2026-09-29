@@ -1,9 +1,9 @@
 # submit_feedback
 
-House spec for the OAuth-gated feedback tool lives in Drive, not in this repo.
+House spec lives in Drive.
 
-SoR: [submit_feedback spec 2026-09-29](https://docs.google.com/document/d/1W3O22GZBHhTVTxyLJ2p1E8FIxsSXLnikGpKWx9scHGM/edit)
+SoR: [submit_feedback spec 2026-09-29](https://docs.google.com/document/d/1X9yMITh3_M_Luq1TG_QaU-FrNvAHtsELzYqyB3Yz0jI/edit)
 
 Folder: Business / pirin.ai / 2026 / MCP
 
-Revised 29 Sep 2026: Armstrong /feedback thread, Liad committee note, Cursor/Grok consent lessons, standards watch list. This repo does not implement the tool in this PR.
+Covers auth, identification, wire meta, context levels, and storage. No tool implementation in this PR.
