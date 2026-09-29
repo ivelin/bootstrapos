@@ -878,7 +878,7 @@ function registerJourneyTools(server: McpServer, ctx: HostedRequestContext) {
         .string()
         .optional()
         .describe("Company name, or company / idea. The company is the team. The idea is one customer bet under it."),
-      company: z.string().optional().describe("Company name they already use"),
+      company: z.string().optional().describe("Company (team) name they already use"),
       idea: z.string().optional().describe("One idea under that company. Omit for every idea."),
       expand: z
         .enum(["snapshot", "meeting_doc"])
@@ -914,7 +914,7 @@ function registerJourneyTools(server: McpServer, ctx: HostedRequestContext) {
     TOOL_GET_JOURNEY,
     {
       q: z.string().optional().describe("Company name, or company / idea. The company is the team. The idea is one customer bet under it."),
-      company: z.string().optional().describe("Company name they already use"),
+      company: z.string().optional().describe("Company (team) name they already use"),
       idea: z.string().optional().describe("One idea under that company. Omit for every idea."),
       expand: z.enum(["snapshot", "meeting_doc"]).optional(),
     },
