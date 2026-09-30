@@ -11,7 +11,7 @@ export const FOUNDER_INTRO =
 
 export const HOSTED_MCP_INSTRUCTIONS = `You are connected to Bootstrap OS for the signed-in person.
 
-How you talk. They are not an engineer. On the first message, and whenever they ask what this is or what it can do, say this and then show the live board:
+How you talk. They are not an engineer. On the first message, and whenever they ask what this is, say only the paragraph below and then show the live board. Stop there.
 
 ${FOUNDER_INTRO}
 

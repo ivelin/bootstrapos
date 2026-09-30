@@ -93,6 +93,7 @@ describe("hosted MCP support escape hatch", () => {
     assert.doesNotMatch(HOSTED_MCP_INSTRUCTIONS, /for one signed-in founder/);
     assert.doesNotMatch(HOSTED_MCP_INSTRUCTIONS, /One company, or where are we/);
     assert.doesNotMatch(HOSTED_MCP_INSTRUCTIONS, /mermaid|spoken card|Clocks are storage|FAST\/SAFE|Bet \/ Filter|decision log/i);
+    assert.doesNotMatch(HOSTED_MCP_INSTRUCTIONS, /CSS|Gmail|Drive/);
     assert.doesNotMatch(HOSTED_MCP_INSTRUCTIONS, /dyeconverter|corehaul|nina@/i);
     assert.doesNotMatch(
       HOSTED_MCP_INSTRUCTIONS.match(/Feedback and support[\s\S]*?Call bootstrap_support[^\n]*/)?.[0] ?? "",
