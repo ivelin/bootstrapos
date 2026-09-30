@@ -219,18 +219,6 @@ export function formatBoardDirectory(ideas: unknown): string {
   return parts.join("\n\n").trim();
 }
 
-/** Drop stopped bets when a live bet is in the same list. A stopped-only read stays. */
-function omitKilledWhenLive(list: unknown): unknown {
-  if (!Array.isArray(list)) return list;
-  const anyLive = list.some(
-    (idea) => idea && typeof idea === "object" && !Array.isArray(idea) && !isKilledSource(idea),
-  );
-  if (!anyLive) return list;
-  return list.filter(
-    (idea) => idea && typeof idea === "object" && !Array.isArray(idea) && !isKilledSource(idea),
-  );
-}
-
 function isKilledSource(source: unknown): boolean {
   if (!source || typeof source !== "object" || Array.isArray(source)) return false;
   const rec = source as { killed?: unknown; clocks?: { currentGate?: unknown }; currentGate?: unknown };
@@ -1024,8 +1012,6 @@ export function applySpokenPayloadLead(
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) return raw;
   const payload = { ...(raw as Record<string, unknown>) };
   if (payload.ok !== true) return raw;
-  payload.ideas = omitKilledWhenLive(payload.ideas);
-  payload.primary = omitKilledWhenLive(payload.primary);
   const expand = Boolean(opts.expand);
   const company =
     payload.company && typeof payload.company === "object"

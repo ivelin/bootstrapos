@@ -520,7 +520,7 @@ describe("spoken-card eval C snapshot bottleneck line", () => {
     assert.match(seen.boards, /Bootstrap OS\nWhat's stuck: need a second person to finish signup/);
     assert.doesNotMatch(seen.boards, /Intensive/);
     assert.doesNotMatch(seen.boards, /Stopped/);
-    assert.doesNotMatch(JSON.stringify(seen.ideas), /Intensive/);
+    assert.ok(seen.ideas.some((idea) => idea.name === "Intensive" && idea.killed === true));
     assert.doesNotMatch(seen.boards, /bootstrap-os/);
     assert.doesNotMatch(seen.boards, /\bgate\b/i);
     assert.doesNotMatch(seen.boards, /\bhold\b/i);
