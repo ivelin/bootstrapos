@@ -5,6 +5,7 @@ set -eu
 
 ROOT=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
 cd "$ROOT"
+python3 tests/test_cleanup_stale_refs.py
 sh tests/test_day0.sh
 
 # Spoken-card grounding EVAL wire (format A + grounding B + snapshot C).
