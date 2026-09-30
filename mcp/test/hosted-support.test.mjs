@@ -84,6 +84,12 @@ describe("hosted MCP support escape hatch", () => {
     assert.match(HOSTED_MCP_INSTRUCTIONS, /more than one company/);
     assert.match(HOSTED_MCP_INSTRUCTIONS, /A company is the team/);
     assert.match(HOSTED_MCP_INSTRUCTIONS, /Ideas under that company are the customer bets/);
+    assert.match(HOSTED_MCP_INSTRUCTIONS, /aligned and grounded/);
+    assert.match(HOSTED_MCP_INSTRUCTIONS, /the founder, the team, supporters, and the AI agents/);
+    assert.match(HOSTED_MCP_INSTRUCTIONS, /Where are we\?/);
+    assert.match(HOSTED_MCP_INSTRUCTIONS, /Which companies can I open\?/);
+    assert.match(HOSTED_MCP_INSTRUCTIONS, /What is stuck this week\?/);
+    assert.match(HOSTED_MCP_INSTRUCTIONS, /What did we already decide\?/);
     assert.doesNotMatch(HOSTED_MCP_INSTRUCTIONS, /for one signed-in founder/);
     assert.doesNotMatch(HOSTED_MCP_INSTRUCTIONS, /One company, or where are we/);
     assert.doesNotMatch(HOSTED_MCP_INSTRUCTIONS, /mermaid|spoken card|Clocks are storage|FAST\/SAFE|Bet \/ Filter|decision log/i);
