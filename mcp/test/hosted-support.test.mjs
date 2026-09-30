@@ -80,6 +80,12 @@ describe("hosted MCP support escape hatch", () => {
     assert.match(HOSTED_MCP_INSTRUCTIONS, /local install/);
     assert.doesNotMatch(HOSTED_MCP_INSTRUCTIONS, /Path 3|self-host kit/i);
     assert.match(HOSTED_MCP_INSTRUCTIONS, /Do not invent a sample company/);
+    assert.match(HOSTED_MCP_INSTRUCTIONS, /every team you belong to/);
+    assert.match(HOSTED_MCP_INSTRUCTIONS, /more than one company/);
+    assert.match(HOSTED_MCP_INSTRUCTIONS, /A company is the team/);
+    assert.match(HOSTED_MCP_INSTRUCTIONS, /Ideas under that company are the customer bets/);
+    assert.doesNotMatch(HOSTED_MCP_INSTRUCTIONS, /for one signed-in founder/);
+    assert.doesNotMatch(HOSTED_MCP_INSTRUCTIONS, /One company, or where are we/);
     assert.doesNotMatch(HOSTED_MCP_INSTRUCTIONS, /dyeconverter|corehaul|nina@/i);
     assert.doesNotMatch(
       HOSTED_MCP_INSTRUCTIONS.match(/Feedback and support[\s\S]*?Call bootstrap_support[^\n]*/)?.[0] ?? "",
@@ -136,6 +142,9 @@ describe("hosted MCP support escape hatch", () => {
     assert.match(String(info.doNotRecite), /adoptionOrder/);
     assert.match(JSON.stringify(info.adoptionOrder), /Not pirin\.ai/);
     assert.match(JSON.stringify(info.adoptionOrder), /not mentee-ready boards/i);
+    assert.match(JSON.stringify(info.adoptionOrder), /every team the signed-in person belongs to/);
+    assert.match(JSON.stringify(info.adoptionOrder), /Each company is one team/);
+    assert.doesNotMatch(JSON.stringify(info.adoptionOrder), /signed-in company/);
     assert.doesNotMatch(JSON.stringify(info.adoptionOrder), /self-host|selfHost|local install|Fork and deploy|Path 1/i);
     assert.doesNotMatch(JSON.stringify(info.pluginPreview), /Path 1|self-host/i);
     assertHowto(info.support);

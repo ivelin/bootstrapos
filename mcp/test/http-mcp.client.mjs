@@ -134,7 +134,8 @@ async function main() {
     assert.match(JSON.stringify(info.adoptionOrder), /not mentee-ready boards/);
     assert.match(JSON.stringify(info.adoptionOrder), /Not pirin\.ai/);
     assert.match(JSON.stringify(info.companyState), /board for each company|Not hosted/i);
-    assert.match(String(info.founderVoice), /board for your company/);
+    assert.match(String(info.founderVoice), /every team you belong to/);
+    assert.match(String(info.founderVoice), /Ideas under that company are the customer bets/);
     assert.equal(info.marketplace, false);
     assert.ok(!info.paths?.statePath, "hosted-read must not expose founder state paths");
 
