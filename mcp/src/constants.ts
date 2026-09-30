@@ -29,6 +29,7 @@ export const HOSTED_GATED_IDENTITY_TOOL_NAMES = [
   "create_company",
   "grant_super_admin",
   "revoke_super_admin",
+  "submit_feedback",
 ] as const;
 
 /**

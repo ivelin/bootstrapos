@@ -15,6 +15,11 @@ import {
 } from "./constants.js";
 import { enableBoardWatch } from "./board-watch.js";
 import {
+  prepareFeedback,
+  resolveFeedbackStore,
+  type FeedbackStamp,
+} from "./feedback.js";
+import {
   askAdminResult,
   publicAdminResult,
   resolveCompanyAdminStore,
@@ -74,6 +79,7 @@ import {
   TOOL_LIST_COMPANY_LABELS_ALIAS,
   TOOL_USE_COMPANY,
   TOOL_SUPPORT,
+  TOOL_SUBMIT_FEEDBACK,
   TOOL_WHOAMI,
 } from "./hosted-copy.js";
 import { inviteFailMessage, resolveInviteStore } from "./invite.js";
@@ -442,6 +448,52 @@ function registerGatedIdentityTools(server: McpServer, ctx: HostedRequestContext
       } catch (e) {
         return err(e instanceof Error ? e.message : String(e));
       }
+    },
+  );
+
+  server.tool(
+    "submit_feedback",
+    TOOL_SUBMIT_FEEDBACK,
+    {
+      kind: z.enum(["bug", "missing_capability", "confusing_output", "docs"]),
+      summary: z.string().min(1).max(2000).describe("What happened, in a few sentences"),
+      user_consented: z.boolean().describe("True only after a yes in this chat"),
+      tool: z.string().optional().describe("Tool name, when one failed"),
+      expected: z.string().max(2000).optional(),
+      actual: z.string().max(2000).optional(),
+      severity: z.enum(["blocker", "annoying", "wish"]).optional(),
+      intent_context: z.string().max(500).optional().describe("What they were trying to do"),
+      plugin_version: z.string().max(80).optional(),
+      skill_version: z.string().max(80).optional(),
+      bot_id: z.string().max(80).optional(),
+      context_level: z.enum(["identity_only", "tool_trace", "reasoning_trace"]).optional(),
+      request_id: z.string().max(80).optional(),
+      submissionId: z.string().max(80).optional(),
+      argument_keys: z.array(z.string()).max(32).optional().describe("Argument names only"),
+      error_code: z.string().max(80).optional(),
+      latency_ms: z.number().int().min(0).max(600000).optional(),
+      reasoning: z.string().max(8000).optional().describe("Text the person pasted in this chat"),
+    },
+    async (input) => {
+      if (!ctx.whoami.authenticated) return err(NOTE_NOT_SIGNED_IN);
+      const actorId = ctx.inviteActor?.sub || ctx.inviteActor?.email || ctx.whoami.email || "";
+      const stamp: FeedbackStamp = {
+        actorId,
+        tenantId: actorId,
+        actorEmail: ctx.inviteActor?.email || ctx.whoami.email || null,
+        serverVersion: MCP_VERSION,
+        deploySha: process.env.VERCEL_GIT_COMMIT_SHA || null,
+        protocolVersion: ctx.protocolVersion || null,
+        clientName: ctx.clientHint?.clientName || null,
+        httpUserAgent: ctx.clientHint?.userAgent || null,
+      };
+      const prepared = prepareFeedback(input, stamp);
+      if (!prepared.ok) return err(prepared.error);
+      const store = resolveFeedbackStore(ctx.accessToken);
+      if (!store) return err("Filing is not available on this surface.");
+      const filed = await store.submit(prepared.ticket);
+      if (!filed.ok) return err(filed.error);
+      return text({ ok: true, id: filed.id, line: filed.line, duplicate: filed.duplicate });
     },
   );
 }
