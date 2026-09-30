@@ -1,0 +1,28 @@
+name: Cleanup stale branches and pull requests
+
+on:
+  schedule:
+    # Monday 15:30 UTC. Thirty days of quiet, then close and delete.
+    - cron: "30 15 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: cleanup-stale-refs
+  cancel-in-progress: false
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Close quiet pull requests and delete quiet branches
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 scripts/cleanup_stale_refs.py --apply --repo "${{ github.repository }}" --days 30
