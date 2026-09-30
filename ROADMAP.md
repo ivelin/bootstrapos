@@ -553,6 +553,7 @@ T1 hooks (no new product):
 - Preview plugin: [`plugin/`](plugin/) — team Import from Repo only; not a public catalog submit  
 - Template policy: [README](README.md#template-change-policy)  
 - PR (local MCP): https://github.com/ivelin/bootstrap/pull/1  
+- Proposed requirements (not a build): [Team-activity notifications](docs/team-activity-notifications.md)
 
 ---
 
