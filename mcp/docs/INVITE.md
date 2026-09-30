@@ -19,7 +19,7 @@ Fail-closed allowlist is already on. A valid pirin.ai JWT is not enough. **User*
 
 ## Channels (harness-agnostic)
 
-The product is MCP tools + a login URL. Grok Bot is one client, not the requirement. Any agentic client (Grok App, Claude Cowork, ChatGPT, Cursor, Hermes, OpenClaw, a browser) that can open the URL and/or call `accept_invite` with a Bearer is first-class.
+The product is MCP tools + a login URL. Grok Bot is one client, not the requirement. Any agentic client (Grok Bot, Claude Cowork, ChatGPT Work, ChatGPT Dot, Cursor, Hermes, OpenClaw, a browser) that can open the URL and/or call `accept_invite` with a Bearer is first-class. Named targets: [`docs/TARGETED_CHANNELS.md`](../../docs/TARGETED_CHANNELS.md).
 
 | Channel | Who it is for | Status |
 |---------|----------------|--------|
