@@ -7,7 +7,7 @@ export const HOSTED_BILL_GROK_LINE =
 
 /** What a founder should hear when this connector is introduced, then the live board. */
 export const FOUNDER_INTRO =
-  "The same connection covers every team you belong to. Each company is one team. Ideas under that company are the customer bets. The board shows who you are betting on, what is stuck this week, and what you already decided.\n\nIt exists to keep the founder, the team, supporters, and the AI agents aligned and grounded.\n\nYou can ask: Where are we? Which companies can I open? What is stuck this week? What did we already decide?"
+  "The same connection covers every team you belong to. You can open more than one company on it. Each company is one team. Ideas under that company are the customer bets. The board shows who you are betting on, what is stuck this week, and what you already decided.\n\nIt exists to keep the founder, the team, supporters, and the AI agents aligned and grounded.\n\nYou can ask: Where are we? Which companies can I open? What is stuck this week? What did we already decide?"
 
 export const HOSTED_MCP_INSTRUCTIONS = `You are connected to Bootstrap OS for the signed-in person.
 
@@ -21,8 +21,6 @@ Which companies: the same connection already includes every company they can ope
 
 When they name one company, or ask where are we, show the company board, show company X ideas, or show my idea board: Print spoken first. Call get_journey or bootstrap_where_are_we and print the spoken field.
 All boards: print the boards field and stop. A live board is its name and what is stuck. Do not mention a stopped bet unless they ask what you already stopped.
-
-The same sign-in can belong to more than one team and open more than one company. A company is the team. Ideas under that company are the customer bets.
 
 To see who is signed in, call bootstrap_whoami or bootstrap_list_companies. Say the company names.
 
@@ -51,7 +49,7 @@ export function hostedInstructionsForClient(input: {
 }
 
 export const TOOL_WHOAMI =
-  "Who is signed in, and which companies they can open. The same connection covers every team they belong to. Each company is one team. Ideas under that company are the customer bets. When they ask which companies, say the names in one sentence. Do not print email, role, or a table."
+  "Who is signed in, and which companies they can open. When they ask which companies, say the names in one sentence. Do not print email, role, or a table."
 
 export const TOOL_CREATE_COMPANY =
   "Create a company on this hosted board. Super admin only. Needs founder yes in this chat and a short why. Does not create an idea — call create_idea next. A duplicate name is refused. If this is refused, ask an admin or email bootstrap@pirin.ai."
@@ -63,7 +61,7 @@ export const TOOL_REVOKE_SUPER_ADMIN =
   "Revoke super admin immediately. Live super admin only."
 
 export const TOOL_LIST_COMPANIES =
-  "Companies this login can open. The same connection covers every team they belong to. Each company is one team. Ideas under that company are the customer bets. Say the names in one sentence. Do not print email, role, or a table."
+  "Companies this login can open. Say the names in one sentence. Do not print email, role, or a table."
 
 export const TOOL_LIST_COMPANY_LABELS_ALIAS =
   "Same as bootstrap_list_companies. Prefer bootstrap_list_companies."
@@ -78,12 +76,12 @@ export const TOOL_ACCEPT_INVITE =
   "Join a company with the one-time invite token. Uses the signed-in email. Same person, additional company — not a second login."
 
 export const NOTE_COMPANIES =
-  "Companies this login can open. The same connection covers every team they belong to. Each company is one team. Ideas under that company are the customer bets. Say the names in one sentence. Do not print email, role, or a table."
+  "Companies this login can open. Say the names in one sentence. Do not print email, role, or a table."
 
 export const NOTE_NOT_SIGNED_IN = "You're not signed in to Bootstrap OS."
 
 export const TOOL_GET_JOURNEY =
-  "Where are we — the company board, or one idea board under it. The same connection covers every team they belong to. Each company is the team. Ideas under that company are the customer bets. Print spoken first. Use this when they say where are we, show the company board, show company X ideas, or show my idea board. If they ask for every board, print the boards field and stop. Live boards only. Do not describe a stopped bet unless they ask what you already stopped."
+  "Where are we — the company board, or one idea board under it. Print spoken first. Use this when they say where are we, show the company board, show company X ideas, or show my idea board. If they ask for every board, print the boards field and stop. Live boards only. Do not describe a stopped bet unless they ask what you already stopped."
 
 export const TOOL_CREATE_IDEA =
   "Start another customer bet under a company this login can open. Needs a yes in this chat."
@@ -104,7 +102,7 @@ export const TOOL_PUT_PORTFOLIO_SCORE =
   "Weekly labels on one live bet when the company has two or more. Needs a yes in this chat and a short why. Labels do not decide the bet."
 
 export const NOTE_OS_INFO_HOSTED =
-  "The board for each company this person can open. The same connection covers every team they belong to. Each company is one team. Ideas under that company are the customer bets."
+  "The board for each company this person can open."
 
 /** Same mailbox as Bill / public feedback and invite From. Inbound howto only — MCP does not send mail. */
 export const SUPPORT_EMAIL = "bootstrap@pirin.ai";

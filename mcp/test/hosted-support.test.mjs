@@ -82,8 +82,10 @@ describe("hosted MCP support escape hatch", () => {
     assert.match(HOSTED_MCP_INSTRUCTIONS, /Do not invent a sample company/);
     assert.match(HOSTED_MCP_INSTRUCTIONS, /every team you belong to/);
     assert.match(HOSTED_MCP_INSTRUCTIONS, /more than one company/);
-    assert.match(HOSTED_MCP_INSTRUCTIONS, /A company is the team/);
+    assert.match(HOSTED_MCP_INSTRUCTIONS, /Each company is one team/);
     assert.match(HOSTED_MCP_INSTRUCTIONS, /Ideas under that company are the customer bets/);
+    const outsideIntro = HOSTED_MCP_INSTRUCTIONS.replace(FOUNDER_INTRO, "");
+    assert.doesNotMatch(outsideIntro, /Each company is one team|A company is the team|Ideas under that company are the customer bets/);
     assert.match(HOSTED_MCP_INSTRUCTIONS, /aligned and grounded/);
     assert.match(HOSTED_MCP_INSTRUCTIONS, /the founder, the team, supporters, and the AI agents/);
     assert.match(HOSTED_MCP_INSTRUCTIONS, /Where are we\?/);
@@ -152,12 +154,28 @@ describe("hosted MCP support escape hatch", () => {
     assert.equal(info.houseRules, undefined);
     assert.equal(info.osVersion, undefined);
     assert.doesNotMatch(JSON.stringify(info.adoptionOrder), /pirin\.ai|mentee/i);
-    assert.match(JSON.stringify(info.adoptionOrder), /every team the signed-in person belongs to/);
-    assert.match(JSON.stringify(info.adoptionOrder), /Each company is one team/);
+    assert.match(JSON.stringify(info.adoptionOrder), /Speak live customer bets only/);
+    assert.doesNotMatch(JSON.stringify(info.adoptionOrder), /Each company is one team|A company is the team/);
+    assert.doesNotMatch(String(info.connectorModel), /Each company is one team/);
+    assert.doesNotMatch(String(info.companyState), /Each company is one team/);
     assert.doesNotMatch(JSON.stringify(info.adoptionOrder), /signed-in company/);
     assert.doesNotMatch(JSON.stringify(info.adoptionOrder), /self-host|selfHost|local install|Fork and deploy|Path 1/i);
     assert.doesNotMatch(JSON.stringify(info.pluginPreview), /Path 1|self-host|mentee/i);
     assertHowto(info.support);
+
+    const clocks = parseTool(
+      await rpc("tools/call", { name: "bootstrap_reference_clocks", arguments: {} }, 7),
+    );
+    assert.equal(clocks.journeySpoken, undefined);
+    assert.match(String(clocks.note), /Leave week labels off the page until they ask/);
+    assert.doesNotMatch(JSON.stringify(clocks), /Bet \/ Filter|Write the bet|Filter cheaply|Ground it/);
+
+    const pins = parseTool(
+      await rpc("tools/call", { name: "bootstrap_house_rule_pins", arguments: {} }, 8),
+    );
+    const pinBlob = JSON.stringify(pins);
+    assert.match(pinBlob, /Leave week labels off the page until they ask/);
+    assert.doesNotMatch(pinBlob, /Spoken card|Also moving|show clocks|Clocks are storage|Bet \/ Filter/);
 
     const howto = parseTool(await rpc("tools/call", { name: "bootstrap_support", arguments: {} }, 4));
     assertHowto(howto);

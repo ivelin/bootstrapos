@@ -71,10 +71,10 @@ describe("OS house rules (adapter reminders)", () => {
     assert.match(pins, /spoken-label-customer-bet-2.8.21/);
     assert.match(pins, /CUSTOMER BETS/);
     assert.match(pins, /customer_check ranks first/);
-    assert.match(pins, /Also moving \(not the bottleneck\)/);
-    assert.match(pins, /show clocks/);
-    assert.match(pins, /Clocks are storage/);
-    assert.match(blob, /Spoken card \(founder voice default\)/);
+    assert.match(pins, /Leave week labels off the page until they ask/);
+    assert.match(blob, /Leave week labels off the page until they ask/);
+    assert.doesNotMatch(pins, /Spoken card|Also moving|show clocks|Clocks are storage|Bet \/ Filter/);
+    assert.doesNotMatch(blob, /Spoken card|Also moving|show clocks|Clocks are storage|Bet \/ Filter/);
     assert.equal(initiativeMappingMayAdvance(), false);
     assert.match(pins, /house-rule-advisor-ride-along-is-assumed-not-observed/);
     assert.match(pins, /house-rule-unpaid-weeks-cannot-promote/);

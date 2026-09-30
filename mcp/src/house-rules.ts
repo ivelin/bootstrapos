@@ -25,7 +25,7 @@ export const HOUSE_RULE_LINES = [
   "Legal paper cannot promote.",
   "Advisor ride-along is assumed, not observed. An advisor's opinion is a tip, not proof customers will pay. Write down who said it.",
   "One board for the founder. The main row is the customer bet. Advisors, investors, lawyers, contractors, and partners stay on that same board. They do not get their own journey. A contract or a funding document does not by itself show that customers want this.",
-  "Spoken card (founder voice default). Start at the company name, then Bottleneck #1 in that company’s words. Then accounts: where it stands / next (nested under the customer bet). Then “Also moving (not the bottleneck)” for capital / legal / advisor. Then open questions in plain words. Hide unless the human says “show clocks” or “show schema”. Engine keeps those rules. Spoken card does not print them. Clocks are storage.",
+  "When they ask where you are, print the board in the company’s words: who you are betting on, what is stuck, and what you already decided. Leave week labels off the page until they ask.",
   "SaaS 1.0 playbooks may be outdated. Stay current.",
   "AI never advances a journey phase without founder Advance / Iterate / Hold / Kill.",
   "Empty context with no founder update: do not invent their stage, a price, or an LTV number. Write unknown / none yet.",
@@ -205,7 +205,7 @@ export const HOUSE_RULE_PINS = [
   },
   {
     id: "spoken-card-2.8.20",
-    pin: "Spoken card (founder voice default). Start at the company name, then Bottleneck #1 in that company’s words. Then accounts: where it stands / next (nested under the customer bet). Then “Also moving (not the bottleneck)” for capital / legal / advisor. Then open questions in plain words. Hide unless the human says “show clocks” or “show schema”. Engine keeps those rules. Spoken card does not print them. Clocks are storage.",
+    pin: "When they ask where you are, print the board in the company’s words: who you are betting on, what is stuck, and what you already decided. Leave week labels off the page until they ask.",
     url: "https://github.com/ivelin/bootstrapos/blob/main/company-os/operating-system.md#spoken-card-founder-voice-default",
   },
   {

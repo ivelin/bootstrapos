@@ -111,6 +111,8 @@ describe("spoken payload lead (alpha fixture)", () => {
     assert.doesNotMatch(info, /spoken-card default/);
     assert.doesNotMatch(info, /five journey rungs \(Bet/);
     const os = fs.readFileSync(path.join(REPO_ROOT, "company-os/operating-system.md"), "utf8");
-    assert.match(os, /Payload lead is spoken; snapshot is not a clock dump/);
+    assert.match(os, /Payload lead is spoken/);
+    assert.match(os, /Leave week labels off the page until they ask/);
+    assert.doesNotMatch(os, /Spoken card|Clocks are storage|Bet \/ Filter \/ Ground \/ Build \/ Try/);
   });
 });

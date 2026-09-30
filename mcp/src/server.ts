@@ -119,7 +119,7 @@ function adoptionOrder(surface: McpSurface) {
   if (surface === "hosted-read") {
     return {
       speakLiveBets:
-        "This connection covers every team the signed-in person belongs to. Each company is one team. Ideas under that company are the customer bets. Speak live customer bets only. A stopped bet is not a feature.",
+        "Speak live customer bets only. A stopped bet is not a feature.",
     };
   }
   return {
@@ -278,14 +278,20 @@ function registerReadTools(server: McpServer, surface: McpSurface, hosted?: Host
     "bootstrap_reference_clocks",
     "Week labels. Say them only when the person asks.",
     {},
-    async () =>
-      text({
+    async () => {
+      if (surface === "hosted-read") {
+        return text({
+          note: "Leave week labels off the page until they ask.",
+        });
+      }
+      return text({
         journeySpoken: JOURNEY_SPOKEN,
         loopSpoken: LOOP_SPOKEN,
         storedJourneyMap: JOURNEY_STORED_MAP,
         storedLoopMap: LOOP_STORED_MAP,
         note: CLOCK_REMAP_NOTE,
-      }),
+      });
+    },
   );
 
   server.tool(
@@ -881,7 +887,7 @@ function registerJourneyTools(server: McpServer, ctx: HostedRequestContext) {
       q: z
         .string()
         .optional()
-        .describe("Company name, or company / idea. The same login can open more than one company. The company is the team. Ideas under it are the customer bets."),
+        .describe("Company name, or one customer bet under it."),
       company: z.string().optional().describe("Company (team) name they already use"),
       idea: z.string().optional().describe("One idea under that company. Omit for every idea."),
       expand: z
@@ -917,7 +923,7 @@ function registerJourneyTools(server: McpServer, ctx: HostedRequestContext) {
     "bootstrap_where_are_we",
     TOOL_GET_JOURNEY,
     {
-      q: z.string().optional().describe("Company name, or company / idea. The same login can open more than one company. The company is the team. Ideas under it are the customer bets."),
+      q: z.string().optional().describe("Company name, or one customer bet under it."),
       company: z.string().optional().describe("Company (team) name they already use"),
       idea: z.string().optional().describe("One idea under that company. Omit for every idea."),
       expand: z.enum(["snapshot", "meeting_doc"]).optional(),

@@ -21,7 +21,7 @@ The OS has **two coordinated views**. Do not collapse them into one list.
 Early on you mostly live in **Write the bet / Filter cheaply / Ground it**.  
 Later you still run the weekly quality bar **inside** Build / Try — research does not stop after launch. Grow is an after-proof pack after Try, not a sixth rung.
 
-Name rule: journey = place names (Bet / Filter / Ground / Build / Try). Loop verbs = quality bar + [clock-examples](clock-examples.md) teaching only. Never put “synthetic research” or “real users” on both clocks. Do not flatten the two clocks into one list. Do takes the station’s shape. It is not a synonym for Build. Make / Check / Hear are not loop weeks. Where-are-we is journey + gate + constraint + missing artifacts. Do not invent Write back as `loopStage` 7.
+Name rule: journey place names stay in storage until they ask. Loop verbs = quality bar + [clock-examples](clock-examples.md) teaching only. Never put “synthetic research” or “real users” on both clocks. Do not flatten the two clocks into one list. Do takes the station’s shape. It is not a synonym for Build. Make / Check / Hear are not loop weeks. Where-are-we is journey + gate + constraint + missing artifacts. Do not invent Write back as `loopStage` 7.
 
 ```text
   BOOTSTRAP JOURNEY (slow, founder-gated)

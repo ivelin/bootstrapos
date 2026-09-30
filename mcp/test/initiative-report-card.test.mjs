@@ -275,29 +275,23 @@ describe("OS 2.8.19 initiative report card", () => {
       path.join(REPO_ROOT, "company-os/operating-system.md"),
       "utf8",
     );
-    assert.match(os, /### Spoken card \(founder voice default\)/);
-    assert.match(os, /Start at the company name, then Bottleneck #1 in that company’s words/);
-    assert.match(os, /Then accounts: where it stands \/ next \(nested under the customer bet\)/);
+    assert.match(os, /id="spoken-card-founder-voice-default"/);
+    assert.match(os, /#### Where are we/);
+    assert.match(os, /Leave week labels off the page until they ask/);
     assert.match(os, /customer bets with nested engagements/);
     assert.match(os, /Card heading: CUSTOMER BETS/);
     assert.match(os, /Stored kind enum stays `customer_check`/);
     assert.match(os, /\| 2\.8\.21 \|/);
     assert.doesNotMatch(os, /customer check/);
-    assert.match(os, /Then “Also moving \(not the bottleneck\)” for capital \/ legal \/ advisor/);
-    assert.match(os, /Then open questions in plain words/);
-    assert.match(os, /Hide unless the human says “show clocks” or “show schema”/);
-    assert.match(os, /Engine keeps those rules\. Spoken card does not print them/);
-    assert.match(os, /Payload lead is spoken; snapshot is not a clock dump/);
-    assert.match(os, /Clocks are storage/);
+    assert.doesNotMatch(os, /Spoken card|Also moving \(not the bottleneck\)|show clocks|Clocks are storage|Bet \/ Filter \/ Ground \/ Build \/ Try/);
+    assert.match(os, /Payload lead is spoken/);
     assert.match(os, /\| 2\.8\.20 \|/);
     assert.match(os, /\*\*Version:\*\* 2\.8\.19/);
     assert.doesNotMatch(os, /card-v1/);
 
     const lines = HOUSE_RULE_LINES.join("\n");
-    assert.match(lines, /Spoken card \(founder voice default\)/);
-    assert.match(lines, /Also moving \(not the bottleneck\)/);
-    assert.match(lines, /show clocks/);
-    assert.match(lines, /Clocks are storage/);
+    assert.match(lines, /Leave week labels off the page until they ask/);
+    assert.doesNotMatch(lines, /Spoken card|Also moving|show clocks|Clocks are storage|Bet \/ Filter/);
     const pins = JSON.stringify(HOUSE_RULE_PINS);
     assert.match(pins, /spoken-card-2\.8\.20/);
     assert.match(pins, /spoken-card-founder-voice-default/);
@@ -317,16 +311,19 @@ describe("OS 2.8.19 initiative report card", () => {
       path.join(REPO_ROOT, "company-os/first-hour.md"),
       "utf8",
     );
-    assert.match(firstHour, /Also moving \(not the bottleneck\)/);
+    assert.match(firstHour, /Leave week labels off the page until they ask/);
     assert.match(firstHour, /spoken-card-founder-voice-default/);
+    assert.doesNotMatch(firstHour, /Spoken card|Also moving \(not the bottleneck\)|show clocks|Bet \/ Filter/);
     const ai = fs.readFileSync(path.join(REPO_ROOT, "company-os/ai-instructions.md"), "utf8");
     assert.match(ai, /spoken-card-founder-voice-default/);
-    assert.match(ai, /Also moving \(not the bottleneck\)/);
+    assert.match(ai, /Leave week labels off the page until I ask/);
+    assert.doesNotMatch(ai, /Spoken card|Also moving \(not the bottleneck\)|show clocks|Bet \/ Filter/);
     const pinsSkill = fs.readFileSync(
       path.join(REPO_ROOT, "plugin/skills/house-rule-pins/SKILL.md"),
       "utf8",
     );
-    assert.match(pinsSkill, /Spoken card \(founder voice default\) \(2\.8\.20\)/);
+    assert.match(pinsSkill, /Where are we \(2\.8\.20\)/);
+    assert.doesNotMatch(pinsSkill, /Spoken card/);
 
     assert.equal(OS_VERSION, "2.8.19");
     assert.equal(initiativeMappingMayAdvance(), false);
