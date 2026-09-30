@@ -2,7 +2,7 @@
 
 **Portable company operating system for solo founders in the 0→1 journey.**
 
-Not the Bootstrap CSS / UI framework ([getbootstrap.com](https://getbootstrap.com)). This repo is process and control for a company: two clocks, founder gates, honest evidence.
+This repo is the operating board for a company: who you are betting on, what is stuck this week, and what you already decided.
 
 Use this repo as the **source of truth** for process and control. Point your AI here and apply what fits *your* startup. Instantiate blank files in *your* product repo only when you want them — fill only *your* thesis, customer groups, scores, and open questions.
 
@@ -65,7 +65,6 @@ No copy, no script, no CLI, no MCP. Use what applies to *your* startup immediate
 Take the Bootstrap OS from https://github.com/ivelin/bootstrapos
 (company-os/operating-system.md + live-runtime.md + ai-instructions.md).
 Bootstrap OS is a company operating system for solo 0-1 founders.
-It is not the Bootstrap CSS framework.
 Apply process and control to MY startup only.
 Do not import any other company's product thesis or market.
 ```

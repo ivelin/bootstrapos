@@ -9,8 +9,6 @@ When to use: first ask. Any harness.
 
 Point the AI at https://github.com/ivelin/bootstrapos — no install, no MCP, no plugin required.
 
-Not the Bootstrap CSS framework.
-
 Day 0 (~60 minutes): https://github.com/ivelin/bootstrapos/blob/main/company-os/first-hour.md
 
 Chat plus a weekly “Where are we?” ritual. The two-minute figure is the snapshot read, not the hour.
