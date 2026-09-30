@@ -6,6 +6,7 @@ Bootstrap OS is harness-agnostic. These are the named agent environments we targ
 |---------|--------------|------|
 | Grok Bot | https://x.ai/bot | Persistent agent + cloud computer |
 | Claude Cowork | https://claude.com/product/cowork | Persistent agent + computer |
+| Muse | https://ai.meta.com/muse/ | Personal agent + Secure VM |
 | ChatGPT Work | https://chatgpt.com/work | Team ChatGPT workspace |
 | ChatGPT Dot | https://chatgpt.com/features/dots/ | Always-on agent + own cloud computer |
 | OpenClaw | https://openclaw.ai | Open agent harness |
