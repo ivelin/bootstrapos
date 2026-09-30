@@ -1300,8 +1300,8 @@ if grep -q 'When speaking the board to a human' company-os/operating-system.md \
   && grep -q 'Ask / Do / Write back' templates/applied-here.md \
   && grep -q 'lead with descriptive labels; numbers only in parentheses' .cursor/skills/verify-bootstrap/SKILL.md \
   && grep -q 'lead with descriptive labels; numbers only in parentheses' .cursor/skills/verify-bootstrap/features/journey-board.md \
-  && grep -q 'Spoken or rendered summary should lead with descriptive labels' mcp/src/hosted-copy.ts \
-  && grep -q 'Spoken board talk leads with descriptive labels' mcp/src/hosted-copy.ts \
+  && ! grep -q 'Spoken or rendered summary should lead with descriptive labels' mcp/src/hosted-copy.ts \
+  && ! grep -q 'Spoken board talk leads with descriptive labels' mcp/src/hosted-copy.ts \
   && grep -q 'Board status spoken to humans leads with descriptive labels' mcp/docs/JOURNEY.md \
   && grep -q 'Spoken board talk leads with descriptive labels' AGENTS.md \
   && grep -q 'simple phase name first; number in parentheses only if useful' company-os/operating-system.md \
@@ -1532,10 +1532,12 @@ if grep -q '| 2.8.20 |' company-os/operating-system.md \
   && grep -Fq '**Version:** 2.8.19' company-os/operating-system.md \
   && grep -q 'OS_VERSION = "2.8.19"' mcp/src/constants.ts \
   && grep -q 'spoken-card-2.8.20' mcp/src/house-rules.ts \
-  && grep -q 'founder-facing spoken card without a clarification round' mcp/src/hosted-copy.ts \
   && grep -q 'Print spoken first' mcp/src/hosted-copy.ts \
-  && grep -q 'Also moving (not the bottleneck)' mcp/src/hosted-copy.ts \
-  && grep -q 'spoken-card default (founder voice' mcp/src/server.ts \
+  && ! grep -q 'founder-facing spoken card without a clarification round' mcp/src/hosted-copy.ts \
+  && ! grep -q 'Also moving (not the bottleneck)' mcp/src/hosted-copy.ts \
+  && ! grep -q 'Clocks are storage' mcp/src/hosted-copy.ts \
+  && ! grep -q 'spoken-card default (founder voice' mcp/src/server.ts \
+  && ! grep -q 'five journey rungs (Bet' mcp/src/server.ts \
   && grep -q 'spoken-card-founder-voice-default' company-os/ai-instructions.md \
   && grep -q 'Also moving (not the bottleneck)' company-os/first-hour.md \
   && grep -q 'Spoken card (founder voice default) (2.8.20)' plugin/skills/house-rule-pins/SKILL.md \

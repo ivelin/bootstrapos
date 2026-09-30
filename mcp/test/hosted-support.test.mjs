@@ -86,6 +86,7 @@ describe("hosted MCP support escape hatch", () => {
     assert.match(HOSTED_MCP_INSTRUCTIONS, /Ideas under that company are the customer bets/);
     assert.doesNotMatch(HOSTED_MCP_INSTRUCTIONS, /for one signed-in founder/);
     assert.doesNotMatch(HOSTED_MCP_INSTRUCTIONS, /One company, or where are we/);
+    assert.doesNotMatch(HOSTED_MCP_INSTRUCTIONS, /mermaid|spoken card|Clocks are storage|FAST\/SAFE|Bet \/ Filter|decision log/i);
     assert.doesNotMatch(HOSTED_MCP_INSTRUCTIONS, /dyeconverter|corehaul|nina@/i);
     assert.doesNotMatch(
       HOSTED_MCP_INSTRUCTIONS.match(/Feedback and support[\s\S]*?Call bootstrap_support[^\n]*/)?.[0] ?? "",
@@ -139,14 +140,17 @@ describe("hosted MCP support escape hatch", () => {
     const info = parseTool(await rpc("tools/call", { name: "bootstrap_os_info", arguments: {} }, 3));
     assert.equal(info.surface, "hosted-read");
     assert.equal(info.founderVoice, FOUNDER_INTRO);
-    assert.match(String(info.doNotRecite), /adoptionOrder/);
+    assert.match(String(info.doNotRecite), /Say founderVoice, then the board/);
+    assert.equal(info.hardRules, undefined);
+    assert.equal(info.houseRules, undefined);
+    assert.equal(info.osVersion, undefined);
     assert.match(JSON.stringify(info.adoptionOrder), /Not pirin\.ai/);
-    assert.match(JSON.stringify(info.adoptionOrder), /not mentee-ready boards/i);
+    assert.doesNotMatch(JSON.stringify(info.adoptionOrder), /mentee/i);
     assert.match(JSON.stringify(info.adoptionOrder), /every team the signed-in person belongs to/);
     assert.match(JSON.stringify(info.adoptionOrder), /Each company is one team/);
     assert.doesNotMatch(JSON.stringify(info.adoptionOrder), /signed-in company/);
     assert.doesNotMatch(JSON.stringify(info.adoptionOrder), /self-host|selfHost|local install|Fork and deploy|Path 1/i);
-    assert.doesNotMatch(JSON.stringify(info.pluginPreview), /Path 1|self-host/i);
+    assert.doesNotMatch(JSON.stringify(info.pluginPreview), /Path 1|self-host|mentee/i);
     assertHowto(info.support);
 
     const howto = parseTool(await rpc("tools/call", { name: "bootstrap_support", arguments: {} }, 4));

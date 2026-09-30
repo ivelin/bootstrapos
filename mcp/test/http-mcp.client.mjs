@@ -131,8 +131,11 @@ async function main() {
     assert.match(String(support.routed), /not auto-fix/i);
     assert.equal(info.docsSource, "published");
     assert.match(String(info.docsBase), /127\.0\.0\.1/);
-    assert.match(JSON.stringify(info.adoptionOrder), /not mentee-ready boards/);
+    assert.doesNotMatch(JSON.stringify(info.adoptionOrder), /mentee/i);
     assert.match(JSON.stringify(info.adoptionOrder), /Not pirin\.ai/);
+    assert.equal(info.hardRules, undefined);
+    assert.equal(info.houseRules, undefined);
+    assert.equal(info.osVersion, undefined);
     assert.match(JSON.stringify(info.companyState), /board for each company|Not hosted/i);
     assert.match(String(info.founderVoice), /every team you belong to/);
     assert.match(String(info.founderVoice), /Ideas under that company are the customer bets/);

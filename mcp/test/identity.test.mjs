@@ -166,7 +166,10 @@ describe("hosted identity (resource server, gated)", () => {
     assert.match(String(info.companyState), /board for each company|Not hosted/i);
     assert.match(String(info.founderVoice), /every team you belong to/);
     assert.match(String(info.founderVoice), /Ideas under that company are the customer bets/);
-    assert.match(String(info.doNotRecite), /osVersion/);
+    assert.match(String(info.doNotRecite), /Say founderVoice, then the board/);
+    assert.equal(info.hardRules, undefined);
+    assert.equal(info.houseRules, undefined);
+    assert.equal(info.osVersion, undefined);
     assert.ok(!info.paths?.statePath);
     assert.equal(info.identityStore, "memory");
     assert.equal(info.support?.email, "bootstrap@pirin.ai");
