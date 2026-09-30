@@ -303,21 +303,15 @@ describe("OS 2.8.19 initiative report card", () => {
     assert.match(pins, /spoken-card-founder-voice-default/);
     assert.match(pins, /initiative-report-card-2\.8\.19/);
 
-    assert.match(TOOL_GET_JOURNEY, /founder-facing spoken card without a clarification round/);
     assert.match(TOOL_GET_JOURNEY, /Print spoken first/);
-    assert.match(TOOL_GET_JOURNEY, /Also moving \(not the bottleneck\)/);
-    assert.match(TOOL_GET_JOURNEY, /show clocks/);
-    assert.match(TOOL_GET_JOURNEY, /Clocks are storage/);
+    assert.doesNotMatch(TOOL_GET_JOURNEY, /spoken card|Also moving|Clocks are storage|show clocks/);
     assert.match(HOSTED_MCP_INSTRUCTIONS, /Print spoken first/);
-    assert.match(HOSTED_MCP_INSTRUCTIONS, /founder-facing spoken card without a clarification round/);
-    assert.match(HOSTED_MCP_INSTRUCTIONS, /Also moving \(not the bottleneck\)/);
-    assert.match(HOSTED_MCP_INSTRUCTIONS, /show clocks/);
-    assert.match(HOSTED_MCP_INSTRUCTIONS, /Clocks are storage/);
+    assert.doesNotMatch(HOSTED_MCP_INSTRUCTIONS, /spoken card|Also moving|Clocks are storage|show clocks/);
 
     const infoDesc = fs.readFileSync(path.join(REPO_ROOT, "mcp/src/server.ts"), "utf8");
-    assert.match(infoDesc, /spoken-card default \(founder voice/);
-    assert.match(infoDesc, /clocks are storage/);
-    assert.match(infoDesc, /show clocks/);
+    assert.match(infoDesc, /Say the founder sentence, then the live board/);
+    assert.doesNotMatch(infoDesc, /spoken-card default/);
+    assert.doesNotMatch(infoDesc, /five journey rungs \(Bet/);
 
     const firstHour = fs.readFileSync(
       path.join(REPO_ROOT, "company-os/first-hour.md"),

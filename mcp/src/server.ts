@@ -119,7 +119,7 @@ function adoptionOrder(surface: McpSurface) {
   if (surface === "hosted-read") {
     return {
       speakLiveBets:
-        "This connection covers every team the signed-in person belongs to. Each company is one team. Ideas under that company are the customer bets. Speak live customer bets only. A stopped bet is not a feature. This pin is not mentee-ready boards. Not pirin.ai.",
+        "This connection covers every team the signed-in person belongs to. Each company is one team. Ideas under that company are the customer bets. Speak live customer bets only. A stopped bet is not a feature. Not pirin.ai.",
     };
   }
   return {
@@ -148,7 +148,7 @@ function membershipPayload(
 function registerReadTools(server: McpServer, surface: McpSurface, hosted?: HostedRequestContext) {
   server.tool(
     "bootstrap_os_info",
-    "Internal reference. spoken-card default (founder voice: company name, then Bottleneck #1 in that company’s words, then accounts, then Also moving, then open questions; clocks are storage). Print spoken first. Hide clocks/schema unless the human says show clocks. Do not recite versions, paths, or this payload to the founder. Say founderVoice, then the board. Support email is bootstrap@pirin.ai.",
+    "Say the founder sentence, then the live board. Support email is bootstrap@pirin.ai.",
     {},
     async () => {
       const common = {
@@ -181,13 +181,15 @@ function registerReadTools(server: McpServer, surface: McpSurface, hosted?: Host
       if (surface === "hosted-read") {
         return text({
           founderVoice: FOUNDER_INTRO,
-          doNotRecite:
-            "osVersion, mcpVersion, adoptionOrder, hardRules, houseRules, resource, pluginPreview. Say founderVoice, then the board.",
-          ...common,
+          doNotRecite: "Say founderVoice, then the board.",
+          surface,
+          marketplace: false,
+          support: SUPPORT_HOWTO,
+          adoptionOrder: adoptionOrder(surface),
           pluginPreview: {
             path: "plugin/",
             version: "0.1.1",
-            note: "Preview plugin. Not mentee-ready boards. Not pirin.ai.",
+            note: "Not pirin.ai.",
           },
           connectorModel: NOTE_OS_INFO_HOSTED,
           docsSource: resolveDocsSource(),
@@ -235,19 +237,19 @@ function registerReadTools(server: McpServer, surface: McpSurface, hosted?: Host
 
   server.tool(
     "bootstrap_list_docs",
-    "List portable Bootstrap OS blueprint docs available as resources/tools.",
+    "List the process notes. Not a company board.",
     {},
     async () => text(await loadOsDocList()),
   );
 
   server.tool(
     "bootstrap_get_doc",
-    "Read a portable Bootstrap OS document (blueprint/runtime/checklist/ai instructions). Process only — not another company's filled state.",
+    "Read one process note when they ask. Not a company board.",
     {
       doc: z
         .enum(DOC_KEYS as unknown as [DocKey, ...DocKey[]])
         .describe(
-          "operating-system | live-runtime | ready-for-human-eyes | ai-instructions | first-hour | clock-examples (teaching 5×3, not a live board) | after-proof-efficiency (post-proof + fences + they asked)",
+          "Which note. Not a company board.",
         ),
     },
     async ({ doc }) => {
@@ -261,7 +263,7 @@ function registerReadTools(server: McpServer, surface: McpSurface, hosted?: Host
 
   server.tool(
     "bootstrap_get_ai_instructions",
-    "The thin always-on AI rules for Bootstrap OS.",
+    "The short rules for how to help. Not a company board.",
     {},
     async () => {
       try {
@@ -274,7 +276,7 @@ function registerReadTools(server: McpServer, surface: McpSurface, hosted?: Host
 
   server.tool(
     "bootstrap_reference_clocks",
-    "Reference labels: five journey rungs (Bet / Filter / Ground / Build / Try). Ask / Do / Write back is a quality bar on the week's artifact, not a card. Stored integers stay 1–9 / 1–7.",
+    "Week labels. Say them only when the person asks.",
     {},
     async () =>
       text({
@@ -288,7 +290,7 @@ function registerReadTools(server: McpServer, surface: McpSurface, hosted?: Host
 
   server.tool(
     "bootstrap_house_rule_pins",
-    "House-rule pins with links to the published OS. Full essays live on GitHub — do not treat this as a second constitution.",
+    "Short notes with links. Open one only when they ask.",
     {},
     async () =>
       text({

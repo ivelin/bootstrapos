@@ -80,11 +80,8 @@ describe("hosted access layer (one login, many companies)", () => {
     assert.match(instructions, /where are we/i);
     assert.match(instructions, /company board/i);
     assert.match(instructions, /idea board/i);
-    assert.match(instructions, /visualFlow|mermaid/i);
-    assert.match(instructions, /render/i);
-    assert.match(instructions, /lastTransitions|decision log/i);
-    assert.match(instructions, /owners/);
-    assert.match(instructions, /constraintThisWeek|bottleneck/i);
+    assert.match(instructions, /Print spoken first/);
+    assert.doesNotMatch(instructions, /mermaid|visualFlow|decision log|spoken card|Clocks are storage|FAST\/SAFE|Bet \/ Filter/i);
     assert.match(instructions, /user-bootstrap-os-mcp/);
     assert.match(instructions, /bootstrap@pirin\.ai/);
     assert.match(instructions, /bootstrap_support/);
@@ -123,7 +120,7 @@ describe("hosted access layer (one login, many companies)", () => {
     }
   });
 
-  it("get_journey description advertises company vs idea, mermaid, log, bottleneck, owners", async () => {
+  it("get_journey description is the company board and the idea board", async () => {
     setIdentityStoreForTests(ivelinMemoryFixture(IVELIN_TOKEN));
     setJourneyStoreForTests(
       new HostedMembershipJourneyStore((actor) =>
@@ -139,17 +136,18 @@ describe("hosted access layer (one login, many companies)", () => {
     assert.match(journey.description, /idea board/i);
     assert.match(journey.description, /company/i);
     assert.match(journey.description, /idea/i);
-    assert.match(journey.description, /visualFlow|mermaid/i);
-    assert.match(journey.description, /lastTransitions|decision log/i);
-    assert.match(journey.description, /owners/);
-    assert.match(journey.description, /constraintThisWeek|bottleneck/i);
     assert.match(journey.description, /Print spoken first/);
-    assert.match(journey.description, /founder-facing spoken card/i);
-    assert.match(journey.description, /Also moving \(not the bottleneck\)/);
-    assert.match(journey.description, /show clocks/);
-    assert.match(journey.description, /Clocks are storage/);
+    assert.match(journey.description, /boards field/);
+    assert.doesNotMatch(journey.description, /mermaid|decision log|spoken card|Clocks are storage|Also moving|show clocks|FAST\/SAFE|Bet \/ Filter/i);
     assert.doesNotMatch(journey.description, /swim/i);
     assert.doesNotMatch(journey.description, /state machine/i);
+    for (const tool of listed.result.tools) {
+      assert.doesNotMatch(
+        String(tool.description ?? ""),
+        /mermaid|Bet \/ Filter|Clocks are storage|spoken card|decision log|FAST\/SAFE|mentee/i,
+        tool.name,
+      );
+    }
     const ideaParam = journey.inputSchema?.properties?.idea;
     const companyParam = journey.inputSchema?.properties?.company;
     assert.match(String(companyParam?.description ?? ""), /team/i);

@@ -104,11 +104,12 @@ describe("spoken payload lead (alpha fixture)", () => {
 
   it("tool descriptions pin print spoken first", () => {
     assert.match(TOOL_GET_JOURNEY, /Print spoken first/);
-    assert.match(TOOL_GET_JOURNEY, /Hide clocks\/schema unless the human says show clocks/);
+    assert.doesNotMatch(TOOL_GET_JOURNEY, /Hide clocks|spoken card|Clocks are storage/);
     assert.match(HOSTED_MCP_INSTRUCTIONS, /Print spoken first/);
+    assert.doesNotMatch(HOSTED_MCP_INSTRUCTIONS, /Clocks are storage|spoken card/);
     const info = fs.readFileSync(path.join(REPO_ROOT, "mcp/src/server.ts"), "utf8");
-    assert.match(info, /Print spoken first/);
-    assert.match(info, /Hide clocks\/schema unless the human says show clocks/);
+    assert.doesNotMatch(info, /spoken-card default/);
+    assert.doesNotMatch(info, /five journey rungs \(Bet/);
     const os = fs.readFileSync(path.join(REPO_ROOT, "company-os/operating-system.md"), "utf8");
     assert.match(os, /Payload lead is spoken; snapshot is not a clock dump/);
   });
