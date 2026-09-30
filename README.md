@@ -123,7 +123,7 @@ Local CI is `./scripts/ci.sh`.
 
 | Clock | Question | Changes when |
 |-------|----------|--------------|
-| **Bootstrap journey** (five rungs: Bet / Filter / Ground / Build / Try) | Where is this bet on the prove-it path? | Founder **Advance / Iterate / Hold / Kill** |
+| **Bootstrap journey** (five rungs) | Where is this bet on the prove-it path? | Founder **Advance / Iterate / Hold / Kill** |
 | **Live loop** (quality bar: Ask / Do / Write) | What artifact does this week need? | Continuous; many cycles inside one journey rung. Not a card. |
 
 AI never advances a journey phase alone. Evidence beats narrative. Waitlists and synthetic research are filters, not product–market fit.
@@ -173,10 +173,10 @@ Treat promotion into this template as rare, deliberate work — not a continuous
 Four short pins. Version header stays 2.8.19. No schema bump. [Re-ground before advising](company-os/operating-system.md#house-rule-re-ground-before-advising). [Evidence bound to the exact artifact](company-os/operating-system.md#house-rule-evidence-bound-to-the-exact-artifact) — cross-reference Ready for human eyes; do not copy that gate. [Failure becomes a small runtime policy](company-os/operating-system.md#house-rule-failure-becomes-a-small-runtime-policy). [Synthetic-consumer pretests are not customer evidence](company-os/operating-system.md#house-rule-synthetic-consumer-pretests-are-not-customer-evidence).
 
 **v2.8.21 — spoken label: customer bet**  
-Additive note on 2.8.19. Full text: [initiative report card](company-os/operating-system.md#initiative-report-card) · [spoken card](company-os/operating-system.md#spoken-card-founder-voice-default). Founder speech: customer bet / customer bets with nested engagements. Card heading: CUSTOMER BETS. Stored kind stays `customer_check`. Version header stays 2.8.19. No schema bump. No enum rename.
+Additive note on 2.8.19. Full text: [initiative report card](company-os/operating-system.md#initiative-report-card) · [where are we](company-os/operating-system.md#spoken-card-founder-voice-default). Founder speech: customer bet / customer bets with nested engagements. Card heading: CUSTOMER BETS. Stored kind stays `customer_check`. Version header stays 2.8.19. No schema bump. No enum rename.
 
-**v2.8.20 — spoken-card pin (founder voice default)**  
-Additive note on 2.8.19. Full text: [spoken card](company-os/operating-system.md#spoken-card-founder-voice-default). Start at the company name, then Bottleneck #1 in that company’s words. Then accounts: where it stands / next (nested under the customer bet). Then “Also moving (not the bottleneck)” for capital / legal / advisor. Then open questions in plain words. Hide clocks and schema unless the human says “show clocks” or “show schema”. Engine keeps those rules. Spoken card does not print them. Clocks are storage. Version header stays 2.8.19. No third clock. No schema bump.
+**v2.8.20 — where are we**  
+Additive note on 2.8.19. Full text: [where are we](company-os/operating-system.md#spoken-card-founder-voice-default). When they ask where you are, print the board in the company’s words: who you are betting on, what is stuck, and what you already decided. Leave week labels off the page until they ask. Version header stays 2.8.19. No schema bump.
 
 **v2.8.19 — initiative report card**  
 Additive. Full text: [operating-system.md](company-os/operating-system.md#initiative-report-card). Company header → bottleneck #1 → customer bets with nested engagements → other initiatives footer. New writes → `initiatives[]`. When `initiatives[]` is present, dual-read of progress/supporting/engagements is dead for the card lead. Rank is computed, not stored. Mapping cannot Advance. Ask / Do is not a card. No third clock. No schema bump.

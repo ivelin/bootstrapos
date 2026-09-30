@@ -8,7 +8,7 @@
  * Stored 8 or 9 stay at Try — do not invent Advance.
  * Grow is an after-proof pack after Try, not a sixth rung.
  *
- * Name rule: journey = place names (Bet / Filter / Ground / Build / Try).
+ * Name rule: journey place names stay in storage until they ask.
  * Loop verbs = quality bar + clock-examples teaching only.
  * Never put “synthetic research” or “real users” on both clocks.
  * Do takes the station’s shape. It is not a synonym for Build.

@@ -1522,16 +1522,32 @@ fi
 # --- z9) OS 2.8.20: spoken-card pin (founder voice default) ---
 # Additive note on 2.8.19. No version header bump. No schema bump.
 if grep -q '| 2.8.20 |' company-os/operating-system.md \
-  && grep -q '### Spoken card (founder voice default)' company-os/operating-system.md \
-  && grep -q 'Start at the company name, then Bottleneck #1' company-os/operating-system.md \
-  && grep -q 'Also moving (not the bottleneck)' company-os/operating-system.md \
-  && grep -q 'show clocks' company-os/operating-system.md \
-  && grep -q 'Engine keeps those rules. Spoken card does not print them.' company-os/operating-system.md \
-  && grep -q 'Payload lead is spoken; snapshot is not a clock dump' company-os/operating-system.md \
-  && grep -q 'Clocks are storage' company-os/operating-system.md \
+  && grep -q 'id="spoken-card-founder-voice-default"' company-os/operating-system.md \
+  && grep -q '#### Where are we' company-os/operating-system.md \
+  && grep -q 'Leave week labels off the page until they ask' company-os/operating-system.md \
+  && grep -q 'Payload lead is spoken' company-os/operating-system.md \
+  && ! grep -q 'Spoken card' company-os/operating-system.md \
+  && ! grep -q 'show clocks' company-os/operating-system.md \
+  && ! grep -q 'Clocks are storage' company-os/operating-system.md \
+  && ! grep -q 'Also moving (not the bottleneck)' company-os/operating-system.md \
+  && ! grep -q 'Bet / Filter / Ground / Build / Try' company-os/operating-system.md \
+  && ! grep -q 'Bet / Filter / Ground / Build / Try' company-os/live-runtime.md \
+  && ! grep -q 'Bet / Filter / Ground / Build / Try' company-os/ai-instructions.md \
+  && ! grep -q 'Bet / Filter / Ground / Build / Try' company-os/first-hour.md \
+  && ! grep -q 'Bet / Filter / Ground / Build / Try' README.md \
+  && ! grep -q 'Spoken card' company-os/ai-instructions.md \
+  && ! grep -q 'Also moving (not the bottleneck)' company-os/ai-instructions.md \
+  && ! grep -q 'show clocks' company-os/ai-instructions.md \
+  && ! grep -q 'Spoken card' company-os/first-hour.md \
+  && ! grep -q 'Also moving (not the bottleneck)' company-os/first-hour.md \
+  && grep -q 'Leave week labels off the page until they ask' company-os/first-hour.md \
   && grep -Fq '**Version:** 2.8.19' company-os/operating-system.md \
   && grep -q 'OS_VERSION = "2.8.19"' mcp/src/constants.ts \
   && grep -q 'spoken-card-2.8.20' mcp/src/house-rules.ts \
+  && grep -q 'Leave week labels off the page until they ask' mcp/src/house-rules.ts \
+  && ! grep -q 'Spoken card' mcp/src/house-rules.ts \
+  && ! grep -q 'Clocks are storage' mcp/src/house-rules.ts \
+  && ! grep -q 'Bet / Filter / Ground / Build / Try' mcp/src/house-rules.ts \
   && grep -q 'Print spoken first' mcp/src/hosted-copy.ts \
   && ! grep -q 'founder-facing spoken card without a clarification round' mcp/src/hosted-copy.ts \
   && ! grep -q 'Also moving (not the bottleneck)' mcp/src/hosted-copy.ts \
@@ -1539,14 +1555,14 @@ if grep -q '| 2.8.20 |' company-os/operating-system.md \
   && ! grep -q 'spoken-card default (founder voice' mcp/src/server.ts \
   && ! grep -q 'five journey rungs (Bet' mcp/src/server.ts \
   && grep -q 'spoken-card-founder-voice-default' company-os/ai-instructions.md \
-  && grep -q 'Also moving (not the bottleneck)' company-os/first-hour.md \
-  && grep -q 'Spoken card (founder voice default) (2.8.20)' plugin/skills/house-rule-pins/SKILL.md \
+  && grep -q 'Where are we (2.8.20)' plugin/skills/house-rule-pins/SKILL.md \
+  && ! grep -q 'Spoken card' plugin/skills/house-rule-pins/SKILL.md \
   && grep -q 'Honor OS 2.8.19' AGENTS.md \
   && grep -q 'v2.8.20' README.md \
   && ! grep -q 'card-v1' company-os/operating-system.md; then
-  ok "OS 2.8.20 spoken-card pin is additive (founder voice default; no schema bump)"
+  ok "OS 2.8.20 where-are-we speech stays additive (no schema bump; no term table)"
 else
-  not_ok "2.8.20 spoken-card strings must exist; keep 2.8.19 version header; no schema bump"
+  not_ok "2.8.20 where-are-we sentence must exist; keep 2.8.19 version header; no term table"
 fi
 done_when=$(sed -n '/^## Done when$/,/^## After this hour$/p' company-os/first-hour.md)
 if ! printf '%s\n' "$done_when" | grep -q 'spoken card' \
@@ -1562,7 +1578,6 @@ if grep -q '| 2.8.21 |' company-os/operating-system.md \
   && grep -Fq '**Version:** 2.8.19' company-os/operating-system.md \
   && grep -q 'OS_VERSION = "2.8.19"' mcp/src/constants.ts \
   && grep -q 'customer bets with nested engagements' company-os/operating-system.md \
-  && grep -q 'nested under the customer bet' company-os/operating-system.md \
   && grep -q 'CUSTOMER BETS' mcp/src/initiative-card.ts \
   && grep -q 'CUSTOMER BETS' templates/company/state/where-are-we.py \
   && grep -q 'customer_check' company-os/operating-system.md \

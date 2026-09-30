@@ -10,7 +10,7 @@ Use for every “where are we with COMPANY” and every “company board card”
 ## Source of truth
 
 1. Live `get_journey` / `initiatives[]` for that company first. SoR (Gmail / Drive / Calendar) only to fill **Who** / **When** when the board is silent. Do not invent rows.
-2. Spoken voice: start at Bottleneck #1 in the company’s language. Hide unless asked (“show clocks” / “show schema”): OS version, journey integers, loop labels, autonomy, Ready-for-human-eyes, “NDA is not Try”, kind slugs, idea slugs. Keep those rules internal.
+2. Print the spoken field in the company’s words. Leave week labels off the page until they ask.
 3. Company = team. Idea = one customer bet. Never print the storage slug `default` as a node. Nested engagements are children of that bet (`parentId`). Capital / legal / advisor = Footer. Paper cannot promote.
 
 ## Spoken label: customer bet

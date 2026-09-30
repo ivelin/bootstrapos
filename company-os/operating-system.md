@@ -120,7 +120,7 @@ The blueprint is **not** the running system. Do not confuse “we wrote the plan
 
 When speaking the board to a human, lead with the simple journey name, the gate, the constraint, and missing artifacts. Numbers stay in storage and in `get_journey`; use them in parentheses only if useful. Spoken Ask / Do / Write back are not where-we-are.
 
-Name rule: journey = place names (Bet / Filter / Ground / Build / Try). Loop verbs = quality bar + [clock-examples](clock-examples.md) teaching only. Never put “synthetic research” or “real users” on both clocks. Do not flatten the two clocks into one list. Do takes the station’s shape. It is not a synonym for Build. Make / Check / Hear are not loop weeks.
+Name rule: journey place names stay in storage until they ask. Loop verbs = quality bar + [clock-examples](clock-examples.md) teaching only. Never put “synthetic research” or “real users” on both clocks. Do not flatten the two clocks into one list. Do takes the station’s shape. It is not a synonym for Build. Make / Check / Hear are not loop weeks.
 
 You can run many loop cycles inside one journey phase. Full detail, state stores, and the stage diagram: **[`live-runtime.md`](live-runtime.md)**.
 
@@ -1258,21 +1258,13 @@ Where-are-we is a **report card**, not a concatenated sentence. Additive on 2.8.
 | **Nest** | Engagements under the customer bet via `parentId`. NDA stays nested. | Treat the NDA as Try. Open a second journey. |
 | **Footer** | Capital, legal, advisor, and closed rows. | Title the card with `impact=clock`. |
 
-#### Spoken card (founder voice default)
+<a id="spoken-card-founder-voice-default"></a>
 
-Additive on 2.8.19. Default Where-are-we speech. Print this. Clients that read this OS and the tool descriptions render it without a clarification round. Not a third clock. Not a house rule. Mapping cannot Advance. Clocks are storage. Spoken label (2.8.21): customer bet. Card heading is CUSTOMER BETS. Stored kind stays `customer_check`. Version header stays 2.8.19.
+#### Where are we
 
-**Speak.** Start at the company name, then Bottleneck #1 in that company’s words. Then accounts: where it stands / next (nested under the customer bet). Then “Also moving (not the bottleneck)” for capital / legal / advisor. Then open questions in plain words.
+When they ask where you are, print the board in the company’s words: who you are betting on, what is stuck, and what you already decided. Leave week labels off the page until they ask.
 
-**Hide** unless the human says “show clocks” or “show schema”: journey integers, stored vs spoken clocks, gate labels, autonomy, Ready for human eyes, OS version, kind slugs, idea slugs, WIP-as-header, and mapping notes.
-
-Engine keeps those rules. Spoken card does not print them. Payload lead is spoken; snapshot is not a clock dump. Eval is CI. Spoken footer cannot drop supporting/engagements. Snapshot matches spoken bottleneck line. Also-moving cannot be none-yet when supporting or footer rows exist; killed cards are killed.
-
-| | Do this | Not this |
-|--|---------|----------|
-| **Lead** | Company name, then Bottleneck #1 in that company’s words. | Lead with journey integers, gate labels, or WIP. |
-| **Accounts** | Where it stands / next, nested under the customer bet. | Flatten capital / legal / advisor into the bottleneck. |
-| **Footer** | “Also moving (not the bottleneck)”. Then open questions in plain words. | Print “NDA is not Try”, “Ask / Do is not a card”, or “stored clocks stay”. |
+Additive on 2.8.19. Mapping cannot Advance. Spoken label (2.8.21): customer bet. Card heading is CUSTOMER BETS. Stored kind stays `customer_check`. Version header stays 2.8.19. Payload lead is spoken. Eval is CI. Spoken footer cannot drop supporting/engagements. Snapshot matches spoken bottleneck line. Also-moving cannot be none-yet when supporting or footer rows exist; killed cards are killed.
 
 Not Day 0 homework. No invented Advance.
 
@@ -1404,11 +1396,7 @@ Hard rules you must follow:
    Also label research inputs: stated (their words) | synthetic (sim after a condition change) | observed (time or money).
    Never treat simulated prices or a spoken “I would buy” as demand. Keep the words. They are stated evidence, not a sale.
    Never ask a synthetic user for a Likert or a naked dollar WTP; ask a choice or a sentence, then map. A mapped figure after a choice is allowed. If synthetic variance is too tight or the same prompt drifted versus a human baseline, discard that pass. A new category with no prior survey cannot be rescued by fine-tuning.
-4. When I ask “Where are we?” or “Where do we stand?”, answer with the spoken card
-   (company name, then Bottleneck #1 in that company’s words, then accounts, then
-   “Also moving (not the bottleneck)”, then open questions). Hide clocks and schema
-   unless I say “show clocks” or “show schema”. Engine keeps those rules. Spoken card
-   does not print them.
+4. When I ask “Where are we?” or “Where do we stand?”, print the board in this company’s words: who we are betting on, what is stuck, and what we already decided. Leave week labels off the page until I ask.
 5. The standing deny list applies in every posture (no silent live-send, spend, or fake staffing). One primary partner may call jobs; jobs are not employees.
 6. When an important decision needs human judgment, say so directly.
 7. Prefer small, honest tests and evaluation-driven increments (Spec → Harness → Implement → Gate) over big unmeasured builds.
@@ -1697,8 +1685,8 @@ Also house rules, each with a paper: [re-ground before advising](#house-rule-re-
 | 2.8.17 | Implicit loop: Ask / Do / Write back is a quality bar on the week’s artifact, not a stored week verb and not card position. Founder gates journey only (Advance / Iterate / Hold / Kill). `loopStage` mutations are rejected (omit or identical no-op only). Spoken labels are not where-we-are. Missing Write back is said from artifacts, never invented as `loopStage` 7. [clock-examples](clock-examples.md) stays teaching. No schema bump. No invented Advance. Writing: [Say it once. Link. No filler.](#how-this-os-may-change-stability-contract). |
 | 2.8.18 | House rule: [one founder control plane](#house-rule-one-founder-control-plane). Primary is the customer bet. Advisors, investors, lawyers, contractors, and partners stay on the same snapshot — no separate journey, cannot promote. Engagements are named accounts under primary. Exile to a spreadsheet is rejected. A nondisclosure agreement is not proof someone used the product. No third clock. No schema bump 1–9 / 1–7. Implicit loop from 2.8.17 stays. Writing: [Say it once. Link. No filler.](#how-this-os-may-change-stability-contract). |
 | 2.8.19 | Additive: [Initiative report card](#initiative-report-card). Company header → bottleneck #1 → customer bets with nested engagements → other initiatives footer. `initiatives[]` kinds v1 only (`customer_check` \| `engagement` \| `capital` \| `legal` \| `advisor`). When `initiatives[]` is present, dual-read of progress/supporting/engagements is dead for the card lead. Rank is computed, not stored. New writes → `initiatives[]`. Mapping cannot Advance. `wipLimit` 1 on customer_check until paid use. `impact=clock` may warn, not title. Closed = footer. `progress[]` is not card body. Ask / Do is not a card. No third clock. No schema bump 1–9 / 1–7. Writing: [Say it once. Link. No filler.](#how-this-os-may-change-stability-contract). |
-| 2.8.20 | Additive spoken-card pin on [Initiative report card](#initiative-report-card) / [Spoken card (founder voice default)](#spoken-card-founder-voice-default). Start at the company name, then Bottleneck #1 in that company’s words. Then accounts: where it stands / next (nested under the customer bet). Then “Also moving (not the bottleneck)” for capital / legal / advisor. Then open questions in plain words. Hide unless the human says “show clocks” or “show schema”. Engine keeps those rules. Spoken card does not print them. Clocks are storage. Mapping cannot Advance. No third clock. No schema bump 1–9 / 1–7. Version header stays 2.8.19. Writing: [Say it once. Link. No filler.](#how-this-os-may-change-stability-contract). |
-| 2.8.21 | Additive spoken label on [Initiative report card](#initiative-report-card) / [Spoken card (founder voice default)](#spoken-card-founder-voice-default). Founder speech: customer bet / customer bets with nested engagements. Card heading: CUSTOMER BETS. Stored kind enum stays `customer_check`. No enum rename. No schema bump 1–9 / 1–7. No third clock. Mapping cannot Advance. Version header stays 2.8.19. Writing: [Say it once. Link. No filler.](#how-this-os-may-change-stability-contract). |
+| 2.8.20 | Where-are-we speech on [Initiative report card](#initiative-report-card) / [Where are we](#spoken-card-founder-voice-default). When they ask where you are, print the board in the company’s words: who you are betting on, what is stuck, and what you already decided. Leave week labels off the page until they ask. Mapping cannot Advance. No schema bump 1–9 / 1–7. Version header stays 2.8.19. Writing: [Say it once. Link. No filler.](#how-this-os-may-change-stability-contract). |
+| 2.8.21 | Additive spoken label on [Initiative report card](#initiative-report-card) / [Where are we](#spoken-card-founder-voice-default). Founder speech: customer bet / customer bets with nested engagements. Card heading: CUSTOMER BETS. Stored kind enum stays `customer_check`. No enum rename. No schema bump 1–9 / 1–7. Mapping cannot Advance. Version header stays 2.8.19. Writing: [Say it once. Link. No filler.](#how-this-os-may-change-stability-contract). |
 | pins | Additive house-rule pins. No version bump. No schema bump. Version header stays 2.8.19. [Re-ground before advising](#house-rule-re-ground-before-advising). [Evidence bound to the exact artifact](#house-rule-evidence-bound-to-the-exact-artifact). [Failure becomes a small runtime policy](#house-rule-failure-becomes-a-small-runtime-policy). [Synthetic-consumer pretests are not customer evidence](#house-rule-synthetic-consumer-pretests-are-not-customer-evidence). Writing: [Say it once. Link. No filler.](#how-this-os-may-change-stability-contract). |
 
 ---

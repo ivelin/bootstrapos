@@ -17,7 +17,7 @@ SoR vs Play; buy vs build; advice filter. Do not add a stack. Git URL unknown �
 
 After First Hour: query GitHub / install-os / local. Do not upload mentee work to Ivelin's GitHub. https://github.com/ivelin/bootstrapos/blob/main/company-os/first-hour.md#standing-rules
 
-Spoken card: print spoken first — https://github.com/ivelin/bootstrapos/blob/main/company-os/operating-system.md#spoken-card-founder-voice-default
+Where are we: print spoken first — https://github.com/ivelin/bootstrapos/blob/main/company-os/operating-system.md#spoken-card-founder-voice-default
 
 Lifestyle or swinging for the fences (not a house rule) — https://github.com/ivelin/bootstrapos/blob/main/company-os/operating-system.md#day-0-lifestyle-or-swinging-for-the-fences
 
