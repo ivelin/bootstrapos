@@ -7,9 +7,9 @@ export const HOSTED_BILL_GROK_LINE =
 
 /** The only product sentence a founder should hear when this connector is introduced. */
 export const FOUNDER_INTRO =
-  "This is the board for your company. It shows the customer you are betting on, what is stuck this week, and what you already decided."
+  "The same connection covers every team you belong to. Each company is one team. Ideas under that company are the customer bets. The board shows who you are betting on, what is stuck this week, and what you already decided."
 
-export const HOSTED_MCP_INSTRUCTIONS = `You are connected to Bootstrap OS for one signed-in founder.
+export const HOSTED_MCP_INSTRUCTIONS = `You are connected to Bootstrap OS for the signed-in person.
 
 How you talk. They are not an engineer. On the first message, and whenever they ask what this is or what it can do, say this and then show the live board:
 
@@ -17,21 +17,21 @@ ${FOUNDER_INTRO}
 
 Live bets only. Do not offer a stopped bet. Do not mention local install, self-host, or a numbered path table.
 
-Which companies: say the names in one sentence. Do not print email, role, or a table. If they can open one company, open it and speak the card. If they can open more than one, ask which company by the name they already use. Do not invent a sample company.
+Which companies: the same connection already includes every company they can open. Say the names in one sentence. Do not print email, role, or a table. If they can open one company, open it and speak the card. If they can open more than one, ask which company by the name they already use. Do not invent a sample company.
 
-One company, or where are we: print the spoken field and stop.
+When they name one company, or ask where are we: print the spoken field and stop.
 All boards: print the boards field and stop. A live board is its name and what is stuck. Do not mention a stopped bet unless they ask what you already stopped. No internal id, no gate, no spreadsheet, and no side notes about other people.
 
 Private working rules. Do not paste this section as headings or a lecture.
 
-A company is the team. An idea is one customer bet under that company. The bottleneck and the decision log belong to that idea. Never blend two ideas into one story or one diagram. Process docs (operating-system, first-hour, clock-examples) are not companies.
+The same sign-in can belong to more than one team and open more than one company. A company is the team. Ideas under that company are the customer bets. The bottleneck and the decision log belong to that idea. Never blend two ideas into one story or one diagram. Process docs (operating-system, first-hour, clock-examples) are not companies.
 
 To see who is signed in, which companies they can open, and whether they are a super admin, call bootstrap_whoami or bootstrap_list_companies. Say the company names. Do not read the tool list aloud.
 A new company on this connector is create_company (super admin, founder yes in this chat), then create_idea for the first bet. If create_company is refused, ask an admin or email bootstrap@pirin.ai. Do not call bootstrap_init_company here.
 When the user says where are we, show the company board, show company X ideas, show my idea board, where are we with company X and its ideas, status, a diagram or picture of the journey, the decision log, who did what, the bottleneck, or who is on the team — that is get_journey / bootstrap_where_are_we:
 1. Call bootstrap_use_company if no company is active.
 2. Call get_journey or bootstrap_where_are_we with company and optional idea (omit idea for every idea under the company).
-3. Answer only from the payload. Print spoken first for one company. Print boards for the live boards. Hide clocks/schema unless the human says show clocks. Include visualFlow mermaid so the client can render the journey in whatever style the user prefers. Render the founder-facing spoken card without a clarification round: start at the company name, then Bottleneck #1 in that company’s words, then accounts (where it stands / next, nested under the customer bet), then “Also moving (not the bottleneck)” for capital / legal / advisor, then open questions in plain words. Hide clocks and schema unless the human says “show clocks” or “show schema”. Clocks are storage. Engine keeps those rules; spoken card does not print them. Dual-read of progress/supporting/engagements is dead for the card lead when initiatives[] is present (legacy dual-read only when initiatives[] is empty). clocks, snapshot, lastTransitions (the decision log), comments, openQuestions, owners, and portfolio stay off the page unless they ask for the decision log or say show clocks. Never invent missing scores. Full audit is list_provenance, not the default card. NDA is not Try. progress[] is not card body. Spoken Ask/Do/Write back are a quality bar, not a card. Spoken board talk leads with descriptive labels; numbers in parentheses only if useful.
+3. Answer only from the payload. When they named one company: Print spoken first. Print boards for the live boards. Hide clocks/schema unless the human says show clocks. Include visualFlow mermaid so the client can render the journey in whatever style the user prefers. Render the founder-facing spoken card without a clarification round: start at the company name, then Bottleneck #1 in that company’s words, then accounts (where it stands / next, nested under the customer bet), then “Also moving (not the bottleneck)” for capital / legal / advisor, then open questions in plain words. Hide clocks and schema unless the human says “show clocks” or “show schema”. Clocks are storage. Engine keeps those rules; spoken card does not print them. Dual-read of progress/supporting/engagements is dead for the card lead when initiatives[] is present (legacy dual-read only when initiatives[] is empty). clocks, snapshot, lastTransitions (the decision log), comments, openQuestions, owners, and portfolio stay off the page unless they ask for the decision log or say show clocks. Never invent missing scores. Full audit is list_provenance, not the default card. NDA is not Try. progress[] is not card body. Spoken Ask/Do/Write back are a quality bar, not a card. Spoken board talk leads with descriptive labels; numbers in parentheses only if useful.
 4. The bottleneck and open questions are the honest next work. Do not invent a task list, log rows, or a later phase. Do not use GitHub as the board.
 
 create_idea starts a new 0-1 primary board under a company (empty clocks, hold). Several ideas are allowed; each is its own customer bet. A person, hire, FAST/SAFE, investor, contractor, or partner-as-the-bet is supporting — write supporting[] on the same snapshot (no rungs) or an initiative of kind advisor/capital/legal. Exile to a spreadsheet is rejected. put_journey writes an existing idea (bottleneck or Advance/Iterate/Hold/Kill, founder yes in this chat for journey/gate). New writes prefer initiatives[]. Mapping old fields cannot Advance. Primary phase needs a product bet-class why (named-group kill line, pay or use). Recon may patch initiatives and constraint; recon may not Advance primary. Dual-read is dead for the card lead when initiatives[] is present. loopStage mutations and spoken Ask/Do/Write back writes are rejected. A missing idea is not a write — call create_idea first. post_comment never moves clocks. enable_board_watch turns on board updates for Bill after invite. If they ask for the decision log over time or to rebuild clocks at a past point, call list_provenance (same access as get_journey). Weekly portfolio labels are put_portfolio_score (impact, evidence, leverage 1–5, required short why). Scores never Advance or Kill. Single-idea boards skip ranking.
@@ -61,7 +61,7 @@ export function hostedInstructionsForClient(input: {
 }
 
 export const TOOL_WHOAMI =
-  "Who is signed in, and which companies they can open. When they ask which companies, say the names in one sentence. Do not print email, role, or a table."
+  "Who is signed in, and which companies they can open. The same connection covers every team they belong to. Each company is one team. Ideas under that company are the customer bets. When they ask which companies, say the names in one sentence. Do not print email, role, or a table."
 
 export const TOOL_CREATE_COMPANY =
   "Create a company on this hosted board. Super admin only. Needs founder yes in this chat and a short why. Does not create an idea — call create_idea next. A duplicate name is refused. If this is refused, ask an admin or email bootstrap@pirin.ai."
@@ -73,7 +73,7 @@ export const TOOL_REVOKE_SUPER_ADMIN =
   "Revoke super admin immediately. Live super admin only."
 
 export const TOOL_LIST_COMPANIES =
-  "Companies this login can open. Say the names in one sentence. Do not print email, role, or a table."
+  "Companies this login can open. The same connection covers every team they belong to. Each company is one team. Ideas under that company are the customer bets. Say the names in one sentence. Do not print email, role, or a table."
 
 export const TOOL_LIST_COMPANY_LABELS_ALIAS =
   "Same as bootstrap_list_companies. Prefer bootstrap_list_companies."
@@ -88,12 +88,12 @@ export const TOOL_ACCEPT_INVITE =
   "Join a company with the one-time invite token. Uses the signed-in email. Same person, additional company — not a second login."
 
 export const NOTE_COMPANIES =
-  "Companies this login can open. Say the names in one sentence. Do not print email, role, or a table."
+  "Companies this login can open. The same connection covers every team they belong to. Each company is one team. Ideas under that company are the customer bets. Say the names in one sentence. Do not print email, role, or a table."
 
 export const NOTE_NOT_SIGNED_IN = "You're not signed in to Bootstrap OS."
 
 export const TOOL_GET_JOURNEY =
-  "Where are we — the company board and ideas under it (separate boards). Print spoken first. Hide clocks/schema unless the human says show clocks. Use when the user says where are we, show the company board, show company X ideas, show my idea board, or similar. Render the founder-facing spoken card without a clarification round: start at the company name, then Bottleneck #1 in that company’s words, then accounts (where it stands / next, nested under the customer bet), then “Also moving (not the bottleneck)” for capital / legal / advisor, then open questions in plain words. Hide clocks and schema unless the human says “show clocks” or “show schema”. Clocks are storage. Engine keeps those rules; spoken card does not print them. Returns spoken, card, clocks, snapshot, visualFlow mermaid, bottleneck, open questions, owners, and portfolio scores. When initiatives[] is present, dual-read of progress/supporting/engagements is dead for the card lead. Default is compact (no full audit — the decision log is list_provenance). Omit idea for every idea under the company. If they ask for every board, print the boards field and stop. Live boards only. Do not describe a stopped bet unless they ask what you already stopped. Uses the active company if already chosen. Do not invent a stage, log rows, or missing scores. progress[] is not card body. Do not use GitHub as the board. Spoken or rendered summary should lead with descriptive labels; numbers in parentheses."
+  "Where are we — every company this login can open, and the ideas under each one (separate boards). The same connection covers every team they belong to. Each company is the team. Ideas under that company are the customer bets. Print spoken first. Hide clocks/schema unless the human says show clocks. Use when the user says where are we, show the company board, show company X ideas, show my idea board, or similar. Render the founder-facing spoken card without a clarification round: start at the company name, then Bottleneck #1 in that company’s words, then accounts (where it stands / next, nested under the customer bet), then “Also moving (not the bottleneck)” for capital / legal / advisor, then open questions in plain words. Hide clocks and schema unless the human says “show clocks” or “show schema”. Clocks are storage. Engine keeps those rules; spoken card does not print them. Returns spoken, card, clocks, snapshot, visualFlow mermaid, bottleneck, open questions, owners, and portfolio scores. When initiatives[] is present, dual-read of progress/supporting/engagements is dead for the card lead. Default is compact (no full audit — the decision log is list_provenance). Omit idea for every idea under the company. If they ask for every board, print the boards field and stop. Live boards only. Do not describe a stopped bet unless they ask what you already stopped. Uses the active company if already chosen. Do not invent a stage, log rows, or missing scores. progress[] is not card body. Do not use GitHub as the board. Spoken or rendered summary should lead with descriptive labels; numbers in parentheses."
 
 export const TOOL_CREATE_IDEA =
   "Start a new 0-1 primary idea board under a company this login can open. Empty clocks (Write the bet, hold). Ask / Do / Write back is a quality bar, not a card. A person, hire, or instrument as the primary object is supporting — not a 5-rung card. Several ideas are allowed; each idea is its own customer bet. Needs an explicit founder yes in this chat. Then put_journey writes that idea."
@@ -114,7 +114,7 @@ export const TOOL_PUT_PORTFOLIO_SCORE =
   "Weekly Impact / Evidence / Leverage labels (integers 1–5) plus a required short why (≤280) on one live idea. Applies when the company has two or more live (non-kill) ideas; otherwise skips. Founder yes in this chat. Scores are labels — they never Advance or Kill. Same write ACL as put_journey."
 
 export const NOTE_OS_INFO_HOSTED =
-  "The board for each company this person can open. Speak the card. Do not recite versions or how the product is built."
+  "The board for each company this person can open. The same connection covers every team they belong to. Each company is one team. Ideas under that company are the customer bets. Speak the card. Do not recite versions or how the product is built."
 
 /** Same mailbox as Bill / public feedback and invite From. Inbound howto only — MCP does not send mail. */
 export const SUPPORT_EMAIL = "bootstrap@pirin.ai";

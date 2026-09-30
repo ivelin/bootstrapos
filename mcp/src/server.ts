@@ -119,7 +119,7 @@ function adoptionOrder(surface: McpSurface) {
   if (surface === "hosted-read") {
     return {
       speakLiveBets:
-        "This connector is the board for the signed-in company. Speak live customer bets only. A stopped bet is not a feature. This pin is not mentee-ready boards. Not pirin.ai.",
+        "This connection covers every team the signed-in person belongs to. Each company is one team. Ideas under that company are the customer bets. Speak live customer bets only. A stopped bet is not a feature. This pin is not mentee-ready boards. Not pirin.ai.",
     };
   }
   return {
@@ -879,7 +879,7 @@ function registerJourneyTools(server: McpServer, ctx: HostedRequestContext) {
       q: z
         .string()
         .optional()
-        .describe("Company name, or company / idea. The company is the team. The idea is one customer bet under it."),
+        .describe("Company name, or company / idea. The same login can open more than one company. The company is the team. Ideas under it are the customer bets."),
       company: z.string().optional().describe("Company (team) name they already use"),
       idea: z.string().optional().describe("One idea under that company. Omit for every idea."),
       expand: z
@@ -915,7 +915,7 @@ function registerJourneyTools(server: McpServer, ctx: HostedRequestContext) {
     "bootstrap_where_are_we",
     TOOL_GET_JOURNEY,
     {
-      q: z.string().optional().describe("Company name, or company / idea. The company is the team. The idea is one customer bet under it."),
+      q: z.string().optional().describe("Company name, or company / idea. The same login can open more than one company. The company is the team. Ideas under it are the customer bets."),
       company: z.string().optional().describe("Company (team) name they already use"),
       idea: z.string().optional().describe("One idea under that company. Omit for every idea."),
       expand: z.enum(["snapshot", "meeting_doc"]).optional(),
