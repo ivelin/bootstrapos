@@ -197,15 +197,20 @@ function boardDirectoryLine(idea: Record<string, unknown>): { name: string; text
   return { name, text: stuck || "none yet", killed: false };
 }
 
-/** Plain list for "show all boards". Names and what is stuck. No slug, no gate. */
+/** Live boards only when any bet is still live. A stopped bet is not listed beside live ones. */
 export function formatBoardDirectory(ideas: unknown): string {
   if (!Array.isArray(ideas)) return "";
-  const live: string[] = [];
-  const stopped: string[] = [];
+  const rows: { name: string; text: string; killed: boolean }[] = [];
   for (const idea of ideas) {
     if (!idea || typeof idea !== "object" || Array.isArray(idea)) continue;
     const row = boardDirectoryLine(idea as Record<string, unknown>);
-    if (!row) continue;
+    if (row) rows.push(row);
+  }
+  const liveRows = rows.filter((row) => !row.killed);
+  const shown = liveRows.length ? liveRows : rows;
+  const live: string[] = [];
+  const stopped: string[] = [];
+  for (const row of shown) {
     if (row.killed) stopped.push(`${row.name} — ${row.text}`);
     else live.push(`${row.name}\nWhat's stuck: ${row.text}`);
   }
