@@ -136,8 +136,7 @@ async function assertPublicPin(origin) {
   assert.match(String(info.companyState), /board for each company|Not hosted/i);
   assert.match(String(info.founderVoice), /every team you belong to/);
   assert.match(String(info.founderVoice), /Ideas under that company are the customer bets/);
-  assert.doesNotMatch(JSON.stringify(info.adoptionOrder), /mentee/i);
-  assert.match(JSON.stringify(info.adoptionOrder), /Not pirin\.ai/);
+  assert.doesNotMatch(JSON.stringify(info.adoptionOrder), /mentee|pirin\.ai/i);
   assert.equal(info.hardRules, undefined);
   assert.equal(info.houseRules, undefined);
   assert.equal(info.osVersion, undefined);

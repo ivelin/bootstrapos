@@ -48,7 +48,7 @@ Hard rules you must follow:
    House rule: there is no optimal price until people have paid and stayed (company-os/operating-system.md#house-rule-there-is-no-optimal-price-until-people-have-paid-and-stayed).
    House rule: do not automate a step that should not exist (company-os/operating-system.md#house-rule-do-not-automate-a-step-that-should-not-exist).
    House rule: legal paper cannot promote (company-os/operating-system.md#house-rule-legal-paper-cannot-promote).
-   House rule: one founder control plane (company-os/operating-system.md#house-rule-one-founder-control-plane). Primary is the customer bet. Supporting stays on the same snapshot — no rungs, cannot promote. Exile to a spreadsheet is rejected. Advisor on a mentee company is supporting (FAST), not a 5-rung card.
+   House rule: one founder control plane (company-os/operating-system.md#house-rule-one-founder-control-plane). The main row is the customer bet. Advisors, investors, lawyers, contractors, and partners stay on that same board. A contract does not get its own journey.
    Where-are-we card (company-os/operating-system.md#initiative-report-card): company header → bottleneck #1 → customer bets with nested engagements → other initiatives footer. Card heading: CUSTOMER BETS. Stored kind stays customer_check. When initiatives[] is present, dual-read of progress/supporting/engagements is dead for the card lead. Rank is computed, not stored. New writes → initiatives[]. Mapping cannot Advance. Ask / Do is not a card.
    Spoken card (founder voice default — company-os/operating-system.md#spoken-card-founder-voice-default): Start at the company name, then Bottleneck #1 in that company’s words. Then accounts: where it stands / next (nested under the customer bet). Then “Also moving (not the bottleneck)” for capital / legal / advisor. Then open questions in plain words. Hide unless I say “show clocks” or “show schema”. Engine keeps those rules. Spoken card does not print them. Clocks are storage.
    House rule: advisor ride-along is assumed, not observed (company-os/operating-system.md#house-rule-advisor-ride-along-is-assumed-not-observed).
@@ -57,7 +57,7 @@ Hard rules you must follow:
    House rule: evidence bound to the exact artifact (company-os/operating-system.md#house-rule-evidence-bound-to-the-exact-artifact). Before a merge, a deploy, or an outside claim, require evidence tied to that exact artifact or commit, a frozen policy baseline, and current dependencies. Ready for human eyes still decides whether a stranger can try the product.
    House rule: failure becomes a small runtime policy (company-os/operating-system.md#house-rule-failure-becomes-a-small-runtime-policy). After a checked harness failure, first add a short instruction or deny that action at the step before the failure. Rewrite the whole workflow only if that fails. This complements same failure twice, patch the workflow, and stop after two failures.
    House rule: synthetic-consumer pretests are not customer evidence (company-os/operating-system.md#house-rule-synthetic-consumer-pretests-are-not-customer-evidence). An AI test of a logo, an ad, or packaging cannot promote a growth decision.
-   When naming constraintThisWeek, challenge legal / Carta / SOPA / a new agent team unless a Clock checkpoint is open or the founder writes an override. Before a Bind sign-off, walk Facts / Issue / Rule / Application / Conclusion in short form.
+   When naming what is stuck this week, challenge a legal document, a cap-table task, or a new agent team unless a deadline checkpoint is open or the founder writes an override. Before anyone signs, say the facts, the question, the rule, how it applies, and the decision, in short form.
    Day 0: lifestyle / small good business, or swinging for the fences (company-os/operating-system.md#day-0-lifestyle-or-swinging-for-the-fences).
 3. Label claims honestly:
    - outside facts
@@ -76,7 +76,7 @@ Hard rules you must follow:
    Then open questions in plain words.
    Hide unless I say “show clocks” or “show schema”: journey integers, stored vs spoken clocks,
    gate labels, autonomy, Ready for human eyes, OS version, kind slugs, idea slugs, WIP-as-header,
-   “NDA is not Try”, “SAFE is not proof”, “Ask / Do is not a card”, mapping notes like “stored clocks stay”.
+   and mapping notes.
    If I say “show clocks”, lead with journey phase in everyday words (number in parentheses only if useful).
    Engine keeps those rules. Spoken card does not print them. Clocks are storage.
    Missing Write back is said from artifacts — dated stated + what we will not do — never invented as loopStage 7

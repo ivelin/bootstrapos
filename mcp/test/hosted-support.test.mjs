@@ -150,8 +150,7 @@ describe("hosted MCP support escape hatch", () => {
     assert.equal(info.hardRules, undefined);
     assert.equal(info.houseRules, undefined);
     assert.equal(info.osVersion, undefined);
-    assert.match(JSON.stringify(info.adoptionOrder), /Not pirin\.ai/);
-    assert.doesNotMatch(JSON.stringify(info.adoptionOrder), /mentee/i);
+    assert.doesNotMatch(JSON.stringify(info.adoptionOrder), /pirin\.ai|mentee/i);
     assert.match(JSON.stringify(info.adoptionOrder), /every team the signed-in person belongs to/);
     assert.match(JSON.stringify(info.adoptionOrder), /Each company is one team/);
     assert.doesNotMatch(JSON.stringify(info.adoptionOrder), /signed-in company/);

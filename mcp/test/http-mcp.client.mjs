@@ -131,8 +131,7 @@ async function main() {
     assert.match(String(support.routed), /not auto-fix/i);
     assert.equal(info.docsSource, "published");
     assert.match(String(info.docsBase), /127\.0\.0\.1/);
-    assert.doesNotMatch(JSON.stringify(info.adoptionOrder), /mentee/i);
-    assert.match(JSON.stringify(info.adoptionOrder), /Not pirin\.ai/);
+    assert.doesNotMatch(JSON.stringify(info.adoptionOrder), /mentee|pirin\.ai/i);
     assert.equal(info.hardRules, undefined);
     assert.equal(info.houseRules, undefined);
     assert.equal(info.osVersion, undefined);

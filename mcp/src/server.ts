@@ -119,7 +119,7 @@ function adoptionOrder(surface: McpSurface) {
   if (surface === "hosted-read") {
     return {
       speakLiveBets:
-        "This connection covers every team the signed-in person belongs to. Each company is one team. Ideas under that company are the customer bets. Speak live customer bets only. A stopped bet is not a feature. Not pirin.ai.",
+        "This connection covers every team the signed-in person belongs to. Each company is one team. Ideas under that company are the customer bets. Speak live customer bets only. A stopped bet is not a feature.",
     };
   }
   return {
@@ -189,7 +189,7 @@ function registerReadTools(server: McpServer, surface: McpSurface, hosted?: Host
           pluginPreview: {
             path: "plugin/",
             version: "0.1.1",
-            note: "Not pirin.ai.",
+            note: "Preview.",
           },
           connectorModel: NOTE_OS_INFO_HOSTED,
           docsSource: resolveDocsSource(),
@@ -1065,7 +1065,7 @@ function registerJourneyTools(server: McpServer, ctx: HostedRequestContext) {
         )
         .optional()
         .describe(
-          "Same company snapshot. No rungs. Cannot promote. Recon may patch. Advisor/FAST is supporting, not a 5-rung card.",
+          "Advisors, investors, lawyers, contractors, and partners stay on this company. A contract is not a separate customer bet.",
         ),
       engagements: z
         .array(

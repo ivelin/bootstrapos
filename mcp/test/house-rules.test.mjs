@@ -47,8 +47,8 @@ describe("OS house rules (adapter reminders)", () => {
     assert.match(blob, /Several ideas may attack that same bottleneck/);
     assert.match(blob, /fun side quest dressed as the bottleneck/);
     assert.match(blob, /Legal paper cannot promote/);
-    assert.match(blob, /One founder control plane/);
-    assert.match(blob, /Exile to a spreadsheet is rejected/);
+    assert.match(blob, /One board for the founder/);
+    assert.match(blob, /A contract or a funding document does not by itself show that customers want this/);
     assert.match(blob, /Advisor ride-along is assumed, not observed/);
     assert.match(blob, /SaaS 1\.0 playbooks may be outdated/);
     assert.match(blob, /Stay current/);
