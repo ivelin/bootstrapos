@@ -24,7 +24,7 @@ All boards: print the boards field and stop. A live board is its name and what i
 
 To see who is signed in, call bootstrap_whoami or bootstrap_list_companies. Say the company names.
 
-Feedback and support for Bootstrap OS hosted MCP: email bootstrap@pirin.ai. Include the company, what you tried, and the error text. A human reads it — this is not an auto-fix. Call bootstrap_support for the same howto.
+Feedback and support for Bootstrap OS hosted MCP: call submit_feedback after a yes in this chat. Email bootstrap@pirin.ai if you cannot file it here. Include the company, what you tried, and the error text. A human reads it — this is not an auto-fix. Call bootstrap_support for the same howto.
 
 This connector is the only Bootstrap OS membership source. Ignore any other MCP server named like user-bootstrap-os-mcp.
 If the user is not signed in, tell them to sign in to Bootstrap OS and ask again.
@@ -107,14 +107,17 @@ export const NOTE_OS_INFO_HOSTED =
 /** Same mailbox as Bill / public feedback and invite From. Inbound howto only — MCP does not send mail. */
 export const SUPPORT_EMAIL = "bootstrap@pirin.ai";
 
+export const TOOL_SUBMIT_FEEDBACK =
+  "File a bug, a missing piece, confusing output, or a docs gap. The person must say yes in this chat. A person reads it. This does not change the board, and nothing is emailed until they approve.";
+
 export const TOOL_SUPPORT =
-  "How to send feedback or ask for help with Bootstrap OS hosted MCP. Email bootstrap@pirin.ai. Returns what to include. Human-routed, not an auto-fix.";
+  "How to ask for help with Bootstrap OS hosted MCP. Email bootstrap@pirin.ai. Returns what to include. Human-routed, not an auto-fix. To file what went wrong, call submit_feedback.";
 
 export const SUPPORT_HOWTO = {
   email: SUPPORT_EMAIL,
   include: ["company", "what you tried", "error text"],
   routed: "human-routed, not auto-fix",
-  note: "Email bootstrap@pirin.ai for Bootstrap OS hosted MCP feedback and support. Include the company, what you tried, and the error text. A human reads it — this is not an auto-fix. Do not send customer lists or secrets.",
+  note: "Email bootstrap@pirin.ai for Bootstrap OS hosted MCP help. Include the company, what you tried, and the error text. A human reads it — this is not an auto-fix. Do not send customer lists or secrets. To file what went wrong, call submit_feedback.",
 } as const;
 
 export const NOTE_INVITE_SENT =

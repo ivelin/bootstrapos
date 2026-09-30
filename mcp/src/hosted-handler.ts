@@ -258,6 +258,7 @@ export async function handleHostedReadFetch(req: Request): Promise<Response> {
     accessToken,
     sessionKey: hostedSessionKey(req, accessToken),
     clientHint: clientHintFromInitialize(req, rpcBody),
+    protocolVersion: req.headers.get("mcp-protocol-version"),
   });
   const transport = new WebStandardStreamableHTTPServerTransport({
     sessionIdGenerator: undefined,

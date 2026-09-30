@@ -23,6 +23,8 @@ export type HostedRequestContext = {
     clientName?: string | null;
     userAgent?: string | null;
   };
+  /** MCP-Protocol-Version header. Stamp only. Never ACL. */
+  protocolVersion?: string | null;
 };
 
 export function anonymousWhoami(): HostedWhoami {

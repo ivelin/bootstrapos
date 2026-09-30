@@ -6,4 +6,6 @@ SoR: [submit_feedback spec 2026-09-29](https://docs.google.com/document/d/1X9yMI
 
 Folder: Business / pirin.ai / 2026 / MCP
 
-Covers auth, identification, wire meta, context levels, and storage. No tool implementation in this PR.
+Covers auth, identification, wire meta, context levels, and storage.
+
+Hosted tool: `submit_feedback`. Append-only. The signed-in account is the tenant. The database is the record. Mail waits until a person approves. This file stays a pointer.
