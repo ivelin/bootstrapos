@@ -76,6 +76,9 @@ describe("hosted MCP support escape hatch", () => {
     assert.match(HOSTED_MCP_INSTRUCTIONS, /Which companies/);
     assert.match(HOSTED_MCP_INSTRUCTIONS, /Do not print email, role, or a table/);
     assert.match(HOSTED_MCP_INSTRUCTIONS, /print the boards field and stop/);
+    assert.match(HOSTED_MCP_INSTRUCTIONS, /Do not offer a stopped bet/);
+    assert.match(HOSTED_MCP_INSTRUCTIONS, /local install/);
+    assert.doesNotMatch(HOSTED_MCP_INSTRUCTIONS, /Path 3|self-host kit/i);
     assert.match(HOSTED_MCP_INSTRUCTIONS, /Do not invent a sample company/);
     assert.doesNotMatch(HOSTED_MCP_INSTRUCTIONS, /dyeconverter|corehaul|nina@/i);
     assert.doesNotMatch(
@@ -131,6 +134,10 @@ describe("hosted MCP support escape hatch", () => {
     assert.equal(info.surface, "hosted-read");
     assert.equal(info.founderVoice, FOUNDER_INTRO);
     assert.match(String(info.doNotRecite), /adoptionOrder/);
+    assert.match(JSON.stringify(info.adoptionOrder), /Not pirin\.ai/);
+    assert.match(JSON.stringify(info.adoptionOrder), /not mentee-ready boards/i);
+    assert.doesNotMatch(JSON.stringify(info.adoptionOrder), /self-host|selfHost|local install|Fork and deploy|Path 1/i);
+    assert.doesNotMatch(JSON.stringify(info.pluginPreview), /Path 1|self-host/i);
     assertHowto(info.support);
 
     const howto = parseTool(await rpc("tools/call", { name: "bootstrap_support", arguments: {} }, 4));

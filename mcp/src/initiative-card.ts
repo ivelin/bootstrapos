@@ -197,21 +197,38 @@ function boardDirectoryLine(idea: Record<string, unknown>): { name: string; text
   return { name, text: stuck || "none yet", killed: false };
 }
 
-/** Plain list for "show all boards". Names and what is stuck. No slug, no gate. */
+/** Live boards only when any bet is still live. A stopped bet is not listed beside live ones. */
 export function formatBoardDirectory(ideas: unknown): string {
   if (!Array.isArray(ideas)) return "";
-  const live: string[] = [];
-  const stopped: string[] = [];
+  const rows: { name: string; text: string; killed: boolean }[] = [];
   for (const idea of ideas) {
     if (!idea || typeof idea !== "object" || Array.isArray(idea)) continue;
     const row = boardDirectoryLine(idea as Record<string, unknown>);
-    if (!row) continue;
+    if (row) rows.push(row);
+  }
+  const liveRows = rows.filter((row) => !row.killed);
+  const shown = liveRows.length ? liveRows : rows;
+  const live: string[] = [];
+  const stopped: string[] = [];
+  for (const row of shown) {
     if (row.killed) stopped.push(`${row.name} — ${row.text}`);
     else live.push(`${row.name}\nWhat's stuck: ${row.text}`);
   }
   const parts = [...live];
   if (stopped.length) parts.push(["Stopped", ...stopped].join("\n"));
   return parts.join("\n\n").trim();
+}
+
+/** Drop stopped bets when a live bet is in the same list. A stopped-only read stays. */
+function omitKilledWhenLive(list: unknown): unknown {
+  if (!Array.isArray(list)) return list;
+  const anyLive = list.some(
+    (idea) => idea && typeof idea === "object" && !Array.isArray(idea) && !isKilledSource(idea),
+  );
+  if (!anyLive) return list;
+  return list.filter(
+    (idea) => idea && typeof idea === "object" && !Array.isArray(idea) && !isKilledSource(idea),
+  );
 }
 
 function isKilledSource(source: unknown): boolean {
@@ -1007,6 +1024,8 @@ export function applySpokenPayloadLead(
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) return raw;
   const payload = { ...(raw as Record<string, unknown>) };
   if (payload.ok !== true) return raw;
+  payload.ideas = omitKilledWhenLive(payload.ideas);
+  payload.primary = omitKilledWhenLive(payload.primary);
   const expand = Boolean(opts.expand);
   const company =
     payload.company && typeof payload.company === "object"

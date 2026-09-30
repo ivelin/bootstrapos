@@ -118,11 +118,8 @@ function adoptionOrder(surface: McpSurface) {
   };
   if (surface === "hosted-read") {
     return {
-      ...shared,
-      hostedWrite:
-        "This pin is the Pirin write plane. A super admin calls create_company, then create_idea. If that is refused, ask an admin or email bootstrap@pirin.ai.",
-      selfHost:
-        "Fork and deploy mcp/ on your own Vercel and Supabase. That kit is not the Pirin-supported path.",
+      speakLiveBets:
+        "This connector is the board for the signed-in company. Speak live customer bets only. A stopped bet is not a feature. This pin is not mentee-ready boards. Not pirin.ai.",
     };
   }
   return {
@@ -187,6 +184,11 @@ function registerReadTools(server: McpServer, surface: McpSurface, hosted?: Host
           doNotRecite:
             "osVersion, mcpVersion, adoptionOrder, hardRules, houseRules, resource, pluginPreview. Say founderVoice, then the board.",
           ...common,
+          pluginPreview: {
+            path: "plugin/",
+            version: "0.1.1",
+            note: "Preview plugin. Not mentee-ready boards. Not pirin.ai.",
+          },
           connectorModel: NOTE_OS_INFO_HOSTED,
           docsSource: resolveDocsSource(),
           docsBase: resolveDocsBaseUrl(),

@@ -518,10 +518,30 @@ describe("spoken-card eval C snapshot bottleneck line", () => {
     });
     assert.equal(Object.keys(seen)[1], "spoken");
     assert.match(seen.boards, /Bootstrap OS\nWhat's stuck: need a second person to finish signup/);
-    assert.match(seen.boards, /Stopped\nIntensive — no paid deposits/);
+    assert.doesNotMatch(seen.boards, /Intensive/);
+    assert.doesNotMatch(seen.boards, /Stopped/);
+    assert.doesNotMatch(JSON.stringify(seen.ideas), /Intensive/);
     assert.doesNotMatch(seen.boards, /bootstrap-os/);
     assert.doesNotMatch(seen.boards, /\bgate\b/i);
     assert.doesNotMatch(seen.boards, /\bhold\b/i);
+  });
+
+  it("a stopped-only read still says why it stopped", () => {
+    const seen = applySpokenPayloadLead({
+      ok: true,
+      company: { slug: "alpha", label: "alpha" },
+      ideas: [
+        {
+          slug: "intensive",
+          name: "Intensive",
+          killed: true,
+          killedCard: "Killed — no paid deposits",
+          clocks: { journeyPhase: 1, loopStage: 1, currentGate: "kill" },
+          scoreboard: { schema_version: 1 },
+        },
+      ],
+    });
+    assert.match(seen.boards, /Stopped\nIntensive — no paid deposits/);
   });
 
   it("hosted Dye-shaped snapshot Also-moving matches spoken footer", () => {
