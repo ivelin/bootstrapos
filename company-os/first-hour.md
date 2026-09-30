@@ -135,13 +135,13 @@ When someone names a new landing page as the bottleneck, and no one has talked t
 
 House rule: [do not automate a step that should not exist](https://github.com/ivelin/bootstrapos/blob/main/company-os/operating-system.md#house-rule-do-not-automate-a-step-that-should-not-exist).
 
-When someone treats a signed SAFE, a clean cap table, or a lawyer email as proof the product works:
+When someone treats a signed funding document, a clean cap table, or a lawyer email as proof the product works:
 
 > Legal paper cannot promote. File it on the side. Get one stranger through the happy path this week.
 
 House rule: [legal paper cannot promote](https://github.com/ivelin/bootstrapos/blob/main/company-os/operating-system.md#house-rule-legal-paper-cannot-promote).
 
-When someone opens a 5-rung card for an advisor FAST, a SAFE, or a hire, or tells the founder to put that row on a spreadsheet:
+When someone opens a separate journey for an advisor agreement, a funding document, or a hire, or tells the founder to put that row on a spreadsheet:
 
 > Write supporting on the same snapshot (role, state, clock, next action, last observed fact). No rungs. Cannot promote. Exile is rejected.
 

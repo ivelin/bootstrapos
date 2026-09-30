@@ -505,7 +505,7 @@ else
   not_ok "operating-system.md must have cap-table modeler + both home URLs"
 fi
 if grep -q 'https://www.ycombinator.com/safe/calculator' "$os" \
-  && grep -q 'what % does this one SAFE sell' "$os"; then
+  && grep -q 'what share does this one funding agreement sell' "$os"; then
   ok "YC SAFE calculator companion is present (not a second modeler)"
 else
   not_ok "operating-system.md must have the YC SAFE calculator companion"
@@ -1263,7 +1263,7 @@ if grep -q '### Decision methods (aliases, not a third clock)' company-os/operat
   && grep -q 'Checkpoint kind Clock is not the same as the two clocks' company-os/operating-system.md \
   && grep -q 'Do this week with what we have:' company-os/operating-system.md \
   && grep -q 'Clock open?: none | 83(b) by DATE | close DATE | customer DATE' company-os/operating-system.md \
-  && grep -Fq 'When naming constraintThisWeek, challenge legal / Carta / SOPA / a new agent team unless a Clock checkpoint is open or the founder writes an override. Before a Bind sign-off, walk Facts / Issue / Rule / Application / Conclusion in short form.' company-os/ai-instructions.md \
+  && grep -Fq 'When naming what is stuck this week, challenge a legal document, a cap-table task, or a new agent team unless a deadline checkpoint is open or the founder writes an override. Before anyone signs, say the facts, the question, the rule, how it applies, and the decision, in short form.' company-os/ai-instructions.md \
   && grep -q 'unpaid weeks cannot promote' AGENTS.md \
   && grep -q 'unpaid-weeks-2.8.13' mcp/src/house-rules.ts \
   && grep -Fq 'Honest biggest bottleneck this week. Not a calendar stub. Not tickets. Not a fun side quest. Exception: an open Clock checkpoint.' mcp/src/server.ts \
