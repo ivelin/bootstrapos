@@ -30,6 +30,9 @@ The example uses fixture labels only: companies **alpha**, **bravo**, and **char
 | **UTC** | Coordinated Universal Time. One clock for every event, so order does not depend on a laptop’s time zone. |
 | **HTTP 401 / 403** | The usual refusal codes: 401 means not signed in, 403 means signed in but not allowed. An empty body is the same idea when we show nothing. |
 | **Idempotent** | Asking again with the same bookmark returns the same next page. A retry does not skip a fact or invent a second copy. |
+| **Slug** | The short name of a company or a customer bet, such as `alpha`. |
+| **Debounce** | When several facts happen close together, send one bundled notice instead of a burst. |
+| **Backoff** | After a failed delivery, wait longer before each retry. |
 
 ## What this is
 
@@ -193,7 +196,7 @@ Each push is a signed notice to that subscriber’s own webhook URL:
 
 | Control | Requirement |
 |---------|-------------|
-| Address | HTTPS only. The subscriber routine’s address. Founders do not paste it into chat. |
+| Address | HTTPS only (the address starts with `https://`). The subscriber routine’s address. Founders do not paste it into chat. |
 | Signature | A header the routine can check. The signing secret is not in the notice, the pull feed, or the decision log. |
 | Which events | The three types above, and only if that subscriber set them to instant and turned push on. |
 | One delivery | One event id is posted once to that routine (retries of the **same** id are allowed; a second routine copy is not). |
