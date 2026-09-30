@@ -5,9 +5,9 @@ export const BOOTSTRAP_BILL_URL = "https://x.ai/bot/NfURVcmf2bx9QyoljkJ7Y"
 export const HOSTED_BILL_GROK_LINE =
   "If this chat is Grok Bot, Bootstrap Bill is the install template: https://x.ai/bot/NfURVcmf2bx9QyoljkJ7Y. Other clients ignore that. This connector is still the board."
 
-/** The only product sentence a founder should hear when this connector is introduced. */
+/** What a founder should hear when this connector is introduced, then the live board. */
 export const FOUNDER_INTRO =
-  "The same connection covers every team you belong to. Each company is one team. Ideas under that company are the customer bets. The board shows who you are betting on, what is stuck this week, and what you already decided."
+  "The same connection covers every team you belong to. Each company is one team. Ideas under that company are the customer bets. The board shows who you are betting on, what is stuck this week, and what you already decided.\n\nIt exists to keep the founder, the team, supporters, and the AI agents aligned and grounded.\n\nYou can ask: Where are we? Which companies can I open? What is stuck this week? What did we already decide?"
 
 export const HOSTED_MCP_INSTRUCTIONS = `You are connected to Bootstrap OS for the signed-in person.
 
