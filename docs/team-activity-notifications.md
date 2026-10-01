@@ -151,13 +151,13 @@ Turning a type off hides it from that subscriber’s feed. It stays available to
 
 A product decision on 2026-09-30 rejected push wakes for inbound messages. The reason is spam and denial-of-service risk: a flood of messages could ring agents until they cannot work.
 
-**Pull and digest are the default. Push is a capped exception.**
+**Pull is the recommended zero-setup default for a template install. Push is an optional upgrade.**
 
-Ordinary comments, journey edits, scores, and inbound chatter do not wake an agent. The agent asks (`list_events`) or reads a digest.
+A Bill routine that is already signed in polls the feed. That needs no routine panel and no copied key. Ordinary comments, journey edits, scores, and inbound chatter do not wake an agent. The agent asks (`list_events`) or reads a digest. A founder who wants faster delivery can add webhook push later, after a one-time copy. See [Webhook auto-registration](#webhook-auto-registration).
 
 ### Default: pull
 
-An authenticated tool, `list_events`, reads **this caller’s** feed.
+An authenticated tool, `list_events`, reads **this caller’s** feed. For a template install this poll is the whole setup: `list_events since <cursor>`, on the member’s existing sign-in.
 
 ```text
 list_events since <cursor>
@@ -184,7 +184,7 @@ The decision log stays `list_provenance` for someone who asks for the audit. `li
 
 ### Optional push (capped)
 
-Push is off until that subscriber turns it on. Even then, only three types may push:
+Push is an upgrade for a founder who wants faster delivery and will do the one-time copy in [Webhook auto-registration](#webhook-auto-registration). It stays off until that copy succeeds and the test ping returns a success code. Even then, only three types may push:
 
 1. Member accepted.
 2. First access.
@@ -196,7 +196,7 @@ Each push is a signed notice to that subscriber’s own webhook URL:
 
 | Control | Requirement |
 |---------|-------------|
-| Address | HTTPS only (the address starts with `https://`). The subscriber routine’s address. Founders do not paste it into chat. |
+| Address | HTTPS only (the address starts with `https://`). The founder copies it once from the routine panel into a masked input. It does not go into the chat transcript. The agent cannot read it from the panel. |
 | Signature | A header the routine can check. The signing secret is not in the notice, the pull feed, or the decision log. |
 | Which events | The three types above, and only if that subscriber set them to instant and turned push on. |
 | One delivery | One event id is posted once to that routine (retries of the **same** id are allowed; a second routine copy is not). |
@@ -230,29 +230,38 @@ One fact, one wake, per routine.
 
 ### The gap
 
-`subscribe_board` today takes a listen address (`webhookUrl`) and no key. A Grok Bot routine’s address requires a header `Authorization: Bearer <key>`: the word Bearer, then a secret key. A board push that omits that header is rejected. The key must not be pasted into chat.
+A Grok Bot agent can create a routine. It cannot read that routine’s webhook address or key. Only the human sees them, in the routine panel.
+
+`subscribe_board` today takes a listen address (`webhookUrl`) and no key. A Grok Bot routine’s address requires a header `Authorization: Bearer <key>`: the word Bearer, then a secret key. A board push that omits that header is rejected.
+
+### Recommended default: pull, nothing to copy
+
+For a template install, use the signed-in pull feed. A Bill routine that is already signed in polls `list_events since <cursor>`. That is the zero-setup path: no routine panel, no address, and no key.
+
+Webhook push is an optional upgrade for a founder who wants faster delivery and will do the one-time copy below. Until that copy is done, push stays off. Pull still answers.
 
 ### Recommendation: new tool `register_webhook`
 
-Add `register_webhook`. Leave `subscribe_board` as an address-only grant.
+Add `register_webhook` for that optional upgrade. Leave `subscribe_board` as an address-only grant.
 
-`subscribe_board` is a founder grant of someone else’s address. It is operator furniture, and the notices on that path are the existing broad watch (a journey edit, a comment, a gate move). The Grok routine key belongs to the signed-in member’s own routine. Putting it on `subscribe_board` would store a secret on the broad watch and would ask a person to copy the key.
+`subscribe_board` is operator furniture, and the notices on that path are the existing broad watch (a journey edit, a comment, a gate move). The upgrade is a different path: the capped events already in this page (member accepted, first access, and comment or mention), with the routine key stored encrypted on this registration only. One tool stores the key, so the key does not grow a second field on the broad watch.
 
-`register_webhook` is one step, by the member who is already on that company, for that member’s own routine. Pushes from this registration stay the capped set already in this page: member accepted, first access, and comment or mention. One tool stores the key, so the key does not grow a second field.
+### One-time founder copy
+
+`register_webhook` requires the founder to copy two fields from the routine panel, once:
+
+1. The routine’s webhook address.
+2. The routine’s key.
+
+The agent cannot supply them. It cannot read the panel. The founder pastes them into a masked input, so the characters stay hidden. They do not go into the chat transcript.
+
+The company is one the signed-in member can already open. Example: `founder@example.test` on **alpha** supplies that copy’s address and key for alpha. The same call for **bravo**, when this login is not on bravo, is refused. **charlie** is untouched.
 
 ### What is stored
 
-The call carries the company the member can already open, the routine’s https address, and the auth header value or secret (the Bearer key).
-
 The server stores the key encrypted. No response echoes it. No log line contains it. The pull feed, the decision log, and a failed-ping reason omit it.
 
-The member can rotate the key: the new key replaces the old one, and the old one is dropped. The member can revoke it: pushes to that routine stop, and the key is dropped. Rotate and revoke take effect immediately.
-
-### One step during onboarding
-
-Any copy of Bill can register its own routine during onboarding, in one step. The founder does not copy fields by hand. The key enters through a secure masked input, so the characters stay hidden. It is never pasted into the chat.
-
-Example: `founder@example.test` on company **alpha** registers that copy’s routine for alpha. The same call for **bravo**, when this login is not on bravo, is refused. **charlie** is untouched.
+The founder rotates the key by copying a new one into the same masked input. The new key replaces the old one, and the old one is dropped. The founder revokes it: pushes to that routine stop, and the key is dropped. Rotate and revoke take effect immediately.
 
 ### Test ping before active
 
@@ -273,13 +282,19 @@ If either value is missing, do not send. A failed send does not mark the board w
 
 ### Beside the pull feed
 
-Registration does not turn pull off. `list_events` still answers. Pushes from this registration stay capped to the high-value events already listed. The 2026-09-30 decision still holds: ordinary inbound messages do not wake an agent.
+The pull feed is the default and keeps working when push is off, inactive, or revoked. `list_events` still answers. Pushes from this registration stay capped to the high-value events already listed. The 2026-09-30 decision still holds: ordinary inbound messages do not wake an agent.
+
+### External dependencies
+
+A Grok Bot platform capability, outside Bootstrap OS: an agent can hand its own routine webhook (the address and the key) to a trusted connector securely, so the human does not copy them from the routine panel.
+
+Bootstrap OS does not control that capability and does not build it here. Until it exists, the one-time founder copy above is the path.
 
 ### Today’s manual pin, and the open decision
 
 Today an operator, the Chief of Staff bot (called Cos in the board contracts), pins subscriptions with a manual production database command (SQL, run by hand). This page does not run that command, and it does not change production.
 
-Whether self-registration removes that manual step for people already allowed on the company (the access list, sometimes called ACL) is **not decided**.
+Whether **founder-assisted registration** removes that manual step is **not decided**. Founder-assisted means the founder copies the routine address and key once into the masked input, for a company they already belong to. It does not mean the agent reads the routine panel.
 
 Proposal, for that later decision: **yes, for members of that company only.** A caller who is not on the company is refused (fail closed). Each register, rotate, revoke, and failed ping writes an audit row with who, which company, and the action. The audit row omits the key and the listen address, matching today’s subscriber audit, which already leaves the live address off the decision log.
 
@@ -327,6 +342,8 @@ The implementation pull requests on 2026-10-01 are done when all of the followin
 12. Cross-company isolation: that alpha registration is invisible from **bravo**. A bravo member cannot rotate or revoke the alpha key. **charlie** is untouched.
 13. Rotate and revoke: after rotate, delivery uses the new key and the old key is gone. After revoke, the subscription is inactive and later pushes do not send the key. Neither call returns the key.
 14. Test-ping gate: a non-2xx answer or no answer leaves the subscription inactive with a clear reason and sends no later push. A 2xx answer is what marks it active.
+15. Zero-setup default: a template install on **alpha**, signed in as `founder@example.test`, answers the invite story by polling `list_events since <cursor>`. No webhook address and no key are required. Push stays inactive.
+16. Founder-assisted register: `register_webhook` requires the routine address and the Bearer key as founder-supplied inputs through a masked input. The agent has no field it can fill from the Grok routine panel. The chat transcript does not contain them.
 
 This requirements pull request is done when this page is linked from the roadmap, marked Proposed, and contains no code, schema, or migration.
 
@@ -342,7 +359,8 @@ This requirements pull request is done when this page is linked from the roadmap
 8. Email digest is later and would be sent by pirin.ai, not this host. Do we want that channel at all?
 9. May a company founder turn push off for the whole company, or only each member for themselves?
 10. When a mention field exists, who sees the mention event: the named person, or everyone who can already read the comment?
-11. Does `register_webhook` remove the Chief of Staff bot’s manual production database pin for members of that company only? Proposal: yes, members of that company only, fail closed, audit-logged, with the key and the listen address omitted from the audit row. Not decided on this page.
+11. Does founder-assisted `register_webhook` (the founder copies the routine address and key once into the masked input) remove the Chief of Staff bot’s manual production database pin for members of that company only? Proposal: yes, members of that company only, fail closed, audit-logged, with the key and the listen address omitted from the audit row. Not decided on this page.
+12. When Grok Bot lets an agent hand its own routine webhook (address and key) to a trusted connector, does the one-time founder copy retire? That capability is outside Bootstrap OS. Until it exists, the founder copy stands.
 
 ## Related
 
