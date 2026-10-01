@@ -226,6 +226,65 @@ This work does not add a second wake for those same writes.
 
 One fact, one wake, per routine.
 
+## Webhook auto-registration
+
+### The gap
+
+`subscribe_board` today takes a listen address (`webhookUrl`) and no key. A Grok Bot routine’s address requires a header `Authorization: Bearer <key>`: the word Bearer, then a secret key. A board push that omits that header is rejected. The key must not be pasted into chat.
+
+### Recommendation: new tool `register_webhook`
+
+Add `register_webhook`. Leave `subscribe_board` as an address-only grant.
+
+`subscribe_board` is a founder grant of someone else’s address. It is operator furniture, and the notices on that path are the existing broad watch (a journey edit, a comment, a gate move). The Grok routine key belongs to the signed-in member’s own routine. Putting it on `subscribe_board` would store a secret on the broad watch and would ask a person to copy the key.
+
+`register_webhook` is one step, by the member who is already on that company, for that member’s own routine. Pushes from this registration stay the capped set already in this page: member accepted, first access, and comment or mention. One tool stores the key, so the key does not grow a second field.
+
+### What is stored
+
+The call carries the company the member can already open, the routine’s https address, and the auth header value or secret (the Bearer key).
+
+The server stores the key encrypted. No response echoes it. No log line contains it. The pull feed, the decision log, and a failed-ping reason omit it.
+
+The member can rotate the key: the new key replaces the old one, and the old one is dropped. The member can revoke it: pushes to that routine stop, and the key is dropped. Rotate and revoke take effect immediately.
+
+### One step during onboarding
+
+Any copy of Bill can register its own routine during onboarding, in one step. The founder does not copy fields by hand. The key enters through a secure masked input, so the characters stay hidden. It is never pasted into the chat.
+
+Example: `founder@example.test` on company **alpha** registers that copy’s routine for alpha. The same call for **bravo**, when this login is not on bravo, is refused. **charlie** is untouched.
+
+### Test ping before active
+
+On register, and again on rotate, the server sends one test ping to that address. The ping carries the Authorization header and Bootstrap’s own payload signature. The subscription is marked active only after the routine answers with a success code in the 200–299 range (called 2xx).
+
+Any other answer, or no answer, leaves the subscription inactive and returns a clear reason. The reason names the failure (refused, timed out, or a non-success code). It does not include the key, the signature secret, or another company’s rows. An inactive registration sends no later push. The pull feed still works.
+
+### Both checks on every push
+
+Each later push to that routine sends both headers. They are independent. One does not stand in for the other.
+
+| Header | Who it satisfies |
+|--------|------------------|
+| `Authorization: Bearer <key>` | The routine, which rejects a call that lacks its key. The key is read from the encrypted store at send time. |
+| Bootstrap’s payload signature | The routine, which can check the notice came from Bootstrap. |
+
+If either value is missing, do not send. A failed send does not mark the board write as failed. The fact stays on the pull feed.
+
+### Beside the pull feed
+
+Registration does not turn pull off. `list_events` still answers. Pushes from this registration stay capped to the high-value events already listed. The 2026-09-30 decision still holds: ordinary inbound messages do not wake an agent.
+
+### Today’s manual pin, and the open decision
+
+Today an operator, the Chief of Staff bot (called Cos in the board contracts), pins subscriptions with a manual production database command (SQL, run by hand). This page does not run that command, and it does not change production.
+
+Whether self-registration removes that manual step for people already allowed on the company (the access list, sometimes called ACL) is **not decided**.
+
+Proposal, for that later decision: **yes, for members of that company only.** A caller who is not on the company is refused (fail closed). Each register, rotate, revoke, and failed ping writes an audit row with who, which company, and the action. The audit row omits the key and the listen address, matching today’s subscriber audit, which already leaves the live address off the decision log.
+
+The question is listed under Open questions.
+
 ## Security and privacy
 
 - Invite-only. A signed-out caller, a stranger, and a member of another company get a refusal or an empty body.
@@ -234,7 +293,7 @@ One fact, one wake, per routine.
 - Fail closed. A bad cursor, a missing sign-in, a typo slug, or an unknown company returns empty or 401/403. It never returns “the nearest” company.
 - The feed shows facts the caller can already see by opening that company or the invite they sent. It is a faster list, not a new window.
 - Invite tokens stay off the feed. The accept card may still show a token once, as [Invite](../mcp/docs/INVITE.md) already says. The event row does not.
-- Webhook addresses and signing secrets stay off the feed and off the decision log. Today’s subscriber audit already omits the live webhook address. Keep that.
+- Webhook addresses, signing secrets, and routine Bearer keys stay off the feed, off the decision log, and out of logs. Today’s subscriber audit already omits the live webhook address. Keep that. A read never echoes a stored key.
 - Fixture companies in tests and in this page are alpha, bravo, and charlie only.
 
 ### Leak tests the build must include
@@ -245,9 +304,10 @@ These tests land with the implementation pull request, not this one. Pattern to 
 2. The same member calls `list_events` for bravo. The answer is 401, 403, or empty.
 3. A member of alpha and bravo who asks for alpha gets alpha only. Each event is labeled. Asking with a mistyped slug returns empty.
 4. A signed-out caller and a stranger get 401, 403, or empty on `list_events`, including a typo slug and an idea slug.
-5. No returned row contains an invite token (`inv_`), a password, a sign-in token, a webhook address, or a signing secret.
+5. No returned row contains an invite token (`inv_`), a password, a sign-in token, a webhook address, a signing secret, or a routine Bearer key.
 6. A push for an alpha accept is signed, goes only to that alpha subscriber’s address, and includes no bravo field.
 7. With Bill’s watch on, one comment produces one watch post, not two.
+8. `founder@example.test` on **alpha** registers a routine for alpha. The same login registering or reading a routine for **bravo** is refused or empty. A bravo key never appears in an alpha response. **charlie** is absent from both.
 
 ## Acceptance criteria
 
@@ -263,6 +323,10 @@ The implementation pull requests on 2026-10-01 are done when all of the followin
 8. The leak tests above pass on alpha and bravo.
 9. No event, log line, or decision-log row from this feature contains a token or a signing secret.
 10. Mail is still not sent from this host. A digest does not invent a stage or an Advance.
+11. Secret never returned or logged: a test registers, rotates, revokes, lists, and fails a ping for `founder@example.test` on **alpha**. The Bearer key is absent from every response, the pull feed, the decision log, and logs.
+12. Cross-company isolation: that alpha registration is invisible from **bravo**. A bravo member cannot rotate or revoke the alpha key. **charlie** is untouched.
+13. Rotate and revoke: after rotate, delivery uses the new key and the old key is gone. After revoke, the subscription is inactive and later pushes do not send the key. Neither call returns the key.
+14. Test-ping gate: a non-2xx answer or no answer leaves the subscription inactive with a clear reason and sends no later push. A 2xx answer is what marks it active.
 
 This requirements pull request is done when this page is linked from the roadmap, marked Proposed, and contains no code, schema, or migration.
 
@@ -278,6 +342,7 @@ This requirements pull request is done when this page is linked from the roadmap
 8. Email digest is later and would be sent by pirin.ai, not this host. Do we want that channel at all?
 9. May a company founder turn push off for the whole company, or only each member for themselves?
 10. When a mention field exists, who sees the mention event: the named person, or everyone who can already read the comment?
+11. Does `register_webhook` remove the Chief of Staff bot’s manual production database pin for members of that company only? Proposal: yes, members of that company only, fail closed, audit-logged, with the key and the listen address omitted from the audit row. Not decided on this page.
 
 ## Related
 
