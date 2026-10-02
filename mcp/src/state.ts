@@ -1,14 +1,12 @@
 import fs from "node:fs";
 import path from "node:path";
 import { resolveStatePath, resolveTracesDir } from "./paths.js";
-import { formatSpokenJourney } from "./constants.js";
+import { cardFromScoreboard, formatSpokenCard } from "./initiative-card.js";
 import {
   LOOP_STAGE_MUTATION_REJECTED,
   SPOKEN_LOOP_WRITE_REJECTED,
   loopStageMutationRejected,
-  missingWriteBackLine,
   spokenLoopWriteRejected,
-  writeBackMissingFromArtifacts,
 } from "./loop-freeze.js";
 
 export type AutonomyPosture = "strict" | "auto" | "dangerous";
@@ -116,61 +114,31 @@ export function patchState(
 }
 
 export function whereAreWePlain(state: CompanyState): string {
-  const phase = state.journeyPhase;
-  const phaseLabel = formatSpokenJourney(phase);
-  const eyes = state.readyForHumanEyes?.status ?? "unknown";
-  const posture = state.autonomyPosture ?? "strict";
-  const weekly = state.lastWeeklySnapshotAt
-    ? `last weekly snapshot ${state.lastWeeklySnapshotAt}`
-    : "weekly control-plane snapshot missing or not recorded";
-  const writeBackMissing = writeBackMissingFromArtifacts({
-    lastWeeklySnapshotAt: state.lastWeeklySnapshotAt,
-    scoreboard: state as unknown as Record<string, unknown>,
+  const label = String(state.companyId || "company").trim() || "company";
+  const constraint =
+    (typeof state.constraintThisWeek === "string" && state.constraintThisWeek) ||
+    (typeof state.constraint_this_week === "string" && state.constraint_this_week) ||
+    "";
+  const killed = String(state.gateStatus || "").toLowerCase() === "kill";
+  const card = cardFromScoreboard({
+    slug: label,
+    label,
+    journeyPhase: Number(state.journeyPhase) || 1,
+    gate: String(state.gateStatus || "open"),
+    scoreboard: {
+      constraint_this_week: constraint,
+      initiatives: state.initiatives,
+      supporting: state.supporting,
+      engagements: state.engagements,
+    },
+    killed,
   });
-
-  const questions = (state.openQuestions ?? []).slice(0, 5);
-  const qBlock =
-    questions.length > 0
-      ? questions.map((q, i) => `  ${i + 1}. ${q}`).join("\n")
-      : "  (none listed)";
-
-  return [
-    "Where we stand (Bootstrap OS control plane)",
-    "",
-    `Company: ${state.companyId}`,
-    `Hypothesis: ${state.hypothesis}`,
-    "",
-    `Journey: ${phaseLabel}`,
-    `Gate status: ${state.gateStatus}`,
-    writeBackMissing
-      ? `Missing artifacts: ${missingWriteBackLine()}`
-      : "Missing artifacts: none recorded",
-    "Ask / Do / Write back is a quality bar on the week's artifact, not a card.",
-    `AI freedom (autonomy): ${posture} (Strict = pause on strategy/spend/live sends; Auto = more routine autonomy; Dangerous = high risk)`,
-    `Ready for human eyes: ${eyes} (green only means cold happy path works — not demand or PMF)`,
-    eyes === "blocked" && state.readyForHumanEyes?.blockers?.length
-      ? `  Blockers: ${state.readyForHumanEyes.blockers.join("; ")}`
-      : null,
-    `Learning rituals: ${weekly}`,
-    `Last action: ${state.lastAction}`,
-    "",
-    "Top open questions:",
-    qBlock,
-    "",
-    "Scores (honest; engineering green is not PMF):",
-    JSON.stringify(state.scores ?? {}, null, 2),
-    "",
-    "Rules reminder: AI never advances journey phase alone. Evidence beats narrative.",
-    "House rules (OS 2.8.6): stated / synthetic / observed — observed wins. Spoken yes cannot promote.",
-    "Do not seed from a demographic one-liner (demo-only role-play is the weak case).",
-    "Several ideas are allowed. Each companyId is its own board. Rank and kill per board.",
-    "Marketing volume cannot promote.",
-    "There is no optimal price until people have paid and stayed.",
-    "No Likert or naked dollar WTP — choice or sentence, then map.",
-    "Same state as markdown: company-state.json + where-are-we.py. Green human-eyes ≠ demand/PMF.",
-  ]
-    .filter((line) => line !== null)
-    .join("\n");
+  return formatSpokenCard({
+    label,
+    card,
+    constraintThisWeek: constraint || undefined,
+    killed,
+  });
 }
 
 export function appendDecisionTrace(input: {

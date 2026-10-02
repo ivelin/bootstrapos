@@ -172,6 +172,9 @@ Treat promotion into this template as rare, deliberate work — not a continuous
 **House-rule pins (no version bump)**  
 Four short pins. Version header stays 2.8.19. No schema bump. [Re-ground before advising](company-os/operating-system.md#house-rule-re-ground-before-advising). [Evidence bound to the exact artifact](company-os/operating-system.md#house-rule-evidence-bound-to-the-exact-artifact) — cross-reference Ready for human eyes; do not copy that gate. [Failure becomes a small runtime policy](company-os/operating-system.md#house-rule-failure-becomes-a-small-runtime-policy). [Synthetic-consumer pretests are not customer evidence](company-os/operating-system.md#house-rule-synthetic-consumer-pretests-are-not-customer-evidence).
 
+**v2.8.22 — board card**  
+Additive note on 2.8.19. Full text: [where are we](company-os/operating-system.md#spoken-card-founder-voice-default). Bold company name, what it sells and to whom, and the goal. One table (`Work | State | When | Who`). Sections: Bet, Other paths, Past bets, Background. Top bet starts with 🎯. Legend, then a Next line. Plain words. Stored kind stays `customer_check`. Version header stays 2.8.19. No schema bump.
+
 **v2.8.21 — spoken label: customer bet**  
 Additive note on 2.8.19. Full text: [initiative report card](company-os/operating-system.md#initiative-report-card) · [where are we](company-os/operating-system.md#spoken-card-founder-voice-default). Founder speech: customer bet / customer bets with nested engagements. Card heading: CUSTOMER BETS. Stored kind stays `customer_check`. Version header stays 2.8.19. No schema bump. No enum rename.
 

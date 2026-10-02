@@ -147,7 +147,9 @@ describe("PR2.2 initiative card loose ends", () => {
     assert.equal(snapshotLeadOmitsProgress(body, progress), true);
     assert.doesNotMatch(body, /called the plant/);
     assert.doesNotMatch(body, /landing page draft/);
-    assert.match(body, /#1 BOTTLENECK  alpha-check-1/);
+    assert.match(body, /operators who already pay for dispatch at bravo plant/);
+    assert.doesNotMatch(body, /alpha-check-1/);
+    assert.match(body, /\| Work \| State \| When \| Who \|/);
     assert.equal(card.bottleneck.id, "alpha-check-1");
     assert.notEqual(card.bottleneck.kind, "legal");
   });

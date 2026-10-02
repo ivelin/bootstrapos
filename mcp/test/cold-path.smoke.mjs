@@ -49,9 +49,11 @@ try {
 
   // 6. Status plain + house rules
   const plain = whereAreWePlain(readState());
-  assert.match(plain, /charlie/);
-  assert.match(plain, /observed wins/i);
-  assert.match(plain, /marketing volume cannot promote/i);
+  assert.match(plain, /\*\*charlie\*\*:/);
+  assert.match(plain, /\| Work \| State \| When \| Who \|/);
+  assert.match(plain, /\*🎯 the one thing that matters most/);
+  assert.match(plain, /\*\*Next:\*\*/);
+  assert.doesNotMatch(plain, /Journey:|gate hold|customer bet|\bP0\b/i);
 
   const wherePy = path.join(
     dataRoot,

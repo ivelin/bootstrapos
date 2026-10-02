@@ -1,61 +1,68 @@
 ---
 name: Bootstrap board status visualization
 description: >-
-  Use for every where-are-we / company board card — locked table
-  Work|State|When|Who; spoken label customer bet (schema customer_check); live
-  get_journey first; no invent.
+  Use for every where-are-we / company board card: a bold company name, what it
+  sells and to whom, the goal, then one table. Live get_journey first; never invent.
 ---
-Use for every “where are we with COMPANY” and every “company board card” request. Locked 2026-09-22 — do not weaken; do not invent a second format.
+Use for every “where are we with COMPANY” and every “company board card” request, for every founder. Locked 2026-10-02 at 4:55 PM CT. If a reader has to ask what a word means, rewrite it. Do not invent a second format.
 
 ## Source of truth
 
-1. Live `get_journey` / `initiatives[]` for that company first. SoR (Gmail / Drive / Calendar) only to fill **Who** / **When** when the board is silent. Do not invent rows.
-2. Print the spoken field in the company’s words. Leave week labels off the page until they ask.
-3. Company = team. Idea = one customer bet. Never print the storage slug `default` as a node. Nested engagements are children of that bet (`parentId`). Capital / legal / advisor = Footer. Paper cannot promote.
+1. Read the live `get_journey` / `initiatives[]` first. Use the system of record only to fill in who and when where the board is silent. Never invent rows, moves, owners, or dates.
+2. Write in the company's own words. Unless the reader asks (“show clocks” / “show schema”), hide the OS version, journey integers, loop labels, autonomy, Ready-for-human-eyes, kind slugs, idea slugs, and the storage slug `default`.
+3. Describe each try as the plain thing being tried ("Get one plant to hire alpha"). The stored kind stays `customer_check`.
+4. Plain words for any average person. Do not write P0, GC/PM, FAST, SOPA, SAFE, Apollo, MLS, tenancy, engagement, or customer bet. Say advisor agreement, stock option paperwork, and investment.
+5. The first line is the bold company name, then one plain sentence on what it sells and to whom, plus the goal.
+6. Column headers are exactly `Work | State | When | Who`.
+7. The first time a person or company name appears, say who they are ("bravo, a plant we're talking with").
 
-## Spoken label: customer bet
+## Card shape
 
-Founder-facing name for schema kind `customer_check` is **customer bet**. When a heading is shown, use **CUSTOMER BETS** (or table section **Bet**). Do not say “customer check” to founders. Do not rename the stored enum. Do not treat it as a checkbox or a to-do next to an account. Accounts nest under the customer bet. WIP still 1 on that kind until paid use.
+1. **Title (always first).** `**<Company>**: <what it sells and to whom>. The goal is <goal>.`
+2. **One table** with bold section rows, in this order. Other cells on a section row stay empty. Omit a section that has no rows, except Bet.
+   - **Bet**. The top row starts with 🎯 plus a fitting icon and a **bold** title. Nested rows indent with `· ·` and start with their own icon.
+   - **Other paths (not the main bet)** when another live try exists.
+   - **Past bets**.
+   - **Background** (money 💵, advisor agreement 📄, legal ⚖️).
+3. The status dot sits at the start of the State cell: 🟢 working on it, 🟡 waiting, 🔴 dropped, ⚪ closed.
+4. **Legend, then Next.** `*🎯 the one thing that matters most · 🟢 working on it · 🟡 waiting · 🔴 dropped · ⚪ closed*` then `**Next:**` one plain sentence on who does what next.
 
-## Format (copy this shape)
+Fixture shape (alpha / bravo / charlie / founder@example.test only):
 
-Title line: **Company** — one-sentence bet. Optional second short constraint in company words.
+**alpha**: alpha sells dispatch help to plants that already pay for it. The goal is one plant paying for a weekly report.
 
-Then one markdown table with exactly four columns: `Work | State | When | Who`
+| Work | State | When | Who |
+|---|---|---|---|
+| **Bet** | | | |
+| 🎯 🤝 **Get one plant to pay alpha for a weekly dispatch report** | 🟢 No plant has paid yet | Talk with bravo this week | founder@example.test, the founder |
+| · · 🏢 bravo, a plant we're talking with | 🟢 Asked, time not set | Book the call | founder@example.test |
+| **Other paths (not the main bet)** | | | |
+| 🤝 charlie, a company we're talking with, might license the notes | 🟡 Parked | Reopen only if they come back | — |
+| **Past bets** | | | |
+| 🔎 A page where plants sign up themselves | ⚪ Plants would not fill in the form | — | — |
+| **Background** | | | |
+| 💵 An investment, not yet signed | 🟡 Unsigned | — | — |
+| 📄 Advisor agreement | 🟡 Stock option paperwork not set up yet | — | — |
 
-Hierarchy lives inside the Work cell. Do not use a separate first column for arrows or dots (it wraps and breaks the tree).
+*🎯 the one thing that matters most · 🟢 working on it · 🟡 waiting · 🔴 dropped · ⚪ closed*
 
-Rows:
+**Next:** founder@example.test, the founder, talks with bravo this week.
 
-- A section row **Bet** (or **Bet: NAME** when two live ideas exist)
-- `🟢 P0 <bottleneck title>` | ACTIVE | this week | owner
-- Child engagements indented with leading `· · ` then their own dot
-- If two live ideas: a second **Bet:** block, same pattern
-- A section row **Footer**
-- Footer rows with 💵 capital, 📄 advisor/FAST, ⚖️ legal, ⚪ closed
-- If an idea is killed: section **Killed** with 🔴
+## Dots
 
-Dots (locked):
-
-- 🟢 open / in play (active work, not an all-clear)
-- 🟡 next but blocked, or waiting on a parent / confirm
-- ⚪ parked, proposed, or closed
-- 🔴 fail, overdue kill line, or killed idea
-
-Do not use blue or red for “active.”
-
-After the table, one legend line. Then **Next:** one sentence naming the human and the P0 move.
-
-Who column: short names only. Split send vs approve only when both are real.
+- 🎯 the one thing that matters most
+- 🟢 working on it
+- 🟡 waiting
+- 🔴 dropped
+- ⚪ closed
 
 ## Anti
 
-- No mermaid, no Gantt, no BPMN, no side-by-side schema diagrams unless the founder asks for schema.
-- No “idea default” folder.
-- Do not Advance, Hold-write, email, or create a new idea as part of rendering the card.
-- If several companies are asked, one card each, same format.
-- No board writes from this skill.
+- Never put the goal anywhere but the first line and the Next line.
+- No mermaid, Gantt, or schema diagrams unless asked.
+- This skill makes no board writes.
+- If several companies are asked about, give one card each, in this shape.
 
 ## Internal (never print)
 
-Paper cannot promote; NDA ≠ Try; Ask/Do is not a card; unpaid weeks cannot promote; no invented Impact/Evidence/Leverage. Schema kind remains `customer_check`.
+Paper cannot promote. A confidentiality promise is not proof someone used the product. Ask/Do is not a card. Unpaid weeks cannot promote. Never invent Impact/Evidence/Leverage. The stored kind stays `customer_check`.

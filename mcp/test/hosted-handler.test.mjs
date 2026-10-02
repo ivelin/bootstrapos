@@ -288,8 +288,9 @@ describe("Vercel fetch handler (hosted-read)", () => {
     assert.equal(parsed.company.slug, "corehaul");
     assert.equal(parsed.ideas.length, 1);
     assert.match(parsed.ideas[0].visualFlow, /mermaid/);
-    assert.match(parsed.spoken, /Bottleneck/);
-    assert.match(parsed.ideas[0].snapshot, /Bottleneck/);
+    assert.match(parsed.spoken, /The goal is/);
+    assert.match(parsed.ideas[0].snapshot, /The goal is/);
+    assert.match(parsed.spoken, /\*\*Next:\*\*/);
     assert.doesNotMatch(parsed.ideas[0].snapshot, /journey phase \d/);
     assert.doesNotMatch(parsed.ideas[0].snapshot, /gate hold/i);
     assert.equal(parsed.ideas[0].constraintThisWeek, "");

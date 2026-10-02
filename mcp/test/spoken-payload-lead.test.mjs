@@ -56,14 +56,13 @@ describe("spoken payload lead (alpha fixture)", () => {
     const seen = await store.getJourney(bearer("founder@example.test"), { companySlug: "alpha" });
     assert.equal(seen.ok, true);
     assert.equal(typeof seen.spoken, "string");
-    assert.match(seen.spoken, /Bottleneck/);
-    assert.match(seen.spoken, /^alpha\n/);
-    assert.match(seen.spoken, /Bottleneck #1: operators who already pay for dispatch at bravo plant/);
-    assert.match(seen.spoken, /where it stands:/);
-    assert.match(seen.spoken, /next:/);
-    assert.match(seen.spoken, /Also moving \(not the bottleneck\)/);
+    assert.match(seen.spoken, /^\*\*alpha\*\*:/);
+    assert.match(seen.spoken, /operators who already pay for dispatch at bravo plant/);
+    assert.match(seen.spoken, /\| Work \| State \| When \| Who \|/);
+    assert.match(seen.spoken, /\*\*Next:\*\*/);
     assert.match(seen.spoken, /side file for counsel notes/);
-    assert.match(seen.spoken, /Open questions/);
+    assert.doesNotMatch(seen.spoken, /^Open questions/m);
+    assert.doesNotMatch(seen.spoken, /\bP0\b|\bFAST\b|\bSOPA\b|\bengagement\b|customer bet/i);
     assert.doesNotMatch(seen.spoken, JOURNEY_PHASE_DUMP);
     assert.doesNotMatch(seen.spoken, GATE_HOLD_DUMP);
     assert.doesNotMatch(seen.spoken, /customer_check|engagement|legal/);
@@ -74,7 +73,7 @@ describe("spoken payload lead (alpha fixture)", () => {
     assert.equal(snap, seen.spoken);
     assert.doesNotMatch(snap, JOURNEY_PHASE_DUMP);
     assert.doesNotMatch(snap, GATE_HOLD_DUMP);
-    assert.match(snap, /Bottleneck/);
+    assert.match(snap, /The goal is/);
     assert.equal(seen.ideas[0].clocks.journeyPhase, 1);
     assert.equal(seen.ideas[0].clocks.loopStage, 1);
     assert.equal(seen.ideas[0].clocks.currentGate, "hold");
@@ -93,7 +92,7 @@ describe("spoken payload lead (alpha fixture)", () => {
       companySlug: "alpha",
       expandMeetingDoc: true,
     });
-    assert.match(seen.spoken, /Bottleneck/);
+    assert.match(seen.spoken, /The goal is/);
     assert.doesNotMatch(seen.spoken, JOURNEY_PHASE_DUMP);
     assert.doesNotMatch(seen.ideas[0].snapshot, GATE_HOLD_DUMP);
     assert.equal("stage" in seen.card.company, false);
