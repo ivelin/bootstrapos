@@ -128,12 +128,12 @@ describe("OS 2.8.19 initiative report card", () => {
     assert.equal(card.footer.some((row) => row.kind === "legal"), true);
     assert.match(card.warn || "", /impact=clock/);
     const body = formatInitiativeCard(card).join("\n");
-    assert.match(body, /WHERE ARE WE — alpha/);
-    assert.match(body, /#1 BOTTLENECK/);
-    assert.match(body, /CUSTOMER BETS/);
-    assert.doesNotMatch(body, /CUSTOMER CHECKS/);
-    assert.match(body, /OTHER INITIATIVES/);
-    assert.match(body, /NDA is not Try/);
+    assert.match(body, /\*\*alpha's biggest problem right now:/);
+    assert.match(body, /\| What we're working on \| Where it stands \| What happens next \| Who \|/);
+    assert.match(body, /🟢 \*\*/);
+    assert.doesNotMatch(body, /CUSTOMER BETS|CUSTOMER CHECKS|#1 BOTTLENECK|OTHER INITIATIVES/);
+    assert.doesNotMatch(body, /NDA is not Try/);
+    assert.doesNotMatch(body, /\bP0\b|\bengagement\b|customer bet/i);
     assert.doesNotMatch(body, /Ask \/ Do \/ Write back is a card/);
   });
 
@@ -245,8 +245,8 @@ describe("OS 2.8.19 initiative report card", () => {
     const seen = await store.getJourney(founder, { companySlug: "alpha" });
     assert.equal(seen.ok, true);
     assert.equal(seen.card.bottleneck.kind, "customer_check");
-    assert.match(seen.spoken, /Bottleneck/);
-    assert.match(seen.ideas[0].snapshot, /Bottleneck/);
+    assert.match(seen.spoken, /biggest problem right now/);
+    assert.match(seen.ideas[0].snapshot, /biggest problem right now/);
     assert.doesNotMatch(seen.ideas[0].snapshot, /called the plant/);
     assert.doesNotMatch(seen.ideas[0].snapshot, /journey phase \d/);
     assert.doesNotMatch(seen.ideas[0].snapshot, /gate hold/i);
@@ -279,7 +279,8 @@ describe("OS 2.8.19 initiative report card", () => {
     assert.match(os, /#### Where are we/);
     assert.match(os, /Leave week labels off the page until they ask/);
     assert.match(os, /customer bets with nested engagements/);
-    assert.match(os, /Card heading: CUSTOMER BETS/);
+    assert.match(os, /What we're working on \| Where it stands \| What happens next \| Who/);
+    assert.match(os, /\| 2\.8\.22 \|/);
     assert.match(os, /Stored kind enum stays `customer_check`/);
     assert.match(os, /\| 2\.8\.21 \|/);
     assert.doesNotMatch(os, /customer check/);
@@ -323,6 +324,7 @@ describe("OS 2.8.19 initiative report card", () => {
       "utf8",
     );
     assert.match(pinsSkill, /Where are we \(2\.8\.20\)/);
+    assert.match(pinsSkill, /Plain-words table/);
     assert.doesNotMatch(pinsSkill, /Spoken card/);
 
     assert.equal(OS_VERSION, "2.8.19");

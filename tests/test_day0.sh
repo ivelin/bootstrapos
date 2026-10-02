@@ -1499,9 +1499,9 @@ if grep -q '| 2.8.19 |' company-os/operating-system.md \
   && grep -q 'OS_VERSION = "2.8.19"' mcp/src/constants.ts \
   && grep -q 'initiative-report-card-2.8.19' mcp/src/house-rules.ts \
   && grep -q 'initiativeMappingMayAdvance' mcp/src/house-rules.ts \
-  && grep -q 'WHERE ARE WE —' templates/company/state/where-are-we.py \
-  && grep -q 'CUSTOMER BETS' templates/company/state/where-are-we.py \
-  && grep -q 'OTHER INITIATIVES' templates/company/state/where-are-we.py \
+  && grep -q "What we're working on" templates/company/state/where-are-we.py \
+  && grep -q 'biggest problem right now' templates/company/state/where-are-we.py \
+  && grep -q 'working on it now' templates/company/state/where-are-we.py \
   && grep -q 'Do not migrate/seed/live-probe supabase-pirin-ai' mcp/supabase/migrations/20260926_bootstrap_os_initiative_report_card.sql \
   && grep -q '| 2.8.18 |' company-os/operating-system.md \
   && grep -q 'v2.8.19' README.md \
@@ -1578,14 +1578,15 @@ if grep -q '| 2.8.21 |' company-os/operating-system.md \
   && grep -Fq '**Version:** 2.8.19' company-os/operating-system.md \
   && grep -q 'OS_VERSION = "2.8.19"' mcp/src/constants.ts \
   && grep -q 'customer bets with nested engagements' company-os/operating-system.md \
-  && grep -q 'CUSTOMER BETS' mcp/src/initiative-card.ts \
-  && grep -q 'CUSTOMER BETS' templates/company/state/where-are-we.py \
+  && grep -q "What we're working on" mcp/src/initiative-card.ts \
+  && grep -q "What we're working on" templates/company/state/where-are-we.py \
   && grep -q 'customer_check' company-os/operating-system.md \
   && grep -q 'customer_check' mcp/src/initiative-card.ts \
   && grep -q 'spoken-label-customer-bet-2.8.21' mcp/src/house-rules.ts \
-  && grep -q 'Spoken label: customer bet (2.8.21)' plugin/skills/house-rule-pins/SKILL.md \
+  && grep -q 'Plain-words table' plugin/skills/house-rule-pins/SKILL.md \
   && grep -q 'v2.8.21' README.md \
-  && grep -q 'customer bets with nested engagements' AGENTS.md \
+  && grep -q 'v2.8.22' README.md \
+  && grep -q "What we're working on" AGENTS.md \
   && ! grep -q 'CUSTOMER CHECKS' mcp/src/initiative-card.ts \
   && ! grep -q 'CUSTOMER CHECKS' templates/company/state/where-are-we.py \
   && ! grep -q 'card-v1' company-os/operating-system.md; then

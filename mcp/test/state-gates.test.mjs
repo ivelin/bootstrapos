@@ -53,16 +53,11 @@ describe("phase advance gate", () => {
 
   it("whereAreWePlain includes company and clocks", () => {
     const plain = whereAreWePlain(readState());
-    assert.match(plain, /charlie/i);
-    assert.match(plain, /Journey: Write the bet \(1\)/);
-    assert.doesNotMatch(plain, /Live loop: Ask/);
-    assert.match(plain, /Missing artifacts: Write back/);
-    assert.match(plain, /quality bar/);
-    assert.match(plain, /not demand or PMF/i);
-    assert.match(plain, /observed wins/i);
-    assert.match(plain, /Spoken yes cannot promote/i);
-    assert.match(plain, /demographic one-liner/i);
-    assert.match(plain, /where-are-we\.py/);
+    assert.match(plain, /\*\*charlie's biggest problem right now:/);
+    assert.match(plain, /\| What we're working on \| Where it stands \| What happens next \| Who \|/);
+    assert.match(plain, /\*🟢 working on it now/);
+    assert.doesNotMatch(plain, /Journey: Write the bet/);
+    assert.doesNotMatch(plain, /\bP0\b|customer bet|\bengagement\b/i);
   });
 
   it("appendDecisionTrace writes under active company traces", () => {

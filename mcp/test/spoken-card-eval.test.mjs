@@ -13,7 +13,9 @@ import {
   alsoMovingBodyOf,
   applySpokenPayloadLead,
   cardFromScoreboard,
+  FOUNDER_CARD_LEGEND,
   formatSpokenCard,
+  founderCardBannedHit,
   isActivePayOrUse,
   looksLikePaperBottleneck,
   spokenBottleneckLineOf,
@@ -161,6 +163,23 @@ function alsoMovingBody(spoken) {
   return alsoMovingBodyOf(spoken) ?? "";
 }
 
+function assertFounderCard(text) {
+  const lines = String(text).split("\n").filter((line) => line.trim());
+  assert.match(lines[0], /^\*\*.+biggest problem right now:/);
+  assert.match(lines[1], /^To fix it,/);
+  const headers = String(text)
+    .split("\n")
+    .filter((line) => line.startsWith("| What we're working on |"));
+  assert.equal(headers.length, 1);
+  assert.equal(headers[0], "| What we're working on | Where it stands | What happens next | Who |");
+  assert.equal(lines.at(-1), FOUNDER_CARD_LEGEND);
+  assert.equal(founderCardBannedHit(text), null);
+  assert.doesNotMatch(text, /^\s*\**\s*Next\s*:/im);
+  assert.doesNotMatch(text, /\bP0\b/);
+  assert.doesNotMatch(text, /Bottleneck #1/);
+  assert.doesNotMatch(text, /^\| 🟢 \|/m);
+}
+
 function assertNoClockDump(text) {
   assert.doesNotMatch(text, DUMP.phase);
   assert.doesNotMatch(text, DUMP.loop);
@@ -180,7 +199,7 @@ function assertAlsoMovingMatch(spoken, snapshot) {
 }
 
 describe("spoken-card eval A format", () => {
-  it("spoken exists, starts with company then Bottleneck #1; no clock dump", async () => {
+  it("spoken exists, headline first, one table, legend last; no clock dump", async () => {
     const store = alphaStore({
       ...defaultScoreboard(),
       constraint_this_week: "operators at bravo plant who already pay for dispatch",
@@ -191,19 +210,16 @@ describe("spoken-card eval A format", () => {
     const seen = await store.getJourney(bearer("founder@example.test"), { companySlug: "alpha" });
     assert.equal(seen.ok, true);
     assert.equal(typeof seen.spoken, "string");
-    assert.match(seen.spoken, /^alpha\n/);
-    assert.match(seen.spoken, /Bottleneck #1/);
-    const companyIdx = seen.spoken.indexOf("alpha");
-    const bnIdx = seen.spoken.indexOf("Bottleneck #1");
-    assert.ok(companyIdx >= 0 && bnIdx > companyIdx);
+    assert.match(seen.spoken, /^\*\*alpha's biggest problem right now:/);
+    assertFounderCard(seen.spoken);
+    assertFounderCard(seen.ideas[0].snapshot);
     assertNoClockDump(seen.spoken);
     assertNoClockDump(seen.ideas[0].snapshot);
     assert.equal("stage" in seen.card.company, false);
     assert.equal("gate" in seen.card.company, false);
     assert.equal("wipLimit" in seen.card.company, false);
-    assert.match(seen.spoken, /Also moving \(not the bottleneck\)/);
-    assert.match(seen.spoken, /Open questions/);
-    assert.match(seen.spoken, /Which operator will try a paid week\?/);
+    assert.equal(seen.ideas[0].scoreboard.openQuestions[0], "Which operator will try a paid week?");
+    assert.doesNotMatch(seen.spoken, /^Open questions/m);
     assert.doesNotMatch(seen.spoken, /loopStage|journeyPhase|osVersion/);
     assertAlsoMovingMatch(seen.spoken, seen.ideas[0].snapshot);
   });
@@ -227,6 +243,8 @@ describe("spoken-card eval B grounding", () => {
     assert.match(footer, /bravo plant/);
     assert.equal(Array.isArray(seen.ideas[0].scoreboard.initiatives), true);
     assert.equal(seen.ideas[0].scoreboard.initiatives.length, 0);
+    assertFounderCard(seen.spoken);
+    assertFounderCard(seen.ideas[0].snapshot);
     assertAlsoMovingMatch(seen.spoken, seen.ideas[0].snapshot);
   });
 
@@ -244,6 +262,8 @@ describe("spoken-card eval B grounding", () => {
     assert.notEqual(footer, "none yet");
     assert.match(footer, /office hours tip recorded/);
     assert.match(footer, /side file for counsel notes/);
+    assertFounderCard(seen.spoken);
+    assertFounderCard(seen.ideas[0].snapshot);
     assertAlsoMovingMatch(seen.spoken, seen.ideas[0].snapshot);
   });
 
@@ -260,10 +280,13 @@ describe("spoken-card eval B grounding", () => {
     assert.match(footer, /side file for a term note/);
     assert.match(footer, /side file for counsel notes/);
     assert.match(footer, /office hours tip recorded/);
-    const lead = seen.spoken.split("Also moving")[0];
-    assert.match(lead, /bravo plant NDA\n\s+where it stands:/);
-    assert.match(lead, /\n\s+next:/);
-    assert.doesNotMatch(lead, /side file for a term note/);
+    const rows = (alsoMovingBody(seen.spoken) ?? "").split("\n");
+    assert.match(rows[0], /operators who already pay for dispatch at bravo plant/);
+    assert.match(seen.spoken, /· · /);
+    assert.match(seen.spoken, /bravo plant/);
+    assert.doesNotMatch(rows[0], /side file for a term note/);
+    assertFounderCard(seen.spoken);
+    assertFounderCard(seen.ideas[0].snapshot);
     assertAlsoMovingMatch(seen.spoken, seen.ideas[0].snapshot);
   });
 
@@ -275,19 +298,21 @@ describe("spoken-card eval B grounding", () => {
       initiatives: [ALPHA_CHECK, ALPHA_ENG, ALPHA_LEGAL],
     });
     const seen = await store.getJourney(bearer("founder@example.test"), { companySlug: "alpha" });
-    const lead = seen.spoken.split("Also moving")[0];
-    assert.match(lead, /operators who already pay for dispatch at bravo plant/);
-    assert.match(lead, /bravo plant NDA/);
-    assert.match(lead, /where it stands:/);
-    assert.doesNotMatch(lead, /side file for counsel notes/);
+    const rows = (alsoMovingBody(seen.spoken) ?? "").split("\n");
+    assert.match(rows[0], /operators who already pay for dispatch at bravo plant/);
+    assert.match(seen.spoken, /bravo plant/);
+    assert.match(seen.spoken, /confidentiality promise/);
+    assert.doesNotMatch(rows[0], /side file for counsel notes/);
     assert.match(alsoMovingBody(seen.spoken), /side file for counsel notes/);
-    assert.match(seen.spoken, /bravo plant NDA\n\s+where it stands:\s+nda sent/);
+    assert.doesNotMatch(seen.spoken, /\bNDA\b/i);
     assert.equal(seen.card.bottleneck.kind, "customer_check");
     assert.equal(seen.card.customerChecks[0].engagements[0].premise, "bravo plant NDA");
     assert.equal(seen.card.footer.some((row) => row.kind === "legal"), true);
     assert.notEqual(seen.card.bottleneck.kind, "legal");
     assert.notEqual(seen.card.bottleneck.kind, "advisor");
     assert.notEqual(seen.card.bottleneck.kind, "capital");
+    assertFounderCard(seen.spoken);
+    assertFounderCard(seen.ideas[0].snapshot);
     assertAlsoMovingMatch(seen.spoken, seen.ideas[0].snapshot);
   });
 
@@ -338,6 +363,7 @@ describe("spoken-card eval B grounding", () => {
       initiativesPresent: false,
       openQuestions: ["Which operator will try a paid week?"],
     });
+    assertFounderCard(spoken);
     assert.doesNotMatch(spokenBottleneckLineOf(spoken), /SOPA|SAFE|FAST/);
     const allowed = cardFromScoreboard({
       slug: "alpha",
@@ -354,7 +380,8 @@ describe("spoken-card eval B grounding", () => {
       constraintThisWeek: paperConstraint,
       allowPaperBottleneck: true,
     });
-    assert.match(spokenBottleneckLineOf(override), /SOPA/);
+    assert.match(spokenBottleneckLineOf(override), /paperwork to raise money/);
+    assertFounderCard(override);
   });
 
   it("killed idea spoken has Kill and does not invent an active pay-or-use bottleneck", async () => {
@@ -387,6 +414,8 @@ describe("spoken-card eval B grounding", () => {
       seen.card.customerChecks.some((row) => row.id === "legacy-constraint" && isActivePayOrUse(row)),
       false,
     );
+    assertFounderCard(seen.spoken);
+    assertFounderCard(seen.ideas[0].snapshot);
     assertAlsoMovingMatch(seen.spoken, seen.ideas[0].snapshot);
   });
 
@@ -438,13 +467,14 @@ describe("spoken-card eval B grounding", () => {
     );
     const seen = await store.getJourney(bearer("founder@example.test"), { companySlug: "alpha" });
     assert.ok(seen.ideas.filter((idea) => idea.clocks.currentGate !== "kill").length >= 2);
-    assert.match(seen.spoken, /Also live \(separate boards\): bravo/);
-    assert.doesNotMatch(seen.spoken.split("Also live")[0] ?? seen.spoken, /^Bottleneck #1:/);
+    assert.match(seen.spoken, /🟢 \*\*bravo\*\*/);
+    assert.match(seen.spoken, /^\*\*alpha's biggest problem right now:/);
+    assertFounderCard(seen.spoken);
   });
 });
 
 describe("spoken-card eval C snapshot bottleneck line", () => {
-  it("same Bottleneck #1 line on spoken and snapshot when constraint != premise", async () => {
+  it("same biggest-problem line on spoken and snapshot when constraint != premise", async () => {
     const store = alphaStore({
       ...defaultScoreboard(),
       constraint_this_week: "quote to site and date",
@@ -456,6 +486,8 @@ describe("spoken-card eval C snapshot bottleneck line", () => {
     const snapLine = spokenBottleneckLineOf(seen.ideas[0].snapshot);
     assert.equal(spokenLine, snapLine);
     assert.match(spokenLine, /operators who already pay for dispatch at bravo plant/);
+    assertFounderCard(seen.spoken);
+    assertFounderCard(seen.ideas[0].snapshot);
     assert.notEqual(spokenLine, seen.ideas[0].constraintThisWeek);
     assert.equal(seen.ideas[0].constraintThisWeek, "quote to site and date");
   });
@@ -488,6 +520,7 @@ describe("spoken-card eval C snapshot bottleneck line", () => {
     assert.match(footer, /bravo plant/);
     assert.equal(spokenBottleneckLineOf(seen.spoken), spokenBottleneckLineOf(seen.ideas[0].snapshot));
     assert.equal(seen.spoken, seen.ideas[0].snapshot);
+    assertFounderCard(seen.spoken);
     assertAlsoMovingMatch(seen.spoken, seen.ideas[0].snapshot);
   });
 
@@ -576,6 +609,39 @@ describe("spoken-card eval C snapshot bottleneck line", () => {
     assert.match(footer, /side file for a term note/);
     assert.equal(alsoMovingBodyOf(seen.ideas[0].snapshot), alsoMovingBodyOf(seen.spoken));
     assert.equal(spokenBottleneckLineOf(seen.spoken), spokenBottleneckLineOf(seen.ideas[0].snapshot));
+    assertFounderCard(seen.spoken);
+    assertFounderCard(seen.ideas[0].snapshot);
+  });
+});
+
+describe("spoken-card plain words", () => {
+  it("introduces a bare name once, says what done looks like, and bans jargon", () => {
+    const card = cardFromScoreboard({
+      slug: "alpha",
+      label: "alpha",
+      journeyPhase: 1,
+      gate: "hold",
+      scoreboard: {
+        initiatives: [
+          ALPHA_CHECK,
+          {
+            ...ALPHA_ENG,
+            id: "alpha-eng-charlie",
+            premise: "charlie",
+            last: "no reply",
+            next: "founder@example.test calls",
+          },
+        ],
+      },
+    });
+    const spoken = formatSpokenCard({ label: "alpha", card });
+    assertFounderCard(spoken);
+    assert.equal(spoken.split("charlie, a company we're talking with").length - 1, 1);
+    assert.match(spoken, /· · charlie, a company we're talking with/);
+    assert.match(spoken, /founder@example\.test, the founder, calls/);
+    assert.equal(spoken.split("the founder").length - 1, 1);
+    assert.match(spoken, /Done when one paid weekly report used in their shop/);
+    assert.equal(card.customerChecks[0].engagements[0].kind, "engagement");
   });
 });
 
@@ -593,12 +659,10 @@ describe("spoken-card eval D CI wires", () => {
     const os = fs.readFileSync(path.join(REPO_ROOT, "company-os/operating-system.md"), "utf8");
     assert.match(
       os,
-      /Eval is CI\. Spoken footer cannot drop supporting\/engagements\. Snapshot matches spoken bottleneck line\./,
+      /Eval is CI\. Headline names the bottleneck first\. One table\. Legend last\. No Next line\. Background rows stay when supporting or footer rows exist\. Snapshot matches the spoken bottleneck line\. Killed cards are killed\./,
     );
-    assert.match(
-      os,
-      /Also-moving cannot be none-yet when supporting or footer rows exist; killed cards are killed\./,
-    );
+    assert.match(os, /What we're working on \| Where it stands \| What happens next \| Who/);
+    assert.match(os, /\| 2\.8\.22 \|/);
     const ciSh = fs.readFileSync(path.join(REPO_ROOT, "scripts/ci.sh"), "utf8");
     assert.match(ciSh, /spoken-card-eval\.test\.mjs/);
   });

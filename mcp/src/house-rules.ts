@@ -200,7 +200,7 @@ export const HOUSE_RULE_PINS = [
   },
   {
     id: "initiative-report-card-2.8.19",
-    pin: "Initiative report card. Company header → bottleneck #1 → customer bets with nested engagements → other initiatives footer. Card heading: CUSTOMER BETS. customer_check ranks first until paid use. Ask / Do is not a card.",
+    pin: "Initiative report card. Bold biggest-problem line, then one table (What we're working on | Where it stands | What happens next | Who), then an italic legend. customer_check ranks first until paid use. Ask / Do is not a card.",
     url: "https://github.com/ivelin/bootstrapos/blob/main/company-os/operating-system.md#initiative-report-card",
   },
   {
@@ -210,7 +210,7 @@ export const HOUSE_RULE_PINS = [
   },
   {
     id: "spoken-label-customer-bet-2.8.21",
-    pin: "Spoken label: customer bet. Card heading: CUSTOMER BETS. Customer bets with nested engagements. Stored kind stays customer_check. Version header stays 2.8.19.",
+    pin: "Plain-words board card. Bold biggest-problem line, one table (What we're working on | Where it stands | What happens next | Who), italic legend last, no Next line. Do not print rank labels or kind slugs. Stored kind stays customer_check. Version header stays 2.8.19.",
     url: "https://github.com/ivelin/bootstrapos/blob/main/company-os/operating-system.md#initiative-report-card",
   },
   {
