@@ -226,6 +226,8 @@ Agents should start sessions with focus → do work → record when ready (`log_
 
 ### Phase B — Thin local MCP (gates + state) — *current thin slice*
 
+> **Deprecated (October 2, 2026).** The laptop kit and `~/.bootstrap-os` get no more fixes. [Move off a local install](docs/migrate-from-local.md).
+
 | | |
 |--|--|
 | **Ship** | [PR #1](https://github.com/ivelin/bootstrap/pull/1): stdio MCP, policy tools, thin `company-state.json`, **status + next-evidence + agent-focus**, no template writes |

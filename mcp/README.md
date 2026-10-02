@@ -1,5 +1,7 @@
 # Bootstrap OS MCP (self-host kit and hosted pin)
 
+> **Deprecated (October 2, 2026).** The laptop kit and `~/.bootstrap-os` get no more fixes. [Move off a local install](../docs/migrate-from-local.md).
+
 **What this is / is not:** see root [`ROADMAP.md` §0](../ROADMAP.md) — MCP is adapter furniture to the control plane, not a second OS, harness, or memory product.
 
 **Markdown is the constitution.** Front door is still **path 1**: point an AI at https://github.com/ivelin/bootstrapos — no install. Path 2 is optional instance files / CLI + `.grok/workflows`. **This package is the OSS self-host kit** (stdio on your disk via `initCompany()`, or deploy `mcp/` on your own Vercel + Supabase). It is not the Pirin-supported mentee source of record. The Pirin write plane is the hosted pin. Several ideas are allowed. Each company is its own board. Rank and kill per board.
@@ -95,6 +97,8 @@ Hard rules (OS 2.8.9):
 
 ## Install (local)
 
+> **Deprecated (October 2, 2026).** The laptop kit and `~/.bootstrap-os` get no more fixes. [Move off a local install](../docs/migrate-from-local.md).
+
 From the Bootstrap OS clone:
 
 ```bash
@@ -104,6 +108,8 @@ npm run build
 ```
 
 ### Multi-company (recommended)
+
+> **Deprecated (October 2, 2026).** The laptop kit and `~/.bootstrap-os` get no more fixes. [Move off a local install](../docs/migrate-from-local.md).
 
 ```bash
 export BOOTSTRAP_OS_ROOT=/path/to/bootstrap   # template clone (docs + blank templates)
@@ -119,6 +125,8 @@ Then in the agent:
 
 ### Single-company env (backward compatible)
 
+> **Deprecated (October 2, 2026).** The laptop kit and `~/.bootstrap-os` get no more fixes. [Move off a local install](../docs/migrate-from-local.md).
+
 ```bash
 export BOOTSTRAP_OS_ROOT=/path/to/bootstrap
 export BOOTSTRAP_INSTANCE_ROOT=/path/to/one-company-instance
@@ -127,6 +135,8 @@ export BOOTSTRAP_INSTANCE_ROOT=/path/to/one-company-instance
 ---
 
 ## Client config (one connector)
+
+> **Deprecated (October 2, 2026).** The laptop kit and `~/.bootstrap-os` get no more fixes. [Move off a local install](../docs/migrate-from-local.md).
 
 See [`config/mcp.stdio.example.json`](config/mcp.stdio.example.json).
 
@@ -179,6 +189,8 @@ Never deploy this adapter to `v0-pirin-ai-founder-studio` or any pirin.ai host.
 ---
 
 ## Hosted vs self-host
+
+> **Deprecated (October 2, 2026).** The laptop kit and `~/.bootstrap-os` get no more fixes. [Move off a local install](../docs/migrate-from-local.md).
 
 | | Self-host kit | Hosted pin |
 |--|----------------|------------|

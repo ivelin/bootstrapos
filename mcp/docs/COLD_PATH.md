@@ -1,5 +1,7 @@
 # Cold path: Bootstrap OS MCP (non-maintainer)
 
+> **Deprecated (October 2, 2026).** The laptop kit and `~/.bootstrap-os` get no more fixes. [Move off a local install](../../docs/migrate-from-local.md).
+
 **Goal:** On a clean machine, go from zero → working multi-company control plane in under 15 minutes.  
 **Pass criteria for gate M2:** someone who did **not** write this code completes the path and records evidence below.
 
