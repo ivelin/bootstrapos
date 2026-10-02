@@ -268,15 +268,12 @@ def _as_initiatives(state: dict) -> list[dict]:
     return rows
 
 
+# OS vocabulary only. One company's words do not belong in this table.
 _PLAIN_SWAPS = (
-    (re.compile(r"\bGC/PM\b", re.I), "people running building projects"),
     (re.compile(r"\bP0\b"), ""),
     (re.compile(r"\bFAST\b"), "advisor agreement"),
     (re.compile(r"\bSOPA\b", re.I), "stock option paperwork"),
     (re.compile(r"\bSAFE\b"), "investment"),
-    (re.compile(r"\bApollo\b", re.I), "a list of people to call"),
-    (re.compile(r"\bMLS\b", re.I), "a listing of jobs"),
-    (re.compile(r"\btenancy\b", re.I), "use on their product"),
     (re.compile(r"\bengagements\b", re.I), "conversations"),
     (re.compile(r"\bengagement\b", re.I), "a conversation"),
     (re.compile(r"\bcustomer bets\b", re.I), "tries with buyers"),
@@ -284,9 +281,24 @@ _PLAIN_SWAPS = (
     (re.compile(r"\bcustomer checks?\b", re.I), "a try with buyers"),
     (re.compile(r"\bNDAs?\b", re.I), "a confidentiality promise"),
     (re.compile(r"\bBottleneck #1\b", re.I), "the main bet"),
-    (re.compile(r"\bforeign-entity filing\b", re.I), "registering to do business"),
-    (re.compile(r"\baward portal\b", re.I), "the place that lists public jobs"),
 )
+
+_PLAIN_FALLBACK = "the short name"
+# Shorthand is a shape: a slash of vowel-less groups, a vowel-less abbreviation,
+# or a long hyphen compound. One plain fallback. No company dictionary.
+_SLASH_ACRONYM = re.compile(
+    r"\b[BCDFGHJKLMNPQRSTVWXZ]{2,6}(?:/[BCDFGHJKLMNPQRSTVWXZ]{2,6})+\b",
+    re.I,
+)
+_VOWELLESS = re.compile(r"\b[BCDFGHJKLMNPQRSTVWXZ]{3,6}\b", re.I)
+_HYPHEN_JARGON = re.compile(r"\b[A-Za-z]{4,}(?:-[A-Za-z]{4,})+\b")
+_PERSON = re.compile(r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b")
+
+
+def _soften_shorthand(text: str) -> str:
+    text = _SLASH_ACRONYM.sub(_PLAIN_FALLBACK, text)
+    text = _VOWELLESS.sub(_PLAIN_FALLBACK, text)
+    return _HYPHEN_JARGON.sub(_PLAIN_FALLBACK, text)
 
 
 def _plain(value: object) -> str:
@@ -294,23 +306,26 @@ def _plain(value: object) -> str:
     text = re.sub(r"NDA is not Try", "", text, flags=re.I)
     for rule, repl in _PLAIN_SWAPS:
         text = rule.sub(repl, text)
+    text = _soften_shorthand(text)
     text = re.sub(r"\s+a confidentiality promise\b", ", a confidentiality promise", text, flags=re.I)
     return re.sub(r"\s+", " ", text).strip()
 
 
 def _gloss_people(text: str, seen: set[str]) -> str:
+    """First mention of any email (an owner on the board) gets the same plain gloss."""
+
     def repl(match: re.Match[str]) -> str:
-        email = match.group(0)
-        key = email.lower()
+        token = match.group(0)
+        key = token.lower()
         if key in seen:
-            return email
+            return token
         seen.add(key)
         rest = text[match.end() :]
         if re.match(r"\s*[A-Za-z]", rest):
-            return f"{email}, the founder,"
-        return f"{email}, the founder"
+            return f"{token}, the founder,"
+        return f"{token}, the founder"
 
-    return re.sub(r"\bfounder@example\.test\b", repl, text)
+    return _PERSON.sub(repl, text)
 
 
 def _cell(value: str) -> str:
