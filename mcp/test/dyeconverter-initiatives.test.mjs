@@ -142,7 +142,7 @@ describe("PR1.1 dyeconverter Heavy-locked initiatives map", () => {
     const nested = card.customerChecks[0].engagements.map((row) => row.id);
     assert.deepEqual(nested, ["dye-eng-oterra", "dye-eng-turing", "dye-eng-ocean-spray"]);
     const body = formatInitiativeCard(card).join("\n");
-    assert.match(body, /\| What we're working on \| Where it stands \| What happens next \| Who \|/);
+    assert.match(body, /\| Work \| State \| When \| Who \|/);
     assert.doesNotMatch(body, /NDA is not Try/);
     assert.doesNotMatch(body, /\bNDA\b/i);
     assert.doesNotMatch(body, /Ask \/ Do \/ Write back is a card/);
@@ -255,15 +255,16 @@ describe("PR1.1 dyeconverter Heavy-locked initiatives map", () => {
     assert.equal(seen.card.bottleneck.id, "dye-check-plant");
     assert.equal(seen.ideas[0].clocks.journeyPhase, 1);
     assert.equal(seen.ideas[0].clocks.currentGate, "hold");
-    assert.match(seen.spoken, /plants already buying pigment pay for conversion\/tenancy on one SKU/);
-    assert.match(seen.ideas[0].snapshot, /plants already buying pigment pay for conversion\/tenancy on one SKU/);
+    assert.match(seen.spoken, /plants already buying pigment pay for conversion\/use on their product on one SKU/);
+    assert.match(seen.ideas[0].snapshot, /plants already buying pigment pay for conversion\/use on their product on one SKU/);
+    assert.doesNotMatch(seen.spoken, /\btenancy\b/i);
     assert.match(seen.ideas[0].snapshot, /Oterra/);
     assert.doesNotMatch(seen.ideas[0].snapshot, /\bNDA\b/i);
     assert.equal(seen.ideas[0].constraintThisWeek, CONSTRAINT);
     assert.doesNotMatch(seen.ideas[0].snapshot, /journey phase \d/);
     assert.doesNotMatch(seen.ideas[0].snapshot, /gate hold/i);
     const spokenLead = seen.spoken.split("| · ·")[0];
-    assert.match(spokenLead, /plants already buying pigment pay for conversion\/tenancy on one SKU/);
+    assert.match(spokenLead, /plants already buying pigment pay for conversion\/use on their product on one SKU/);
     assert.doesNotMatch(spokenLead, /\bSAFE\b|\bFAST\b/);
   });
 });

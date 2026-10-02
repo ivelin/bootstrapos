@@ -17,7 +17,7 @@ Refuse. Cite the OS link.
 - Do not automate a step that should not exist (2.8.9) — https://github.com/ivelin/bootstrapos/blob/main/company-os/operating-system.md#house-rule-do-not-automate-a-step-that-should-not-exist
 - Legal paper cannot promote (2.8.10) — https://github.com/ivelin/bootstrapos/blob/main/company-os/operating-system.md#house-rule-legal-paper-cannot-promote
 - One founder control plane (2.8.18) — https://github.com/ivelin/bootstrapos/blob/main/company-os/operating-system.md#house-rule-one-founder-control-plane
-- Report card (2.8.22). Plain-words table: What we're working on | Where it stands | What happens next | Who. Stored kind stays customer_check — https://github.com/ivelin/bootstrapos/blob/main/company-os/operating-system.md#initiative-report-card
+- Report card (2.8.22). Table: Work | State | When | Who. Sections Bet, Other paths, Past bets, Background. Stored kind stays customer_check — https://github.com/ivelin/bootstrapos/blob/main/company-os/operating-system.md#initiative-report-card
 - Where are we (2.8.20) — https://github.com/ivelin/bootstrapos/blob/main/company-os/operating-system.md#spoken-card-founder-voice-default
 - Advisor ride-along is assumed, not observed (2.8.11) — https://github.com/ivelin/bootstrapos/blob/main/company-os/operating-system.md#house-rule-advisor-ride-along-is-assumed-not-observed
 - Unpaid weeks cannot promote (2.8.13) — https://github.com/ivelin/bootstrapos/blob/main/company-os/operating-system.md#house-rule-unpaid-weeks-cannot-promote

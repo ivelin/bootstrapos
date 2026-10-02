@@ -69,7 +69,7 @@ describe("OS house rules (adapter reminders)", () => {
     assert.match(pins, /initiative-report-card-2.8.19/);
     assert.match(pins, /spoken-card-2.8.20/);
     assert.match(pins, /spoken-label-customer-bet-2.8.21/);
-    assert.match(pins, /What we're working on \| Where it stands \| What happens next \| Who/);
+    assert.match(pins, /Work \| State \| When \| Who/);
     assert.doesNotMatch(pins, /\bP0\b/);
     assert.match(pins, /customer_check ranks first/);
     assert.match(pins, /Leave week labels off the page until they ask/);

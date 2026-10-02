@@ -167,15 +167,19 @@ export function isActivePayOrUse(row: { status?: string; measure?: string } | nu
   return row.status === "active" && ACTIVE_PAY_OR_USE.test(row.measure ?? "");
 }
 
-export const FOUNDER_CARD_HEADERS = [
-  "What we're working on",
-  "Where it stands",
-  "What happens next",
-  "Who",
-] as const;
+export const FOUNDER_CARD_HEADERS = ["Work", "State", "When", "Who"] as const;
+
+export const FOUNDER_CARD_HEADER_ROW = "| Work | State | When | Who |";
 
 export const FOUNDER_CARD_LEGEND =
-  "*🟢 working on it now · 🟡 waiting · ⚪ stopped or not started · 🔴 killed*";
+  "*🎯 the one thing that matters most · 🟢 working on it · 🟡 waiting · 🔴 dropped · ⚪ closed*";
+
+export const FOUNDER_CARD_SECTIONS = [
+  "**Bet**",
+  "**Other paths (not the main bet)**",
+  "**Past bets**",
+  "**Background**",
+] as const;
 
 /** Founder-facing card text. Internal enums are unchanged. */
 export function founderCardBannedHit(text: string): string | null {
@@ -185,6 +189,9 @@ export function founderCardBannedHit(text: string): string | null {
     /\bFAST\b/,
     /\bSOPA\b/i,
     /\bSAFE\b/,
+    /\bApollo\b/i,
+    /\bMLS\b/i,
+    /\btenancy\b/i,
     /\bengagements?\b/i,
     /\bcustomer bets?\b/i,
     /\bBottleneck #1\b/i,
@@ -199,10 +206,15 @@ export function founderCardBannedHit(text: string): string | null {
 }
 
 export function spokenBottleneckLineOf(text: string): string {
-  const bold = String(text ?? "").match(
+  const title = String(text ?? "").match(/^\*\*[^*]+\*\*:\s*(.+)$/m);
+  if (title) {
+    const sells = title[1].split(/\.\s*The goal is\s+/i)[0] ?? title[1];
+    return sells.trim().replace(/\.$/, "");
+  }
+  const old = String(text ?? "").match(
     /\*\*[^*]*biggest problem right now:\s*([^*]+?)\.?\*\*/,
   );
-  if (bold) return bold[1].trim().replace(/\.$/, "");
+  if (old) return old[1].trim().replace(/\.$/, "");
   const legacy = String(text ?? "").match(/^Bottleneck #1:\s*(.*)$/m);
   return legacy ? legacy[1].trim() : "";
 }
@@ -661,7 +673,7 @@ export function cardBodyOmitsProgress(cardText: string, progress: string[] | und
 /** Lead is the founder card through the legend. progress[] must not write it. */
 export function snapshotLeadOmitsProgress(snapshot: string, progress: string[] | undefined): boolean {
   if (!progress?.length) return true;
-  const headline = snapshot.search(/\*\*[^*]+biggest problem right now:/);
+  const headline = snapshot.search(/^\*\*[^*]+\*\*:/m);
   const legacy = snapshot.indexOf("WHERE ARE WE —");
   const start = headline >= 0 ? headline : legacy;
   if (start < 0) return progress.every((note) => !snapshot.includes(note));
@@ -678,15 +690,18 @@ export const GATE_HOLD_DUMP = /gate hold/i;
 const PLAIN_SWAPS: Array<[RegExp, string]> = [
   [/\bGC\/PM\b/gi, "people running building projects"],
   [/\bP0\b/g, ""],
-  [/\bFAST\b/g, "the paperwork an advisor shares"],
-  [/\bSOPA\b/gi, "the paperwork to raise money"],
-  [/\bSAFE\b/g, "the paperwork to raise money"],
+  [/\bFAST\b/g, "advisor agreement"],
+  [/\bSOPA\b/gi, "stock option paperwork"],
+  [/\bSAFE\b/g, "investment"],
+  [/\bApollo\b/gi, "a list of people to call"],
+  [/\bMLS\b/gi, "a listing of jobs"],
+  [/\btenancy\b/gi, "use on their product"],
   [/\bengagements\b/gi, "conversations"],
   [/\bengagement\b/gi, "a conversation"],
   [/\bcustomer bets\b/gi, "tries with buyers"],
   [/\bcustomer bet\b/gi, "a try with buyers"],
   [/\bcustomer checks?\b/gi, "a try with buyers"],
-  [/\bBottleneck #1\b/gi, "the biggest problem"],
+  [/\bBottleneck #1\b/gi, "the main bet"],
   [/\bforeign-entity filing\b/gi, "registering to do business"],
   [/\baward portal\b/gi, "the place that lists public jobs"],
   [/\bNDAs?\b/gi, "a confidentiality promise"],
@@ -788,7 +803,7 @@ function sanitizeSpoken(text: string): string {
 
 export function alsoMovingBodyOf(text: string): string | null {
   const lines = String(text ?? "").split("\n");
-  const start = lines.findIndex((line) => line.startsWith("| What we're working on |"));
+  const start = lines.findIndex((line) => line.startsWith("| Work |"));
   if (start >= 0) {
     return lines
       .slice(start + 2)
@@ -808,25 +823,22 @@ type SpokenRow = {
   who: string;
 };
 
-function possessive(label: string): string {
-  const name = label.trim() || "company";
-  return /s$/i.test(name) ? `${name}'` : `${name}'s`;
-}
-
-function statusDot(row: Initiative, bottleneck: boolean): string {
+function statusDot(row: Initiative): string {
   if (row.outcome === "killed") return "🔴";
   if (row.status === "closed") return "⚪";
-  if (bottleneck) return "🟢";
-  if (row.status === "waiting") return "🟡";
+  if (row.status === "waiting" || row.status === "proposed") return "🟡";
   if (row.status === "active") return "🟢";
   return "⚪";
 }
 
-function backgroundMark(row: Initiative): string {
+function workIcon(row: Initiative, bottleneck: boolean): string {
+  if (bottleneck) return "🎯 🤝";
   if (row.kind === "capital") return "💵";
   if (row.kind === "advisor") return "📄";
   if (row.kind === "legal") return "⚖️";
-  return statusDot(row, false);
+  if (row.outcome === "killed" || row.status === "closed") return "🔎";
+  if (row.kind === "engagement") return "🏢";
+  return "🤝";
 }
 
 function isBackground(row: Initiative): boolean {
@@ -843,7 +855,7 @@ function glossFor(row: Initiative): string {
 
 function looksLikeBareName(text: string): boolean {
   const words = text.split(/\s+/).filter(Boolean);
-  if (!words.length || words.length > 3) return false;
+  if (words.length !== 1) return false;
   if (/\b(the|a|an|for|and|with|from|sent|recorded|file|notes|tip|draft|plant|shop|company)\b/i.test(text)) {
     return false;
   }
@@ -872,29 +884,25 @@ function introduceEmails(text: string, seen: Set<string>): string {
   });
 }
 
-function happensNext(row: Initiative, bottleneck: boolean): string {
-  const next = plainCardText(row.next);
-  let measure = plainCardText(row.measure);
-  if (/^pay or use$/i.test(String(row.measure ?? ""))) measure = "someone pays or uses it";
-  if (!bottleneck) return next || "—";
-  const done = measure ? `Done when ${measure}` : "Done when this is finished";
-  if (next && next !== measure) return `${done}. ${next}`;
-  return done;
+function goalPhrase(measure: unknown): string {
+  const raw = typeof measure === "string" ? measure.trim() : "";
+  if (/^pay or use$/i.test(raw)) return "someone pays or uses it";
+  const text = plainCardText(measure).replace(/\.$/, "");
+  return text || "to name what done looks like";
 }
 
-function whereItStands(row: Initiative, nested: boolean): string {
+function whereItStands(row: Initiative): string {
   const last = plainCardText(row.last) || "Not started";
-  if (!nested) return last;
-  const dot = statusDot(row, false);
+  const dot = statusDot(row);
   return last.startsWith(dot) ? last : `${dot} ${last}`;
 }
 
 function workLabel(row: Initiative, opts: { bottleneck: boolean; depth: number; seen: Set<string> }): string {
   const premise = maybeIntroduce(plainCardText(row.premise) || "Untitled", glossFor(row), opts.seen);
-  if (opts.depth > 0) return `${"· · ".repeat(opts.depth)}${premise}`;
-  const icon = isBackground(row) ? backgroundMark(row) : statusDot(row, opts.bottleneck);
+  const icon = workIcon(row, opts.bottleneck);
   const body = opts.bottleneck ? `**${premise}**` : premise;
-  return `${icon} ${body}`;
+  const indent = opts.depth > 0 ? "· · ".repeat(opts.depth) : "";
+  return `${indent}${icon} ${body}`;
 }
 
 function pushSpokenRow(
@@ -904,43 +912,55 @@ function pushSpokenRow(
 ): void {
   out.push({
     work: introduceEmails(workLabel(row, opts), opts.seen),
-    state: introduceEmails(whereItStands(row, opts.depth > 0), opts.seen),
-    next: introduceEmails(happensNext(row, opts.bottleneck), opts.seen),
+    state: introduceEmails(whereItStands(row), opts.seen),
+    next: introduceEmails(plainCardText(row.next) || "—", opts.seen),
     who: "—",
   });
 }
 
-function spokenRows(card: InitiativeCard | null | undefined, alsoLive: string[], seen: Set<string>): SpokenRow[] {
-  const rows: SpokenRow[] = [];
+function spokenSections(
+  card: InitiativeCard | null | undefined,
+  alsoLive: string[],
+  seen: Set<string>,
+): { bet: SpokenRow[]; other: SpokenRow[]; past: SpokenRow[]; background: SpokenRow[] } {
+  const bet: SpokenRow[] = [];
+  const other: SpokenRow[] = [];
+  const past: SpokenRow[] = [];
+  const background: SpokenRow[] = [];
   const checks = card?.customerChecks ?? [];
   const footer = card?.footer ?? [];
   const bottleneck = card?.bottleneck ?? null;
   const rendered = new Set<string>();
   const live = checks.filter((row) => row.status !== "closed" && row.outcome !== "killed");
 
-  const emit = (check: CustomerCheckRow, depth: number, isBottleneck: boolean) => {
+  const emit = (
+    bucket: SpokenRow[],
+    check: CustomerCheckRow,
+    depth: number,
+    isBottleneck: boolean,
+  ) => {
     if (rendered.has(check.id)) return;
     rendered.add(check.id);
     const shown = isBottleneck && bottleneck ? { ...check, ...bottleneck, engagements: check.engagements } : check;
-    pushSpokenRow(rows, shown, { bottleneck: isBottleneck, depth, seen });
+    pushSpokenRow(bucket, shown, { bottleneck: isBottleneck, depth, seen });
     for (const child of check.engagements ?? []) {
       rendered.add(child.id);
-      pushSpokenRow(rows, child, { bottleneck: false, depth: depth + 1, seen });
+      pushSpokenRow(bucket, child, { bottleneck: false, depth: depth + 1, seen });
     }
     for (const follow of live) {
-      if (follow.parentId === check.id) emit(follow, depth + 1, false);
+      if (follow.parentId === check.id) emit(bucket, follow, depth + 1, false);
     }
   };
 
   if (bottleneck && bottleneck.kind === "customer_check") {
     const match = checks.find((row) => row.id === bottleneck.id);
-    emit(match ?? { ...bottleneck, engagements: [] }, 0, true);
+    emit(bet, match ?? { ...bottleneck, engagements: [] }, 0, true);
   } else if (bottleneck) {
     rendered.add(bottleneck.id);
-    pushSpokenRow(rows, bottleneck, { bottleneck: true, depth: 0, seen });
+    pushSpokenRow(bet, bottleneck, { bottleneck: true, depth: 0, seen });
   }
 
-  for (const check of live) emit(check, 0, false);
+  for (const check of live) emit(other, check, 0, false);
 
   const rest = footer.filter((row) => !rendered.has(row.id));
   const liveOrphans = rest.filter(
@@ -948,37 +968,49 @@ function spokenRows(card: InitiativeCard | null | undefined, alsoLive: string[],
   );
   for (const row of liveOrphans) {
     rendered.add(row.id);
-    pushSpokenRow(rows, row, { bottleneck: false, depth: row.parentId ? 1 : 0, seen });
+    pushSpokenRow(other, row, { bottleneck: false, depth: row.parentId ? 1 : 0, seen });
   }
 
   for (const name of alsoLive) {
     const label = plainCardText(name);
     if (!label) continue;
-    rows.push({ work: `🟢 **${label}**`, state: "In play", next: "On its own", who: "—" });
+    other.push({ work: `🤝 **${label}**`, state: "🟢 In play", next: "On its own", who: "—" });
   }
 
   const remaining = footer.filter((row) => !rendered.has(row.id));
-  const past = remaining.filter((row) => !isBackground(row));
-  const background = remaining.filter((row) => isBackground(row));
-  for (const row of past) pushSpokenRow(rows, row, { bottleneck: false, depth: row.parentId ? 1 : 0, seen });
-  for (const row of background) pushSpokenRow(rows, row, { bottleneck: false, depth: 0, seen });
+  for (const row of remaining.filter((item) => !isBackground(item))) {
+    pushSpokenRow(past, row, { bottleneck: false, depth: row.parentId ? 1 : 0, seen });
+  }
+  for (const row of remaining.filter((item) => isBackground(item))) {
+    pushSpokenRow(background, row, { bottleneck: false, depth: 0, seen });
+  }
 
-  if (!rows.length) {
-    rows.push({
-      work: "⚪ Nothing on the board yet",
-      state: "Not started",
+  if (!bet.length) {
+    bet.push({
+      work: "🎯 🤝 **Nothing on the board yet**",
+      state: "⚪ Not started",
       next: "Name what done looks like",
       who: "—",
     });
   }
-  return rows;
+  return { bet, other, past, background };
 }
 
-function fixItLine(row: Initiative | null, killed: boolean): string {
-  if (killed) return "To fix it, leave this stopped.";
+function sectionLines(title: string, rows: SpokenRow[]): string[] {
+  if (!rows.length) return [];
+  return [
+    `| ${title} | | | |`,
+    ...rows.map(
+      (row) => `| ${cardCell(row.work)} | ${cardCell(row.state)} | ${cardCell(row.next)} | ${cardCell(row.who)} |`,
+    ),
+  ];
+}
+
+function nextSentence(row: Initiative | null, killed: boolean): string {
+  if (killed) return "Leave this stopped.";
   const next = row ? plainCardText(row.next) : "";
-  if (!next) return "To fix it, name who does the next step.";
-  return `To fix it, ${next.endsWith(".") ? next : `${next}.`}`;
+  if (!next) return "Name who does the next step.";
+  return next.endsWith(".") ? next : `${next}.`;
 }
 
 /** Founder-voice card. No journey integers, gate labels, WIP, OS version, or kind slugs. */
@@ -1004,28 +1036,39 @@ export function formatSpokenCard(input: {
     allowPaperBottleneck: Boolean(input.allowPaperBottleneck),
   };
   const seen = new Set<string>();
-  let fact = plainCardText(spokenBottleneckPremise(card, input.constraintThisWeek, opts));
+  let sells = plainCardText(spokenBottleneckPremise(card, input.constraintThisWeek, opts));
+  let goal = goalPhrase(card?.bottleneck?.measure);
   if (killed) {
-    fact = plainCardText((input.killedCard ?? "").replace(/^☠\s*/, "")) || "Killed";
-  } else if (!fact || fact === "none yet") {
-    fact = "nothing is in play yet";
+    sells = plainCardText((input.killedCard ?? "").replace(/^☠\s*/, "")) || "Killed";
+    goal = "to leave this stopped";
+  } else if (!sells || sells === "none yet") {
+    sells = "nothing is in play yet";
+    goal = "to name what done looks like";
   }
-  fact = fact.replace(/\.$/, "");
-  const headline = `**${possessive(label)} biggest problem right now: ${fact}.**`;
-  const fix = introduceEmails(fixItLine(killed ? null : card?.bottleneck ?? null, killed), seen);
+  sells = sells.replace(/\.$/, "");
+  const headline = introduceEmails(`**${label}**: ${sells}. The goal is ${goal}.`, seen);
   const alsoLive = (input.alsoLive ?? []).map((name) => name.trim()).filter(Boolean);
-  const table = spokenRows(card, alsoLive, seen).map(
-    (row) => `| ${cardCell(row.work)} | ${cardCell(row.state)} | ${cardCell(row.next)} | ${cardCell(row.who)} |`,
+  const sections = spokenSections(card, alsoLive, seen);
+  const table = [
+    ...sectionLines(FOUNDER_CARD_SECTIONS[0], sections.bet),
+    ...sectionLines(FOUNDER_CARD_SECTIONS[1], sections.other),
+    ...sectionLines(FOUNDER_CARD_SECTIONS[2], sections.past),
+    ...sectionLines(FOUNDER_CARD_SECTIONS[3], sections.background),
+  ];
+  const next = introduceEmails(
+    `**Next:** ${nextSentence(killed ? null : card?.bottleneck ?? null, killed)}`,
+    seen,
   );
   const lines = [
     headline,
-    fix,
     "",
-    `| ${FOUNDER_CARD_HEADERS.join(" | ")} |`,
+    FOUNDER_CARD_HEADER_ROW,
     "|---|---|---|---|",
     ...table,
     "",
     FOUNDER_CARD_LEGEND,
+    "",
+    next,
   ];
   return sanitizeSpoken(lines.join("\n")).trim();
 }

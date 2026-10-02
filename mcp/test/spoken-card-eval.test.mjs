@@ -163,21 +163,35 @@ function alsoMovingBody(spoken) {
   return alsoMovingBodyOf(spoken) ?? "";
 }
 
+const SECTION_ORDER = ["Bet", "Other paths (not the main bet)", "Past bets", "Background"];
+
 function assertFounderCard(text) {
-  const lines = String(text).split("\n").filter((line) => line.trim());
-  assert.match(lines[0], /^\*\*.+biggest problem right now:/);
-  assert.match(lines[1], /^To fix it,/);
-  const headers = String(text)
-    .split("\n")
-    .filter((line) => line.startsWith("| What we're working on |"));
+  const raw = String(text);
+  const lines = raw.split("\n").filter((line) => line.trim());
+  assert.match(lines[0], /^\*\*[^*]+\*\*: .+ The goal is .+\.$/);
+  assert.doesNotMatch(lines[0], /biggest problem right now/);
+  assert.doesNotMatch(raw, /\| What we're working on \|/);
+  const headers = raw.split("\n").filter((line) => line.startsWith("| Work |"));
   assert.equal(headers.length, 1);
-  assert.equal(headers[0], "| What we're working on | Where it stands | What happens next | Who |");
-  assert.equal(lines.at(-1), FOUNDER_CARD_LEGEND);
-  assert.equal(founderCardBannedHit(text), null);
-  assert.doesNotMatch(text, /^\s*\**\s*Next\s*:/im);
-  assert.doesNotMatch(text, /\bP0\b/);
-  assert.doesNotMatch(text, /Bottleneck #1/);
-  assert.doesNotMatch(text, /^\| 🟢 \|/m);
+  assert.equal(headers[0], "| Work | State | When | Who |");
+  assert.equal(lines.at(-2), FOUNDER_CARD_LEGEND);
+  assert.match(lines.at(-1), /^\*\*Next:\*\* .+/);
+  assert.equal(founderCardBannedHit(raw), null);
+  assert.doesNotMatch(raw, /\bP0\b/);
+  assert.doesNotMatch(raw, /Bottleneck #1/);
+  const sections = [...raw.matchAll(/^\| \*\*(Bet|Other paths \(not the main bet\)|Past bets|Background)\*\* \| \| \| \|$/gm)].map(
+    (hit) => hit[1],
+  );
+  assert.equal(sections[0], "Bet");
+  let last = -1;
+  for (const name of sections) {
+    const idx = SECTION_ORDER.indexOf(name);
+    assert.ok(idx > last, `section out of order: ${name}`);
+    last = idx;
+  }
+  const afterBet = raw.slice(raw.indexOf("| **Bet** | | | |")).split("\n").slice(1);
+  const top = afterBet.find((line) => line.startsWith("|") && !line.startsWith("|---"));
+  assert.match(top ?? "", /^\| 🎯 /);
 }
 
 function assertNoClockDump(text) {
@@ -210,7 +224,7 @@ describe("spoken-card eval A format", () => {
     const seen = await store.getJourney(bearer("founder@example.test"), { companySlug: "alpha" });
     assert.equal(seen.ok, true);
     assert.equal(typeof seen.spoken, "string");
-    assert.match(seen.spoken, /^\*\*alpha's biggest problem right now:/);
+    assert.match(seen.spoken, /^\*\*alpha\*\*:/);
     assertFounderCard(seen.spoken);
     assertFounderCard(seen.ideas[0].snapshot);
     assertNoClockDump(seen.spoken);
@@ -281,10 +295,10 @@ describe("spoken-card eval B grounding", () => {
     assert.match(footer, /side file for counsel notes/);
     assert.match(footer, /office hours tip recorded/);
     const rows = (alsoMovingBody(seen.spoken) ?? "").split("\n");
-    assert.match(rows[0], /operators who already pay for dispatch at bravo plant/);
+    assert.match(rows.find((row) => row.includes("🎯")) ?? "", /operators who already pay for dispatch at bravo plant/);
     assert.match(seen.spoken, /· · /);
     assert.match(seen.spoken, /bravo plant/);
-    assert.doesNotMatch(rows[0], /side file for a term note/);
+    assert.doesNotMatch(rows.find((row) => row.includes("🎯")) ?? "", /side file for a term note/);
     assertFounderCard(seen.spoken);
     assertFounderCard(seen.ideas[0].snapshot);
     assertAlsoMovingMatch(seen.spoken, seen.ideas[0].snapshot);
@@ -299,10 +313,10 @@ describe("spoken-card eval B grounding", () => {
     });
     const seen = await store.getJourney(bearer("founder@example.test"), { companySlug: "alpha" });
     const rows = (alsoMovingBody(seen.spoken) ?? "").split("\n");
-    assert.match(rows[0], /operators who already pay for dispatch at bravo plant/);
+    assert.match(rows.find((row) => row.includes("🎯")) ?? "", /operators who already pay for dispatch at bravo plant/);
     assert.match(seen.spoken, /bravo plant/);
     assert.match(seen.spoken, /confidentiality promise/);
-    assert.doesNotMatch(rows[0], /side file for counsel notes/);
+    assert.doesNotMatch(rows.find((row) => row.includes("🎯")) ?? "", /side file for counsel notes/);
     assert.match(alsoMovingBody(seen.spoken), /side file for counsel notes/);
     assert.doesNotMatch(seen.spoken, /\bNDA\b/i);
     assert.equal(seen.card.bottleneck.kind, "customer_check");
@@ -380,7 +394,7 @@ describe("spoken-card eval B grounding", () => {
       constraintThisWeek: paperConstraint,
       allowPaperBottleneck: true,
     });
-    assert.match(spokenBottleneckLineOf(override), /paperwork to raise money/);
+    assert.match(spokenBottleneckLineOf(override), /stock option paperwork/);
     assertFounderCard(override);
   });
 
@@ -467,8 +481,9 @@ describe("spoken-card eval B grounding", () => {
     );
     const seen = await store.getJourney(bearer("founder@example.test"), { companySlug: "alpha" });
     assert.ok(seen.ideas.filter((idea) => idea.clocks.currentGate !== "kill").length >= 2);
-    assert.match(seen.spoken, /🟢 \*\*bravo\*\*/);
-    assert.match(seen.spoken, /^\*\*alpha's biggest problem right now:/);
+    assert.match(seen.spoken, /🤝 \*\*bravo\*\*/);
+    assert.match(seen.spoken, /Other paths \(not the main bet\)/);
+    assert.match(seen.spoken, /^\*\*alpha\*\*:/);
     assertFounderCard(seen.spoken);
   });
 });
@@ -637,11 +652,37 @@ describe("spoken-card plain words", () => {
     const spoken = formatSpokenCard({ label: "alpha", card });
     assertFounderCard(spoken);
     assert.equal(spoken.split("charlie, a company we're talking with").length - 1, 1);
-    assert.match(spoken, /· · charlie, a company we're talking with/);
+    assert.match(spoken, /· · 🏢 charlie, a company we're talking with/);
     assert.match(spoken, /founder@example\.test, the founder, calls/);
     assert.equal(spoken.split("the founder").length - 1, 1);
-    assert.match(spoken, /Done when one paid weekly report used in their shop/);
+    assert.match(spoken, /The goal is one paid weekly report used in their shop/);
+    assert.match(spoken, /^\| 🎯 /m);
     assert.equal(card.customerChecks[0].engagements[0].kind, "engagement");
+  });
+});
+
+describe("spoken-card rejects the old shape", () => {
+  it("fails the old headline, old columns, a missing Next line, a bad section, a missing target, and a banned word", () => {
+    const good = [
+      "**alpha**: alpha sells dispatch help to plants. The goal is one plant paying.",
+      "",
+      "| Work | State | When | Who |",
+      "|---|---|---|---|",
+      "| **Bet** | | | |",
+      "| 🎯 🤝 **Get one plant to pay** | 🟢 No plant has paid yet | Talk this week | — |",
+      "",
+      "*🎯 the one thing that matters most · 🟢 working on it · 🟡 waiting · 🔴 dropped · ⚪ closed*",
+      "**Next:** founder@example.test talks this week.",
+    ].join("\n");
+    assert.doesNotThrow(() => assertFounderCard(good));
+    assert.throws(() => assertFounderCard(good.replace("**alpha**:", "**alpha's biggest problem right now:")));
+    assert.throws(() =>
+      assertFounderCard(good.replace("| Work | State | When | Who |", "| What we're working on | Where it stands | What happens next | Who |")),
+    );
+    assert.throws(() => assertFounderCard(good.replace(/\n\*\*Next:\*\*.*$/, "")));
+    assert.throws(() => assertFounderCard(good.replace("| **Bet** |", "| **Main bet** |")));
+    assert.throws(() => assertFounderCard(good.replace("🎯 ", "")));
+    assert.throws(() => assertFounderCard(`${good}\nP0 still here`));
   });
 });
 
@@ -659,9 +700,10 @@ describe("spoken-card eval D CI wires", () => {
     const os = fs.readFileSync(path.join(REPO_ROOT, "company-os/operating-system.md"), "utf8");
     assert.match(
       os,
-      /Eval is CI\. Headline names the bottleneck first\. One table\. Legend last\. No Next line\. Background rows stay when supporting or footer rows exist\. Snapshot matches the spoken bottleneck line\. Killed cards are killed\./,
+      /Eval is CI\. Title names what it sells and the goal\. One table\. Sections in order\. Target mark on the top bet\. Legend, then a Next line\. Background rows stay when supporting or footer rows exist\. Snapshot matches the spoken bottleneck line\. Killed cards are killed\./,
     );
-    assert.match(os, /What we're working on \| Where it stands \| What happens next \| Who/);
+    assert.match(os, /Work \| State \| When \| Who/);
+    assert.doesNotMatch(os, /biggest problem right now/);
     assert.match(os, /\| 2\.8\.22 \|/);
     const ciSh = fs.readFileSync(path.join(REPO_ROOT, "scripts/ci.sh"), "utf8");
     assert.match(ciSh, /spoken-card-eval\.test\.mjs/);

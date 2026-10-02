@@ -271,16 +271,19 @@ def _as_initiatives(state: dict) -> list[dict]:
 _PLAIN_SWAPS = (
     (re.compile(r"\bGC/PM\b", re.I), "people running building projects"),
     (re.compile(r"\bP0\b"), ""),
-    (re.compile(r"\bFAST\b"), "the paperwork an advisor shares"),
-    (re.compile(r"\bSOPA\b", re.I), "the paperwork to raise money"),
-    (re.compile(r"\bSAFE\b"), "the paperwork to raise money"),
+    (re.compile(r"\bFAST\b"), "advisor agreement"),
+    (re.compile(r"\bSOPA\b", re.I), "stock option paperwork"),
+    (re.compile(r"\bSAFE\b"), "investment"),
+    (re.compile(r"\bApollo\b", re.I), "a list of people to call"),
+    (re.compile(r"\bMLS\b", re.I), "a listing of jobs"),
+    (re.compile(r"\btenancy\b", re.I), "use on their product"),
     (re.compile(r"\bengagements\b", re.I), "conversations"),
     (re.compile(r"\bengagement\b", re.I), "a conversation"),
     (re.compile(r"\bcustomer bets\b", re.I), "tries with buyers"),
     (re.compile(r"\bcustomer bet\b", re.I), "a try with buyers"),
     (re.compile(r"\bcustomer checks?\b", re.I), "a try with buyers"),
     (re.compile(r"\bNDAs?\b", re.I), "a confidentiality promise"),
-    (re.compile(r"\bBottleneck #1\b", re.I), "the biggest problem"),
+    (re.compile(r"\bBottleneck #1\b", re.I), "the main bet"),
     (re.compile(r"\bforeign-entity filing\b", re.I), "registering to do business"),
     (re.compile(r"\baward portal\b", re.I), "the place that lists public jobs"),
 )
@@ -315,29 +318,34 @@ def _cell(value: str) -> str:
     return text or "—"
 
 
-def _dot(row: dict, bottleneck: bool) -> str:
+def _dot(row: dict) -> str:
     if str(row.get("outcome") or "") == "killed":
         return "🔴"
-    if str(row.get("status") or "") == "closed":
+    status = str(row.get("status") or "")
+    if status == "closed":
         return "⚪"
-    if bottleneck:
-        return "🟢"
-    if str(row.get("status") or "") == "waiting":
+    if status in ("waiting", "proposed"):
         return "🟡"
-    if str(row.get("status") or "") == "active":
+    if status == "active":
         return "🟢"
     return "⚪"
 
 
-def _kind_mark(row: dict) -> str:
+def _work_icon(row: dict, bottleneck: bool) -> str:
     kind = str(row.get("kind") or "")
+    if bottleneck:
+        return "🎯 🤝"
     if kind == "capital":
         return "💵"
     if kind == "advisor":
         return "📄"
     if kind == "legal":
         return "⚖️"
-    return _dot(row, False)
+    if str(row.get("outcome") or "") == "killed" or str(row.get("status") or "") == "closed":
+        return "🔎"
+    if kind == "engagement":
+        return "🏢"
+    return "🤝"
 
 
 def _card_lines(state: dict) -> list[str]:
@@ -363,23 +371,27 @@ def _card_lines(state: dict) -> list[str]:
             nested.setdefault(str(row["parentId"]), []).append(row)
         elif row.get("kind") != "customer_check" or str(row.get("status") or "") == "closed":
             footer.append(row)
-    fact = _plain(bottleneck.get("premise")) if bottleneck else ""
-    if not fact or fact == "none yet":
-        fact = "nothing is in play yet"
-    fact = fact.rstrip(".")
+    sells = _plain(bottleneck.get("premise")) if bottleneck else ""
+    if not sells or sells == "none yet":
+        sells = "nothing is in play yet"
+        goal = "to name what done looks like"
+    else:
+        measure = _plain(bottleneck.get("measure")) if bottleneck else ""
+        if str((bottleneck or {}).get("measure") or "").strip().lower() == "pay or use":
+            measure = "someone pays or uses it"
+        goal = measure.rstrip(".") or "to name what done looks like"
+    sells = sells.rstrip(".")
     nxt = _plain(bottleneck.get("next")) if bottleneck else ""
-    fix = f"To fix it, {nxt if nxt.endswith('.') else nxt + '.'}" if nxt else "To fix it, name who does the next step."
+    next_line = nxt if nxt.endswith(".") else (f"{nxt}." if nxt else "Name who does the next step.")
     seen: set[str] = set()
-    fact = _gloss_people(fact, seen)
-    fix = _gloss_people(fix, seen)
-    possessive = f"{label}'" if label.lower().endswith("s") else f"{label}'s"
+    headline = _gloss_people(f"**{label}**: {sells}. The goal is {goal}.", seen)
     lines = [
-        f"**{possessive} biggest problem right now: {fact}.**",
-        fix,
+        headline,
         "",
-        "| What we're working on | Where it stands | What happens next | Who |",
+        "| Work | State | When | Who |",
         "|---|---|---|---|",
     ]
+    buckets: dict[str, list[str]] = {"bet": [], "other": [], "past": [], "background": []}
 
     def work_for(row: dict, bottleneck_row: bool, depth: int) -> str:
         premise = _plain(row.get("premise")) or "Untitled"
@@ -396,60 +408,70 @@ def _card_lines(state: dict) -> list[str]:
             gloss
             and key not in seen
             and "," not in premise
-            and 0 < len(words) <= 3
+            and len(words) == 1
             and not re.search(r"\b(plant|shop|company|file|notes|tip|draft)\b", premise, re.I)
         ):
             seen.add(key)
             premise = f"{premise}, {gloss}"
         else:
             seen.add(key)
-        if depth:
-            return f"{'· · ' * depth}{premise}"
-        icon = _kind_mark(row) if kind in ("capital", "legal", "advisor") else _dot(row, bottleneck_row)
+        icon = _work_icon(row, bottleneck_row)
         body = f"**{premise}**" if bottleneck_row else premise
-        return f"{icon} {body}"
+        indent = "· · " * depth if depth else ""
+        return f"{indent}{icon} {body}"
 
-    def emit(row: dict, bottleneck_row: bool, depth: int) -> None:
+    def emit(bucket: str, row: dict, bottleneck_row: bool, depth: int) -> None:
         last = _plain(row.get("last")) or "Not started"
-        if depth:
-            dot = _dot(row, False)
-            if not last.startswith(dot):
-                last = f"{dot} {last}"
+        dot = _dot(row)
+        if not last.startswith(dot):
+            last = f"{dot} {last}"
         nxt_cell = _plain(row.get("next")) or "—"
-        if bottleneck_row:
-            measure = _plain(row.get("measure"))
-            if str(row.get("measure") or "").strip().lower() == "pay or use":
-                measure = "someone pays or uses it"
-            done = f"Done when {measure}" if measure else "Done when this is finished"
-            nxt_cell = f"{done}. {nxt_cell}" if nxt_cell and nxt_cell != measure else done
-        lines.append(
+        buckets[bucket].append(
             f"| {_cell(_gloss_people(work_for(row, bottleneck_row, depth), seen))} | {_cell(_gloss_people(last, seen))} | {_cell(_gloss_people(nxt_cell, seen))} | — |"
         )
 
     rendered: set[str] = set()
     if bottleneck:
-        emit(bottleneck, True, 0)
+        emit("bet", bottleneck, True, 0)
         rendered.add(str(bottleneck.get("id")))
         for child in nested.get(str(bottleneck.get("id")), []):
-            emit(child, False, 1)
+            emit("bet", child, False, 1)
             rendered.add(str(child.get("id")))
     for check in open_checks:
         if str(check.get("id")) in rendered:
             continue
-        emit(check, False, 0)
+        emit("other", check, False, 0)
         rendered.add(str(check.get("id")))
         for child in nested.get(str(check.get("id")), []):
-            emit(child, False, 1)
+            emit("other", child, False, 1)
             rendered.add(str(child.get("id")))
     past = [r for r in footer if str(r.get("id")) not in rendered and r.get("kind") not in ("capital", "legal", "advisor")]
     background = [r for r in footer if str(r.get("id")) not in rendered and r.get("kind") in ("capital", "legal", "advisor")]
     for row in past:
-        emit(row, False, 1 if row.get("parentId") else 0)
+        emit("past", row, False, 1 if row.get("parentId") else 0)
     for row in background:
-        emit(row, False, 0)
-    if len(lines) == 5:
-        lines.append("| ⚪ Nothing on the board yet | Not started | Name what done looks like | — |")
-    lines.extend(["", "*🟢 working on it now · 🟡 waiting · ⚪ stopped or not started · 🔴 killed*"])
+        emit("background", row, False, 0)
+    if not buckets["bet"]:
+        buckets["bet"].append("| 🎯 🤝 **Nothing on the board yet** | ⚪ Not started | Name what done looks like | — |")
+    sections = (
+        ("**Bet**", "bet"),
+        ("**Other paths (not the main bet)**", "other"),
+        ("**Past bets**", "past"),
+        ("**Background**", "background"),
+    )
+    for title, key in sections:
+        if not buckets[key]:
+            continue
+        lines.append(f"| {title} | | | |")
+        lines.extend(buckets[key])
+    lines.extend(
+        [
+            "",
+            "*🎯 the one thing that matters most · 🟢 working on it · 🟡 waiting · 🔴 dropped · ⚪ closed*",
+            "",
+            _gloss_people(f"**Next:** {next_line}", seen),
+        ]
+    )
     return lines
 
 

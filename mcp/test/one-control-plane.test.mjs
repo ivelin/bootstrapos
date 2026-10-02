@@ -225,8 +225,9 @@ describe("OS 2.8.18 one founder control plane", () => {
     assert.equal(seen.engagements[0].kind, "nda");
     assert.equal(seen.ideas[0].engagements[0].account, "bravo plant");
     const snap = seen.ideas[0].snapshot;
-    assert.match(seen.spoken, /biggest problem right now/);
-    assert.match(snap, /biggest problem right now/);
+    assert.match(seen.spoken, /The goal is/);
+    assert.match(snap, /The goal is/);
+    assert.match(seen.spoken, /\*\*Next:\*\*/);
     assert.doesNotMatch(snap, /journey phase \d/);
     assert.doesNotMatch(snap, /PRIMARY \(customer bet/);
     assert.doesNotMatch(snap, /Relationship shelf/);

@@ -49,9 +49,10 @@ try {
 
   // 6. Status plain + house rules
   const plain = whereAreWePlain(readState());
-  assert.match(plain, /\*\*charlie's biggest problem right now:/);
-  assert.match(plain, /\| What we're working on \| Where it stands \| What happens next \| Who \|/);
-  assert.match(plain, /\*🟢 working on it now/);
+  assert.match(plain, /\*\*charlie\*\*:/);
+  assert.match(plain, /\| Work \| State \| When \| Who \|/);
+  assert.match(plain, /\*🎯 the one thing that matters most/);
+  assert.match(plain, /\*\*Next:\*\*/);
   assert.doesNotMatch(plain, /Journey:|gate hold|customer bet|\bP0\b/i);
 
   const wherePy = path.join(

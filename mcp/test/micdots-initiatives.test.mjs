@@ -184,7 +184,7 @@ describe("PR2.1 micdots Heavy-locked initiatives map", () => {
     const footerIds = card.footer.map((row) => row.id);
     assert.equal(footerIds.includes("mic-eng-granite"), false);
     const body = formatInitiativeCard(card).join("\n");
-    assert.match(body, /\| What we're working on \| Where it stands \| What happens next \| Who \|/);
+    assert.match(body, /\| Work \| State \| When \| Who \|/);
     assert.doesNotMatch(body, /WIP 1 on customer_check/);
     assert.match(body, /Granite Design intro/);
     assert.equal(GRANITE.killLine, "intro is not Try");
