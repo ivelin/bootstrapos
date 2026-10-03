@@ -6,6 +6,8 @@ This repo is the operating board for a company: who you are betting on, what is 
 
 Use this repo as the **source of truth** for process and control. Point your AI here and apply what fits *your* startup. Instantiate blank files in *your* product repo only when you want them — fill only *your* thesis, customer groups, scores, and open questions.
 
+> **Local deployment is deprecated as of October 2, 2026.** The laptop kit and `~/.bootstrap-os` get no more fixes, features, or evals. Local-only files for that path will be removed around October 16, 2026. The supported paths are the [hosted MCP](https://mcp.bootstrap.pirin.ai/mcp) and the [Bootstrap Bill template](docs/install-bill.md). [Move off a local install](docs/migrate-from-local.md).
+
 | | |
 |--|--|
 | **Version** | Blueprint + live runtime **v2.8.19** · hosted pin is the Pirin write plane · OSS `mcp/` is the self-host kit |
@@ -75,9 +77,13 @@ Hands-on page: [Install Bootstrap OS](https://pirin.ai/bootstrap-os).
 
 ### 2. Instantiate files (when you want them in your repo)
 
+> **Deprecated (October 2, 2026).** The laptop kit and `~/.bootstrap-os` get no more fixes. [Move off a local install](docs/migrate-from-local.md).
+
 Optional. Script or hand copy — [Install](#install-in-your-company). Optional Grok Build workflows live in [`.grok/workflows/`](.grok/workflows/) (`company-operating-loop`, `user-research`, `ready-for-human-eyes`) if present — same rung, not the only front door. One idea per repo is fine; several ideas each get their own board.
 
 ### 3. Self-host kit (optional)
+
+> **Deprecated (October 2, 2026).** The laptop kit and `~/.bootstrap-os` get no more fixes. [Move off a local install](docs/migrate-from-local.md).
 
 Fork and run [`mcp/`](mcp/) yourself: stdio on your disk (`initCompany()` / `~/.bootstrap-os`) or your own Vercel + Supabase. That kit is not the Pirin-supported mentee source of record. Path 1 and path 2 stay enough. Several ideas are allowed; rank and kill per board. Markdown remains the constitution. MCP never writes `company-os/` template files.
 
@@ -100,6 +106,8 @@ Invited founders who want Bill: [Install Bootstrap Bill](docs/install-bill.md). 
 ---
 
 ## Install in your company
+
+> **Deprecated (October 2, 2026).** The laptop kit and `~/.bootstrap-os` get no more fixes. [Move off a local install](docs/migrate-from-local.md).
 
 Optional (path 2). From this repo:
 

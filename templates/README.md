@@ -1,5 +1,7 @@
 # Blank instance files
 
+> **Deprecated (October 2, 2026).** The laptop kit and `~/.bootstrap-os` get no more fixes. [Move off a local install](../docs/migrate-from-local.md).
+
 Copy these into *your* company repo. The one-command path from the template root:
 
 ```text

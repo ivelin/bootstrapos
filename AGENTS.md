@@ -2,6 +2,8 @@
 
 This repository is the **portable Bootstrap OS template** only.
 
+> **Deprecated (October 2, 2026).** The laptop kit and `~/.bootstrap-os` get no more fixes. [Move off a local install](docs/migrate-from-local.md).
+
 1. Prefer editing instance examples under product repos or a self-host data root, not this template, unless the founder explicitly approved a **template** change.
 2. Never add a filled product thesis, beachhead market, or company scores into `company-os/` — those belong in consumer instances (`docs/company-os/applied-here.md`, `company/state/`, or `BOOTSTRAP_DATA_ROOT/instances/<id>/`).
 3. When helping a founder adopt the OS, present the Day-0 order from [README.md](README.md#how-to-use-this-pick-one):

@@ -1,5 +1,7 @@
 # Optional Grok Build workflows (path 2)
 
+> **Deprecated (October 2, 2026).** The laptop kit and `~/.bootstrap-os` get no more fixes. [Move off a local install](../docs/migrate-from-local.md).
+
 These Rhai workflows are an **optional** way to run the Bootstrap OS loop in [Grok Build](https://grok.x.ai). They are not the constitution.
 
 **Markdown wins.** `company-os/operating-system.md`, `live-runtime.md`, and `ai-instructions.md` are the source of truth. If a workflow and the OS disagree, follow the OS.

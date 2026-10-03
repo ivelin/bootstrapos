@@ -1,5 +1,7 @@
 # Company OS instance (index)
 
+> **Deprecated (October 2, 2026).** The laptop kit and `~/.bootstrap-os` get no more fixes. [Move off a local install](../../docs/migrate-from-local.md).
+
 **This is the living instance**, not the portable template.
 
 | Artifact | Path |

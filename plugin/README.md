@@ -112,6 +112,8 @@ Optional `${BOOTSTRAP_MCP_URL}` override; it defaults to the collab pin. Read to
 
 **(c) Local copy**
 
+> **Deprecated (October 2, 2026).** The laptop kit and `~/.bootstrap-os` get no more fixes. [Move off a local install](../docs/migrate-from-local.md).
+
 Copy this `plugin/` folder to `~/.cursor/plugins/local/bootstrap-os`. Restart Cursor (or Developer: Reload Window).
 
 ## Feedback

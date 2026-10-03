@@ -19,6 +19,8 @@ Without an invite, login will not open a board.
 
 ## Free Path 1 (no Bill, no login)
 
+> **Deprecated (October 2, 2026).** Local disk install is closed. The laptop kit and `~/.bootstrap-os` get no more fixes. [Move off a local install](migrate-from-local.md).
+
 Anyone can still run Bootstrap OS in chat with no account:
 
 - https://github.com/ivelin/bootstrapos

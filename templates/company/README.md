@@ -1,5 +1,7 @@
 # Company instance root
 
+> **Deprecated (October 2, 2026).** The laptop kit and `~/.bootstrap-os` get no more fixes. [Move off a local install](../../docs/migrate-from-local.md).
+
 Living **company operating system** instance for *this* repository — not the portable Bootstrap OS template.
 
 | Path | Role |

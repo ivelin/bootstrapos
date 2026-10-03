@@ -62,6 +62,8 @@ Ready-for-human-eyes for invite links: this host never sends. pirin-ai productio
 
 ## SRE / ops notes
 
+> **Deprecated (October 2, 2026).** The laptop kit and `~/.bootstrap-os` get no more fixes. [Move off a local install](../docs/migrate-from-local.md).
+
 - **Runtime:** Node ≥20. The hosted pin is the Pirin write plane. Stdio `initCompany()` is the self-host disk kit. `npm run start:http` is the local HTTP helper.
 - **State:** self-host disk under `BOOTSTRAP_DATA_ROOT` (default `~/.bootstrap-os`). Pirin boards are not that directory.
 - **Failure modes:** missing state file, unknown companyId, template demo mode when no instance — tools return structured errors, not silent success.
