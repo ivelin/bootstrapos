@@ -659,6 +659,52 @@ describe("spoken-card plain words", () => {
     assert.match(spoken, /^\| 🎯 /m);
     assert.equal(card.customerChecks[0].engagements[0].kind, "engagement");
   });
+
+  it("glosses any email once and softens shorthand from fixture examples", () => {
+    const examples = ["GC/PM", "MLS", "foreign-entity filing", "Apollo", "tenancy", "award portal"];
+    const card = cardFromScoreboard({
+      slug: "alpha",
+      label: "alpha",
+      journeyPhase: 1,
+      gate: "hold",
+      scoreboard: {
+        initiatives: [
+          {
+            ...ALPHA_CHECK,
+            premise: "alpha sells dispatch help to plants",
+            measure: "one plant paying",
+            next: "charlie@example.test and founder@example.test call GC/PM about MLS and a foreign-entity filing",
+          },
+        ],
+      },
+    });
+    const spoken = formatSpokenCard({ label: "alpha", card });
+    assertFounderCard(spoken);
+    assert.match(spoken, /charlie@example\.test, the founder,/);
+    assert.match(spoken, /founder@example\.test, the founder,/);
+    assert.equal(spoken.split("the founder").length - 1, 2);
+    assert.doesNotMatch(spoken, /GC\/PM|\bMLS\b|foreign-entity/);
+    assert.match(spoken, /the short name/);
+    assert.match(spoken, /\| Work \| State \| When \| Who \|/);
+    assert.match(spoken, /^\| 🎯 /m);
+    const shipped = [
+      fs.readFileSync(path.join(REPO_ROOT, "mcp/src/initiative-card.ts"), "utf8"),
+      fs.readFileSync(path.join(REPO_ROOT, "templates/company/state/where-are-we.py"), "utf8"),
+    ].join("\n");
+    const bannedInShip = [
+      "founder@example.test",
+      ...examples,
+      "people running building projects",
+      "a list of people to call",
+      "a listing of jobs",
+      "use on their product",
+      "registering to do business",
+      "the place that lists public jobs",
+    ];
+    for (const word of bannedInShip) {
+      assert.equal(shipped.includes(word), false, word);
+    }
+  });
 });
 
 describe("spoken-card rejects the old shape", () => {

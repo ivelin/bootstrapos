@@ -1595,6 +1595,72 @@ else
   not_ok "2.8.21 spoken-label strings must exist; keep customer_check; keep 2.8.19 version header"
 fi
 
+# --- z11) generic people gloss + shorthand fallback (fixture examples only) ---
+if python3 - <<'PY'
+import json, pathlib, subprocess, sys, tempfile
+root = pathlib.Path(".")
+banned = [
+    "founder@example.test",
+    "GC/PM",
+    "Apollo",
+    "MLS",
+    "tenancy",
+    "foreign-entity",
+    "award portal",
+    "people running building projects",
+    "a list of people to call",
+    "a listing of jobs",
+    "use on their product",
+    "registering to do business",
+    "the place that lists public jobs",
+]
+for rel in ("templates/company/state/where-are-we.py", "mcp/src/initiative-card.ts"):
+    src = (root / rel).read_text()
+    for word in banned:
+        if word in src:
+            sys.exit(f"shipped {rel} still mentions {word}")
+base = json.loads((root / "templates/company/state/company-state.json").read_text())
+base["companyId"] = "alpha"
+base["initiatives"] = [{
+    "id": "alpha-check-1",
+    "kind": "customer_check",
+    "premise": "alpha sells dispatch help to plants",
+    "measure": "one plant paying",
+    "killLine": "kill if no plant pays",
+    "status": "active",
+    "last": "not started",
+    "next": "charlie@example.test and founder@example.test call GC/PM about MLS and a foreign-entity filing",
+    "outcome": "none",
+    "impact": "none",
+    "evidence": "stated",
+}]
+td = pathlib.Path(tempfile.mkdtemp())
+(td / "company-state.schema.json").write_text((root / "templates/company/state/company-state.schema.json").read_text())
+(td / "company-state.json").write_text(json.dumps(base))
+out = subprocess.check_output(
+    ["python3", "templates/company/state/where-are-we.py", str(td / "company-state.json")],
+    text=True,
+)
+for need in (
+    "charlie@example.test, the founder,",
+    "founder@example.test, the founder,",
+    "the short name",
+    "| Work | State | When | Who |",
+):
+    if need not in out:
+        sys.exit(f"missing {need}\n" + out[:1800])
+for gone in ("GC/PM", "MLS", "foreign-entity"):
+    if gone in out:
+        sys.exit(f"still printed {gone}\n" + out[:1800])
+if out.count("the founder") != 2:
+    sys.exit(f"founder gloss count {out.count('the founder')}\n" + out[:1800])
+PY
+then
+  ok "generic email gloss and shorthand fallback (no company word table)"
+else
+  not_ok "generic email gloss and shorthand fallback (no company word table)"
+fi
+
 # --- w) Bootstrap Bill install docs (invite-only; not Path 1) ---
 bill=docs/install-bill.md
 if [ -s "$bill" ] \

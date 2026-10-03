@@ -185,13 +185,9 @@ export const FOUNDER_CARD_SECTIONS = [
 export function founderCardBannedHit(text: string): string | null {
   const rules: RegExp[] = [
     /\bP0\b/,
-    /\bGC\/PM\b/i,
     /\bFAST\b/,
     /\bSOPA\b/i,
     /\bSAFE\b/,
-    /\bApollo\b/i,
-    /\bMLS\b/i,
-    /\btenancy\b/i,
     /\bengagements?\b/i,
     /\bcustomer bets?\b/i,
     /\bBottleneck #1\b/i,
@@ -687,31 +683,41 @@ export function snapshotLeadOmitsProgress(snapshot: string, progress: string[] |
 export const JOURNEY_PHASE_DUMP = /journey phase \d/;
 export const GATE_HOLD_DUMP = /gate hold/i;
 
+/** OS vocabulary only. One company's words do not belong in this table. */
 const PLAIN_SWAPS: Array<[RegExp, string]> = [
-  [/\bGC\/PM\b/gi, "people running building projects"],
   [/\bP0\b/g, ""],
   [/\bFAST\b/g, "advisor agreement"],
   [/\bSOPA\b/gi, "stock option paperwork"],
   [/\bSAFE\b/g, "investment"],
-  [/\bApollo\b/gi, "a list of people to call"],
-  [/\bMLS\b/gi, "a listing of jobs"],
-  [/\btenancy\b/gi, "use on their product"],
   [/\bengagements\b/gi, "conversations"],
   [/\bengagement\b/gi, "a conversation"],
   [/\bcustomer bets\b/gi, "tries with buyers"],
   [/\bcustomer bet\b/gi, "a try with buyers"],
   [/\bcustomer checks?\b/gi, "a try with buyers"],
   [/\bBottleneck #1\b/gi, "the main bet"],
-  [/\bforeign-entity filing\b/gi, "registering to do business"],
-  [/\baward portal\b/gi, "the place that lists public jobs"],
   [/\bNDAs?\b/gi, "a confidentiality promise"],
 ];
+
+const PLAIN_FALLBACK = "the short name";
+
+/**
+ * Shorthand is a shape, not a dictionary.
+ * A slash of vowel-less groups, a vowel-less abbreviation, or a long hyphen compound
+ * becomes one plain fallback.
+ */
+function softenShorthand(text: string): string {
+  return text
+    .replace(/\b[BCDFGHJKLMNPQRSTVWXZ]{2,6}(?:\/[BCDFGHJKLMNPQRSTVWXZ]{2,6})+\b/gi, PLAIN_FALLBACK)
+    .replace(/\b[BCDFGHJKLMNPQRSTVWXZ]{3,6}\b/gi, PLAIN_FALLBACK)
+    .replace(/\b[A-Za-z]{4,}(?:-[A-Za-z]{4,})+\b/g, PLAIN_FALLBACK);
+}
 
 function plainCardText(value: unknown): string {
   let text = typeof value === "string" ? value : "";
   text = text.replace(/\s+/g, " ").trim();
   for (const rule of SPOKEN_HIDE) text = text.replace(rule, "");
   for (const [rule, to] of PLAIN_SWAPS) text = text.replace(rule, to);
+  text = softenShorthand(text);
   text = text.replace(/\s+a confidentiality promise\b/gi, ", a confidentiality promise");
   return text.replace(/\s+/g, " ").replace(/\s+([.,;])/g, "$1").trim();
 }
@@ -874,13 +880,14 @@ function maybeIntroduce(text: string, gloss: string, seen: Set<string>): string 
   return `${cleaned}, ${gloss}`;
 }
 
-function introduceEmails(text: string, seen: Set<string>): string {
-  return text.replace(/\bfounder@example\.test\b/g, (email, offset: number, whole: string) => {
-    const key = email.toLowerCase();
-    if (seen.has(key)) return email;
+/** First mention of any email (an owner on the board) gets the same plain gloss. */
+function introducePeople(text: string, seen: Set<string>): string {
+  return text.replace(/\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b/g, (token, offset: number, whole: string) => {
+    const key = token.toLowerCase();
+    if (seen.has(key)) return token;
     seen.add(key);
-    const continues = /^\s*[A-Za-z]/.test(whole.slice(offset + email.length));
-    return continues ? `${email}, the founder,` : `${email}, the founder`;
+    const continues = /^\s*[A-Za-z]/.test(whole.slice(offset + token.length));
+    return continues ? `${token}, the founder,` : `${token}, the founder`;
   });
 }
 
@@ -911,9 +918,9 @@ function pushSpokenRow(
   opts: { bottleneck: boolean; depth: number; seen: Set<string> },
 ): void {
   out.push({
-    work: introduceEmails(workLabel(row, opts), opts.seen),
-    state: introduceEmails(whereItStands(row), opts.seen),
-    next: introduceEmails(plainCardText(row.next) || "—", opts.seen),
+    work: introducePeople(workLabel(row, opts), opts.seen),
+    state: introducePeople(whereItStands(row), opts.seen),
+    next: introducePeople(plainCardText(row.next) || "—", opts.seen),
     who: "—",
   });
 }
@@ -1046,7 +1053,7 @@ export function formatSpokenCard(input: {
     goal = "to name what done looks like";
   }
   sells = sells.replace(/\.$/, "");
-  const headline = introduceEmails(`**${label}**: ${sells}. The goal is ${goal}.`, seen);
+  const headline = introducePeople(`**${label}**: ${sells}. The goal is ${goal}.`, seen);
   const alsoLive = (input.alsoLive ?? []).map((name) => name.trim()).filter(Boolean);
   const sections = spokenSections(card, alsoLive, seen);
   const table = [
@@ -1055,7 +1062,7 @@ export function formatSpokenCard(input: {
     ...sectionLines(FOUNDER_CARD_SECTIONS[2], sections.past),
     ...sectionLines(FOUNDER_CARD_SECTIONS[3], sections.background),
   ];
-  const next = introduceEmails(
+  const next = introducePeople(
     `**Next:** ${nextSentence(killed ? null : card?.bottleneck ?? null, killed)}`,
     seen,
   );
