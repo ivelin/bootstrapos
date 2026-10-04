@@ -89,7 +89,11 @@ const BRAVO_CANARIES = [
 const DELTA_CANARIES = [DELTA_CONSTRAINT, DELTA_COMMENT];
 
 function jwt(email, sub) {
-  return syntheticAccessToken({ email, sub: sub || `sub-${email}` });
+  return syntheticAccessToken({
+    email,
+    sub: sub || `sub-${email}`,
+    extra: { exp: Math.floor(Date.now() / 1000) + 3600 },
+  });
 }
 
 function bearer(email, sub) {

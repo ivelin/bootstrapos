@@ -218,7 +218,10 @@ describe("enable_board_watch hosted tool", () => {
   it("returns board_watch_unset when Cos env is missing; no secret leak", async () => {
     setJourneyStoreForTests(fixtureJourneyStore());
     clearWatchEnv();
-    const tok = syntheticAccessToken({ email: "founder-core@example.test" });
+    const tok = syntheticAccessToken({
+      email: "founder-core@example.test",
+      extra: { exp: Math.floor(Date.now() / 1000) + 3600 },
+    });
     const hit = await callWatch({ company: "corehaul" }, tok);
     assert.equal(hit.res.status, 200, hit.raw);
     const parsed = toolJson(hit.body);
@@ -229,7 +232,10 @@ describe("enable_board_watch hosted tool", () => {
   it("returns board_watch_unset for http URL without echoing it", async () => {
     setJourneyStoreForTests(fixtureJourneyStore());
     setWatchEnv({ url: "http://hooks.example.test/not-for-logs" });
-    const tok = syntheticAccessToken({ email: "founder-core@example.test" });
+    const tok = syntheticAccessToken({
+      email: "founder-core@example.test",
+      extra: { exp: Math.floor(Date.now() / 1000) + 3600 },
+    });
     const hit = await callWatch({ company: "corehaul" }, tok);
     assert.equal(hit.res.status, 200, hit.raw);
     assert.deepEqual(toolJson(hit.body), { ok: false, error: BOARD_WATCH_UNSET });
@@ -240,7 +246,10 @@ describe("enable_board_watch hosted tool", () => {
     const store = fixtureJourneyStore();
     setJourneyStoreForTests(store);
     setWatchEnv();
-    const tok = syntheticAccessToken({ email: "founder-core@example.test" });
+    const tok = syntheticAccessToken({
+      email: "founder-core@example.test",
+      extra: { exp: Math.floor(Date.now() / 1000) + 3600 },
+    });
     const hit = await callWatch({ company: "corehaul" }, tok);
     assert.equal(hit.res.status, 200, hit.raw);
     const parsed = toolJson(hit.body);

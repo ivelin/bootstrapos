@@ -16,6 +16,7 @@ import {
   parseBearerToken,
   resolveHostedWhoami,
   supabaseAccessTokenRejected,
+  supabaseIdentityUpstreamFailure,
   type HostedWhoami,
 } from "./identity.js";
 import {
@@ -112,6 +113,24 @@ export function unauthorizedGatedToolResponse(
       reason: reason ?? null,
     }),
     { status: 401, headers },
+  );
+}
+
+function journeyUpstreamUnavailableResponse(whoami: HostedWhoami): Response {
+  return new Response(
+    JSON.stringify({
+      error: "upstream_unavailable",
+      error_description: "The login check is temporarily unavailable.",
+      identityStore: whoami.identityStore ?? "supabase",
+      reason: whoami.reason ?? "identity_upstream_unavailable",
+    }),
+    {
+      status: 503,
+      headers: {
+        ...corsHeaders(),
+        "Content-Type": "application/json; charset=utf-8",
+      },
+    },
   );
 }
 
@@ -264,6 +283,10 @@ export async function handleHostedReadFetch(req: Request): Promise<Response> {
         }
       } else if (isHostedGatedJourneyToolName(gatedName)) {
         // Same /auth/v1/user result whoami just recorded. Do not fetch it again.
+        // 5xx / network: 503 and no challenge, so a GoTrue outage does not refresh-storm.
+        if (supabaseIdentityUpstreamFailure(whoami)) {
+          return journeyUpstreamUnavailableResponse(whoami);
+        }
         if (supabaseAccessTokenRejected(whoami)) {
           return unauthorizedGatedToolResponse(whoami, req);
         }
