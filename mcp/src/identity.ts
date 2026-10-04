@@ -289,6 +289,14 @@ export function resolveIdentityStore(): IdentityStore | null {
   return createIdentityStore();
 }
 
+/**
+ * Journey tools reuse this request's whoami. SupabaseIdentityStore.whoami already
+ * called /auth/v1/user and set this reason. Not a second fetch and not a cache.
+ */
+export function supabaseAccessTokenRejected(whoami: HostedWhoami): boolean {
+  return whoami.identityStore === "supabase" && whoami.reason === "invalid_or_revoked_token";
+}
+
 export async function resolveHostedWhoami(authorizationHeader: string | null | undefined): Promise<HostedWhoami> {
   const token = parseBearerToken(authorizationHeader);
   const store = resolveIdentityStore();

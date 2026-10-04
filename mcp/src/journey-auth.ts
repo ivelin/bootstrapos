@@ -55,6 +55,23 @@ export function principalFromClaims(claims: { email?: string; sub?: string }): s
   return claims.email || claims.sub || undefined;
 }
 
+/**
+ * RFC 7519: the current time must be before `exp` (seconds).
+ * Missing `exp` is not treated as expired. Signature stays on /auth/v1/user.
+ */
+export function accessTokenExpired(token: string | undefined, nowMs = Date.now()): boolean {
+  if (!token || !isJwtAccessToken(token)) return false;
+  try {
+    const payload = JSON.parse(Buffer.from(token.split(".")[1], "base64url").toString("utf8")) as {
+      exp?: unknown;
+    };
+    if (typeof payload.exp !== "number" || !Number.isFinite(payload.exp)) return false;
+    return nowMs >= payload.exp * 1000;
+  } catch {
+    return false;
+  }
+}
+
 export function unauthenticatedActor(
   reason: string,
   store: JourneyActor["identityStore"] = "unset",
