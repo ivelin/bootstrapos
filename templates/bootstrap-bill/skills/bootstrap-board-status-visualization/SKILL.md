@@ -11,7 +11,7 @@ Use for every “where are we with COMPANY” and every “company board card”
 1. Read the live `get_journey` / `initiatives[]` first. Use the system of record only to fill in who and when where the board is silent. Never invent rows, moves, owners, or dates.
 2. Write in the company's own words. Unless the reader asks (“show clocks” / “show schema”), hide the OS version, journey integers, loop labels, autonomy, Ready-for-human-eyes, kind slugs, idea slugs, and the storage slug `default`.
 3. Describe each try as the plain thing being tried ("Get one plant to hire alpha"). The stored kind stays `customer_check`.
-4. Plain words for any average person. Do not write P0, FAST, SOPA, SAFE, engagement, or customer bet. Say advisor agreement, stock option paperwork, and investment. Unexplained abbreviations come out in plain words.
+4. Plain words for any average person. Do not write P0, FAST, SOPA, SAFE, engagement, or customer bet. Say advisor agreement, stock option paperwork, and investment. Short names the founder wrote stay as written.
 5. The first line is the bold company name, then one plain sentence on what it sells and to whom, plus the goal.
 6. Column headers are exactly `Work | State | When | Who`.
 7. The first time a person or company name appears, say who they are ("bravo, a plant we're talking with").

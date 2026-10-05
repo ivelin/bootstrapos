@@ -320,8 +320,8 @@ describe("PR2.1 micdots Heavy-locked initiatives map", () => {
     assert.match(seen.spoken, /paid construction work puts the first check in the company/);
     assert.match(seen.ideas[0].snapshot, /paid construction work puts the first check in the company/);
     assert.equal(seen.ideas[0].constraintThisWeek, CONSTRAINT);
-    assert.match(seen.ideas[0].snapshot, /the short name on-site trial/);
-    assert.doesNotMatch(seen.ideas[0].snapshot, /CCG\/CCJ/);
+    assert.match(seen.ideas[0].snapshot, /CCG\/CCJ on-site trial/);
+    assert.doesNotMatch(seen.ideas[0].snapshot, /the short name/);
     assert.match(seen.ideas[0].snapshot, /Granite Design intro/);
     assert.doesNotMatch(seen.ideas[0].snapshot, /mic-check-ccg/);
     assert.doesNotMatch(seen.ideas[0].snapshot, /journey phase \d/);

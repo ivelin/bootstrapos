@@ -1595,12 +1595,13 @@ else
   not_ok "2.8.21 spoken-label strings must exist; keep customer_check; keep 2.8.19 version header"
 fi
 
-# --- z11) generic people gloss + shorthand fallback (fixture examples only) ---
+# --- z11) generic people gloss; founder short names stay (fixture examples only) ---
 if python3 - <<'PY'
 import json, pathlib, subprocess, sys, tempfile
 root = pathlib.Path(".")
 banned = [
     "founder@example.test",
+    "the short name",
     "GC/PM",
     "Apollo",
     "MLS",
@@ -1624,11 +1625,11 @@ base["companyId"] = "alpha"
 base["initiatives"] = [{
     "id": "alpha-check-1",
     "kind": "customer_check",
-    "premise": "alpha sells dispatch help to plants",
+    "premise": "AI phone and SMS receptionist",
     "measure": "one plant paying",
     "killLine": "kill if no plant pays",
     "status": "active",
-    "last": "not started",
+    "last": "run local MCP",
     "next": "charlie@example.test and founder@example.test call GC/PM about MLS and a foreign-entity filing",
     "outcome": "none",
     "impact": "none",
@@ -1644,21 +1645,24 @@ out = subprocess.check_output(
 for need in (
     "charlie@example.test, the founder,",
     "founder@example.test, the founder,",
-    "the short name",
+    "AI phone and SMS receptionist",
+    "run local MCP",
+    "GC/PM",
+    "MLS",
+    "foreign-entity",
     "| Work | State | When | Who |",
 ):
     if need not in out:
         sys.exit(f"missing {need}\n" + out[:1800])
-for gone in ("GC/PM", "MLS", "foreign-entity"):
-    if gone in out:
-        sys.exit(f"still printed {gone}\n" + out[:1800])
+if "the short name" in out:
+    sys.exit("placeholder leaked\n" + out[:1800])
 if out.count("the founder") != 2:
     sys.exit(f"founder gloss count {out.count('the founder')}\n" + out[:1800])
 PY
 then
-  ok "generic email gloss and shorthand fallback (no company word table)"
+  ok "generic email gloss; founder short names stay (no company word table)"
 else
-  not_ok "generic email gloss and shorthand fallback (no company word table)"
+  not_ok "generic email gloss; founder short names stay (no company word table)"
 fi
 
 # --- w) Bootstrap Bill install docs (invite-only; not Path 1) ---
