@@ -14,6 +14,7 @@ import {
   applySpokenPayloadLead,
   cardFromScoreboard,
   FOUNDER_CARD_LEGEND,
+  formatInitiativeCard,
   formatSpokenCard,
   founderCardBannedHit,
   isActivePayOrUse,
@@ -660,7 +661,7 @@ describe("spoken-card plain words", () => {
     assert.equal(card.customerChecks[0].engagements[0].kind, "engagement");
   });
 
-  it("glosses any email once and softens shorthand from fixture examples", () => {
+  it("glosses any email once and leaves founder shorthand as written", () => {
     const examples = ["GC/PM", "MLS", "foreign-entity filing", "Apollo", "tenancy", "award portal"];
     const card = cardFromScoreboard({
       slug: "alpha",
@@ -683,8 +684,10 @@ describe("spoken-card plain words", () => {
     assert.match(spoken, /charlie@example\.test, the founder,/);
     assert.match(spoken, /founder@example\.test, the founder,/);
     assert.equal(spoken.split("the founder").length - 1, 2);
-    assert.doesNotMatch(spoken, /GC\/PM|\bMLS\b|foreign-entity/);
-    assert.match(spoken, /the short name/);
+    assert.match(spoken, /GC\/PM/);
+    assert.match(spoken, /\bMLS\b/);
+    assert.match(spoken, /foreign-entity/);
+    assert.doesNotMatch(spoken, /the short name/);
     assert.match(spoken, /\| Work \| State \| When \| Who \|/);
     assert.match(spoken, /^\| 🎯 /m);
     const shipped = [
@@ -693,6 +696,7 @@ describe("spoken-card plain words", () => {
     ].join("\n");
     const bannedInShip = [
       "founder@example.test",
+      "the short name",
       ...examples,
       "people running building projects",
       "a list of people to call",
@@ -703,6 +707,64 @@ describe("spoken-card plain words", () => {
     ];
     for (const word of bannedInShip) {
       assert.equal(shipped.includes(word), false, word);
+    }
+  });
+
+  it("leaves SMS and MCP on the spoken board and still hides desk jargon", async () => {
+    const phrases = ["AI phone and SMS receptionist", "run local MCP"];
+    const store = alphaStore({
+      ...defaultScoreboard(),
+      initiatives: [
+        {
+          ...ALPHA_CHECK,
+          premise: phrases[0],
+          measure: "one plant paying",
+          last: phrases[1],
+          next: `${phrases[1]} after the FAST and a SOPA`,
+        },
+      ],
+    });
+    const seen = await store.getJourney(bearer("founder@example.test"), { companySlug: "alpha" });
+    assert.equal(seen.ok, true);
+    for (const phrase of phrases) {
+      assert.match(seen.spoken, new RegExp(phrase.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
+      assert.match(seen.ideas[0].snapshot, new RegExp(phrase.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
+    }
+    assert.doesNotMatch(seen.spoken, /the short name/);
+    assert.doesNotMatch(seen.ideas[0].snapshot, /the short name/);
+    assert.match(seen.spoken, /advisor agreement/);
+    assert.match(seen.spoken, /stock option paperwork/);
+    assert.doesNotMatch(seen.spoken, /\bFAST\b|\bSOPA\b|\bP0\b/);
+    assertNoClockDump(seen.spoken);
+    assertNoClockDump(seen.ideas[0].snapshot);
+    assertFounderCard(seen.spoken);
+    assertFounderCard(seen.ideas[0].snapshot);
+  });
+
+  it("existing fixture spoken and snapshot text never contains the placeholder", () => {
+    const dir = path.join(REPO_ROOT, "mcp/test/fixtures");
+    const names = fs.readdirSync(dir).filter((name) => name.endsWith(".json"));
+    assert.ok(names.length > 0);
+    for (const name of names) {
+      const fixture = JSON.parse(fs.readFileSync(path.join(dir, name), "utf8"));
+      const scoreboard = fixture.scoreboard ?? fixture;
+      const card = cardFromScoreboard({
+        slug: "alpha",
+        label: "alpha",
+        journeyPhase: Number(fixture.journeyPhase) || 1,
+        gate: fixture.currentGate || "hold",
+        scoreboard,
+      });
+      const spoken = formatSpokenCard({
+        label: "alpha",
+        card,
+        constraintThisWeek:
+          typeof scoreboard.constraint_this_week === "string" ? scoreboard.constraint_this_week : undefined,
+      });
+      const snapshot = formatInitiativeCard(card).join("\n");
+      assert.doesNotMatch(spoken, /the short name/, name);
+      assert.doesNotMatch(snapshot, /the short name/, name);
+      assertNoClockDump(spoken);
     }
   });
 });

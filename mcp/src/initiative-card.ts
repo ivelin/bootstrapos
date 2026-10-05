@@ -698,26 +698,13 @@ const PLAIN_SWAPS: Array<[RegExp, string]> = [
   [/\bNDAs?\b/gi, "a confidentiality promise"],
 ];
 
-const PLAIN_FALLBACK = "the short name";
-
-/**
- * Shorthand is a shape, not a dictionary.
- * A slash of vowel-less groups, a vowel-less abbreviation, or a long hyphen compound
- * becomes one plain fallback.
- */
-function softenShorthand(text: string): string {
-  return text
-    .replace(/\b[BCDFGHJKLMNPQRSTVWXZ]{2,6}(?:\/[BCDFGHJKLMNPQRSTVWXZ]{2,6})+\b/gi, PLAIN_FALLBACK)
-    .replace(/\b[BCDFGHJKLMNPQRSTVWXZ]{3,6}\b/gi, PLAIN_FALLBACK)
-    .replace(/\b[A-Za-z]{4,}(?:-[A-Za-z]{4,})+\b/g, PLAIN_FALLBACK);
-}
-
 function plainCardText(value: unknown): string {
   let text = typeof value === "string" ? value : "";
   text = text.replace(/\s+/g, " ").trim();
   for (const rule of SPOKEN_HIDE) text = text.replace(rule, "");
   for (const [rule, to] of PLAIN_SWAPS) text = text.replace(rule, to);
-  text = softenShorthand(text);
+  // Founder short names stay as written. A vowel-less token, a slash name,
+  // or a hyphen compound is the board's own wording. Do not substitute a phrase.
   text = text.replace(/\s+a confidentiality promise\b/gi, ", a confidentiality promise");
   return text.replace(/\s+/g, " ").replace(/\s+([.,;])/g, "$1").trim();
 }
