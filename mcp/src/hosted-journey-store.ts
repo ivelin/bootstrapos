@@ -254,6 +254,13 @@ export class HostedMembershipJourneyStore implements JourneyStore {
   }
 }
 
+/** PostgREST rejected the caller token. HTTP layer turns this into a 401 challenge. */
+export const JOURNEY_RPC_UNAUTHORIZED = "journey_rpc_failed:401";
+
+function journeyRpcError(status: number): string {
+  return `journey_rpc_failed:${status}`;
+}
+
 export class SupabaseJourneyStore implements JourneyStore {
   readonly kind = "supabase" as const;
 
@@ -287,7 +294,7 @@ export class SupabaseJourneyStore implements JourneyStore {
     } catch {
       raw = text;
     }
-    if (!res.ok) return { error: `journey_rpc_failed:${res.status}` };
+    if (!res.ok) return { error: journeyRpcError(res.status) };
     return { raw };
   }
 

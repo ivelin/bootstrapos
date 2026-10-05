@@ -6,9 +6,16 @@ import {
   HOSTED_GATED_JOURNEY_TOOL_NAMES,
   HOSTED_READ_TOOL_NAMES,
 } from "../dist/constants.js";
+import { HostedMembershipJourneyStore, SupabaseJourneyStore } from "../dist/hosted-journey-store.js";
+import { ivelinMemoryFixture, setIdentityStoreForTests } from "../dist/identity.js";
 import { fixtureJourneyStore, setJourneyStoreForTests } from "../dist/journey.js";
-import { syntheticAccessToken } from "../dist/journey-auth.js";
-import { HOSTED_MCP_RESOURCE, HOSTED_MCP_RESOURCE_ALIAS, WWW_AUTHENTICATE_CHALLENGE } from "../dist/oauth.js";
+import { accessTokenExpired, syntheticAccessToken } from "../dist/journey-auth.js";
+import {
+  HOSTED_MCP_RESOURCE,
+  HOSTED_MCP_RESOURCE_ALIAS,
+  WWW_AUTHENTICATE_CHALLENGE,
+  wwwAuthenticateChallenge,
+} from "../dist/oauth.js";
 
 async function rpc(method, params, id = 1) {
   const res = await handleHostedReadFetch(
@@ -195,7 +202,7 @@ describe("Vercel fetch handler (hosted-read)", () => {
         headers: {
           "Content-Type": "application/json",
           Accept: "application/json, text/event-stream",
-          Authorization: `Bearer ${syntheticAccessToken({ email: "stranger@example.test", extra: { fast: true } })}`,
+          Authorization: `Bearer ${syntheticAccessToken({ email: "stranger@example.test", extra: { fast: true, exp: Math.floor(Date.now() / 1000) + 3600 } })}`,
         },
         body: JSON.stringify({
           jsonrpc: "2.0",
@@ -250,7 +257,7 @@ describe("Vercel fetch handler (hosted-read)", () => {
           headers: {
             "Content-Type": "application/json",
             Accept: "application/json, text/event-stream",
-            Authorization: `Bearer ${syntheticAccessToken({ email: "stranger@example.test", extra: { fast: true } })}`,
+            Authorization: `Bearer ${syntheticAccessToken({ email: "stranger@example.test", extra: { fast: true, exp: Math.floor(Date.now() / 1000) + 3600 } })}`,
           },
           body: JSON.stringify({
             jsonrpc: "2.0",
@@ -263,7 +270,10 @@ describe("Vercel fetch handler (hosted-read)", () => {
       assert.equal(notify.status, 401, name);
     }
 
-    const founderTok = syntheticAccessToken({ email: "founder-core@example.test" });
+    const founderTok = syntheticAccessToken({
+      email: "founder-core@example.test",
+      extra: { exp: Math.floor(Date.now() / 1000) + 3600 },
+    });
     const founder = await handleHostedReadFetch(
       new Request("https://preview.example/mcp", {
         method: "POST",
@@ -294,5 +304,476 @@ describe("Vercel fetch handler (hosted-read)", () => {
     assert.doesNotMatch(parsed.ideas[0].snapshot, /journey phase \d/);
     assert.doesNotMatch(parsed.ideas[0].snapshot, /gate hold/i);
     assert.equal(parsed.ideas[0].constraintThisWeek, "");
+  });
+});
+
+const ALPHA_EMAIL = "founder@example.test";
+const ALPHA_BOS = "bos_alpha_fixture_token";
+
+function futureExp() {
+  return Math.floor(Date.now() / 1000) + 3600;
+}
+
+function alphaMembershipStore() {
+  return new HostedMembershipJourneyStore((actor) =>
+    actor.email === ALPHA_EMAIL ? ["alpha"] : [],
+  );
+}
+
+function countingJourneyStore(inner) {
+  const calls = [];
+  const wrap = (name, fn) => async (...args) => {
+    calls.push(name);
+    return fn.apply(inner, args);
+  };
+  return {
+    calls,
+    store: {
+      kind: inner.kind,
+      actorOnAllowlist(actor) {
+        calls.push("actorOnAllowlist");
+        return inner.actorOnAllowlist(actor);
+      },
+      getJourney: wrap("getJourney", inner.getJourney),
+      createIdea: wrap("createIdea", inner.createIdea),
+      putJourney: wrap("putJourney", inner.putJourney),
+      putPortfolioScore: wrap("putPortfolioScore", inner.putPortfolioScore),
+      listProvenance: wrap("listProvenance", inner.listProvenance),
+      listKilledIdeas: wrap("listKilledIdeas", inner.listKilledIdeas),
+      postComment: wrap("postComment", inner.postComment),
+      changeAcl: wrap("changeAcl", inner.changeAcl),
+      subscribeBoard: wrap("subscribeBoard", inner.subscribeBoard),
+      unsubscribeBoard: wrap("unsubscribeBoard", inner.unsubscribeBoard),
+      listSubscribers: wrap("listSubscribers", inner.listSubscribers),
+    },
+  };
+}
+
+function toolRequest(name, args, token) {
+  const headers = {
+    "Content-Type": "application/json",
+    Accept: "application/json, text/event-stream",
+  };
+  if (token) headers.Authorization = `Bearer ${token}`;
+  return new Request("https://preview.example/mcp", {
+    method: "POST",
+    headers,
+    body: JSON.stringify({
+      jsonrpc: "2.0",
+      id: 1,
+      method: "tools/call",
+      params: { name, arguments: args },
+    }),
+  });
+}
+
+function toolText(payload) {
+  return payload.result.content.map((part) => part.text ?? "").join("\n");
+}
+
+describe("journey token must be usable before the tool runs", () => {
+  afterEach(() => {
+    setJourneyStoreForTests(undefined);
+    setIdentityStoreForTests(undefined);
+    delete process.env.VERCEL_ENV;
+    delete process.env.BOOTSTRAP_SUPABASE_URL;
+    delete process.env.SUPABASE_URL;
+    delete process.env.BOOTSTRAP_SUPABASE_ANON_KEY;
+    delete process.env.SUPABASE_ANON_KEY;
+    delete process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  });
+
+  it("expired token on a journey tool returns 401 invalid_token and does not call the journey store", async () => {
+    const counted = countingJourneyStore(alphaMembershipStore());
+    setJourneyStoreForTests(counted.store);
+    const fetches = [];
+    const origFetch = globalThis.fetch;
+    globalThis.fetch = async (url, init) => {
+      fetches.push(String(url));
+      return origFetch(url, init);
+    };
+    try {
+      const token = syntheticAccessToken({
+        email: ALPHA_EMAIL,
+        sub: "auth-alpha",
+        extra: { exp: 1 },
+      });
+      for (const [name, args] of [
+        ["post_comment", { company: "alpha", body: "note" }],
+        ["get_journey", { company: "alpha" }],
+      ]) {
+        const req = toolRequest(name, args, token);
+        const res = await handleHostedReadFetch(req);
+        assert.equal(res.status, 401, name);
+        assert.equal(res.headers.get("WWW-Authenticate"), wwwAuthenticateChallenge(req));
+        assert.match(res.headers.get("WWW-Authenticate") ?? "", /error="invalid_token"/);
+        const body = JSON.parse(await res.text());
+        assert.equal(body.error, "invalid_token");
+        assert.equal(body.reason, "invalid_or_revoked_token");
+        assert.equal(body.labels, undefined);
+      }
+      assert.deepEqual(counted.calls, []);
+      assert.deepEqual(fetches, []);
+    } finally {
+      globalThis.fetch = origFetch;
+    }
+  });
+
+  it("valid token on get_journey still returns the alpha board", async () => {
+    setJourneyStoreForTests(alphaMembershipStore());
+    const token = syntheticAccessToken({
+      email: ALPHA_EMAIL,
+      sub: "auth-alpha",
+      extra: { exp: futureExp() },
+    });
+    const res = await handleHostedReadFetch(toolRequest("get_journey", { company: "alpha" }, token));
+    const raw = await res.text();
+    assert.equal(res.status, 200, raw);
+    const parsed = JSON.parse(toolText(JSON.parse(raw)));
+    assert.equal(parsed.ok, true);
+    assert.equal(parsed.company.slug, "alpha");
+  });
+
+  it("PostgREST 401 on post_comment and put_journey becomes HTTP 401 invalid_token", async () => {
+    const token = syntheticAccessToken({
+      email: ALPHA_EMAIL,
+      sub: "auth-alpha",
+      extra: { exp: futureExp() },
+    });
+    setJourneyStoreForTests(
+      new SupabaseJourneyStore("https://example.supabase.co", "anon-test-key", token),
+    );
+    const urls = [];
+    const origFetch = globalThis.fetch;
+    globalThis.fetch = async (url) => {
+      urls.push(String(url));
+      return new Response(JSON.stringify({ message: "JWT expired" }), {
+        status: 401,
+        headers: { "Content-Type": "application/json" },
+      });
+    };
+    try {
+      for (const [name, args, rpc] of [
+        ["post_comment", { company: "alpha", body: "note" }, "bootstrap_os_post_comment"],
+        ["put_journey", { company: "alpha", why: "yes", founderYes: true }, "bootstrap_os_put_journey"],
+      ]) {
+        const req = toolRequest(name, args, token);
+        const res = await handleHostedReadFetch(req);
+        const raw = await res.text();
+        assert.equal(res.status, 401, `${name} ${raw}`);
+        assert.equal(res.headers.get("WWW-Authenticate"), wwwAuthenticateChallenge(req));
+        assert.match(res.headers.get("WWW-Authenticate") ?? "", /error="invalid_token"/);
+        const body = JSON.parse(raw);
+        assert.equal(body.error, "invalid_token");
+        assert.equal(body.reason, "invalid_or_revoked_token");
+        assert.equal(raw.includes("JWT expired"), false);
+        assert.equal(raw.includes(token), false);
+        assert.ok(urls.some((url) => url.includes(`/rest/v1/rpc/${rpc}`)));
+      }
+      assert.equal(urls.some((url) => url.includes("/auth/v1/user")), false);
+    } finally {
+      globalThis.fetch = origFetch;
+    }
+  });
+
+  it("PostgREST 403 and 500 stay HTTP 200 tool results", async () => {
+    const token = syntheticAccessToken({
+      email: ALPHA_EMAIL,
+      sub: "auth-alpha",
+      extra: { exp: futureExp() },
+    });
+    const origFetch = globalThis.fetch;
+    try {
+      for (const status of [403, 500]) {
+        setJourneyStoreForTests(
+          new SupabaseJourneyStore("https://example.supabase.co", "anon-test-key", token),
+        );
+        globalThis.fetch = async () => new Response("nope", { status });
+        const res = await handleHostedReadFetch(
+          toolRequest("get_journey", { company: "alpha" }, token),
+        );
+        const raw = await res.text();
+        assert.equal(res.status, 200, `${status} ${raw}`);
+        assert.equal(res.headers.get("WWW-Authenticate"), null);
+        const parsed = JSON.parse(toolText(JSON.parse(raw)));
+        assert.equal(parsed.ok, false);
+        assert.equal(parsed.error, `journey_rpc_failed:${status}`);
+      }
+    } finally {
+      globalThis.fetch = origFetch;
+    }
+  });
+
+  it("non-journey tools ignore journey expiry and still use whoami", async () => {
+    const expired = syntheticAccessToken({
+      email: ALPHA_EMAIL,
+      sub: "auth-alpha",
+      extra: { exp: 1 },
+    });
+    const fresh = syntheticAccessToken({
+      email: ALPHA_EMAIL,
+      sub: "auth-alpha",
+      extra: { exp: futureExp() },
+    });
+
+    const publicExpired = await handleHostedReadFetch(
+      toolRequest("bootstrap_os_info", {}, expired),
+    );
+    assert.equal(publicExpired.status, 200);
+
+    const whoamiExpired = await handleHostedReadFetch(
+      toolRequest("bootstrap_whoami", {}, expired),
+    );
+    assert.equal(whoamiExpired.status, 401);
+    const expiredBody = JSON.parse(await whoamiExpired.text());
+    assert.equal(expiredBody.reason, "identity_store_unset");
+    assert.equal(expiredBody.error, "invalid_token");
+
+    const whoamiFresh = await handleHostedReadFetch(toolRequest("bootstrap_whoami", {}, fresh));
+    assert.equal(whoamiFresh.status, 401);
+    const freshBody = JSON.parse(await whoamiFresh.text());
+    assert.equal(freshBody.reason, expiredBody.reason);
+
+    setIdentityStoreForTests(ivelinMemoryFixture(ALPHA_BOS));
+    const known = await handleHostedReadFetch(toolRequest("bootstrap_whoami", {}, ALPHA_BOS));
+    const knownRaw = await known.text();
+    assert.equal(known.status, 200, knownRaw);
+    const knownBody = JSON.parse(toolText(JSON.parse(knownRaw)));
+    assert.equal(knownBody.authenticated, true);
+    assert.deepEqual(knownBody.labels, ["alpha", "bravo", "charlie"]);
+  });
+
+  it("supabase /auth/v1/user rejection blocks a journey tool with 401 and no journey RPC", async () => {
+    const counted = countingJourneyStore(alphaMembershipStore());
+    setJourneyStoreForTests(counted.store);
+    setIdentityStoreForTests(undefined);
+    process.env.VERCEL_ENV = "production";
+    process.env.BOOTSTRAP_SUPABASE_URL = "https://example.supabase.co";
+    process.env.BOOTSTRAP_SUPABASE_ANON_KEY = "anon-test-key";
+    const urls = [];
+    const origFetch = globalThis.fetch;
+    globalThis.fetch = async (url) => {
+      const href = String(url);
+      urls.push(href);
+      if (href.endsWith("/auth/v1/user")) {
+        return new Response(JSON.stringify({ message: "invalid" }), { status: 401 });
+      }
+      return new Response("unexpected", { status: 500 });
+    };
+    try {
+      const token = syntheticAccessToken({
+        email: ALPHA_EMAIL,
+        sub: "auth-alpha",
+        extra: { exp: futureExp() },
+      });
+      const req = toolRequest("get_journey", { company: "alpha" }, token);
+      const res = await handleHostedReadFetch(req);
+      assert.equal(res.status, 401);
+      assert.equal(res.headers.get("WWW-Authenticate"), wwwAuthenticateChallenge(req));
+      assert.match(res.headers.get("WWW-Authenticate") ?? "", /error="invalid_token"/);
+      const body = JSON.parse(await res.text());
+      assert.equal(body.error, "invalid_token");
+      assert.equal(body.reason, "invalid_or_revoked_token");
+      assert.equal(body.identityStore, "supabase");
+      assert.deepEqual(counted.calls, []);
+      assert.deepEqual(
+        urls.filter((url) => url.includes("/rest/v1/rpc/")),
+        [],
+      );
+      assert.equal(urls.filter((url) => url.endsWith("/auth/v1/user")).length, 1);
+    } finally {
+      globalThis.fetch = origFetch;
+    }
+  });
+
+  it("a token with no exp and a token with a string exp both return 401", async () => {
+    const counted = countingJourneyStore(alphaMembershipStore());
+    setJourneyStoreForTests(counted.store);
+    const tokens = [
+      syntheticAccessToken({ email: ALPHA_EMAIL, sub: "auth-alpha" }),
+      syntheticAccessToken({
+        email: ALPHA_EMAIL,
+        sub: "auth-alpha",
+        extra: { exp: "4102444800" },
+      }),
+    ];
+    for (const token of tokens) {
+      const req = toolRequest("get_journey", { company: "alpha" }, token);
+      const res = await handleHostedReadFetch(req);
+      assert.equal(res.status, 401);
+      assert.equal(res.headers.get("WWW-Authenticate"), wwwAuthenticateChallenge(req));
+      assert.match(res.headers.get("WWW-Authenticate") ?? "", /error="invalid_token"/);
+      const body = JSON.parse(await res.text());
+      assert.equal(body.error, "invalid_token");
+      assert.equal(body.reason, "invalid_or_revoked_token");
+    }
+    assert.deepEqual(counted.calls, []);
+  });
+
+  it("a malformed JWT payload returns 401, not 500", async () => {
+    setJourneyStoreForTests(alphaMembershipStore());
+    const header = Buffer.from(JSON.stringify({ alg: "none", typ: "JWT" })).toString("base64url");
+    const payload = Buffer.from("not-json", "utf8").toString("base64url");
+    const token = `${header}.${payload}.synthetic-sig`;
+    const req = toolRequest("post_comment", { company: "alpha", body: "note" }, token);
+    const res = await handleHostedReadFetch(req);
+    const raw = await res.text();
+    assert.equal(res.status, 401, raw);
+    assert.notEqual(res.status, 500);
+    assert.match(res.headers.get("WWW-Authenticate") ?? "", /error="invalid_token"/);
+    const body = JSON.parse(raw);
+    assert.equal(body.error, "invalid_token");
+    assert.equal(raw.includes(token), false);
+  });
+
+  it("exp equal to now counts as expired", async () => {
+    const nowMs = 1_700_000_000_000;
+    const exp = nowMs / 1000;
+    const token = syntheticAccessToken({
+      email: ALPHA_EMAIL,
+      sub: "auth-alpha",
+      extra: { exp },
+    });
+    assert.equal(accessTokenExpired(token, nowMs), true);
+    assert.equal(accessTokenExpired(token, nowMs - 1), false);
+
+    setJourneyStoreForTests(alphaMembershipStore());
+    const liveExp = Math.floor(Date.now() / 1000);
+    const live = syntheticAccessToken({
+      email: ALPHA_EMAIL,
+      sub: "auth-alpha",
+      extra: { exp: liveExp },
+    });
+    const req = toolRequest("get_journey", { company: "alpha" }, live);
+    const res = await handleHostedReadFetch(req);
+    assert.equal(res.status, 401);
+    assert.equal(res.headers.get("WWW-Authenticate"), wwwAuthenticateChallenge(req));
+    const body = JSON.parse(await res.text());
+    assert.equal(body.error, "invalid_token");
+    assert.equal(body.reason, "invalid_or_revoked_token");
+  });
+
+  it("a /auth/v1/user 5xx gives 503 with no challenge", async () => {
+    const counted = countingJourneyStore(alphaMembershipStore());
+    setJourneyStoreForTests(counted.store);
+    setIdentityStoreForTests(undefined);
+    process.env.VERCEL_ENV = "production";
+    process.env.BOOTSTRAP_SUPABASE_URL = "https://example.supabase.co";
+    process.env.BOOTSTRAP_SUPABASE_ANON_KEY = "anon-test-key";
+    const token = syntheticAccessToken({
+      email: ALPHA_EMAIL,
+      sub: "auth-alpha",
+      extra: { exp: futureExp() },
+    });
+    const origFetch = globalThis.fetch;
+    try {
+      for (const failure of ["status", "network"]) {
+        counted.calls.length = 0;
+        globalThis.fetch = async (url) => {
+          const href = String(url);
+          if (!href.endsWith("/auth/v1/user")) {
+            return new Response("unexpected", { status: 500 });
+          }
+          if (failure === "network") {
+            throw new Error("connect ECONNREFUSED");
+          }
+          return new Response(JSON.stringify({ message: "JWT expired" }), {
+            status: 500,
+            headers: { "Content-Type": "application/json" },
+          });
+        };
+        const req = toolRequest("get_journey", { company: "alpha" }, token);
+        const res = await handleHostedReadFetch(req);
+        const raw = await res.text();
+        assert.equal(res.status, 503, `${failure} ${raw}`);
+        assert.equal(res.headers.get("WWW-Authenticate"), null);
+        const body = JSON.parse(raw);
+        assert.equal(body.error, "upstream_unavailable");
+        assert.equal(body.reason, "identity_upstream_unavailable");
+        assert.equal(raw.includes("JWT expired"), false);
+        assert.equal(raw.includes(token), false);
+        assert.equal(raw.includes("ECONNREFUSED"), false);
+        assert.deepEqual(counted.calls, []);
+      }
+    } finally {
+      globalThis.fetch = origFetch;
+    }
+  });
+
+  it("a /auth/v1/user 403 is still a journey 401 challenge", async () => {
+    const counted = countingJourneyStore(alphaMembershipStore());
+    setJourneyStoreForTests(counted.store);
+    setIdentityStoreForTests(undefined);
+    process.env.VERCEL_ENV = "production";
+    process.env.BOOTSTRAP_SUPABASE_URL = "https://example.supabase.co";
+    process.env.BOOTSTRAP_SUPABASE_ANON_KEY = "anon-test-key";
+    const origFetch = globalThis.fetch;
+    globalThis.fetch = async (url) => {
+      if (String(url).endsWith("/auth/v1/user")) {
+        return new Response(JSON.stringify({ message: "forbidden" }), { status: 403 });
+      }
+      return new Response("unexpected", { status: 500 });
+    };
+    try {
+      const token = syntheticAccessToken({
+        email: ALPHA_EMAIL,
+        sub: "auth-alpha",
+        extra: { exp: futureExp() },
+      });
+      const req = toolRequest("get_journey", { company: "alpha" }, token);
+      const res = await handleHostedReadFetch(req);
+      const raw = await res.text();
+      assert.equal(res.status, 401, raw);
+      assert.equal(res.headers.get("WWW-Authenticate"), wwwAuthenticateChallenge(req));
+      const body = JSON.parse(raw);
+      assert.equal(body.error, "invalid_token");
+      assert.equal(body.reason, "invalid_or_revoked_token");
+      assert.equal(raw.includes("forbidden"), false);
+      assert.deepEqual(counted.calls, []);
+    } finally {
+      globalThis.fetch = origFetch;
+    }
+  });
+
+  it("a token /auth/v1/user accepts still opens the journey tool when the mentee row is missing", async () => {
+    setJourneyStoreForTests(alphaMembershipStore());
+    setIdentityStoreForTests(undefined);
+    process.env.VERCEL_ENV = "production";
+    process.env.BOOTSTRAP_SUPABASE_URL = "https://example.supabase.co";
+    process.env.BOOTSTRAP_SUPABASE_ANON_KEY = "anon-test-key";
+    const origFetch = globalThis.fetch;
+    globalThis.fetch = async (url) => {
+      const href = String(url);
+      if (href.endsWith("/auth/v1/user")) {
+        return new Response(JSON.stringify({ email: ALPHA_EMAIL, id: "user-alpha" }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+      if (href.includes("/rest/v1/rpc/bootstrap_mcp_my_labels")) {
+        return new Response(
+          JSON.stringify({ authenticated: false, reason: "not_invited", labels: [] }),
+          { status: 200, headers: { "Content-Type": "application/json" } },
+        );
+      }
+      return new Response("unexpected", { status: 500 });
+    };
+    try {
+      const token = syntheticAccessToken({
+        email: ALPHA_EMAIL,
+        sub: "auth-alpha",
+        extra: { exp: futureExp() },
+      });
+      const res = await handleHostedReadFetch(
+        toolRequest("get_journey", { company: "alpha" }, token),
+      );
+      const raw = await res.text();
+      assert.equal(res.status, 200, raw);
+      const parsed = JSON.parse(toolText(JSON.parse(raw)));
+      assert.equal(parsed.ok, true);
+      assert.equal(parsed.company.slug, "alpha");
+    } finally {
+      globalThis.fetch = origFetch;
+    }
   });
 });

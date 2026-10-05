@@ -55,6 +55,27 @@ export function principalFromClaims(claims: { email?: string; sub?: string }): s
   return claims.email || claims.sub || undefined;
 }
 
+/**
+ * Fail closed for journey tools.
+ * `exp` is seconds (RFC 7519). Expired when `exp * 1000 <= nowMs`:
+ * the exact millisecond of `exp` counts as expired.
+ * Missing `exp`, or a value that is not a finite number, is rejected.
+ * A payload that cannot be decoded is rejected.
+ * A non-JWT is not this check. Signature stays on /auth/v1/user.
+ */
+export function accessTokenExpired(token: string | undefined, nowMs = Date.now()): boolean {
+  if (!token || !isJwtAccessToken(token)) return false;
+  try {
+    const payload = JSON.parse(Buffer.from(token.split(".")[1], "base64url").toString("utf8")) as {
+      exp?: unknown;
+    };
+    if (typeof payload.exp !== "number" || !Number.isFinite(payload.exp)) return true;
+    return nowMs >= payload.exp * 1000;
+  } catch {
+    return true;
+  }
+}
+
 export function unauthenticatedActor(
   reason: string,
   store: JourneyActor["identityStore"] = "unset",

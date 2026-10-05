@@ -226,20 +226,30 @@ export class SupabaseIdentityStore implements IdentityStore {
       };
     }
     const base = this.url.replace(/\/+$/, "");
-    const userRes = await fetch(`${base}/auth/v1/user`, {
-      headers: {
-        apikey: this.anonKey,
-        Authorization: `Bearer ${token}`,
-      },
-      signal: AbortSignal.timeout(10_000),
-    });
-    if (!userRes.ok) {
+    let userRes: Response;
+    try {
+      userRes = await fetch(`${base}/auth/v1/user`, {
+        headers: {
+          apikey: this.anonKey,
+          Authorization: `Bearer ${token}`,
+        },
+        signal: AbortSignal.timeout(10_000),
+      });
+    } catch {
+      return supabaseUserUpstream();
+    }
+    if (userRes.status === 401 || userRes.status === 403) {
+      await discardResponseBody(userRes);
       return {
         authenticated: false,
         labels: [],
         reason: "invalid_or_revoked_token",
         identityStore: "supabase",
       };
+    }
+    if (!userRes.ok) {
+      await discardResponseBody(userRes);
+      return supabaseUserUpstream();
     }
     const user = (await userRes.json()) as { email?: string };
     const labelsRes = await fetch(`${base}/rest/v1/rpc/bootstrap_mcp_my_labels`, {
@@ -287,6 +297,39 @@ export function setIdentityStoreForTests(store: IdentityStore | null | undefined
 export function resolveIdentityStore(): IdentityStore | null {
   if (testStore !== undefined) return testStore;
   return createIdentityStore();
+}
+
+/** GoTrue /auth/v1/user was a 5xx or could not be reached. Not a bad token. */
+export const IDENTITY_UPSTREAM_UNAVAILABLE = "identity_upstream_unavailable";
+
+function supabaseUserUpstream(): HostedWhoami {
+  return {
+    authenticated: false,
+    labels: [],
+    reason: IDENTITY_UPSTREAM_UNAVAILABLE,
+    identityStore: "supabase",
+  };
+}
+
+async function discardResponseBody(res: Response): Promise<void> {
+  try {
+    await res.body?.cancel();
+  } catch {
+    // The status is enough. Do not copy the upstream body into the tool result.
+  }
+}
+
+/**
+ * Journey tools reuse this request's whoami. SupabaseIdentityStore.whoami already
+ * called /auth/v1/user and set this reason. Not a second fetch and not a cache.
+ * Only 401 and 403 are a rejected token. 5xx and network errors are upstream.
+ */
+export function supabaseAccessTokenRejected(whoami: HostedWhoami): boolean {
+  return whoami.identityStore === "supabase" && whoami.reason === "invalid_or_revoked_token";
+}
+
+export function supabaseIdentityUpstreamFailure(whoami: HostedWhoami): boolean {
+  return whoami.identityStore === "supabase" && whoami.reason === IDENTITY_UPSTREAM_UNAVAILABLE;
 }
 
 export async function resolveHostedWhoami(authorizationHeader: string | null | undefined): Promise<HostedWhoami> {

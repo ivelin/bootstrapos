@@ -706,7 +706,11 @@ describe("E2E role-play matrix (PGlite, never prod)", { concurrency: false }, ()
         actor.email === IVELIN_SEED_EMAIL ? [...IVELIN_SEED_LABELS] : [],
       ),
     );
-    const ivelin = syntheticAccessToken({ email: IVELIN_SEED_EMAIL, sub: IVELIN_UID });
+    const ivelin = syntheticAccessToken({
+      email: IVELIN_SEED_EMAIL,
+      sub: IVELIN_UID,
+      extra: { exp: Math.floor(Date.now() / 1000) + 3600 },
+    });
     const session = { "MCP-Session-Id": "e2e-p7-alpha" };
     await callTool("bootstrap_use_company", { company: "alpha" }, ivelin, session);
     const listed = await rawRpc("tools/list", {}, ivelin, session);
