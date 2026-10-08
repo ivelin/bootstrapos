@@ -1060,15 +1060,16 @@ function registerJourneyTools(server: McpServer, ctx: HostedRequestContext) {
     {
       company: z.string().describe("Company name they already use"),
       claim: z.string().describe("phase, phase:2, or ready-for-human-eyes"),
+      idea: z.string().optional().describe("One idea under that company. Omit for the lead idea."),
     },
-    async ({ company, claim }) => {
+    async ({ company, claim, idea }) => {
       const store = storeOf();
       const actor = ctx.actor;
       if (!store || !actor?.authenticated) {
         return err("Gated. Founder or founder-authorized token required.");
       }
       try {
-        const result = await runVerify({ store, actor, company, claim });
+        const result = await runVerify({ store, actor, company, claim, idea });
         if ("error" in result) return err(result.error);
         return text(result);
       } catch (e) {
@@ -1201,6 +1202,7 @@ function registerJourneyTools(server: McpServer, ctx: HostedRequestContext) {
           scoreboard: input.scoreboard as Record<string, unknown> | undefined,
           evidenceId: input.evidence_id,
           claim: input.claim,
+          founderWrittenDecision: input.founderWrittenDecision,
         });
         if (!gate.ok) return err(gate.error);
         return text(

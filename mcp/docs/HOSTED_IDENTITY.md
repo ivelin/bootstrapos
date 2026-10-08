@@ -4,7 +4,9 @@ This host is the **resource server only**. There is **one** invite-only hosted M
 
 Free docs are GitHub + [install-os](https://pirin.ai/install-os) + local — **not** a hosted MCP connector. Do not invent `os.bootstrap.pirin.ai` or a second public Path 1 hostname. This pin is the Pirin product write plane: a super admin calls `create_company`, then `create_idea`. Hosted callers do not call `bootstrap_init_company`. OSS `mcp/` on your own Vercel and Supabase is the self-host alternative. Path 1 markdown stays the constitution.
 
-A member, an unset role, or a mentor sees read tools and writes on their own company. They do not see `create_company`, `grant_super_admin`, or `revoke_super_admin` in the tool list. Calling those by name is still refused. A super admin's list is the full list. Before a phase change or Ready for human eyes, call `bootstrap_verify` and pass the receipt on the write. See [`JOURNEY.md`](JOURNEY.md).
+A member, an unset role, a mentor, or a caller who is not signed in does not see `create_company`, `grant_super_admin`, or `revoke_super_admin` in the tool list. Calling those by name is still refused. A signed-in super admin's list is the full list. Before a phase change or Ready for human eyes, call `bootstrap_verify` and pass the receipt on the write. See [`JOURNEY.md`](JOURNEY.md).
+
+Receipts are signed with `BOOTSTRAP_VERIFY_SECRET` (at least 32 characters). Until that is set, this host falls back to `BOOTSTRAP_INVITE_MAIL_SECRET`. That fallback is temporary: pirin.ai holds the invite secret. Do not print either value.
 
 ## Founder lock
 

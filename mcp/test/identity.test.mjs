@@ -157,7 +157,11 @@ describe("hosted identity (resource server, gated)", () => {
       assert.ok(names.includes(n), `missing public ${n}`);
     }
     for (const n of HOSTED_GATED_IDENTITY_TOOL_NAMES) {
-      assert.ok(names.includes(n), `missing gated ${n}`);
+      if (HIGH_TIER_TOOL_NAMES.includes(n)) {
+        assert.ok(!names.includes(n), `anonymous must not see ${n}`);
+      } else {
+        assert.ok(names.includes(n), `missing gated ${n}`);
+      }
     }
     assert.ok(!names.includes("bootstrap_init_company"));
     assert.ok(!names.includes("bootstrap_get_state"));

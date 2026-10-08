@@ -3,7 +3,8 @@
  * Stateless HMAC. audit_events (list_provenance) could hold a jsonb row, but
  * authenticated cannot INSERT, emit_audit is revoked, and list_provenance omits
  * the row id — storing one would be a migration. MAC key is HKDF-SHA256 of
- * BOOTSTRAP_INVITE_MAIL_SECRET with info "bootstrap-verify-v1", never the raw secret.
+ * BOOTSTRAP_VERIFY_SECRET (fallback BOOTSTRAP_INVITE_MAIL_SECRET, temporary)
+ * with info "bootstrap-verify-v1", never the raw secret.
  */
 import { createHash, createHmac, hkdfSync, timingSafeEqual } from "node:crypto";
 import { PHASE_GATES } from "./gates.js";
@@ -29,6 +30,7 @@ type Receipt = {
   sub: string;
   revision: string;
   exp: number;
+  idea: string;
 };
 type BoardIdea = {
   slug?: string;
@@ -38,12 +40,19 @@ type BoardIdea = {
   updatedAt?: string;
 };
 type Board = { ok?: boolean; ideas?: BoardIdea[] };
+const SECRET_MIN = 32;
+const macKeys = new Map<string, Buffer>();
 export function verifyServerSecret(env: NodeJS.ProcessEnv = process.env): string | undefined {
-  const raw = env.BOOTSTRAP_INVITE_MAIL_SECRET?.trim();
-  return raw || undefined;
+  const raw = env.BOOTSTRAP_VERIFY_SECRET?.trim() || env.BOOTSTRAP_INVITE_MAIL_SECRET?.trim();
+  if (!raw || raw.length < SECRET_MIN) return undefined;
+  return raw;
 }
 export function verifyMacKey(secret: string): Buffer {
-  return Buffer.from(hkdfSync("sha256", secret, "", VERIFY_INFO, 32));
+  const hit = macKeys.get(secret);
+  if (hit) return hit;
+  const key = Buffer.from(hkdfSync("sha256", secret, "", VERIFY_INFO, 32));
+  macKeys.set(secret, key);
+  return key;
 }
 function stable(value: unknown): string {
   if (Array.isArray(value)) return `[${value.map(stable).join(",")}]`;
@@ -113,12 +122,15 @@ const PHASE_RECORDED: Record<string, (scoreboard: Record<string, unknown>) => bo
 };
 /** Existing cold-path checklist against the board already read. No fetch. */
 
-export function coldPathGaps(claim: string, board: Board): string[] {
+function rungNeedsReceipt(phase: number): boolean {
+  const gate = PHASE_GATES[phase];
+  if (!gate?.evidenceToAdvance.length) return false;
+  return gate.evidenceToAdvance.every((item) => Boolean(PHASE_RECORDED[item.id]));
+}
+export function coldPathGaps(claim: string, board: Board, ideaSlug?: string): string[] {
   if (board.ok !== true || !board.ideas?.length) return ["This company board is not visible."];
-  const idea =
-    board.ideas.length === 1
-      ? board.ideas[0]
-      : (board.ideas.find((row) => row.slug === "default") ?? board.ideas[0]);
+  const idea = leadIdea(board, ideaSlug);
+  if (!idea) return ["That idea is not on this board."];
   const scoreboard = idea.scoreboard ?? {};
   const key = canonicalClaim(claim);
   if (!key) return ["Say the claim to check."];
@@ -135,10 +147,11 @@ export function coldPathGaps(claim: string, board: Board): string[] {
     }
     return gaps.concat(eyes.blockers);
   }
-  if (key !== "phase" && !/^phase:[1-9]$/.test(key)) {
-    return ["That claim is not one of the cold-path checks."];
-  }
-  const gate = PHASE_GATES[Number(idea.clocks?.journeyPhase) || 1];
+  const cur = Number(idea.clocks?.journeyPhase) || 1;
+  const numbered = /^phase:([1-9])$/.exec(key);
+  if (key !== "phase" && !numbered) return ["That claim is not one of the cold-path checks."];
+  if (numbered && Number(numbered[1]) !== cur + 1) return ["That claim is not the next rung."];
+  const gate = PHASE_GATES[cur];
   if (!gate) return ["No cold-path check for this rung."];
   return gate.evidenceToAdvance
     .filter((item) => !(PHASE_RECORDED[item.id]?.(scoreboard) ?? false))
@@ -196,6 +209,7 @@ export async function runVerify(input: {
   actor: JourneyActor;
   company: string;
   claim: string;
+  idea?: string;
   nowMs?: number;
   secret?: string;
 }): Promise<VerifyResult | { error: string }> {
@@ -212,9 +226,15 @@ export async function runVerify(input: {
     };
   }
   const board = asBoard(await input.store.getJourney(input.actor, { companySlug: company }));
-  const gaps = coldPathGaps(claim, board);
-  if (gaps.length > 0 || board.ok !== true) {
-    return { pass: false, gaps, evidence_id: null, expires_at: null };
+  const picked = leadIdea(board, input.idea);
+  const gaps = coldPathGaps(claim, board, input.idea);
+  if (gaps.length > 0 || board.ok !== true || !picked?.slug) {
+    return {
+      pass: false,
+      gaps: gaps.length ? gaps : ["That idea is not on this board."],
+      evidence_id: null,
+      expires_at: null,
+    };
   }
   const secret = input.secret ?? verifyServerSecret();
   if (!secret) return { error: `Verify receipts are not signed on this host. ${VERIFY_HINT}` };
@@ -223,7 +243,16 @@ export async function runVerify(input: {
     pass: true,
     gaps: [],
     evidence_id: signVerifyReceipt(
-      { v: 1, pass: true, company, claim, sub, revision: journeyRevision(board), exp },
+      {
+        v: 1,
+        pass: true,
+        company,
+        claim,
+        sub,
+        revision: journeyRevision(board),
+        exp,
+        idea: picked.slug,
+      },
       secret,
     ),
     expires_at: new Date(exp).toISOString(),
@@ -239,20 +268,30 @@ export async function enforceVerifyReceipt(input: {
   scoreboard?: Record<string, unknown>;
   evidenceId?: string;
   claim?: string;
+  founderWrittenDecision?: string;
   nowMs?: number;
   secret?: string;
 }): Promise<{ ok: true } | { ok: false; error: string }> {
   const company = normalizeSlug(input.company || "");
   const board = asBoard(await input.store.getJourney(input.actor, { companySlug: company }));
-  if (board.ok !== true) return { ok: true };
-  const idea = leadIdea(board, input.idea);
-  if (!idea) return { ok: true };
-  const phaseChange =
-    input.journeyPhase !== undefined && input.journeyPhase !== (Number(idea.clocks?.journeyPhase) || 1);
+  const idea = board.ok === true ? leadIdea(board, input.idea) : undefined;
+  const wants = input.journeyPhase !== undefined || eyesStatus(input.scoreboard) !== undefined;
+  if (board.ok !== true || !idea?.slug) return wants ? { ok: false, error: VERIFY_ERROR } : { ok: true };
+  const cur = Number(idea.clocks?.journeyPhase) || 1;
+  const phaseChange = input.journeyPhase !== undefined && input.journeyPhase !== cur;
   const nextEyes = eyesStatus(input.scoreboard);
-  const eyesChange = nextEyes !== undefined && nextEyes !== eyesStatus(idea.scoreboard);
-  if (!phaseChange && !eyesChange) return { ok: true };
-  if (phaseChange && eyesChange) return { ok: false, error: VERIFY_ERROR };
+  const eyesToGreen = nextEyes === "green" && nextEyes !== eyesStatus(idea.scoreboard);
+  if (!phaseChange && !eyesToGreen) return { ok: true };
+  if (phaseChange && eyesToGreen) return { ok: false, error: VERIFY_ERROR };
+  if (phaseChange && (input.journeyPhase as number) < cur) {
+    if (!text(input.founderWrittenDecision)) return { ok: false, error: VERIFY_ERROR };
+    return { ok: true };
+  }
+  if (phaseChange && input.journeyPhase !== cur + 1) return { ok: false, error: VERIFY_ERROR };
+  if (phaseChange && !rungNeedsReceipt(cur)) {
+    if (!text(input.founderWrittenDecision)) return { ok: false, error: VERIFY_ERROR };
+    return { ok: true };
+  }
   const claim = canonicalClaim(input.claim || "");
   const claimOk = phaseChange
     ? claim === "phase" || claim === `phase:${input.journeyPhase}`
@@ -265,6 +304,7 @@ export async function enforceVerifyReceipt(input: {
   if (read.body.company !== company || read.body.claim !== claim || read.body.sub !== sub) {
     return { ok: false, error: VERIFY_ERROR };
   }
+  if (read.body.idea !== idea.slug) return { ok: false, error: VERIFY_ERROR };
   if (read.body.revision !== journeyRevision(board)) return { ok: false, error: VERIFY_ERROR };
   return { ok: true };
 }

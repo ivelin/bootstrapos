@@ -31,10 +31,9 @@ export function toolTier(name: string): ToolTier {
   if (MEDIUM.has(name)) return "medium";
   return "low";
 }
-/** member, unset, and mentor see the member list. super_admin sees every tool. */
+/** Only a signed-in super_admin sees admin tools. Anonymous, member, unset, and mentor do not. */
 export function hidesHighTierTools(role: string | undefined, authenticated: boolean): boolean {
-  if (!authenticated) return false;
-  return role !== "super_admin";
+  return !(authenticated && role === "super_admin");
 }
 export function filterToolsForRole<T extends { name: string }>(
   tools: T[],
@@ -44,21 +43,30 @@ export function filterToolsForRole<T extends { name: string }>(
   if (!hidesHighTierTools(role, authenticated)) return tools;
   return tools.filter((tool) => toolTier(tool.name) !== "high");
 }
-/** Drop high-tier tools from a tools/list JSON-RPC body. Leave other bodies alone. */
+function rewriteListedTools(row: unknown, role: string | undefined, authenticated: boolean): boolean {
+  if (!row || typeof row !== "object") return false;
+  const tools = (row as { result?: { tools?: Array<{ name: string }> } }).result?.tools;
+  if (!Array.isArray(tools)) return false;
+  const kept = filterToolsForRole(tools, role, authenticated);
+  if (kept.length === tools.length) return false;
+  (row as { result: { tools: Array<{ name: string }> } }).result.tools = kept;
+  return true;
+}
+/** Drop high-tier tools from a tools/list body, including a JSON-RPC batch. Leave other bodies alone. */
 export function filterToolsListJson(
   raw: string,
   role: string | undefined,
   authenticated: boolean,
 ): string | null {
   if (!hidesHighTierTools(role, authenticated)) return null;
-  let body: { result?: { tools?: Array<{ name: string }> } };
+  let parsed: unknown;
   try {
-    body = JSON.parse(raw) as { result?: { tools?: Array<{ name: string }> } };
+    parsed = JSON.parse(raw);
   } catch {
     return null;
   }
-  const tools = body.result?.tools;
-  if (!Array.isArray(tools)) return null;
-  body.result!.tools = filterToolsForRole(tools, role, authenticated);
-  return JSON.stringify(body);
+  const rows = Array.isArray(parsed) ? parsed : [parsed];
+  const changed = rows.some((row) => rewriteListedTools(row, role, authenticated));
+  if (!changed) return null;
+  return JSON.stringify(Array.isArray(parsed) ? rows : rows[0]);
 }
