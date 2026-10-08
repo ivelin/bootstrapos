@@ -156,6 +156,7 @@ describe("0-1 journey visitor matrix (CoS smell-test)", () => {
       "enable_board_watch",
       "list_provenance",
       "put_portfolio_score",
+      "bootstrap_verify",
     ]);
     const journeyDoc = fs.readFileSync(path.join(REPO_ROOT, "mcp", "docs", "JOURNEY.md"), "utf8");
     assert.match(journeyDoc, /Hard rule — invite-only company boards/);

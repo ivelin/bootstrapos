@@ -9,6 +9,7 @@ import {
   HOSTED_GATED_IDENTITY_TOOL_NAMES,
   HOSTED_GATED_JOURNEY_TOOL_NAMES,
 } from "../dist/constants.js";
+import { HIGH_TIER_TOOL_NAMES } from "../dist/tool-tier.js";
 import {
   HOSTED_BILL_GROK_LINE,
   hostedInstructionsForClient,
@@ -100,7 +101,11 @@ describe("hosted access layer (one login, many companies)", () => {
     const tools = listed.result.tools;
     const names = tools.map((t) => t.name);
     for (const n of HOSTED_GATED_IDENTITY_TOOL_NAMES) {
-      assert.ok(names.includes(n), `missing ${n}`);
+      if (HIGH_TIER_TOOL_NAMES.includes(n)) {
+        assert.ok(!names.includes(n), `member must not see ${n}`);
+      } else {
+        assert.ok(names.includes(n), `missing ${n}`);
+      }
     }
     for (const n of HOSTED_GATED_JOURNEY_TOOL_NAMES) {
       assert.ok(!names.includes(n), `must hide ${n} without a store`);

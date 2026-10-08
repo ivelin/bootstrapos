@@ -80,6 +80,9 @@ export const NOTE_COMPANIES =
 
 export const NOTE_NOT_SIGNED_IN = "You're not signed in to Bootstrap OS."
 
+export const TOOL_VERIFY =
+  "Check this company's board before you change the phase or Ready for human eyes. Read-only. A pass gives a receipt for about a day. A miss lists the gaps and no receipt.";
+
 export const TOOL_GET_JOURNEY =
   "Where are we — the company board, or one idea board under it. Print spoken first. Use this when they say where are we, show the company board, show company X ideas, or show my idea board. If they ask for every board, print the boards field and stop. Live boards only. Do not describe a stopped bet unless they ask what you already stopped."
 
@@ -87,7 +90,7 @@ export const TOOL_CREATE_IDEA =
   "Start another customer bet under a company this login can open. Needs a yes in this chat."
 
 export const TOOL_PUT_JOURNEY =
-  "Change what is stuck on an existing bet, or record a decision they already made. Needs a yes in this chat before a decision changes."
+  "Change what is stuck on an existing bet, or record a decision they already made. Needs a yes in this chat before a decision changes. Changing the phase or Ready for human eyes also needs a receipt from bootstrap_verify."
 
 export const TOOL_POST_COMMENT =
   "Comment on an idea. A comment does not change the bet."

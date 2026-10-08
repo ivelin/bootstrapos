@@ -8,6 +8,7 @@ import {
 } from "../dist/constants.js";
 import { HostedMembershipJourneyStore, SupabaseJourneyStore } from "../dist/hosted-journey-store.js";
 import { ivelinMemoryFixture, setIdentityStoreForTests } from "../dist/identity.js";
+import { HIGH_TIER_TOOL_NAMES } from "../dist/tool-tier.js";
 import { fixtureJourneyStore, setJourneyStoreForTests } from "../dist/journey.js";
 import { accessTokenExpired, syntheticAccessToken } from "../dist/journey-auth.js";
 import {
@@ -64,7 +65,11 @@ describe("Vercel fetch handler (hosted-read)", () => {
       assert.ok(names.includes(n), `missing ${n}`);
     }
     for (const n of HOSTED_GATED_IDENTITY_TOOL_NAMES) {
-      assert.ok(names.includes(n), `missing gated ${n}`);
+      if (HIGH_TIER_TOOL_NAMES.includes(n)) {
+        assert.ok(!names.includes(n), `anonymous must not see ${n}`);
+      } else {
+        assert.ok(names.includes(n), `missing gated ${n}`);
+      }
     }
     for (const n of HOSTED_GATED_JOURNEY_TOOL_NAMES) {
       assert.ok(!names.includes(n), `must not list ${n} without a journey store`);

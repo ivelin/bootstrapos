@@ -15,6 +15,7 @@ import {
 } from "../dist/constants.js";
 import { startHostedReadServer } from "../dist/http.js";
 import { WWW_AUTHENTICATE_CHALLENGE } from "../dist/oauth.js";
+import { HIGH_TIER_TOOL_NAMES } from "../dist/tool-tier.js";
 
 const WRITE_TOOLS = [
   "bootstrap_init_company",
@@ -112,7 +113,11 @@ async function main() {
     for (const n of HOSTED_GATED_TOOL_NAMES.filter(
       (n) => !HOSTED_GATED_JOURNEY_TOOL_NAMES.includes(n),
     )) {
-      assert.ok(names.includes(n), `missing gated tool ${n}`);
+      if (HIGH_TIER_TOOL_NAMES.includes(n)) {
+        assert.ok(!names.includes(n), `anonymous must not see ${n}`);
+      } else {
+        assert.ok(names.includes(n), `missing gated tool ${n}`);
+      }
     }
     for (const n of WRITE_TOOLS) {
       assert.ok(!names.includes(n), `hosted-read must not expose ${n}`);

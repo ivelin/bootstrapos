@@ -37,6 +37,7 @@ import {
 } from "./oauth.js";
 import { createBootstrapServer } from "./server.js";
 import { hostedSessionKey } from "./hosted-company-context.js";
+import { filterToolsListJson } from "./tool-tier.js";
 
 setLiveJourneyStoreFactory(createJourneyStore);
 
@@ -58,9 +59,14 @@ function corsHeaders(): Record<string, string> {
 }
 
 function rpcMethodOf(body: unknown): string | undefined {
-  if (!body || typeof body !== "object") return undefined;
+  if (!body || typeof body !== "object" || Array.isArray(body)) return undefined;
   const method = (body as { method?: unknown }).method;
   return typeof method === "string" ? method : undefined;
+}
+
+function requestListsTools(body: unknown): boolean {
+  if (Array.isArray(body)) return body.some((row) => rpcMethodOf(row) === "tools/list");
+  return rpcMethodOf(body) === "tools/list";
 }
 
 function gatedToolNameFromRpc(body: unknown): string | undefined {
@@ -324,7 +330,20 @@ export async function handleHostedReadFetch(req: Request): Promise<Response> {
     const upgraded = await unauthorizedIfJourneyRpcRejected(res, req, actor);
     if (upgraded) return withCors(upgraded);
   }
-  return withCors(res);
+  return withCors(await filterListedTools(res, rpcBody, whoami));
+}
+
+async function filterListedTools(
+  res: Response,
+  rpcBody: unknown,
+  whoami: HostedWhoami,
+): Promise<Response> {
+  if (!requestListsTools(rpcBody)) return res;
+  const next = filterToolsListJson(await res.clone().text(), whoami.role, whoami.authenticated);
+  if (next === null) return res;
+  const headers = new Headers(res.headers);
+  headers.delete("content-length");
+  return new Response(next, { status: res.status, statusText: res.statusText, headers });
 }
 
 function toolResultJourneyRpcUnauthorized(raw: string): boolean {
