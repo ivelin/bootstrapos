@@ -101,7 +101,7 @@ describe("hosted access layer (one login, many companies)", () => {
     const tools = listed.result.tools;
     const names = tools.map((t) => t.name);
     for (const n of HOSTED_GATED_IDENTITY_TOOL_NAMES) {
-      if ((HIGH_TIER_TOOL_NAMES as readonly string[]).includes(n)) {
+      if (HIGH_TIER_TOOL_NAMES.includes(n)) {
         assert.ok(!names.includes(n), `member must not see ${n}`);
       } else {
         assert.ok(names.includes(n), `missing ${n}`);

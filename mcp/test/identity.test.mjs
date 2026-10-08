@@ -788,7 +788,7 @@ describe("hosted identity (resource server, gated)", () => {
       assert.ok(collabNames.includes(n), `authed collab missing public ${n}`);
     }
     for (const n of HOSTED_GATED_IDENTITY_TOOL_NAMES) {
-      if ((HIGH_TIER_TOOL_NAMES as readonly string[]).includes(n)) {
+      if (HIGH_TIER_TOOL_NAMES.includes(n)) {
         assert.ok(!collabNames.includes(n), `member must not see ${n}`);
       } else {
         assert.ok(collabNames.includes(n), `authed collab missing gated ${n}`);
