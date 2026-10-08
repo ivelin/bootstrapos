@@ -127,6 +127,28 @@ export function buildStatusView(state: CompanyState, plainWhere: string): Status
   };
 }
 
+/** Same three checks the cold path already names. Not a crawler. */
+export const HUMAN_EYES_EVIDENCE: EvidenceItem[] = [
+  {
+    id: "cold_url",
+    plain: "Cold URL loads for a stranger device/session",
+    labelHint: "assumed_capability",
+    howToGather: "Open deploy URL in private/other device; record pass/fail",
+  },
+  {
+    id: "happy_path",
+    plain: "Documented happy path completes without founder help",
+    labelHint: "assumed_capability",
+    howToGather: "Write steps; run once cold; list blockers",
+  },
+  {
+    id: "eyes_artifact",
+    plain: "Short Ready for human eyes note (date, URL, pass/fail, blockers)",
+    labelHint: "assumed_capability",
+    howToGather: "bootstrap_set_ready_for_human_eyes + optional evidencePath file",
+  },
+];
+
 export function buildNextEvidenceView(state: CompanyState): NextEvidenceView {
   const phase = Number(state.journeyPhase) || 1;
   const stage = Number(state.loopStage) || 1;
@@ -137,26 +159,7 @@ export function buildNextEvidenceView(state: CompanyState): NextEvidenceView {
   const eyes = state.readyForHumanEyes?.status ?? "unknown";
   const eyesBlocked = eyes !== "green";
 
-  const humanEyesEvidence: EvidenceItem[] = [
-    {
-      id: "cold_url",
-      plain: "Cold URL loads for a stranger device/session",
-      labelHint: "assumed_capability",
-      howToGather: "Open deploy URL in private/other device; record pass/fail",
-    },
-    {
-      id: "happy_path",
-      plain: "Documented happy path completes without founder help",
-      labelHint: "assumed_capability",
-      howToGather: "Write steps; run once cold; list blockers",
-    },
-    {
-      id: "eyes_artifact",
-      plain: "Short Ready for human eyes note (date, URL, pass/fail, blockers)",
-      labelHint: "assumed_capability",
-      howToGather: "bootstrap_set_ready_for_human_eyes + optional evidencePath file",
-    },
-  ];
+  const humanEyesEvidence = HUMAN_EYES_EVIDENCE;
 
   // Mode selection: help agents choose gather vs work vs writeback vs founder.
   // Write back missing is said from artifacts — never invented as loopStage 7.

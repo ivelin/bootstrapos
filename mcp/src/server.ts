@@ -25,6 +25,7 @@ import {
   resolveCompanyAdminStore,
 } from "./company-admin.js";
 import { parseJourneyQuery, resolveJourneyStore } from "./journey.js";
+import { enforceVerifyReceipt, runVerify } from "./verify-evidence.js";
 import { loadOsDoc, loadOsDocList, resolveDocsBaseUrl, resolveDocsSource } from "./docs.js";
 import {
   initCompany,
@@ -66,6 +67,7 @@ import {
   TOOL_ACCEPT_INVITE,
   TOOL_CREATE_COMPANY,
   TOOL_GET_JOURNEY,
+  TOOL_VERIFY,
   TOOL_GRANT_SUPER_ADMIN,
   TOOL_REVOKE_SUPER_ADMIN,
   TOOL_INVITE_MEMBER,
@@ -1053,6 +1055,29 @@ function registerJourneyTools(server: McpServer, ctx: HostedRequestContext) {
   );
 
   server.tool(
+    "bootstrap_verify",
+    TOOL_VERIFY,
+    {
+      company: z.string().describe("Company name they already use"),
+      claim: z.string().describe("phase, phase:2, or ready-for-human-eyes"),
+    },
+    async ({ company, claim }) => {
+      const store = storeOf();
+      const actor = ctx.actor;
+      if (!store || !actor?.authenticated) {
+        return err("Gated. Founder or founder-authorized token required.");
+      }
+      try {
+        const result = await runVerify({ store, actor, company, claim });
+        if ("error" in result) return err(result.error);
+        return text(result);
+      } catch (e) {
+        return err(e instanceof Error ? e.message : String(e));
+      }
+    },
+  );
+
+  server.tool(
     "put_journey",
     TOOL_PUT_JOURNEY,
     {
@@ -1084,6 +1109,8 @@ function registerJourneyTools(server: McpServer, ctx: HostedRequestContext) {
           "Written founder override after a challenge. Required to name “new landing page” as the constraint when no one has talked to customers. founderYes alone is not a rubber-stamp.",
         ),
       client: z.string().optional().describe("Which client wrote. Stored on the audit row."),
+      evidence_id: z.string().optional().describe("Receipt from bootstrap_verify. Required to change the phase or Ready for human eyes."),
+      claim: z.string().optional().describe("The same claim you just verified."),
       gateEnrichment: z
         .object({
           whatChanged: z.string().max(280),
@@ -1165,6 +1192,17 @@ function registerJourneyTools(server: McpServer, ctx: HostedRequestContext) {
         return err("Gated. Founder or founder-authorized token required.");
       }
       try {
+        const gate = await enforceVerifyReceipt({
+          store,
+          actor,
+          company: input.company,
+          idea: input.idea,
+          journeyPhase: input.journeyPhase,
+          scoreboard: input.scoreboard as Record<string, unknown> | undefined,
+          evidenceId: input.evidence_id,
+          claim: input.claim,
+        });
+        if (!gate.ok) return err(gate.error);
         return text(
           await store.putJourney(actor, {
             companySlug: input.company,
