@@ -2,6 +2,10 @@
 
 Plain split. Designer, Tester Synthetic, and Tester Real World are shared across companies. Builder lives in the company's product repo. Cos and the CTO design gate are how a company signs work.
 
+## Shared by default, own copies when needed
+
+The Designer and both Testers are shared across companies by default. A company may run its own copies when privacy or volume calls for it. Cos records that decision, with the reason and the date. Own copies follow the same rules and the same wall. Their verdicts still go to the [registry](registry-format.md) anonymized, unless privacy rules that out; if so, record that in the same note.
+
 The founder names the first bet. See [the first bet](bet-list-format.md#first-bet). After a study exists, the designer works only from decision traces.
 
 ## Designer
