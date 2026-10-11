@@ -60,6 +60,8 @@ Per repo. Each product repo has its own:
 
 - Builder
 
+Shared is the default. A company may run its own Designer or Testers when privacy or volume calls for it. See [roles.md](roles.md#shared-by-default-own-copies-when-needed).
+
 Cos arbitrates for the company. The CTO design gate is the check before build. Both are in [roles.md](roles.md).
 
 ## Files
