@@ -1,6 +1,6 @@
 # Roles
 
-Plain split. Designer, Tester Synthetic, and Tester Real World are shared across companies. Builder lives in the company's product repo. Cos and the CTO design gate are how a company signs work.
+Plain split. Designer, Tester Synthetic, and Tester Real World are shared across companies. Builder lives in the company's product repo. Drafter writes posts and outreach; Board mirror reflects tier status. Cos and the CTO design gate are how a company signs work.
 
 ## Shared by default, own copies when needed
 
@@ -71,6 +71,14 @@ Per repo. This role sits in the company's product repo.
 Implement an approved bet. Make the experience smooth, on time, and on a lean budget. Hold lifetime cost against lovability: a result people will not love at the cost of running it is not done.
 
 Change how the bet is delivered. Do not change what the bet is. The CTO design gate catches drift. Ship the page and the tracking through that gate.
+
+## Drafter
+
+Writes posts and outreach for real-world tiers. A human approves each send before it goes out. The Drafter never sends on its own and stays inside the channel fence and the blocked list.
+
+## Board mirror
+
+Reflects each bet's tier status on the company board. Read-only. It never edits the repo.
 
 ## CTO design gate
 

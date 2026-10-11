@@ -29,9 +29,9 @@ Shared marks for every tier after smoke:
 
 ### Smoke
 
-A landing page or a waitlist. One tracking id for the bet. A free-form field asks why the person acted. The costly step is on the page.
+Start with a one-line post or a fake-door button, before anything is built. A landing page or waitlist comes only after people react to it. One tracking id for the bet. A free-form field asks why the person acted. The costly step is on the post, button, or page.
 
-Smoke passes when the page or waitlist is live, tracking works, and the answer field is stored. Smoke checks the instrument. It does not claim demand.
+Smoke passes when the post or button is live, tracking works, and reactions and answers are stored. Smoke checks the instrument. It does not claim demand.
 
 ### Organic
 
