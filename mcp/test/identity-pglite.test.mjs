@@ -448,6 +448,13 @@ describe("PGlite accept_invite mentee_id (isolated, never prod)", () => {
     const replay = (
       await acceptDb.query("SELECT bootstrap_mcp_accept_invite($1) AS body", [token])
     ).rows[0].body;
-    assert.deepEqual(replay, { ok: false, reason: "invite_already_used" });
+    assert.equal(replay.ok, true, JSON.stringify(replay));
+    assert.equal(replay.email, "founder@example.test");
+    const menteeCount = (
+      await acceptDb.query(
+        "SELECT count(*)::int AS n FROM bootstrap_mcp_mentees WHERE email = 'founder@example.test'",
+      )
+    ).rows[0].n;
+    assert.equal(menteeCount, 1);
   });
 });

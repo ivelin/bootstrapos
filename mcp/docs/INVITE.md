@@ -50,7 +50,7 @@ The raw token is shown **once** on the Accept card (and on the sign-in Auth card
 
 Auth card `action` is **Sign in or create account** (valid for first-time and returning users). Do not enumerate to the inviter whether the email is already a Bootstrap OS user.
 
-Invite mail and this card tell the invitee to open the signup URL on their agent's computer and fill the form card in the chat. The page is one step: **Email**, **Password**, **Continue**, then **Accept invite**. The password stays on that card. This host does not take a password in a tool argument.
+Invite mail is one link. The line is “Open this to sign in or create your account”, then `https://pirin.ai/bootstrap-os/login?invite=<token>`. The signed-in email is matched to the invite. The token alone does not grant access. This host does not take a password in a tool argument.
 
 ## Token
 
@@ -80,7 +80,33 @@ https://pirin.ai/bootstrap-os/login?invite=<token>
 
 Optional display hints the mailer may also send (not required for redeem): invitee email and company label come from **verify**, not from extra query params. Do not trust query `email=` / `company=` for allowlist.
 
-After the invitee has a JWT as that email, the MCP client calls `accept_invite` with the same token. whoami then shows the company workspace memberships for that user.
+After the invitee has a JWT as that email, the MCP client calls `accept_invite` with the same token. whoami then shows the company workspace memberships for that user. A verified sign-in also accepts every pending unexpired invite for that session email, so the invitee does not have to open this page’s Accept step. Explicit `accept_invite` stays. The same verified email replaying an already-used token is a no-op (“Already accepted.”). A different email still fails closed.
+
+## Login page session grant
+
+pirin.ai owns the Allow screen. This host does not. After Allow, the login page POSTs the GoTrue access token here. Server ships first.
+
+```
+POST https://mcp.bootstrap.pirin.ai/bootstrap-os/session
+Authorization: Bearer <GoTrue access token>
+Content-Type: application/json
+
+{ "invite": "inv_…", "email": "ignored@example.test" }
+```
+
+| | |
+|--|--|
+| Bearer | Required. No bearer → HTTP **401** `error: invalid_token`, `reason: missing_or_short_token`. No database write. |
+| `email` | Ignored, in the body and in the query. The verified session email is the only match. |
+| `invite` | Optional. A token without a matching session grants nothing. |
+| Success | HTTP **200** `{ ok, authenticated, grant: "allow", email, companies, reason, hint }`. |
+| Boards | `companies` is the membership list. `reason` and `hint` are null. |
+| No boards | Still `grant: "allow"`. `reason: "no_membership"`. `hint` is exactly `No boards yet. Ask your inviter to resend the invite to this email.` |
+| Revoked access token | HTTP **401** `error: invalid_token`, `reason: invalid_or_revoked_token`. Another live token for the same GoTrue user still works. |
+
+Repeated Allow for the same GoTrue user reuses one user row and one OAuth subject. It rotates `rotated_at`. It does not insert a second user. Each distinct access-token hash is one row. The same hash twice does not duplicate.
+
+Migration (repo only, Cos applies after merge): `mcp/supabase/migrations/20261015_bootstrap_mcp_accept_on_verified_signin.sql`. PR agents do not apply it.
 
 ## Verify RPC (Web Builder — fail-closed)
 
@@ -136,7 +162,7 @@ Hosted identity + invite Supabase adapters attach **only** when `VERCEL_ENV=prod
 
 ## Rebuild from GitHub (Cos — never a PR agent)
 
-1. Identity + fail-closed + invite migrations, in order: `20260829_bootstrap_mcp_identity.sql`, `20260909_bootstrap_mcp_fail_closed_invite.sql`, `20260910_bootstrap_mcp_invite_accept.sql`, then the label-qualify fix `20260910_bootstrap_mcp_invite_qualify_label.sql`, then the pgcrypto search_path fix `20260911_bootstrap_mcp_invite_pgcrypto_search_path.sql`, then the verify + email outbox `20260911_bootstrap_mcp_invite_verify_email_outbox.sql`, then existing-user / second-workspace `20260912_bootstrap_mcp_invite_existing_member.sql` (CREATE OR REPLACE `bootstrap_mcp_invite_member` — shipped accept / qualify / pgcrypto / verify files are not edited).
+1. Identity + fail-closed + invite migrations, in order: `20260829_bootstrap_mcp_identity.sql`, `20260909_bootstrap_mcp_fail_closed_invite.sql`, `20260910_bootstrap_mcp_invite_accept.sql`, then the label-qualify fix `20260910_bootstrap_mcp_invite_qualify_label.sql`, then the pgcrypto search_path fix `20260911_bootstrap_mcp_invite_pgcrypto_search_path.sql`, then the verify + email outbox `20260911_bootstrap_mcp_invite_verify_email_outbox.sql`, then existing-user / second-workspace `20260912_bootstrap_mcp_invite_existing_member.sql` (CREATE OR REPLACE `bootstrap_mcp_invite_member` — shipped accept / qualify / pgcrypto / verify files are not edited), then accept-on-verified-sign-in `20261015_bootstrap_mcp_accept_on_verified_signin.sql` (pending invites for the GoTrue email, one subject per user, one row per access-token hash).
 2. First user = SQL insert (link above). Do **not** apply `mcp/test/pglite/identity-schema.sql` to prod.
 3. Later users use `invite_member` / `accept_invite`. Additional workspaces are extra memberships on the same user. Do not invent journey stage or Advance.
 

@@ -369,16 +369,31 @@ BEGIN
     RETURN jsonb_build_object('ok', false, 'reason', 'invite_not_found');
   END IF;
 
+  IF invite.invitee_email <> user_email THEN
+    RETURN jsonb_build_object('ok', false, 'reason', 'invite_email_mismatch');
+  END IF;
+
   IF invite.accepted_at IS NOT NULL THEN
-    RETURN jsonb_build_object('ok', false, 'reason', 'invite_already_used');
+    SELECT id INTO found_mentee_id
+    FROM bootstrap_mcp_mentees
+    WHERE email = invite.invitee_email;
+
+    SELECT coalesce(jsonb_agg(l.label ORDER BY l.label), '[]'::jsonb)
+    INTO labels
+    FROM bootstrap_company_labels l
+    WHERE l.mentee_id = found_mentee_id;
+
+    RETURN jsonb_build_object(
+      'ok', true,
+      'email', invite.invitee_email,
+      'labels', coalesce(labels, '[]'::jsonb),
+      'companyWorkspace', invite.company_label,
+      'note', 'Already accepted.'
+    );
   END IF;
 
   IF invite.expires_at <= now() THEN
     RETURN jsonb_build_object('ok', false, 'reason', 'invite_expired');
-  END IF;
-
-  IF invite.invitee_email <> user_email THEN
-    RETURN jsonb_build_object('ok', false, 'reason', 'invite_email_mismatch');
   END IF;
 
   UPDATE bootstrap_mcp_invites
@@ -403,6 +418,10 @@ BEGIN
         SELECT 1 FROM bootstrap_mcp_mentees m2 WHERE m2.auth_user_id = uid
       );
   END IF;
+
+  INSERT INTO bootstrap_mcp_invite_redemptions (invite_id, mentee_id, auth_user_id)
+  VALUES (invite.id, found_mentee_id, uid)
+  ON CONFLICT (invite_id) DO NOTHING;
 
   INSERT INTO bootstrap_company_labels (id, mentee_id, label)
   VALUES (gen_random_uuid()::text, found_mentee_id, invite.company_label)
@@ -485,3 +504,135 @@ AS $$
       )
   );
 $$;
+
+-- One redemption per invite. A second accept is a no-op, not a second mentee.
+CREATE TABLE bootstrap_mcp_invite_redemptions (
+  invite_id text PRIMARY KEY REFERENCES bootstrap_mcp_invites (id) ON DELETE CASCADE,
+  mentee_id text NOT NULL REFERENCES bootstrap_mcp_mentees (id) ON DELETE CASCADE,
+  auth_user_id text NOT NULL,
+  redeemed_at timestamptz NOT NULL DEFAULT now()
+);
+
+-- One row per GoTrue user. Re-auth updates rotated_at. It does not insert another row.
+CREATE TABLE bootstrap_mcp_oauth_subjects (
+  auth_user_id text PRIMARY KEY,
+  email text NOT NULL,
+  mentee_id text REFERENCES bootstrap_mcp_mentees (id) ON DELETE SET NULL,
+  rotated_at timestamptz NOT NULL DEFAULT now()
+);
+
+-- One row per access-token hash. Revoked tokens fail closed. Live tokens keep working.
+CREATE TABLE bootstrap_mcp_access_tokens (
+  token_hash text PRIMARY KEY,
+  auth_user_id text NOT NULL,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  revoked_at timestamptz
+);
+
+-- Session email only (app.auth_email). p_token is recorded, never treated as an email.
+CREATE OR REPLACE FUNCTION bootstrap_mcp_accept_pending_invites(p_token text)
+RETURNS jsonb
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  uid text := current_setting('app.auth_uid', true);
+  user_email text := lower(nullif(current_setting('app.auth_email', true), ''));
+  invite bootstrap_mcp_invites%ROWTYPE;
+  found_mentee_id text;
+  labels jsonb := '[]'::jsonb;
+  accepted jsonb := '[]'::jsonb;
+  token_state text;
+BEGIN
+  IF uid IS NULL OR uid = '' OR user_email IS NULL OR user_email = '' THEN
+    RETURN jsonb_build_object('ok', false, 'reason', 'email_required');
+  END IF;
+
+  IF p_token IS NOT NULL AND length(p_token) >= 16 THEN
+    SELECT CASE WHEN revoked_at IS NULL THEN 'live' ELSE 'revoked' END
+      INTO token_state
+    FROM bootstrap_mcp_access_tokens
+    WHERE token_hash = bootstrap_mcp_hash_token(p_token);
+
+    IF token_state = 'revoked' THEN
+      RETURN jsonb_build_object('ok', false, 'reason', 'invalid_token');
+    END IF;
+
+    INSERT INTO bootstrap_mcp_access_tokens (token_hash, auth_user_id)
+    VALUES (bootstrap_mcp_hash_token(p_token), uid)
+    ON CONFLICT (token_hash) DO NOTHING;
+  END IF;
+
+  INSERT INTO bootstrap_mcp_oauth_subjects (auth_user_id, email, rotated_at)
+  VALUES (uid, user_email, now())
+  ON CONFLICT (auth_user_id) DO UPDATE
+    SET email = EXCLUDED.email,
+        rotated_at = now();
+
+  FOR invite IN
+    SELECT *
+    FROM bootstrap_mcp_invites
+    WHERE lower(invitee_email) = user_email
+      AND accepted_at IS NULL
+      AND expires_at > now()
+    ORDER BY created_at
+  LOOP
+    SELECT id INTO found_mentee_id
+    FROM bootstrap_mcp_mentees
+    WHERE lower(email) = user_email;
+
+    IF found_mentee_id IS NULL THEN
+      INSERT INTO bootstrap_mcp_mentees (id, email, auth_user_id)
+      VALUES (gen_random_uuid()::text, user_email, uid)
+      ON CONFLICT (email) DO NOTHING;
+      SELECT id INTO found_mentee_id
+      FROM bootstrap_mcp_mentees
+      WHERE lower(email) = user_email;
+    ELSE
+      UPDATE bootstrap_mcp_mentees
+      SET auth_user_id = uid
+      WHERE id = found_mentee_id
+        AND auth_user_id IS NULL
+        AND NOT EXISTS (
+          SELECT 1 FROM bootstrap_mcp_mentees m2 WHERE m2.auth_user_id = uid
+        );
+    END IF;
+
+    INSERT INTO bootstrap_mcp_invite_redemptions (invite_id, mentee_id, auth_user_id)
+    VALUES (invite.id, found_mentee_id, uid)
+    ON CONFLICT (invite_id) DO NOTHING;
+
+    UPDATE bootstrap_mcp_invites
+    SET accepted_at = now()
+    WHERE id = invite.id
+      AND accepted_at IS NULL;
+
+    INSERT INTO bootstrap_company_labels (id, mentee_id, label)
+    VALUES (gen_random_uuid()::text, found_mentee_id, invite.company_label)
+    ON CONFLICT (mentee_id, label) DO NOTHING;
+
+    UPDATE bootstrap_mcp_oauth_subjects
+    SET mentee_id = found_mentee_id
+    WHERE auth_user_id = uid;
+
+    accepted := accepted || jsonb_build_array(invite.company_label);
+  END LOOP;
+
+  IF found_mentee_id IS NOT NULL THEN
+    SELECT coalesce(jsonb_agg(l.label ORDER BY l.label), '[]'::jsonb)
+      INTO labels
+    FROM bootstrap_company_labels l
+    WHERE l.mentee_id = found_mentee_id;
+  END IF;
+
+  RETURN jsonb_build_object(
+    'ok', true,
+    'email', user_email,
+    'accepted', accepted,
+    'labels', labels
+  );
+END;
+$$;
+
+GRANT EXECUTE ON FUNCTION bootstrap_mcp_accept_pending_invites(text) TO mentee_reader;

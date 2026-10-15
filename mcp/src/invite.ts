@@ -112,6 +112,17 @@ export type AcceptFail = { ok: false; reason: AcceptFailReason } | InviteRpcFail
 export type InviteResult = InviteOk | InviteFail;
 export type AcceptResult = AcceptOk | AcceptFail;
 
+export type AcceptPendingOk = {
+  ok: true;
+  email: string;
+  accepted: string[];
+  labels: string[];
+};
+
+export type AcceptPendingResult =
+  | AcceptPendingOk
+  | { ok: false; reason: "email_required" | "invalid_token" | "invite_store_unset" | "invite_rpc_failed"; status?: number; body?: string };
+
 export const INVITE_RPC_BODY_CLIP = 800;
 
 export function clipInviteRpcBody(text: string): string {
@@ -143,6 +154,11 @@ export function parseInviteRpcJson(text: string): unknown {
 
 function isInviteRpcFail(raw: unknown): raw is InviteRpcFail {
   return Boolean(raw && typeof raw === "object" && (raw as InviteRpcFail).reason === "invite_rpc_failed");
+}
+
+function coercePending(raw: unknown): AcceptPendingResult {
+  if (raw && typeof raw === "object" && "ok" in raw) return raw as AcceptPendingResult;
+  return { ok: false, reason: "invite_rpc_failed" };
 }
 
 function coerceRpcResult<T extends { ok: boolean }>(raw: unknown, status: number): T | InviteRpcFail {
@@ -190,6 +206,8 @@ export interface InviteStore {
   readonly kind: "memory" | "pglite" | "supabase";
   inviteMember(actor: InviteActor, input: InviteCreateInput): Promise<InviteResult>;
   acceptInvite(actor: InviteActor, token: string): Promise<AcceptResult>;
+  /** Pending unexpired invites for the verified session email. Token email is ignored. */
+  acceptPending(actor: InviteActor, accessToken?: string): Promise<AcceptPendingResult>;
   verifyInvite(token: string): Promise<VerifyInviteResult>;
 }
 
@@ -393,6 +411,9 @@ export class MemoryInviteStore implements InviteStore {
   readonly kind = "memory" as const;
   readonly invites: InviteRow[] = [];
   readonly outbox: InviteOutboxRow[] = [];
+  readonly redemptions = new Set<string>();
+  readonly accessTokens: Array<{ hash: string; sub: string; revokedAt: string | null }> = [];
+  readonly subjects: Array<{ sub: string; email: string; rotatedAt: string }> = [];
   private readonly mentees: Array<{
     id: string;
     email: string;
@@ -488,8 +509,21 @@ export class MemoryInviteStore implements InviteStore {
     const digest = token?.length >= 16 ? hashMcpToken(token) : "";
     const invite = this.invites.find((row) => row.tokenHash === digest);
     const decided = decideInviteAccept({ now: inviteNow(), actorEmail: actorEmail ?? undefined, invite });
-    if (!decided.ok) return decided;
+    if (!decided.ok) {
+      if (decided.reason === "invite_already_used" && invite && actorEmail === invite.inviteeEmail) {
+        const held = this.mentees.find((m) => m.email === invite.inviteeEmail);
+        return {
+          ok: true,
+          email: invite.inviteeEmail,
+          labels: held ? [...held.labels].sort() : [],
+          companyWorkspace: invite.companyLabel,
+          note: "Already accepted.",
+        };
+      }
+      return decided;
+    }
     const row = invite as InviteRow;
+    this.redemptions.add(row.id);
     row.acceptedAt = new Date(inviteNow()).toISOString();
     let mentee = this.mentees.find((m) => m.email === row.inviteeEmail);
     if (!mentee) {
@@ -512,6 +546,49 @@ export class MemoryInviteStore implements InviteStore {
       companyWorkspace: row.companyLabel,
       note: "Allowlist bound. Companies this login can open.",
     };
+  }
+
+  async acceptPending(actor: InviteActor, accessToken?: string): Promise<AcceptPendingResult> {
+    const email = normalizeInviteEmail(actor.email ?? "");
+    if (!email) return { ok: false, reason: "email_required" };
+    if (accessToken && accessToken.length >= 16) {
+      const digest = hashMcpToken(accessToken);
+      const noted = this.accessTokens.find((row) => row.hash === digest);
+      if (noted?.revokedAt) return { ok: false, reason: "invalid_token" };
+      if (!noted) this.accessTokens.push({ hash: digest, sub: actor.sub ?? "", revokedAt: null });
+    }
+    const subjectKey = actor.sub || email;
+    const subject = this.subjects.find((row) => row.sub === subjectKey);
+    if (subject) subject.rotatedAt = new Date(inviteNow()).toISOString();
+    else this.subjects.push({ sub: subjectKey, email, rotatedAt: new Date(inviteNow()).toISOString() });
+
+    const now = inviteNow();
+    const accepted: string[] = [];
+    for (const row of this.invites) {
+      if (row.acceptedAt) continue;
+      if (row.inviteeEmail.toLowerCase() !== email) continue;
+      if (Date.parse(row.expiresAt) <= now) continue;
+      if (this.redemptions.has(row.id)) continue;
+      row.acceptedAt = new Date(now).toISOString();
+      this.redemptions.add(row.id);
+      let mentee = this.mentees.find((m) => m.email === row.inviteeEmail);
+      if (!mentee) {
+        mentee = {
+          id: newId("mentee"),
+          email: row.inviteeEmail,
+          authUserId: actor.sub ?? null,
+          labels: [],
+        };
+        this.mentees.push(mentee);
+      } else if (!mentee.authUserId && actor.sub && !this.mentees.some((m) => m.authUserId === actor.sub)) {
+        mentee.authUserId = actor.sub;
+      }
+      if (!mentee.labels.includes(row.companyLabel)) mentee.labels.push(row.companyLabel);
+      mentee.labels.sort();
+      accepted.push(row.companyLabel);
+    }
+    const mentee = this.mentees.find((m) => m.email === email);
+    return { ok: true, email, accepted, labels: mentee ? [...mentee.labels] : [] };
   }
 
   async verifyInvite(token: string): Promise<VerifyInviteResult> {
@@ -557,6 +634,19 @@ export class PgliteInviteStore implements InviteStore {
       return { ok: false, reason: "invite_not_found" };
     }
     return body as AcceptResult;
+  }
+
+  async acceptPending(actor: InviteActor, accessToken?: string): Promise<AcceptPendingResult> {
+    await this.setActor(actor);
+    const body = (
+      await this.db.query("SELECT bootstrap_mcp_accept_pending_invites($1) AS body", [
+        accessToken && accessToken.length >= 16 ? accessToken : null,
+      ])
+    ).rows[0]?.body;
+    if (!body || typeof body !== "object" || !("ok" in body)) {
+      return { ok: false, reason: "invite_store_unset" };
+    }
+    return body as AcceptPendingResult;
   }
 
   async verifyInvite(token: string): Promise<VerifyInviteResult> {
@@ -631,6 +721,24 @@ export class SupabaseInviteStore implements InviteStore {
     const hit = await this.rpc("bootstrap_mcp_accept_invite", { p_token: token });
     if (isInviteRpcFail(hit)) return hit;
     return coerceRpcResult<AcceptResult>(hit.raw, hit.status);
+  }
+
+  async acceptPending(actor: InviteActor, accessToken?: string): Promise<AcceptPendingResult> {
+    void actor;
+    if (accessToken && accessToken.length >= 16) {
+      const state = await this.rpc("bootstrap_mcp_accept_pending_invites", {
+        p_token: accessToken,
+      });
+      if (isInviteRpcFail(state)) {
+        return { ok: false, reason: "invite_rpc_failed", status: state.status, body: state.body };
+      }
+      return coercePending(state.raw);
+    }
+    const hit = await this.rpc("bootstrap_mcp_accept_pending_invites", { p_token: null });
+    if (isInviteRpcFail(hit)) {
+      return { ok: false, reason: "invite_rpc_failed", status: hit.status, body: hit.body };
+    }
+    return coercePending(hit.raw);
   }
 
   async verifyInvite(token: string): Promise<VerifyInviteResult> {
