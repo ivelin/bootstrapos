@@ -42,6 +42,7 @@ import {
   stripLegacyCardKeysWhenInitiatives,
   initiativesOf,
   normalizeInitiatives,
+  whoNamesFromOwners,
   type Initiative,
   type InitiativeCard,
 } from "./initiative-card.js";
@@ -973,6 +974,7 @@ export function ideaPayload(
       killed,
       killedCard: killed ? killedCardOf(idea) : undefined,
       allowPaperBottleneck: allowPaper,
+      who: whoNamesFromOwners(owners),
     }),
     engagements,
     initiatives,

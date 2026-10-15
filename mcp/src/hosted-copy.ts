@@ -81,7 +81,7 @@ export const NOTE_COMPANIES =
 export const NOTE_NOT_SIGNED_IN = "You're not signed in to Bootstrap OS."
 
 export const TOOL_GET_JOURNEY =
-  "Where are we — the company board, or one idea board under it. Print spoken first. Use this when they say where are we, show the company board, show company X ideas, or show my idea board. If they ask for every board, print the boards field and stop. Live boards only. Do not describe a stopped bet unless they ask what you already stopped."
+  "Where are we — the company board, or one idea board under it. Print spoken first. spoken and markdown are the same ready-to-render board. spokenLead is the opening line. Do not rebuild the table. Use this when they say where are we, show the company board, show company X ideas, or show my idea board. If they ask for every board, print the boards field and stop. Live boards only. Do not describe a stopped bet unless they ask what you already stopped."
 
 export const TOOL_CREATE_IDEA =
   "Start another customer bet under a company this login can open. Needs a yes in this chat."
