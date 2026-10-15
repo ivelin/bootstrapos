@@ -8,6 +8,7 @@ on:
       - "plugin/**"
       - "company-os/**"
       - "templates/**"
+      - "docs/runbooks/onboarding.md"
       - ".github/workflows/mcp-ci.yml"
       - "scripts/ci.sh"
   pull_request:
@@ -16,8 +17,12 @@ on:
       - "plugin/**"
       - "company-os/**"
       - "templates/**"
+      - "docs/runbooks/onboarding.md"
       - ".github/workflows/mcp-ci.yml"
       - "scripts/ci.sh"
+  schedule:
+    # Daily fixture probe. Does not touch production. prod-smoke stays push-to-main only.
+    - cron: "17 13 * * *"
 
 concurrency:
   group: mcp-ci-${{ github.workflow }}-${{ github.ref }}
@@ -145,6 +150,29 @@ jobs:
               assert kind in kinds, kind
           print("state template + initiatives schema ok")
           PY
+
+  onboarding-probe:
+    name: onboarding probe (fixtures, never prod)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: mcp
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: mcp/package-lock.json
+
+      - name: Install
+        run: npm ci
+
+      - name: Probe (invite, session grant, whoami — PGlite only)
+        run: npm run probe:onboarding
 
   # Hosted MCP only after merge. PRs stay on local stdio/http. Bounded GET /health + handshake.
   prod-smoke:

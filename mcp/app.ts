@@ -5,6 +5,7 @@ const app = new Hono();
 
 app.all("/health", (c) => handleHostedReadFetch(c.req.raw));
 app.all("/mcp", (c) => handleHostedReadFetch(c.req.raw));
+app.all("/bootstrap-os/session", (c) => handleHostedReadFetch(c.req.raw));
 app.all("/api/health", (c) => handleHostedReadFetch(c.req.raw));
 app.all("/api/mcp", (c) => handleHostedReadFetch(c.req.raw));
 app.all("/.well-known/oauth-protected-resource", (c) => handleHostedReadFetch(c.req.raw));
