@@ -193,6 +193,10 @@ export function founderCardBannedHit(text: string): string | null {
     /\bBottleneck #1\b/i,
     /\bcustomer_check\b/,
     /\bNDAs?\b/i,
+    /\bjourney phase \d/i,
+    /\bloop stage\b/i,
+    /\bwipLimit\b/,
+    /\bmermaid\b/i,
   ];
   for (const rule of rules) {
     const hit = String(text ?? "").match(rule);
@@ -328,6 +332,7 @@ function activeCustomerChecks(rows: Initiative[]): Initiative[] {
 
 export function normalizeInitiatives(
   raw: unknown,
+  opts?: { forDisplay?: boolean },
 ): { ok: true; value: Initiative[] } | { ok: false; error: string } {
   if (raw === undefined) return { ok: true, value: [] };
   if (!Array.isArray(raw)) return { ok: false, error: INITIATIVE_INVALID };
@@ -391,7 +396,14 @@ export function normalizeInitiatives(
   }
   const paid = hasPaidUse(rows);
   if (!paid && activeCustomerChecks(rows).length > 1) {
-    return { ok: false, error: CUSTOMER_CHECK_WIP };
+    if (!opts?.forDisplay) return { ok: false, error: CUSTOMER_CHECK_WIP };
+    // A second in-play bet must not wipe the card. Keep one 🟢 and show the rest as waiting.
+    let kept = false;
+    for (const row of rows) {
+      if (row.kind !== "customer_check" || row.status !== "active") continue;
+      if (kept) row.status = "waiting";
+      else kept = true;
+    }
   }
   // Write-time still sees paper+pay concat so Clock/Operating lead is rejected.
   // Display rank filters paper unless allowPaperBottleneck.
@@ -510,7 +522,7 @@ export function initiativesOf(
 ): Initiative[] {
   const stored = scoreboard.initiatives;
   if (Array.isArray(stored) && stored.length) {
-    const hit = normalizeInitiatives(stored);
+    const hit = normalizeInitiatives(stored, { forDisplay: true });
     return hit.ok ? hit.value : [];
   }
   return initiativesFromLegacy(scoreboard, opts);
@@ -695,17 +707,35 @@ const PLAIN_SWAPS: Array<[RegExp, string]> = [
   [/\bcustomer bet\b/gi, "a try with buyers"],
   [/\bcustomer checks?\b/gi, "a try with buyers"],
   [/\bBottleneck #1\b/gi, "the main bet"],
-  [/\bNDAs?\b/gi, "a confidentiality promise"],
 ];
+
+/**
+ * Replace NDA without breaking the sentence. "the NDA" stays "the confidentiality
+ * promise". A bare NDA becomes "a confidentiality promise". Do not insert a comma.
+ */
+export function redactConfidentiality(value: string): string {
+  let text = value;
+  text = text.replace(/\ban\s+NDAs?\b/gi, "a confidentiality promise");
+  text = text.replace(/\bthe\s+NDAs?\b/gi, "the confidentiality promise");
+  text = text.replace(/(\w)\s+NDAs\b/g, "$1 confidentiality promises");
+  text = text.replace(/(\w)\s+NDA\b/g, "$1 confidentiality promise");
+  text = text.replace(/\bNDAs\b/g, "confidentiality promises");
+  text = text.replace(/\bNDA\b/g, "a confidentiality promise");
+  text = text.replace(/\bnda\b/gi, "a confidentiality promise");
+  text = text.replace(/\b(the|an?)\s+,?\s*a confidentiality promise\b/gi, (full, art: string) =>
+    /^the$/i.test(art) ? "the confidentiality promise" : "a confidentiality promise",
+  );
+  return text;
+}
 
 function plainCardText(value: unknown): string {
   let text = typeof value === "string" ? value : "";
   text = text.replace(/\s+/g, " ").trim();
   for (const rule of SPOKEN_HIDE) text = text.replace(rule, "");
+  text = redactConfidentiality(text);
   for (const [rule, to] of PLAIN_SWAPS) text = text.replace(rule, to);
-  // Founder short names stay as written. A vowel-less token, a slash name,
-  // or a hyphen compound is the board's own wording. Do not substitute a phrase.
-  text = text.replace(/\s+a confidentiality promise\b/gi, ", a confidentiality promise");
+  text = text.replace(/\bpaper cannot promote\b/gi, "");
+  text = text.replace(/\bcannot promote\b/gi, "");
   return text.replace(/\s+/g, " ").replace(/\s+([.,;])/g, "$1").trim();
 }
 
@@ -899,16 +929,78 @@ function workLabel(row: Initiative, opts: { bottleneck: boolean; depth: number; 
   return `${indent}${icon} ${body}`;
 }
 
+function whoFromPrincipal(principal: string): string {
+  const raw = principal.trim();
+  if (!raw) return "";
+  if (raw.includes("@")) {
+    const local = raw.split("@")[0] ?? "";
+    const first = local.split(/[._-]/).filter(Boolean)[0] ?? "";
+    return first;
+  }
+  // A subject id is plumbing. A short label can be a first name.
+  if (/[_-]/.test(raw)) return "";
+  return raw.split(/\s+/).filter(Boolean)[0] ?? "";
+}
+
+export function whoNamesFromOwners(owners: unknown): string[] {
+  if (!Array.isArray(owners)) return [];
+  const names: string[] = [];
+  for (const row of owners) {
+    const principal =
+      typeof row === "string"
+        ? row
+        : row && typeof row === "object"
+          ? String((row as { principal?: unknown }).principal ?? "")
+          : "";
+    const name = whoFromPrincipal(principal);
+    if (name && !names.includes(name)) names.push(name);
+  }
+  return names;
+}
+
+const CARD_WHO_ROLES = new Set(["founder", "founder_authorized"]);
+
+/** Who is a first name from ACL. Hosted boards store founder_authorized, not founder. */
+export function whoNamesForCard(payload: { owners?: unknown; acl?: unknown }): string[] {
+  const fromOwners = whoNamesFromOwners(payload.owners);
+  if (fromOwners.length) return fromOwners;
+  if (!Array.isArray(payload.acl)) return [];
+  const rows = payload.acl.filter((row) => {
+    if (!row || typeof row !== "object") return false;
+    return CARD_WHO_ROLES.has(String((row as { role?: unknown }).role ?? ""));
+  });
+  return whoNamesFromOwners(rows);
+}
+
+function whoCell(names: string[]): string {
+  return names.length ? names.join(", ") : "—";
+}
+
+function whyEnded(row: Initiative): string {
+  const why = plainCardText(row.killLine);
+  const last = plainCardText(row.last);
+  return why || last || "why it ended is not recorded";
+}
+
+function pastState(row: Initiative): string {
+  const dot = statusDot(row);
+  const why = whyEnded(row);
+  const clock = plainCardText(row.clock ?? "");
+  if (clock && clock !== "—") return `${dot} ${clock}: ${why}`;
+  return `${dot} ${why}`;
+}
+
 function pushSpokenRow(
   out: SpokenRow[],
   row: Initiative,
-  opts: { bottleneck: boolean; depth: number; seen: Set<string> },
+  opts: { bottleneck: boolean; depth: number; seen: Set<string>; who: string; past?: boolean },
 ): void {
+  const state = opts.past ? pastState(row) : whereItStands(row);
   out.push({
     work: introducePeople(workLabel(row, opts), opts.seen),
-    state: introducePeople(whereItStands(row), opts.seen),
+    state: introducePeople(state, opts.seen),
     next: introducePeople(plainCardText(row.next) || "—", opts.seen),
-    who: "—",
+    who: opts.who,
   });
 }
 
@@ -916,6 +1008,7 @@ function spokenSections(
   card: InitiativeCard | null | undefined,
   alsoLive: string[],
   seen: Set<string>,
+  who: string,
 ): { bet: SpokenRow[]; other: SpokenRow[]; past: SpokenRow[]; background: SpokenRow[] } {
   const bet: SpokenRow[] = [];
   const other: SpokenRow[] = [];
@@ -936,10 +1029,10 @@ function spokenSections(
     if (rendered.has(check.id)) return;
     rendered.add(check.id);
     const shown = isBottleneck && bottleneck ? { ...check, ...bottleneck, engagements: check.engagements } : check;
-    pushSpokenRow(bucket, shown, { bottleneck: isBottleneck, depth, seen });
+    pushSpokenRow(bucket, shown, { bottleneck: isBottleneck, depth, seen, who });
     for (const child of check.engagements ?? []) {
       rendered.add(child.id);
-      pushSpokenRow(bucket, child, { bottleneck: false, depth: depth + 1, seen });
+      pushSpokenRow(bucket, child, { bottleneck: false, depth: depth + 1, seen, who });
     }
     for (const follow of live) {
       if (follow.parentId === check.id) emit(bucket, follow, depth + 1, false);
@@ -951,7 +1044,7 @@ function spokenSections(
     emit(bet, match ?? { ...bottleneck, engagements: [] }, 0, true);
   } else if (bottleneck) {
     rendered.add(bottleneck.id);
-    pushSpokenRow(bet, bottleneck, { bottleneck: true, depth: 0, seen });
+    pushSpokenRow(bet, bottleneck, { bottleneck: true, depth: 0, seen, who });
   }
 
   for (const check of live) emit(other, check, 0, false);
@@ -962,21 +1055,26 @@ function spokenSections(
   );
   for (const row of liveOrphans) {
     rendered.add(row.id);
-    pushSpokenRow(other, row, { bottleneck: false, depth: row.parentId ? 1 : 0, seen });
+    pushSpokenRow(other, row, { bottleneck: false, depth: row.parentId ? 1 : 0, seen, who });
   }
 
   for (const name of alsoLive) {
     const label = plainCardText(name);
     if (!label) continue;
-    other.push({ work: `🤝 **${label}**`, state: "🟢 In play", next: "On its own", who: "—" });
+    other.push({
+      work: `🤝 **${label}**`,
+      state: "🟡 On its own board",
+      next: "Open that board",
+      who,
+    });
   }
 
   const remaining = footer.filter((row) => !rendered.has(row.id));
   for (const row of remaining.filter((item) => !isBackground(item))) {
-    pushSpokenRow(past, row, { bottleneck: false, depth: row.parentId ? 1 : 0, seen });
+    pushSpokenRow(past, row, { bottleneck: false, depth: row.parentId ? 1 : 0, seen, who, past: true });
   }
   for (const row of remaining.filter((item) => isBackground(item))) {
-    pushSpokenRow(background, row, { bottleneck: false, depth: 0, seen });
+    pushSpokenRow(background, row, { bottleneck: false, depth: 0, seen, who });
   }
 
   if (!bet.length) {
@@ -984,7 +1082,15 @@ function spokenSections(
       work: "🎯 🤝 **Nothing on the board yet**",
       state: "⚪ Not started",
       next: "Name what done looks like",
-      who: "—",
+      who,
+    });
+  }
+  if (!past.length) {
+    past.push({
+      work: "🔎 No past bets recorded",
+      state: "⚪ None recorded",
+      next: "Ask why it ended",
+      who,
     });
   }
   return { bet, other, past, background };
@@ -1020,6 +1126,8 @@ export function formatSpokenCard(input: {
   killedCard?: string;
   allowPaperBottleneck?: boolean;
   alsoLive?: string[];
+  /** ACL founder principals, or already-short names. Missing stays —. */
+  who?: string[];
 }): string {
   const rawLabel = input.label.trim() || "company";
   const label = rawLabel.toLowerCase() === "default" ? "company" : rawLabel;
@@ -1040,19 +1148,26 @@ export function formatSpokenCard(input: {
     goal = "to name what done looks like";
   }
   sells = sells.replace(/\.$/, "");
-  const headline = introducePeople(`**${label}**: ${sells}. The goal is ${goal}.`, seen);
+  const problem = plainCardText(input.constraintThisWeek).replace(/\.$/, "");
+  const problemClause =
+    problem &&
+    problem.toLowerCase() !== "none yet" &&
+    !sells.toLowerCase().includes(problem.toLowerCase())
+      ? ` The problem is ${problem}.`
+      : "";
+  const headline = introducePeople(`**${label}**: ${sells}.${problemClause} The goal is ${goal}.`, seen);
   const alsoLive = (input.alsoLive ?? []).map((name) => name.trim()).filter(Boolean);
-  const sections = spokenSections(card, alsoLive, seen);
+  const who = whoCell(input.who ?? []);
+  const sections = spokenSections(card, alsoLive, seen, who);
   const table = [
     ...sectionLines(FOUNDER_CARD_SECTIONS[0], sections.bet),
     ...sectionLines(FOUNDER_CARD_SECTIONS[1], sections.other),
     ...sectionLines(FOUNDER_CARD_SECTIONS[2], sections.past),
     ...sectionLines(FOUNDER_CARD_SECTIONS[3], sections.background),
   ];
-  const next = introducePeople(
-    `**Next:** ${nextSentence(killed ? null : card?.bottleneck ?? null, killed)}`,
-    seen,
-  );
+  const step = nextSentence(killed ? null : card?.bottleneck ?? null, killed);
+  const namedStep = who !== "—" && !step.toLowerCase().includes(who.toLowerCase()) ? `${who} — ${step}` : step;
+  const next = introducePeople(`**Next:** ${namedStep}`, seen);
   const lines = [
     headline,
     "",
@@ -1182,6 +1297,7 @@ function spokenInputFromIdea(
     killedCard: typeof idea.killedCard === "string" ? idea.killedCard : undefined,
     allowPaperBottleneck: allowPaperOf(sb),
     alsoLive,
+    who: whoNamesForCard(payload),
   };
 }
 
@@ -1268,8 +1384,9 @@ export function applySpokenPayloadLead(
     payload.idea = { ...(payload.idea as Record<string, unknown>), snapshot: spoken };
   }
   const boards = formatBoardDirectory(payload.ideas);
-  const { ok: _ok, spoken: _drop, boards: _boards, ...rest } = payload;
-  return { ok: true, spoken, boards, ...rest };
+  const spokenLead = spoken.split("\n").find((line) => line.trim().startsWith("**"))?.trim() ?? "";
+  const { ok: _ok, spoken: _drop, boards: _boards, markdown: _markdown, spokenLead: _lead, ...rest } = payload;
+  return { ok: true, spoken, spokenLead, markdown: spoken, boards, ...rest };
 }
 
 export function compactJourneyPayload(
