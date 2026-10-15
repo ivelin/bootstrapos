@@ -336,6 +336,60 @@ describe("onboarding gate (PGlite, same commit, never prod)", { concurrency: fal
     void charlieToken;
   });
 
+  it("unconfirmed email cannot claim an invite", async () => {
+    const migration = fs.readFileSync(
+      path.join(__dirname, "..", "supabase", "migrations", "20261015_bootstrap_mcp_accept_on_verified_signin.sql"),
+      "utf8",
+    );
+    const queries = migration.match(
+      /SELECT lower\(email\) INTO user_email\s+FROM auth\.users\s+WHERE id = uid\s+AND email_confirmed_at IS NOT NULL;/g,
+    );
+    assert.equal(queries?.length, 2);
+
+    await db.exec("RESET ROLE");
+    const token = "inv_unconfirmed_email_token_xx";
+    await db.query(
+      `INSERT INTO bootstrap_mcp_invites
+        (id, invitee_email, company_label, invited_by_mentee_id, invited_by_email, token_hash, expires_at)
+       VALUES ('inv-unconfirmed', 'unconfirmed@example.test', 'alpha', 'mentee-ivelin', 'founder@example.test', $1, now() + interval '7 days')`,
+      [hashMcpToken(token)],
+    );
+    await db.query("SELECT set_config('app.auth_uid', $1, false)", ["19191919-1919-4919-8919-191919191919"]);
+    await db.query("SELECT set_config('app.auth_email', $1, false)", ["unconfirmed@example.test"]);
+    await db.query("SELECT set_config('app.email_confirmed_at', '', false)");
+
+    const pending = (await db.query("SELECT bootstrap_mcp_accept_pending_invites($1) AS body", [token])).rows[0].body;
+    assert.deepEqual(pending, { ok: false, reason: "email_required" });
+    const explicit = (await db.query("SELECT bootstrap_mcp_accept_invite($1) AS body", [token])).rows[0].body;
+    assert.deepEqual(explicit, { ok: false, reason: "email_required" });
+
+    const row = (
+      await db.query(
+        "SELECT accepted_at IS NULL AS pending FROM bootstrap_mcp_invites WHERE id = 'inv-unconfirmed'",
+      )
+    ).rows[0];
+    assert.equal(row.pending, true);
+    const mentees = (
+      await db.query("SELECT count(*)::int AS n FROM bootstrap_mcp_mentees WHERE email = 'unconfirmed@example.test'")
+    ).rows[0].n;
+    assert.equal(mentees, 0);
+
+    const memory = new MemoryInviteStore([
+      { id: "mentee-ivelin", email: IVELIN_SEED_EMAIL, authUserId: IVELIN_UID, labels: ["alpha"] },
+    ]);
+    const created = await memory.inviteMember(
+      { email: IVELIN_SEED_EMAIL, sub: IVELIN_UID, labels: ["alpha"] },
+      { email: "unconfirmed-memory@example.test", companyLabel: "alpha" },
+    );
+    assert.equal(created.ok, true);
+    const denied = await memory.acceptPending(
+      { email: "unconfirmed-memory@example.test", sub: "unconfirmed-sub", emailConfirmedAt: null },
+      tokenFor("unconfirmed-memory@example.test", "21212121-2121-4212-8212-212121212121"),
+    );
+    assert.deepEqual(denied, { ok: false, reason: "email_required" });
+    assert.equal(memory.mentees.some((row) => row.email === "unconfirmed-memory@example.test"), false);
+  });
+
   it("token without a session grants nothing", async () => {
     useStores();
     const inviteToken = await invite("token-only@example.test", "alpha");

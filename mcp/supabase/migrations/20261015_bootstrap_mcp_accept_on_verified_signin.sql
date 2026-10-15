@@ -57,7 +57,10 @@ BEGIN
     RETURN jsonb_build_object('ok', false, 'reason', 'email_required');
   END IF;
 
-  SELECT lower(email) INTO user_email FROM auth.users WHERE id = uid;
+  SELECT lower(email) INTO user_email
+  FROM auth.users
+  WHERE id = uid
+    AND email_confirmed_at IS NOT NULL;
   IF user_email IS NULL OR user_email = '' THEN
     RETURN jsonb_build_object('ok', false, 'reason', 'email_required');
   END IF;
@@ -165,7 +168,10 @@ BEGIN
     RETURN jsonb_build_object('ok', false, 'reason', 'email_required');
   END IF;
 
-  SELECT lower(email) INTO user_email FROM auth.users WHERE id = uid;
+  SELECT lower(email) INTO user_email
+  FROM auth.users
+  WHERE id = uid
+    AND email_confirmed_at IS NOT NULL;
   IF user_email IS NULL OR user_email = '' THEN
     RETURN jsonb_build_object('ok', false, 'reason', 'email_required');
   END IF;

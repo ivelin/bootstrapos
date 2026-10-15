@@ -29,6 +29,8 @@ export type InviteActor = {
   email?: string;
   sub?: string;
   labels?: string[];
+  /** Null means GoTrue email_confirmed_at is null. Omitted means the session is confirmed. */
+  emailConfirmedAt?: string | null;
 };
 
 export type InviteCreateInput = {
@@ -505,6 +507,9 @@ export class MemoryInviteStore implements InviteStore {
   }
 
   async acceptInvite(actor: InviteActor, token: string): Promise<AcceptResult> {
+    if (actor.emailConfirmedAt === null || actor.emailConfirmedAt === "") {
+      return { ok: false, reason: "email_required" };
+    }
     const actorEmail = normalizeInviteEmail(actor.email ?? "");
     const digest = token?.length >= 16 ? hashMcpToken(token) : "";
     const invite = this.invites.find((row) => row.tokenHash === digest);
@@ -549,6 +554,9 @@ export class MemoryInviteStore implements InviteStore {
   }
 
   async acceptPending(actor: InviteActor, accessToken?: string): Promise<AcceptPendingResult> {
+    if (actor.emailConfirmedAt === null || actor.emailConfirmedAt === "") {
+      return { ok: false, reason: "email_required" };
+    }
     const email = normalizeInviteEmail(actor.email ?? "");
     if (!email) return { ok: false, reason: "email_required" };
     if (accessToken && accessToken.length >= 16) {
@@ -610,6 +618,11 @@ export class PgliteInviteStore implements InviteStore {
     await this.db.exec("RESET ROLE");
     await this.db.query("SELECT set_config('app.auth_uid', $1, false)", [actor.sub ?? ""]);
     await this.db.query("SELECT set_config('app.auth_email', $1, false)", [actor.email ?? ""]);
+    const confirmed =
+      actor.emailConfirmedAt === null || actor.emailConfirmedAt === ""
+        ? ""
+        : actor.emailConfirmedAt || new Date(0).toISOString();
+    await this.db.query("SELECT set_config('app.email_confirmed_at', $1, false)", [confirmed]);
   }
 
   async inviteMember(actor: InviteActor, input: InviteCreateInput): Promise<InviteResult> {

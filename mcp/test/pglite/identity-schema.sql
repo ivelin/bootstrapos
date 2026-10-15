@@ -345,6 +345,7 @@ AS $$
 DECLARE
   uid text := current_setting('app.auth_uid', true);
   user_email text := lower(nullif(current_setting('app.auth_email', true), ''));
+  confirmed_at text := nullif(current_setting('app.email_confirmed_at', true), '');
   invite bootstrap_mcp_invites%ROWTYPE;
   found_mentee_id text;
   labels jsonb;
@@ -353,7 +354,7 @@ BEGIN
     RETURN jsonb_build_object('ok', false, 'reason', 'email_required');
   END IF;
 
-  IF user_email IS NULL OR user_email = '' THEN
+  IF user_email IS NULL OR user_email = '' OR confirmed_at IS NULL THEN
     RETURN jsonb_build_object('ok', false, 'reason', 'email_required');
   END IF;
 
@@ -530,6 +531,7 @@ CREATE TABLE bootstrap_mcp_access_tokens (
 );
 
 -- Session email only (app.auth_email). p_token is recorded, never treated as an email.
+-- app.email_confirmed_at stands in for auth.users.email_confirmed_at. Empty means unconfirmed.
 CREATE OR REPLACE FUNCTION bootstrap_mcp_accept_pending_invites(p_token text)
 RETURNS jsonb
 LANGUAGE plpgsql
@@ -539,13 +541,14 @@ AS $$
 DECLARE
   uid text := current_setting('app.auth_uid', true);
   user_email text := lower(nullif(current_setting('app.auth_email', true), ''));
+  confirmed_at text := nullif(current_setting('app.email_confirmed_at', true), '');
   invite bootstrap_mcp_invites%ROWTYPE;
   found_mentee_id text;
   labels jsonb := '[]'::jsonb;
   accepted jsonb := '[]'::jsonb;
   token_state text;
 BEGIN
-  IF uid IS NULL OR uid = '' OR user_email IS NULL OR user_email = '' THEN
+  IF uid IS NULL OR uid = '' OR user_email IS NULL OR user_email = '' OR confirmed_at IS NULL THEN
     RETURN jsonb_build_object('ok', false, 'reason', 'email_required');
   END IF;
 
