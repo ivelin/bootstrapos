@@ -321,7 +321,12 @@ describe("spoken-card eval B grounding", () => {
     assert.match(alsoMovingBody(seen.spoken), /side file for counsel notes/);
     assert.doesNotMatch(seen.spoken, /\bNDA\b/i);
     assert.equal(seen.card.bottleneck.kind, "customer_check");
-    assert.equal(seen.card.customerChecks[0].engagements[0].premise, "bravo plant NDA");
+    assert.equal(
+      seen.card.customerChecks[0].engagements[0].premise,
+      "bravo plant confidentiality promise",
+    );
+    assert.doesNotMatch(JSON.stringify(seen.card), /\bnda\b/i);
+    assert.doesNotMatch(JSON.stringify(seen.ideas[0].scoreboard), /\bnda\b/i);
     assert.equal(seen.card.footer.some((row) => row.kind === "legal"), true);
     assert.notEqual(seen.card.bottleneck.kind, "legal");
     assert.notEqual(seen.card.bottleneck.kind, "advisor");

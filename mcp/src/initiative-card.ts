@@ -715,17 +715,62 @@ const PLAIN_SWAPS: Array<[RegExp, string]> = [
  */
 export function redactConfidentiality(value: string): string {
   let text = value;
-  text = text.replace(/\ban\s+NDAs?\b/gi, "a confidentiality promise");
-  text = text.replace(/\bthe\s+NDAs?\b/gi, "the confidentiality promise");
-  text = text.replace(/(\w)\s+NDAs\b/g, "$1 confidentiality promises");
-  text = text.replace(/(\w)\s+NDA\b/g, "$1 confidentiality promise");
-  text = text.replace(/\bNDAs\b/g, "confidentiality promises");
-  text = text.replace(/\bNDA\b/g, "a confidentiality promise");
+  text = text.replace(/\ban\s+ndas?\b/gi, "a confidentiality promise");
+  text = text.replace(/\bthe\s+ndas\b/gi, "the confidentiality promises");
+  text = text.replace(/\bthe\s+nda\b/gi, "the confidentiality promise");
+  text = text.replace(/(\w)\s+ndas\b/gi, "$1 confidentiality promises");
+  text = text.replace(/(\w)\s+nda\b/gi, "$1 confidentiality promise");
+  text = text.replace(/\bndas\b/gi, "confidentiality promises");
   text = text.replace(/\bnda\b/gi, "a confidentiality promise");
-  text = text.replace(/\b(the|an?)\s+,?\s*a confidentiality promise\b/gi, (full, art: string) =>
+  text = text.replace(/\b(the|an?)\s+,?\s*a confidentiality promise\b/gi, (_full, art: string) =>
     /^the$/i.test(art) ? "the confidentiality promise" : "a confidentiality promise",
   );
   return text;
+}
+
+const REDACT_TEXT_KEYS = new Set([
+  "premise",
+  "measure",
+  "killLine",
+  "last",
+  "next",
+  "clock",
+  "constraintThisWeek",
+  "constraint_this_week",
+  "hypothesis",
+  "killedCard",
+  "account",
+  "note",
+  "summary",
+  "body",
+  "snapshot",
+  "lessonsLearned",
+  "actionableInsights",
+  "whatWereNotDoing",
+  "founderWrittenDecision",
+]);
+
+const REDACT_TEXT_LIST_KEYS = new Set(["openQuestions", "progress"]);
+
+/** Copy founder-facing strings. Leave kind, id, and other enums alone (`nda` stays a kind). */
+function redactPayloadText(value: unknown, seen = new WeakSet<object>()): unknown {
+  if (!value || typeof value !== "object") return value;
+  if (seen.has(value)) return value;
+  seen.add(value);
+  if (Array.isArray(value)) return value.map((item) => redactPayloadText(item, seen));
+  const out: Record<string, unknown> = {};
+  for (const [key, child] of Object.entries(value)) {
+    if (typeof child === "string" && REDACT_TEXT_KEYS.has(key)) {
+      out[key] = redactConfidentiality(child);
+    } else if (Array.isArray(child) && REDACT_TEXT_LIST_KEYS.has(key)) {
+      out[key] = child.map((item) => (typeof item === "string" ? redactConfidentiality(item) : redactPayloadText(item, seen)));
+    } else if (child && typeof child === "object") {
+      out[key] = redactPayloadText(child, seen);
+    } else {
+      out[key] = child;
+    }
+  }
+  return out;
 }
 
 function plainCardText(value: unknown): string {
@@ -1383,10 +1428,11 @@ export function applySpokenPayloadLead(
   if (payload.idea && typeof payload.idea === "object") {
     payload.idea = { ...(payload.idea as Record<string, unknown>), snapshot: spoken };
   }
-  const boards = formatBoardDirectory(payload.ideas);
+  const boards = redactConfidentiality(formatBoardDirectory(payload.ideas));
   const spokenLead = spoken.split("\n").find((line) => line.trim().startsWith("**"))?.trim() ?? "";
   const { ok: _ok, spoken: _drop, boards: _boards, markdown: _markdown, spokenLead: _lead, ...rest } = payload;
-  return { ok: true, spoken, spokenLead, markdown: spoken, boards, ...rest };
+  const safe = redactPayloadText(rest) as Record<string, unknown>;
+  return { ok: true, spoken, spokenLead, markdown: spoken, boards, ...safe };
 }
 
 export function compactJourneyPayload(

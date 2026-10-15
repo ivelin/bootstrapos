@@ -9,6 +9,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { MemoryJourneyStore, defaultScoreboard } from "../dist/journey.js";
 import {
+  applySpokenPayloadLead,
   cardFromScoreboard,
   formatSpokenCard,
   normalizeInitiatives,
@@ -216,6 +217,50 @@ describe("canonical board card", () => {
     assert.equal(redactConfidentiality("bravo plant NDA"), "bravo plant confidentiality promise");
     assert.doesNotMatch(redactConfidentiality("the NDA was sent"), /the, a confidentiality/);
     assert.doesNotMatch(redactConfidentiality("signed the NDA today"), /\bNDA\b/);
+    for (const raw of ["nda", "Nda", "NDA", "ndas", "Ndas", "NDAs"]) {
+      assert.doesNotMatch(redactConfidentiality(`signed the ${raw} today`), /\bnda\b/i, raw);
+    }
+    assert.equal(redactConfidentiality("the ndas were filed"), "the confidentiality promises were filed");
+    assert.equal(redactConfidentiality("plant NDAs"), "plant confidentiality promises");
+    assert.equal(redactConfidentiality("an Ndas draft"), "a confidentiality promise draft");
+  });
+
+  it("redacts NDA in structured fields for the bravo fixture", () => {
+    const seen = applySpokenPayloadLead({
+      ok: true,
+      company: { slug: "bravo", label: "bravo" },
+      ideas: [
+        {
+          slug: "default",
+          name: "bravo",
+          constraintThisWeek: "the NDA is unsigned",
+          scoreboard: {
+            schema_version: 1,
+            constraint_this_week: "the nda is unsigned",
+            initiatives: [
+              {
+                ...BRAVO.initiatives[0],
+                premise: "bravo plant NDA",
+                last: "NDAs sent",
+                killLine: "NDA is not Try",
+              },
+            ],
+          },
+        },
+      ],
+    });
+    const structured = JSON.stringify({
+      card: seen.card,
+      ideas: seen.ideas,
+      boards: seen.boards,
+    });
+    assert.equal(seen.markdown, seen.spoken);
+    assert.doesNotMatch(seen.markdown, /\bnda\b/i);
+    assert.doesNotMatch(structured, /\bnda\b/i);
+    assert.match(structured, /bravo plant confidentiality promise/);
+    assert.match(structured, /confidentiality promises sent/);
+    assert.match(seen.ideas[0].scoreboard.initiatives[0].premise, /confidentiality promise/);
+    assert.match(seen.card.bottleneck.premise, /confidentiality promise/);
   });
 
   it("a second in-play bet does not blank the card and stays a single top green", () => {
