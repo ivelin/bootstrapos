@@ -55,18 +55,14 @@ describe("invite mail contract (never prod Resend)", { concurrency: false }, () 
     assert.match(mail.text, /Who invited: founder@example\.test/);
     assert.match(mail.text, /Invitee email: member@example\.test/);
     assert.match(mail.text, /Company workspace: alpha/);
-    assert.match(mail.text, /Invite token: inv_fixture_token_xxxxxxxx/);
-    assert.match(mail.text, /Signup URL: https:\/\/pirin\.ai\/bootstrap-os\/login\?invite=inv_fixture_token_xxxxxxxx/);
-    assert.match(mail.text, /QR payload \(same as signup URL\)/);
+    assert.match(mail.text, /Open this to sign in or create your account/);
+    assert.match(mail.text, /https:\/\/pirin\.ai\/bootstrap-os\/login\?invite=inv_fixture_token_xxxxxxxx/);
     assert.equal(mail.signupUrl, mail.qrPayload);
-    assert.match(mail.text, /accept_invite/);
-    assert.match(mail.text, /Sign in or create/);
-    assert.match(mail.text, /form card in the chat/);
-    assert.match(mail.text, /Email and Password/);
-    assert.match(mail.text, /Press Continue, then Accept invite/);
+    assert.equal((mail.text.match(/https:\/\//g) || []).length, 1);
     assert.match(INVITE_MAIL_NOTE, /pirin-ai sends From bootstrap@pirin.ai on production/);
     assert.match(INVITE_MAIL_NOTE, /any agentic client/);
-    assert.match(INVITE_MAIL_NOTE, /form card in the chat/);
+    assert.match(INVITE_MAIL_NOTE, /Open this to sign in or create your account/);
+    assert.doesNotMatch(mail.text, /Sign in first/);
     assert.doesNotMatch(mail.from, /ivelin@|cos@/);
   });
 

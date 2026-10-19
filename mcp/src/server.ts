@@ -49,10 +49,11 @@ import { buildNextEvidenceView, buildStatusView } from "./guidance.js";
 import { evaluateExternalAsk } from "./policy.js";
 import { HOUSE_RULE_LINES, HOUSE_RULE_PINS } from "./house-rules.js";
 import { anonymousWhoami, type HostedRequestContext } from "./identity-context.js";
+import { noBoardsPayload, NO_BOARDS_HINT } from "./onboarding.js";
 import { hostedMcpResource } from "./oauth.js";
 import {
+  chooseCompany,
   getActiveCompany,
-  resolveCompanyArg,
   setActiveCompany,
 } from "./hosted-company-context.js";
 import {
@@ -140,6 +141,7 @@ function membershipPayload(
   sessionKey?: string,
 ) {
   const companies = [...who.labels].sort();
+  const empty = who.authenticated && companies.length === 0;
   return {
     authenticated: who.authenticated,
     email: who.authenticated ? who.email ?? null : null,
@@ -147,7 +149,9 @@ function membershipPayload(
     companies,
     labels: companies,
     activeCompany: sessionKey ? getActiveCompany(sessionKey) ?? null : null,
-    note: NOTE_COMPANIES,
+    reason: empty ? "no_membership" : null,
+    hint: empty ? NO_BOARDS_HINT : null,
+    note: empty ? NO_BOARDS_HINT : NOTE_COMPANIES,
   };
 }
 
@@ -358,12 +362,17 @@ function registerGatedIdentityTools(server: McpServer, ctx: HostedRequestContext
         return err(NOTE_NOT_SIGNED_IN);
       }
       const sessionKey = ctx.sessionKey ?? "anon";
-      const chosen = resolveCompanyArg({ company, companyId, sessionKey });
-      if (!chosen) {
-        return err(
-          `Say which company. You can open: ${[...who.labels].sort().join(", ") || "(none)"}.`,
-        );
+      const choice = chooseCompany({ company, companyId, sessionKey, labels: who.labels });
+      if (choice.kind === "none") return text(noBoardsPayload(who.email));
+      if (choice.kind === "list") {
+        return text({
+          ok: true,
+          authenticated: true,
+          companies: choice.companies,
+          note: "Say which company you mean.",
+        });
       }
+      const chosen = choice.company;
       const held = new Set(who.labels);
       if (!held.has(chosen)) {
         return err(
@@ -513,12 +522,16 @@ function registerInviteTools(server: McpServer, ctx: HostedRequestContext) {
         return err(NOTE_NOT_SIGNED_IN);
       }
       const sessionKey = ctx.sessionKey ?? "anon";
-      const resolved = resolveCompanyArg({ company, companyLabel, sessionKey });
-      if (!resolved) {
-        return err(
-          `Say which company, or call bootstrap_use_company first. You can open: ${[...who.labels].sort().join(", ") || "(none)"}.`,
-        );
+      const choice = chooseCompany({ company, companyLabel, sessionKey, labels: who.labels });
+      if (choice.kind === "none") return text(noBoardsPayload(who.email));
+      if (choice.kind === "list") {
+        return text({
+          ok: true,
+          companies: choice.companies,
+          note: "Say which company you mean.",
+        });
       }
+      const resolved = choice.company;
       const store = resolveInviteStore(ctx.accessToken);
       if (!store) {
         return err(inviteFailMessage("invite_store_unset"));
@@ -929,8 +942,35 @@ function registerJourneyTools(server: McpServer, ctx: HostedRequestContext) {
   const storeOf = () => resolveJourneyStore(ctx.accessToken);
   const companyOf = (input: { q?: string; company?: string; idea?: string }) => {
     const parsed = parseJourneyQuery(input);
-    const fromSession = ctx.sessionKey ? getActiveCompany(ctx.sessionKey) : undefined;
-    return { companySlug: parsed.companySlug || fromSession, ideaSlug: parsed.ideaSlug };
+    const sessionKey = ctx.sessionKey ?? "anon";
+    const choice = chooseCompany({
+      company: parsed.companySlug || input.company,
+      sessionKey,
+      labels: ctx.whoami.labels,
+    });
+    // The chat's active company is the fallback when whoami has no labels.
+    // Journey ACL still decides. A label list that no longer contains the
+    // active company does not revive it.
+    const active = getActiveCompany(sessionKey);
+    const fromSession =
+      choice.kind === "none" && active && ctx.actor?.authenticated ? active : undefined;
+    const company = choice.kind === "chosen" ? choice.company : fromSession;
+    if (company && !parsed.companySlug) setActiveCompany(sessionKey, company);
+    return {
+      companySlug: company,
+      ideaSlug: parsed.ideaSlug,
+      list: choice.kind === "list" ? choice.companies : undefined,
+    };
+  };
+  const boardOrList = (input: { q?: string; company?: string; idea?: string }) => {
+    if (ctx.actor?.reason === "no_membership" && ctx.whoami.labels.length === 0) {
+      return text(noBoardsPayload(ctx.whoami.email));
+    }
+    const parsed = companyOf(input);
+    if (parsed.list) {
+      return text({ ok: true, companies: parsed.list, note: "Say which company you mean." });
+    }
+    return parsed;
   };
   server.tool(
     "get_journey",
@@ -953,15 +993,16 @@ function registerJourneyTools(server: McpServer, ctx: HostedRequestContext) {
       if (!store || !actor?.authenticated) {
         return err(NOTE_NOT_SIGNED_IN);
       }
-      const parsed = companyOf(input);
-      if (!parsed.companySlug) {
+      const picked = boardOrList(input);
+      if (!("companySlug" in picked)) return picked;
+      if (!picked.companySlug) {
         return err("Say which company, or call bootstrap_use_company first.");
       }
       try {
         return text(
           await store.getJourney(actor, {
-            companySlug: parsed.companySlug,
-            ideaSlug: parsed.ideaSlug,
+            companySlug: picked.companySlug,
+            ideaSlug: picked.ideaSlug,
             expandMeetingDoc: input.expand === "meeting_doc",
           }),
         );
@@ -986,15 +1027,16 @@ function registerJourneyTools(server: McpServer, ctx: HostedRequestContext) {
       if (!store || !actor?.authenticated) {
         return err(NOTE_NOT_SIGNED_IN);
       }
-      const parsed = companyOf(input);
-      if (!parsed.companySlug) {
+      const picked = boardOrList(input);
+      if (!("companySlug" in picked)) return picked;
+      if (!picked.companySlug) {
         return err("Say which company, or call bootstrap_use_company first.");
       }
       try {
         return text(
           await store.getJourney(actor, {
-            companySlug: parsed.companySlug,
-            ideaSlug: parsed.ideaSlug,
+            companySlug: picked.companySlug,
+            ideaSlug: picked.ideaSlug,
             expandMeetingDoc: input.expand === "meeting_doc",
           }),
         );

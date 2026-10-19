@@ -324,7 +324,7 @@ describe("hosted identity (resource server, gated)", () => {
     }
   });
 
-  it("uninvited JWT keeps gated tools 401; missing token still 401s handshake", async () => {
+  it("verified JWT with zero boards is 200 no_membership; missing token still 401s handshake", async () => {
     const uninvitedJwt = syntheticAccessToken({ email: "stranger@example.test", sub: "auth-stranger" });
     setIdentityStoreForTests({
       kind: "supabase",
@@ -346,10 +346,17 @@ describe("hosted identity (resource server, gated)", () => {
         };
       },
     });
-    const gated = await assertGatedUnauthorized(
-      await rawRpc("tools/call", { name: "bootstrap_whoami", arguments: {} }, 40, uninvitedJwt),
+    const zeroBoards = await rawRpc(
+      "tools/call",
+      { name: "bootstrap_whoami", arguments: {} },
+      40,
+      uninvitedJwt,
     );
-    assert.equal(gated.reason, "not_invited");
+    assert.equal(zeroBoards.status, 200);
+    const zeroBody = JSON.parse(await zeroBoards.text());
+    const zeroText = zeroBody.result.content.map((part) => part.text).join("\n");
+    assert.match(zeroText, /No boards yet/);
+    assert.equal(zeroBody.result.isError, undefined);
 
     process.env.VERCEL_ENV = "production";
     const handshake = await handleHostedReadFetch(

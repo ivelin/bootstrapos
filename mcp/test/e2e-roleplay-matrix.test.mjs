@@ -302,22 +302,23 @@ describe("E2E role-play matrix (PGlite, never prod)", { concurrency: false }, ()
     );
   });
 
-  it("R2 PM uninvited JWT: gated whoami 401 not_invited", async () => {
+  it("R2 PM verified JWT with zero boards: whoami is 200 no_membership, not 401", async () => {
     process.env.VERCEL_ENV = "production";
     usePgliteStores();
     const token = syntheticAccessToken({
       email: "stranger@example.test",
       sub: STRANGER_UID,
     });
-    const gated = await assertGated401(
-      await rawRpc("tools/call", { name: "bootstrap_whoami", arguments: {} }, token),
-      "not_invited",
+    const who = await whoamiPass(token);
+    assert.equal(who.authenticated, true);
+    assert.equal(who.reason, "no_membership");
+    assert.deepEqual(who.companies, []);
+    assert.match(String(who.hint), /No boards yet/);
+    const listed = parseTool(
+      (await callTool("bootstrap_list_company_labels", {}, token)).body,
     );
-    assert.match(gated.error_description ?? "", /not on the hosted MCP allowlist/i);
-    await assertGated401(
-      await rawRpc("tools/call", { name: "bootstrap_list_company_labels", arguments: {} }, token),
-      "not_invited",
-    );
+    assert.equal(listed.authenticated, true);
+    assert.deepEqual(listed.companies, []);
   });
 
   it("R3 CTO first-user SQL insert → invited whoami PASS (alpha)", async () => {
@@ -395,14 +396,16 @@ describe("E2E role-play matrix (PGlite, never prod)", { concurrency: false }, ()
       await rawRpc("tools/call", { name: "invite_member", arguments: { email: BILL_EMAIL, companyLabel: "alpha" } }),
       "missing_or_short_token",
     );
-    await assertGated401(
-      await rawRpc(
-        "tools/call",
-        { name: "invite_member", arguments: { email: BILL_EMAIL, companyLabel: "alpha" } },
-        stranger,
-      ),
-      "not_invited",
+    const strangerInvite = await rawRpc(
+      "tools/call",
+      { name: "invite_member", arguments: { email: BILL_EMAIL, companyLabel: "alpha" } },
+      stranger,
     );
+    assert.equal(strangerInvite.status, 403);
+    const strangerBody = JSON.parse(await strangerInvite.text());
+    assert.equal(strangerBody.error, "no_membership");
+    assert.equal(strangerBody.reason, "no_membership");
+    assert.equal(strangerInvite.headers.get("WWW-Authenticate"), null);
 
     const cross = await callTool("invite_member", { email: "other@example.test", companyLabel: "bravo" }, aTok);
     assert.equal(cross.res.status, 200, cross.text);
@@ -529,8 +532,10 @@ describe("E2E role-play matrix (PGlite, never prod)", { concurrency: false }, ()
     assert.ok(!who.labels.includes("bravo") && !who.labels.includes("charlie"));
 
     const replay = await callTool("accept_invite", { token }, bill);
-    assert.equal(replay.body.result.isError, true);
-    assert.match(replay.body.result.content.map((c) => c.text).join("\n"), /Invite rejected/);
+    assert.equal(replay.res.status, 200, replay.text);
+    const replayBody = parseTool(replay.body);
+    assert.equal(replayBody.ok, true);
+    assert.deepEqual(replayBody.labels, ["alpha"]);
   });
 
   it("P3 Invitee login-URL: mail outbox + verify + signup URL + accept → whoami alpha", async () => {
@@ -576,10 +581,9 @@ describe("E2E role-play matrix (PGlite, never prod)", { concurrency: false }, ()
     assert.deepEqual(expiredVerify, { ok: false });
     assert.equal("reason" in expiredVerify, false);
 
-    await assertGated401(
-      await rawRpc("tools/call", { name: "bootstrap_whoami", arguments: {} }, outsider),
-      "not_invited",
-    );
+    const signedIn = await whoamiPass(outsider);
+    assert.equal(signedIn.authenticated, true);
+    assert.deepEqual(signedIn.labels, ["alpha"]);
 
     const accepted = await callTool("accept_invite", { token }, outsider);
     assert.equal(accepted.res.status, 200, accepted.text);
