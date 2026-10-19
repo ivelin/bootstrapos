@@ -54,12 +54,6 @@ export const TOOL_WHOAMI =
 export const TOOL_CREATE_COMPANY =
   "Create a company on this hosted board. Super admin only. Needs founder yes in this chat and a short why. Does not create an idea — call create_idea next. A duplicate name is refused. If this is refused, ask an admin or email bootstrap@pirin.ai."
 
-export const TOOL_GRANT_SUPER_ADMIN =
-  "Grant super admin to someone who already has a login. Live super admin only. You cannot grant it to yourself."
-
-export const TOOL_REVOKE_SUPER_ADMIN =
-  "Revoke super admin immediately. Live super admin only."
-
 export const TOOL_LIST_COMPANIES =
   "Companies this login can open. Say the names in one sentence. Do not print email, role, or a table."
 
