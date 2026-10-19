@@ -128,7 +128,7 @@ describe("OS 2.8.19 initiative report card", () => {
     assert.equal(card.footer.some((row) => row.kind === "legal"), true);
     assert.match(card.warn || "", /impact=clock/);
     const body = formatInitiativeCard(card).join("\n");
-    assert.match(body, /\*\*alpha\*\*:/);
+    assert.match(body, /^\*\*alpha\*\*$/m);
     assert.match(body, /\| Work \| State \| When \| Who \|/);
     assert.match(body, /🎯 🤝 \*\*/);
     assert.doesNotMatch(body, /CUSTOMER BETS|CUSTOMER CHECKS|#1 BOTTLENECK|OTHER INITIATIVES/);
@@ -245,8 +245,9 @@ describe("OS 2.8.19 initiative report card", () => {
     const seen = await store.getJourney(founder, { companySlug: "alpha" });
     assert.equal(seen.ok, true);
     assert.equal(seen.card.bottleneck.kind, "customer_check");
-    assert.match(seen.spoken, /The goal is/);
-    assert.match(seen.ideas[0].snapshot, /The goal is/);
+    assert.doesNotMatch(seen.spoken, /The goal is/);
+    assert.doesNotMatch(seen.ideas[0].snapshot, /The goal is/);
+    assert.match(seen.spoken, /\*\*[^*]+\*\*/);
     assert.match(seen.spoken, /\*\*Next:\*\*/);
     assert.doesNotMatch(seen.ideas[0].snapshot, /called the plant/);
     assert.doesNotMatch(seen.ideas[0].snapshot, /journey phase \d/);

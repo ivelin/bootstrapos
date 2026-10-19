@@ -101,8 +101,8 @@ describe("journey views + tools (memory store)", () => {
     assert.match(idea.visualFlow, /Write the bet/);
     assert.doesNotMatch(idea.visualFlow, /subgraph loop \[Loop\]/);
     assert.match(idea.visualFlow, /Missing artifacts/);
-    assert.match(basic.spoken, /^\*\*[^*]+\*\*:/m);
-    assert.match(idea.snapshot, /^\*\*[^*]+\*\*:/m);
+    assert.match(basic.spoken, /^\*\*[^*]+\*\*$/m);
+    assert.match(idea.snapshot, /^\*\*[^*]+\*\*$/m);
     assert.match(basic.spoken, /\*\*Next:\*\*/);
     assert.doesNotMatch(idea.snapshot, /journey phase \d/);
     assert.doesNotMatch(idea.snapshot, /gate hold/i);
@@ -339,7 +339,8 @@ describe("journey views + tools (memory store)", () => {
 
     const empty = await store.getJourney(founder, { companySlug: "corehaul" });
     assert.equal(empty.ideas[0].constraintThisWeek, "");
-    assert.match(empty.spoken, /The goal is/);
+    assert.match(empty.spoken, /nothing is in play yet/);
+    assert.doesNotMatch(empty.spoken, /The goal is/);
     assert.match(empty.spoken, /\*\*Next:\*\*/);
     assert.match(empty.ideas[0].snapshot, /nothing is in play yet/);
 
@@ -439,7 +440,8 @@ describe("journey views + tools (memory store)", () => {
 
     const seen = await store.getJourney(founder, { companySlug: "corehaul" });
     assert.equal(seen.ideas[0].constraintThisWeek, "new landing page");
-    assert.match(seen.ideas[0].snapshot, /\*\*[^*]+\*\*: new landing page\. The goal is/);
+    assert.match(seen.ideas[0].snapshot, /sells new landing page/);
+    assert.doesNotMatch(seen.ideas[0].snapshot, /The goal is/);
     assert.match(seen.spoken, /new landing page/);
     assert.match(seen.ideas[0].constraintChallenge, /fun side quest/);
   });
@@ -675,7 +677,9 @@ describe("journey views + tools (memory store)", () => {
     assert.ok(retired);
     assert.equal(retired.clocks.currentGate, "kill");
     assert.equal(retired.killedCard, killed.idea.killedCard);
-    assert.match(retired.snapshot, /The goal is/);
+    assert.match(retired.snapshot, /Past bets|Leave this stopped/);
+    assert.doesNotMatch(retired.snapshot, /The goal is/);
+    assert.doesNotMatch(retired.snapshot, /Not started/);
     assert.match(retired.snapshot, /\*\*Next:\*\*/);
     assert.doesNotMatch(retired.snapshot, /journey phase \d/);
     assert.match(retired.killedCard, /☠ Killed — operators already have a dispatcher they trust/);
