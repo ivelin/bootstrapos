@@ -11,9 +11,11 @@ sh tests/test_day0.sh
 # Spoken-card grounding EVAL wire (format A + grounding B + snapshot C).
 # Alpha / bravo fixtures only. No mentee PII. No live put_journey.
 EVAL="$ROOT/mcp/test/spoken-card-eval.test.mjs"
+CARD="$ROOT/mcp/test/board-card-golden.test.mjs"
 test -s "$EVAL"
+test -s "$CARD"
 grep -q 'spoken-card-eval.test.mjs' "$ROOT/mcp/package.json"
-grep -q 'spoken-card-eval.test.mjs' "$ROOT/mcp/package.json" >/dev/null
+grep -q 'board-card-golden.test.mjs' "$ROOT/mcp/package.json"
 
 if ! command -v node >/dev/null 2>&1; then
   echo "node is required for spoken-card-eval" >&2
@@ -29,6 +31,6 @@ if ! test -f "$ROOT/mcp/dist/initiative-card.js"; then
 fi
 
 test -f "$ROOT/mcp/dist/initiative-card.js"
-(cd "$ROOT/mcp" && node --test test/spoken-card-eval.test.mjs)
+(cd "$ROOT/mcp" && node --test test/spoken-card-eval.test.mjs test/board-card-golden.test.mjs)
 
 echo "CI OK"
