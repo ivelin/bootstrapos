@@ -66,6 +66,14 @@ export {
 } from "./initiative-card.js";
 import type { JourneyAclRole, JourneyActor } from "./journey-auth.js";
 import {
+  COMMENT_BODY_MAX_BYTES,
+  COMMENT_TOO_LONG_MESSAGE,
+  HOSTED_DAILY_CAPS,
+  PROVENANCE_PAGE_MAX,
+  hostedActorKey,
+} from "./hosted-caps.js";
+import { memoryRateLimiter, type RateDecision, type RateLimiter } from "./rate-limit.js";
+import {
   enqueueBoardNotify,
   isHttpsWebhookUrl,
   normalizeSubscribePrincipal,
@@ -1114,6 +1122,24 @@ function notFound(message: string) {
   return { ok: false, error: message };
 }
 
+function journeyRateRefusal(decision: Extract<RateDecision, { ok: false }>) {
+  if (decision.reason === "rate_limited") {
+    return {
+      ok: false as const,
+      error: decision.reason,
+      reason: decision.reason,
+      message: decision.message,
+      retryAt: decision.retryAt,
+    };
+  }
+  return {
+    ok: false as const,
+    error: decision.reason,
+    reason: decision.reason,
+    message: decision.message,
+  };
+}
+
 function forbidden(message: string) {
   return { ok: false, error: message };
 }
@@ -1122,6 +1148,7 @@ export class MemoryJourneyStore implements JourneyStore {
   readonly kind = "memory" as const;
   private seq = 0;
   allowMemberComments = false;
+  private readonly limiter: RateLimiter;
 
   constructor(
     private companies: CompanyRow[],
@@ -1133,7 +1160,10 @@ export class MemoryJourneyStore implements JourneyStore {
     private subscribers: BoardSubscriberRow[] = [],
     private notifyOutbox: NotifyOutboxRow[] = [],
     readonly webhookDeliveries: WebhookDelivery[] = [],
-  ) {}
+    options?: { limiter?: RateLimiter },
+  ) {
+    this.limiter = options?.limiter ?? memoryRateLimiter();
+  }
 
   actorOnAllowlist(actor: JourneyActor): boolean {
     return rlsVisibleAcl(this.acl, actor).length > 0;
@@ -1311,6 +1341,13 @@ export class MemoryJourneyStore implements JourneyStore {
     if (this.ideasFor(company.id, slug).length > 0) {
       return forbidden(IDEA_ALREADY_EXISTS);
     }
+    const decision = await this.limiter.take({
+      actorId: hostedActorKey(actor),
+      action: "create_idea",
+      limit: HOSTED_DAILY_CAPS.create_idea.limit,
+      windowMs: HOSTED_DAILY_CAPS.create_idea.windowMs,
+    });
+    if (!decision.ok) return journeyRateRefusal(decision);
     const idea: IdeaRow = {
       id: this.nextId("id"),
       companyId: company.id,
@@ -1731,6 +1768,14 @@ export class MemoryJourneyStore implements JourneyStore {
       return notFound(IDEA_NOT_FOUND_COMMENT);
     }
     const idea = ideas[0];
+    if (typeof input.body === "string" && Buffer.byteLength(input.body, "utf8") > COMMENT_BODY_MAX_BYTES) {
+      return {
+        ok: false,
+        error: "comment_too_long",
+        reason: "comment_too_long",
+        message: COMMENT_TOO_LONG_MESSAGE,
+      };
+    }
     const snap = ideaBoardSnapshot(idea);
     const before = snap.clocks;
     this.comments.push({
@@ -2042,20 +2087,21 @@ export class MemoryJourneyStore implements JourneyStore {
     };
     const slugOf = (id: string | null) =>
       id ? (this.ideas.find((row) => row.id === id)?.slug ?? null) : null;
-    const audit = this.audit
+    const auditRows = this.audit
       .filter((row) => {
         if (row.companyId !== company.id) return false;
         if (ideaId && row.ideaId !== ideaId) return false;
         return inRange(row.at);
       })
       .map((row) => ({
+        kind: "audit" as const,
         at: row.at,
         who: row.who,
         client: row.client,
         ideaSlug: slugOf(row.ideaId),
         whatChanged: row.whatChanged,
       }));
-    const gateEvents = this.events
+    const gateRows = this.events
       .filter((row) => {
         const idea = this.ideas.find((i) => i.id === row.ideaId);
         if (!idea || idea.companyId !== company.id) return false;
@@ -2063,21 +2109,48 @@ export class MemoryJourneyStore implements JourneyStore {
         return inRange(row.at);
       })
       .map((row) => ({
+        kind: "gate" as const,
         at: row.at,
         who: row.who,
         action: row.action,
         why: row.why,
         ideaSlug: slugOf(row.ideaId),
       }));
-    const events = [
-      ...audit.map((row) => ({ kind: "audit" as const, ...row })),
-      ...gateEvents.map((row) => ({ kind: "gate" as const, ...row })),
-    ].sort((a, b) => a.at.localeCompare(b.at) || a.kind.localeCompare(b.kind));
+    const ordered = [...auditRows, ...gateRows].sort(
+      (a, b) => a.at.localeCompare(b.at) || a.kind.localeCompare(b.kind),
+    );
+    const capped = ordered.length <= PROVENANCE_PAGE_MAX ? ordered : ordered.slice(-PROVENANCE_PAGE_MAX);
+    const audit = capped.flatMap((row) =>
+      row.kind === "audit"
+        ? [
+            {
+              at: row.at,
+              who: row.who,
+              client: row.client,
+              ideaSlug: row.ideaSlug,
+              whatChanged: row.whatChanged,
+            },
+          ]
+        : [],
+    );
+    const gateEvents = capped.flatMap((row) =>
+      row.kind === "gate"
+        ? [
+            {
+              at: row.at,
+              who: row.who,
+              action: row.action,
+              why: row.why,
+              ideaSlug: row.ideaSlug,
+            },
+          ]
+        : [],
+    );
     return {
       ok: true,
       company: { slug: company.slug, label: company.label },
       idea: query.ideaSlug ? normalizeSlug(query.ideaSlug) : null,
-      events,
+      events: capped,
       audit,
       gateEvents,
     };

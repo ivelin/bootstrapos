@@ -81,6 +81,7 @@ import {
   TOOL_SUBMIT_FEEDBACK,
   TOOL_WHOAMI,
 } from "./hosted-copy.js";
+import { COMMENT_BODY_MAX_BYTES, COMMENT_TOO_LONG_MESSAGE, refusalMessage } from "./hosted-caps.js";
 import { inviteFailMessage, resolveInviteStore } from "./invite.js";
 import {
   buildInviteMail,
@@ -406,16 +407,15 @@ function registerGatedIdentityTools(server: McpServer, ctx: HostedRequestContext
       const store = adminStoreOf();
       if (!store) return text(askAdminResult());
       try {
-        return text(
-          publicAdminResult(
-            await store.createCompany(adminEmail()!, {
-              slug: input.slug,
-              displayName: input.displayName,
-              founderYes: input.founderYes,
-              why: input.why,
-            }),
-          ),
-        );
+        const raw = await store.createCompany(adminEmail()!, {
+          slug: input.slug,
+          displayName: input.displayName,
+          founderYes: input.founderYes,
+          why: input.why,
+        });
+        const blocked = refusalMessage(raw);
+        if (blocked) return err(blocked);
+        return text(publicAdminResult(raw));
       } catch (e) {
         return err(e instanceof Error ? e.message : String(e));
       }
@@ -503,7 +503,15 @@ function registerInviteTools(server: McpServer, ctx: HostedRequestContext) {
           { email: who.email, sub: ctx.inviteActor?.sub, labels: who.labels },
           { email, companyLabel: resolved },
         );
-        if (!result.ok) return err(inviteFailMessage(result));
+        if (!result.ok) {
+          switch (result.reason) {
+            case "rate_limited":
+            case "rate_limiter_unavailable":
+              return err(refusalMessage(result) ?? result.message);
+            default:
+              return err(inviteFailMessage(result));
+          }
+        }
         const mailMode = resolveInviteMailMode();
         if (mailMode === "dry-run") {
           deliverInviteMailDryRun(
@@ -1040,16 +1048,17 @@ function registerJourneyTools(server: McpServer, ctx: HostedRequestContext) {
         return err("Say the new idea slug.");
       }
       try {
-        return text(
-          await store.createIdea(actor, {
-            companySlug: parsed.companySlug,
-            ideaSlug: parsed.ideaSlug,
-            name: input.name,
-            founderYes: input.founderYes,
-            why: input.why,
-            client: input.client,
-          }),
-        );
+        const raw = await store.createIdea(actor, {
+          companySlug: parsed.companySlug,
+          ideaSlug: parsed.ideaSlug,
+          name: input.name,
+          founderYes: input.founderYes,
+          why: input.why,
+          client: input.client,
+        });
+        const blocked = refusalMessage(raw);
+        if (blocked) return err(blocked);
+        return text(raw);
       } catch (e) {
         return err(e instanceof Error ? e.message : String(e));
       }
@@ -1209,7 +1218,12 @@ function registerJourneyTools(server: McpServer, ctx: HostedRequestContext) {
     {
       company: z.string().describe("Company slug"),
       idea: z.string().optional().describe("Idea slug. Default idea if omitted."),
-      body: z.string().describe("Comment text"),
+      body: z
+        .string()
+        .refine((body) => Buffer.byteLength(body, "utf8") <= COMMENT_BODY_MAX_BYTES, {
+          message: COMMENT_TOO_LONG_MESSAGE,
+        })
+        .describe("Comment text"),
       client: z.string().optional().describe("Which client wrote. Stored on the audit row."),
     },
     async (input) => {
@@ -1219,14 +1233,15 @@ function registerJourneyTools(server: McpServer, ctx: HostedRequestContext) {
         return err("Gated. Advisor token required.");
       }
       try {
-        return text(
-          await store.postComment(actor, {
-            companySlug: input.company,
-            ideaSlug: input.idea,
-            body: input.body,
-            client: input.client,
-          }),
-        );
+        const raw = await store.postComment(actor, {
+          companySlug: input.company,
+          ideaSlug: input.idea,
+          body: input.body,
+          client: input.client,
+        });
+        const blocked = refusalMessage(raw);
+        if (blocked) return err(blocked);
+        return text(raw);
       } catch (e) {
         return err(e instanceof Error ? e.message : String(e));
       }

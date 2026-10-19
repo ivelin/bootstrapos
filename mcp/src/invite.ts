@@ -8,11 +8,13 @@
  */
 import { randomBytes } from "node:crypto";
 import { hashMcpToken, hostedProdIdentityAllowed } from "./identity.js";
+import { HOSTED_DAILY_CAPS, hostedActorKey } from "./hosted-caps.js";
 import {
   INVITE_MAIL_FROM,
   INVITE_MAIL_NOTE,
   inviteSignupUrl,
 } from "./invite-mail.js";
+import { memoryRateLimiter, type RateDecision, type RateLimiter } from "./rate-limit.js";
 
 export const INVITE_TOKEN_PREFIX = "inv_";
 export const INVITE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
@@ -111,7 +113,20 @@ export type InviteRpcFail = {
 export type InviteFail = { ok: false; reason: InviteFailReason } | InviteRpcFail;
 export type AcceptFail = { ok: false; reason: AcceptFailReason } | InviteRpcFail;
 
-export type InviteResult = InviteOk | InviteFail;
+export type InviteRateLimited = {
+  ok: false;
+  reason: "rate_limited";
+  message: string;
+  retryAt: string;
+};
+
+export type InviteLimiterUnavailable = {
+  ok: false;
+  reason: "rate_limiter_unavailable";
+  message: string;
+};
+
+export type InviteResult = InviteOk | InviteFail | InviteRateLimited | InviteLimiterUnavailable;
 export type AcceptResult = AcceptOk | AcceptFail;
 
 export type AcceptPendingOk = {
@@ -409,6 +424,20 @@ function newId(prefix: string): string {
   return `${prefix}-${randomBytes(8).toString("hex")}`;
 }
 
+function inviteRateRefusal(
+  decision: Extract<RateDecision, { ok: false }>,
+): InviteRateLimited | InviteLimiterUnavailable {
+  if (decision.reason === "rate_limited") {
+    return {
+      ok: false,
+      reason: "rate_limited",
+      message: decision.message,
+      retryAt: decision.retryAt,
+    };
+  }
+  return { ok: false, reason: "rate_limiter_unavailable", message: decision.message };
+}
+
 export class MemoryInviteStore implements InviteStore {
   readonly kind = "memory" as const;
   readonly invites: InviteRow[] = [];
@@ -423,6 +452,8 @@ export class MemoryInviteStore implements InviteStore {
     labels: string[];
   }>;
 
+  private readonly limiter: RateLimiter;
+
   constructor(
     mentees: Array<{
       id: string;
@@ -430,8 +461,10 @@ export class MemoryInviteStore implements InviteStore {
       authUserId: string | null;
       labels: string[];
     }>,
+    options?: { limiter?: RateLimiter },
   ) {
     this.mentees = mentees.map((row) => ({ ...row, labels: [...row.labels] }));
+    this.limiter = options?.limiter ?? memoryRateLimiter();
   }
 
   menteeByEmail(email: string) {
@@ -453,6 +486,13 @@ export class MemoryInviteStore implements InviteStore {
     if (existing?.labels.includes(companyLabel)) {
       return { ok: false, reason: "already_member" };
     }
+    const decision = await this.limiter.take({
+      actorId: hostedActorKey({ sub: actor.sub, email: actor.email }),
+      action: "invite_member",
+      limit: HOSTED_DAILY_CAPS.invite_member.limit,
+      windowMs: HOSTED_DAILY_CAPS.invite_member.windowMs,
+    });
+    if (!decision.ok) return inviteRateRefusal(decision);
     const token = mintInviteToken();
     const now = inviteNow();
     const expiresAt = new Date(now + INVITE_TTL_MS).toISOString();

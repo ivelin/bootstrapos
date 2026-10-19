@@ -66,6 +66,34 @@ AS $$
     'sub', NULLIF(current_setting('app.actor_sub', true), '')
   );
 $$;
+
+CREATE OR REPLACE FUNCTION auth.uid()
+RETURNS uuid
+LANGUAGE plpgsql
+STABLE
+AS $$
+DECLARE
+  raw text := nullif(current_setting('app.auth_uid', true), '');
+  seed text;
+  h text;
+BEGIN
+  IF raw IS NOT NULL THEN
+    RETURN raw::uuid;
+  END IF;
+  seed := nullif(current_setting('app.actor_email', true), '');
+  IF seed IS NULL THEN
+    seed := nullif(current_setting('app.actor_sub', true), '');
+  END IF;
+  IF seed IS NULL THEN
+    RETURN NULL;
+  END IF;
+  h := md5(seed);
+  RETURN (
+    substr(h, 1, 8) || '-' || substr(h, 9, 4) || '-' ||
+    substr(h, 13, 4) || '-' || substr(h, 17, 4) || '-' || substr(h, 21, 12)
+  )::uuid;
+END;
+$$;
 `;
 
 const STUBS = `
@@ -165,6 +193,12 @@ describe("PGlite portfolio scores (isolated, never prod)", { concurrency: false 
     await db.exec(fs.readFileSync(PORTFOLIO_SQL, "utf8"));
     await db.exec(fs.readFileSync(IMPLICIT_LOOP_SQL, "utf8"));
     await db.exec(SEED);
+    await db.exec(
+      fs.readFileSync(
+        path.join(__dirname, "..", "supabase", "migrations", "20261019_bootstrap_rate_limit.sql"),
+        "utf8",
+      ),
+    );
   });
 
   after(async () => {
