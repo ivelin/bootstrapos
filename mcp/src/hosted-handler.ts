@@ -124,12 +124,7 @@ export function unauthorizedGatedToolResponse(
   );
 }
 
-const MEMBERSHIP_REQUIRED = new Set([
-  "invite_member",
-  "create_company",
-  "grant_super_admin",
-  "revoke_super_admin",
-]);
+const MEMBERSHIP_REQUIRED = new Set(["invite_member", "create_company"]);
 
 const JOURNEY_READ = new Set([
   "get_journey",

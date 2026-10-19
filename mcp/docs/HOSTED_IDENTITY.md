@@ -147,7 +147,7 @@ Say it **once** here. Other files link.
 
 A first-time hosted install must name a real super_admin email contact. That address is an operator input. Real contact addresses are never committed to this repo.
 
-Apply `mcp/supabase/migrations/20260928_bootstrap_os_roles.sql` first (operator, not a PR agent). The migration does not create a super_admin. `grant_super_admin` cannot create the first one: it requires a caller who is already a live super_admin. After that migration is applied, the operator inserts the first super_admin row by hand, outside git. The person must already be a `bootstrap_mcp_mentees` row (the first-user insert above). If that insert matches no row, nothing is written.
+Apply `mcp/supabase/migrations/20260928_bootstrap_os_roles.sql` first (operator, not a PR agent). The migration does not create a super_admin. `bootstrap_os_grant_super_admin` cannot create the first one. It requires a caller who is already a live super_admin. It is SQL, not a connector tool. After that migration is applied, the operator inserts the first super_admin row by hand, outside git. The person must already be a `bootstrap_mcp_mentees` row (the first-user insert above). If that insert matches no row, nothing is written.
 
 Template and test fixtures use `founder@example.test` as an illustrative `member` only, not a super_admin.
 
@@ -166,7 +166,7 @@ FROM public.bootstrap_mcp_mentees m
 WHERE m.email = lower('<super-admin-email>');
 ```
 
-Later grants and revokes use `grant_super_admin` / `revoke_super_admin`. Revoking the last live super_admin is refused (409 `last_super_admin`, no audit row).
+Later grants and revokes use SQL. `bootstrap_os_grant_super_admin` and `bootstrap_os_revoke_super_admin` are `GRANT EXECUTE` to `authenticated`, and `bootstrap_os_admin_gate()` requires a live super_admin. They are not hosted MCP tools. Revoking the last live super_admin is refused (409 `last_super_admin`, no audit row).
 
 ## Tests (PGlite / isolated)
 

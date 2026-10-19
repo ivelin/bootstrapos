@@ -67,8 +67,6 @@ import {
   TOOL_ACCEPT_INVITE,
   TOOL_CREATE_COMPANY,
   TOOL_GET_JOURNEY,
-  TOOL_GRANT_SUPER_ADMIN,
-  TOOL_REVOKE_SUPER_ADMIN,
   TOOL_INVITE_MEMBER,
   TOOL_CREATE_IDEA,
   TOOL_POST_COMMENT,
@@ -418,42 +416,6 @@ function registerGatedIdentityTools(server: McpServer, ctx: HostedRequestContext
             }),
           ),
         );
-      } catch (e) {
-        return err(e instanceof Error ? e.message : String(e));
-      }
-    },
-  );
-
-  server.tool(
-    "grant_super_admin",
-    TOOL_GRANT_SUPER_ADMIN,
-    {
-      email: z.string().describe("Login email to grant. Cannot be your own email."),
-    },
-    async ({ email }) => {
-      if (!ctx.whoami.authenticated || !adminEmail()) return err(NOTE_NOT_SIGNED_IN);
-      const store = adminStoreOf();
-      if (!store) return text(askAdminResult());
-      try {
-        return text(publicAdminResult(await store.grantSuperAdmin(adminEmail()!, email)));
-      } catch (e) {
-        return err(e instanceof Error ? e.message : String(e));
-      }
-    },
-  );
-
-  server.tool(
-    "revoke_super_admin",
-    TOOL_REVOKE_SUPER_ADMIN,
-    {
-      email: z.string().describe("Login email whose super admin access ends now."),
-    },
-    async ({ email }) => {
-      if (!ctx.whoami.authenticated || !adminEmail()) return err(NOTE_NOT_SIGNED_IN);
-      const store = adminStoreOf();
-      if (!store) return text(askAdminResult());
-      try {
-        return text(publicAdminResult(await store.revokeSuperAdmin(adminEmail()!, email)));
       } catch (e) {
         return err(e instanceof Error ? e.message : String(e));
       }

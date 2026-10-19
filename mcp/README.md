@@ -71,11 +71,12 @@ Product code stays in its own repo. Point the agent at this connector once.
 |------|---------|
 | `bootstrap_whoami` | Who is signed in, which **companies** they can open, and `role` (`member`, `super_admin`, or `unset`). [`INVITE.md`](docs/INVITE.md). |
 | `create_company` | Super admin creates a company (membership only). Then `create_idea`. Duplicate slug is 409. Others get 403 with an empty body. |
-| `grant_super_admin` / `revoke_super_admin` | Live super admin grants or revokes another login. No self-grant. Revoke is immediate. The first super_admin is an operator hand seed after the roles migration (`<super-admin-email>` stays out of git) — [`docs/HOSTED_IDENTITY.md`](docs/HOSTED_IDENTITY.md#first-super-admin-hosted-install). |
 | `bootstrap_list_companies` | Same company list. (`bootstrap_list_company_labels` is a one-release alias.) |
 | `bootstrap_use_company` | This chat is about one company the user already belongs to. |
 | `invite_member` | Invite someone to a company you can open. Same email may join several companies. Email outbox for pirin-ai (`bootstrap@pirin.ai`; production sends). [`INVITE.md`](docs/INVITE.md). |
 | `accept_invite` | Invitee JWT + one-time token → user + workspace membership. Existing users gain an additional team — not a second account. Fail-closed on wrong email / expired / replay. Same token as `?invite=`. |
+
+Super admin grant and revoke are SQL. `bootstrap_os_grant_super_admin` and `bootstrap_os_revoke_super_admin` are granted to `authenticated`, and `bootstrap_os_admin_gate()` requires a live super_admin. They are not connector tools. The first super_admin is an operator hand seed after the roles migration. The address stays out of git. See [docs/HOSTED_IDENTITY.md](docs/HOSTED_IDENTITY.md#first-super-admin-hosted-install).
 
 Hard rules (OS 2.8.9):
 
@@ -161,7 +162,7 @@ Same package. Production entry is the Vercel request handler (`api/mcp.ts` + `ap
 
 Same public read tool names as today (`bootstrap_os_info`, docs, house-rule pins, `bootstrap_support`). Fetches the published GitHub repo (`BOOTSTRAP_OS_DOCS_SOURCE=published`). Invite-only collab host 401s cookie-less `initialize` / `tools/list` / GET SSE; public OS tools stay listed **after** auth. The pin is the Pirin write plane. Hosted callers do not call `bootstrap_init_company`. Free docs are GitHub + install-os + local — not this host as a docs CDN.
 
-Optional gated tools on this host only: `bootstrap_whoami` (includes `role`), `bootstrap_list_companies` (alias `bootstrap_list_company_labels`), `bootstrap_use_company`, `invite_member`, `accept_invite`, `create_company`, `grant_super_admin`, and `revoke_super_admin`. Unauthenticated calls return HTTP 401 + `WWW-Authenticate` pointing at this MCP origin RFC 9728 (`authorization_servers` = pirin.ai login). Login UI is `/bootstrap-os/login` (Web Builder), not this repo. Accept path is in-chat; outsider signup is `?invite=` — [`docs/INVITE.md`](docs/INVITE.md). A super admin calls `create_company`, then `create_idea`. Contract: [`docs/HOSTED_IDENTITY.md`](docs/HOSTED_IDENTITY.md).
+Optional gated tools on this host only: `bootstrap_whoami` (includes `role`), `bootstrap_list_companies` (alias `bootstrap_list_company_labels`), `bootstrap_use_company`, `invite_member`, `accept_invite`, and `create_company`. Unauthenticated calls return HTTP 401 + `WWW-Authenticate` pointing at this MCP origin RFC 9728 (`authorization_servers` = pirin.ai login). Login UI is `/bootstrap-os/login` (Web Builder), not this repo. Accept path is in-chat; outsider signup is `?invite=` — [`docs/INVITE.md`](docs/INVITE.md). A super admin calls `create_company`, then `create_idea`. Contract: [`docs/HOSTED_IDENTITY.md`](docs/HOSTED_IDENTITY.md).
 
 Invite-only collab / Grok pin is `https://mcp.bootstrap.pirin.ai/mcp`. Git-branch public preview is `*.vercel.app` (undeclared deploy-only, not a pin). Project `bootstrap-os-mcp` under `ivelins-projects-9f9b7132`. Not mentee-ready boards. No public catalog submit (team Import from Repo only). Not pirin.ai. Path 1 stays the front door.
 
