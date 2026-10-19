@@ -11,7 +11,7 @@ Critical paths run in CI on **PGlite** before any prod synthetic. Evidence: `mcp
 | ID | Role-play | Path | CI now |
 |----|-----------|------|--------|
 | R1 | PM empty / uninvited context | No Bearer → handshake + gated `bootstrap_whoami` HTTP **401** (`missing_or_short_token`) | Yes |
-| R2 | PM valid JWT, no mentee row | Gated whoami HTTP **401**, `reason: not_invited`. Not open login. | Yes |
+| R2 | PM valid JWT, no mentee row | Gated whoami HTTP **200**, `reason: no_membership`, hint “No boards yet…”. SQL still returns `not_invited`. Not open login. Not a 401. | Yes |
 | R3 | CTO first-user rebuild | SQL insert (email lowercased) + optional label → invited whoami **PASS**. Prefer `alpha` as the outsider-identical fixture label. | Yes (fixture) |
 | R4 | Wrong token | Non-JWT / unusable Bearer → gated **401** (`not_a_pirin_access_token` or `invalid_or_revoked_token`). No label leak. | Yes |
 | R5 | Expired token | JWT `exp` in the past → gated **401** `invalid_or_revoked_token`. Fixture-allowed only — this host does not verify JWKS. | Yes |
@@ -35,7 +35,7 @@ Do **not** run these from a PR cloud agent. Optional maintainer probe of **read-
 |-------|------------------------------------------|------|
 | Liveness | `GET /health` | `200` body `ok` |
 | Handshake | Cookie-less `initialize` / GET SSE / `tools/list` | HTTP **401** + `WWW-Authenticate` (same string as [`HOSTED_IDENTITY.md`](HOSTED_IDENTITY.md#http-contract)) |
-| Whoami uninvited | Bearer with a valid pirin.ai JWT **not** on `bootstrap_mcp_mentees` | HTTP **401**, `reason: not_invited` |
+| Whoami uninvited | Bearer with a valid pirin.ai JWT **not** on `bootstrap_mcp_mentees` | HTTP **200**, `reason: no_membership` (SQL still `not_invited`). Missing or rejected tokens stay HTTP **401** `invalid_token`. |
 | Whoami invited | Bearer Cos already has (seed founder fixture) | `authenticated: true`, companies include `alpha`. |
 | Whoami empty | No `Authorization` | HTTP **401** (same challenge) |
 | Deploy Host | `https://bootstrap-os-mcp.vercel.app` | Same handshake **401**. Not a Path 1 pin. Not a silent 200. |

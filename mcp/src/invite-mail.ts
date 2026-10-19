@@ -4,13 +4,14 @@
  * This repo enqueues + builds the body. pirin-ai Resend sends on production.
  * Default off here. dry-run for tests. Never blast prod mail from MCP / CI.
  */
+import { INVITE_LINK_LINE } from "./onboarding.js";
 import { PIRIN_OAUTH_ORIGIN, PIRIN_ORIGIN } from "./oauth.js";
 
 export const INVITE_MAIL_FROM = "bootstrap@pirin.ai";
 export const INVITE_SIGNUP_QUERY = "invite";
 
 export const INVITE_MAIL_NOTE =
-  "Open the signup URL on your agent's computer and fill the form card in the chat. The fields are Email and Password. Press Continue, then Accept invite. This is the universal path for any agentic client. Sign in or create the account for this invitee email only, then accept_invite with the same token. pirin-ai sends From bootstrap@pirin.ai on production.";
+  "Open this to sign in or create your account. One link, with ?invite=. This is the universal path for any agentic client. The signed-in email is matched to the invite. The token alone does not grant access. pirin-ai sends From bootstrap@pirin.ai on production.";
 
 export type InviteMailMode = "off" | "dry-run";
 
@@ -132,16 +133,11 @@ export function buildInviteMail(input: InviteMailInput): InviteMail {
     `Who invited: ${input.inviterEmail}`,
     `Invitee email: ${input.inviteeEmail}`,
     `Company workspace: ${input.companyWorkspace}`,
-    `Invite token: ${input.inviteToken}`,
-    `Signup URL: ${signupUrl}`,
-    `QR payload (same as signup URL): ${signupUrl}`,
-    `Expires: ${input.expiresAt}`,
     "",
-    "Open the signup URL on your agent's computer and fill the form card in the chat.",
-    "The fields are Email and Password. Press Continue, then Accept invite.",
-    "Sign in or create the account for this invitee email only.",
-    "Continue uses the existing password when this email already has an account.",
-    "After a pirin.ai login exists for that email, call accept_invite with the same token.",
+    `${INVITE_LINK_LINE}:`,
+    signupUrl,
+    "",
+    `Expires: ${input.expiresAt}`,
     "",
     INVITE_MAIL_NOTE,
   ].join("\n");

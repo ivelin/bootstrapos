@@ -376,7 +376,10 @@ describe("invite + accept (memory, never prod)", { concurrency: false }, () => {
       { email: "bill@example.test", sub: "s-bill" },
       invited.card.inviteToken,
     );
-    assert.deepEqual(replay, { ok: false, reason: "invite_already_used" });
+    assert.equal(replay.ok, true);
+    if (!replay.ok) return;
+    assert.deepEqual(replay.labels, ["alpha"]);
+    assert.equal(store.menteeByEmail("bill@example.test")?.labels.length, 1);
     assert.deepEqual(await store.verifyInvite(invited.card.inviteToken), { ok: false });
   });
 

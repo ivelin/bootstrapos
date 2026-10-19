@@ -37,6 +37,14 @@ import {
 } from "./oauth.js";
 import { createBootstrapServer } from "./server.js";
 import { hostedSessionKey } from "./hosted-company-context.js";
+import { resolveInviteStore } from "./invite.js";
+import {
+  ignoredSessionEmail,
+  isSessionGrantPath,
+  NO_BOARDS_HINT,
+  presentVerifiedWhoami,
+  sessionGrantBody,
+} from "./onboarding.js";
 
 setLiveJourneyStoreFactory(createJourneyStore);
 
@@ -114,6 +122,100 @@ export function unauthorizedGatedToolResponse(
     }),
     { status: 401, headers },
   );
+}
+
+const MEMBERSHIP_REQUIRED = new Set([
+  "invite_member",
+  "create_company",
+  "grant_super_admin",
+  "revoke_super_admin",
+]);
+
+const JOURNEY_READ = new Set([
+  "get_journey",
+  "bootstrap_where_are_we",
+  "list_provenance",
+  "list_subscribers",
+]);
+
+export function noMembershipResponse(whoami: HostedWhoami | undefined, req?: Request): Response {
+  const resource = hostedMcpResource(req);
+  return new Response(
+    JSON.stringify({
+      error: "no_membership",
+      reason: "no_membership",
+      error_description: NO_BOARDS_HINT,
+      identityStore: whoami?.identityStore ?? "unset",
+      resource,
+    }),
+    {
+      status: 403,
+      headers: {
+        ...corsHeaders(),
+        "Content-Type": "application/json; charset=utf-8",
+      },
+    },
+  );
+}
+
+async function bindVerifiedSession(authorization: string | null): Promise<HostedWhoami> {
+  const accessToken = parseBearerToken(authorization);
+  const raw = await resolveHostedWhoami(authorization);
+  if (
+    raw.reason === "invalid_or_revoked_token" ||
+    raw.reason === "missing_or_short_token" ||
+    raw.reason === "not_a_pirin_access_token" ||
+    raw.reason === "identity_store_unset" ||
+    raw.reason === "identity_lookup_failed" ||
+    raw.reason === "identity_upstream_unavailable"
+  ) {
+    return raw;
+  }
+  let whoami = presentVerifiedWhoami(raw);
+  if (!whoami.authenticated || !whoami.email || !accessToken) return whoami;
+  const store = resolveInviteStore(accessToken);
+  if (!store) return whoami;
+  try {
+    const claims = actorClaimsFromAccessToken(accessToken);
+    const pending = await store.acceptPending(
+      { email: whoami.email, sub: claims?.sub, labels: whoami.labels },
+      accessToken,
+    );
+    if (!pending.ok && pending.reason === "invalid_token") {
+      return {
+        authenticated: false,
+        labels: [],
+        reason: "invalid_or_revoked_token",
+        identityStore: raw.identityStore ?? "supabase",
+      };
+    }
+  } catch {
+    return whoami;
+  }
+  return presentVerifiedWhoami(await resolveHostedWhoami(authorization));
+}
+
+async function handleSessionGrant(req: Request): Promise<Response> {
+  let body: unknown = null;
+  try {
+    body = await req.clone().json();
+  } catch {
+    body = null;
+  }
+  ignoredSessionEmail(body);
+  const authorization = req.headers.get("authorization");
+  if (!parseBearerToken(authorization)) {
+    return unauthorizedGatedToolResponse(
+      { authenticated: false, labels: [], reason: "missing_or_short_token", identityStore: "unset" },
+      req,
+    );
+  }
+  const whoami = await bindVerifiedSession(authorization);
+  if (!whoami.authenticated) return unauthorizedGatedToolResponse(whoami, req);
+  return new Response(JSON.stringify(sessionGrantBody(whoami)), {
+    status: 200,
+    headers: { "Content-Type": "application/json; charset=utf-8", ...corsHeaders() },
+  });
 }
 
 function journeyUpstreamUnavailableResponse(whoami: HostedWhoami): Response {
@@ -233,6 +335,10 @@ export async function handleHostedReadFetch(req: Request): Promise<Response> {
     });
   }
 
+  if (req.method === "POST" && isSessionGrantPath(pathname)) {
+    return handleSessionGrant(req);
+  }
+
   if (!isMcpPath(pathname)) {
     return new Response("Preview hosted-read MCP. POST /mcp. Not mentee-ready boards.", {
       status: 404,
@@ -262,7 +368,7 @@ export async function handleHostedReadFetch(req: Request): Promise<Response> {
     );
   }
 
-  const whoami = await resolveHostedWhoami(authorization);
+  const whoami = await bindVerifiedSession(authorization);
   const hasBearer = Boolean(parseBearerToken(authorization));
   const handshakeAuth = requiresHandshakeAuth(req);
   let actor: JourneyActor | undefined;
@@ -292,8 +398,22 @@ export async function handleHostedReadFetch(req: Request): Promise<Response> {
         }
         actor = resolveGatedActor(authorization);
         if (!actor.authenticated) {
-          return unauthorizedGatedToolResponse(whoami, req, actor);
+          if (whoami.reason === "no_membership" && JOURNEY_READ.has(gatedName)) {
+            actor = {
+              authenticated: true,
+              email: whoami.email,
+              principal: whoami.email,
+              identityStore: actor.identityStore,
+              reason: "no_membership",
+            };
+          } else if (whoami.reason === "no_membership") {
+            return noMembershipResponse(whoami, req);
+          } else {
+            return unauthorizedGatedToolResponse(whoami, req, actor);
+          }
         }
+      } else if (whoami.reason === "no_membership" && MEMBERSHIP_REQUIRED.has(gatedName)) {
+        return noMembershipResponse(whoami, req);
       } else if (!whoami.authenticated) {
         return unauthorizedGatedToolResponse(whoami, req);
       }

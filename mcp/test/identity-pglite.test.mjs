@@ -313,6 +313,7 @@ $$;
 
     await db.exec("SELECT set_config('app.auth_uid', '11111111-1111-1111-1111-111111111111', false)");
     await db.exec("SELECT set_config('app.auth_email', 'mentee-a@example.test', false)");
+    await db.exec("SELECT set_config('app.email_confirmed_at', '2026-01-01T00:00:00Z', false)");
     const accepted = (
       await db.query("SELECT bootstrap_mcp_accept_invite($1) AS body", [rotated.card.inviteToken])
     ).rows[0].body;
@@ -422,6 +423,7 @@ describe("PGlite accept_invite mentee_id (isolated, never prod)", () => {
       "SELECT set_config('app.auth_uid', '33333333-3333-3333-3333-333333333333', false)",
     );
     await acceptDb.exec("SELECT set_config('app.auth_email', 'founder@example.test', false)");
+    await acceptDb.exec("SELECT set_config('app.email_confirmed_at', '2026-01-01T00:00:00Z', false)");
 
     let accepted;
     try {
@@ -448,6 +450,13 @@ describe("PGlite accept_invite mentee_id (isolated, never prod)", () => {
     const replay = (
       await acceptDb.query("SELECT bootstrap_mcp_accept_invite($1) AS body", [token])
     ).rows[0].body;
-    assert.deepEqual(replay, { ok: false, reason: "invite_already_used" });
+    assert.equal(replay.ok, true, JSON.stringify(replay));
+    assert.equal(replay.email, "founder@example.test");
+    const menteeCount = (
+      await acceptDb.query(
+        "SELECT count(*)::int AS n FROM bootstrap_mcp_mentees WHERE email = 'founder@example.test'",
+      )
+    ).rows[0].n;
+    assert.equal(menteeCount, 1);
   });
 });
