@@ -65,6 +65,7 @@ alpha sells dispatch help to plants that already pay for it.
 - No mermaid, Gantt, or schema diagrams unless asked.
 - This skill makes no board writes.
 - spoken, markdown, and spokenLead are display text. Never write them back. put_journey and create_idea take the stored fields.
+- A display read masks an email address and an sk_live_ or sk_test_ token only inside why, note, and premise. principal, who, and the email field stay the stored address. subscribe_board and unsubscribe_board need that principal.
 - If several companies are asked about, give one card each, in this shape.
 
 ## Internal (never print)

@@ -744,7 +744,7 @@ function scrubFounderText(value: string): string {
   return applyPlainWords(redactConfidentiality(value));
 }
 
-const IDENTITY_TEXT_KEYS = new Set(["who", "principal", "why"]);
+const FREE_TEXT_KEYS = new Set(["why", "note", "premise"]);
 
 const droppedRedactKeyNames: string[] = [];
 
@@ -774,7 +774,8 @@ function copyUnscrubbed(value: unknown, stack: WeakSet<object>): unknown {
 /**
  * Allowlist at every depth. Unknown keys are dropped.
  * The stack is the current path, so a shared object is redacted again and a cycle is null.
- * who, principal, and why lose addresses and sk_live_ / sk_test_ tokens.
+ * why, note, and premise lose addresses and sk_live_ / sk_test_ tokens.
+ * principal, who, and email keep the stored address.
  */
 function redactPayloadText(value: unknown, stack: WeakSet<object>): unknown {
   if (typeof value === "string") return scrubFounderText(value);
@@ -793,7 +794,7 @@ function redactPayloadText(value: unknown, stack: WeakSet<object>): unknown {
         out[key] = copyUnscrubbed(child, stack);
         continue;
       }
-      if (IDENTITY_TEXT_KEYS.has(key) && typeof child === "string") {
+      if (FREE_TEXT_KEYS.has(key) && typeof child === "string") {
         out[key] = maskSecrets(scrubFounderText(child));
         continue;
       }
