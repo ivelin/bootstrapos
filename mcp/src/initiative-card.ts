@@ -28,7 +28,9 @@ import {
   isInternalNote,
   isKillCondition,
   isLowercaseLogin,
-  REDACT_KEEP_KEYS,
+  REDACT_ALLOW_KEYS,
+  REDACT_MASK_KEYS,
+  REDACT_RAW_KEYS,
 } from "./board-plain-words.js";
 import { formatSpokenJourney } from "./clock-map.js";
 import {
@@ -211,11 +213,6 @@ export function spokenBottleneckLineOf(text: string): string {
     const sentence = (sells ?? "").replace(/\.$/, "");
     const wrapped = sentence.match(/^.+?\s+sells\s+(.+)$/i);
     return (wrapped?.[1] ?? sentence).trim();
-  }
-  const title = String(text ?? "").match(/^\*\*[^*]+\*\*:\s*(.+)$/m);
-  if (title) {
-    const sells = title[1].split(/\.\s*The goal is\s+/i)[0] ?? title[1];
-    return sells.trim().replace(/\.$/, "");
   }
   const old = String(text ?? "").match(
     /\*\*[^*]*biggest problem right now:\s*([^*]+?)\.?\*\*/,
@@ -741,20 +738,44 @@ export function redactConfidentiality(value: string): string {
   return text;
 }
 
-/** Copy founder-facing strings. Leave kind, id, and other enums alone (`nda` stays a kind). */
+/** Same words on the card and in JSON. Email addresses are held aside so a rewrite cannot cut them. */
+function scrubFounderText(value: string): string {
+  return applyPlainWords(redactConfidentiality(value));
+}
+
+/** Enum tokens and id lists. Strings stay literal. Nested objects still go through the allowlist. */
+function copyUnscrubbed(value: unknown, seen: WeakSet<object>): unknown {
+  if (value === null || typeof value !== "object") return value;
+  if (Array.isArray(value)) {
+    return value.map((item) =>
+      item !== null && typeof item === "object" ? redactPayloadText(item, seen) : item,
+    );
+  }
+  return redactPayloadText(value, seen);
+}
+
+/**
+ * Allowlist at every depth. Unknown keys are dropped.
+ * email, principal, and who are scrubbed. kind stays raw, so `nda` stays a kind.
+ */
 function redactPayloadText(value: unknown, seen = new WeakSet<object>()): unknown {
-  if (typeof value === "string") return redactConfidentiality(value);
+  if (typeof value === "string") return scrubFounderText(value);
   if (!value || typeof value !== "object") return value;
   if (seen.has(value)) return value;
   seen.add(value);
   if (Array.isArray(value)) return value.map((item) => redactPayloadText(item, seen));
   const out: Record<string, unknown> = {};
   for (const [key, child] of Object.entries(value)) {
-    if (REDACT_KEEP_KEYS.has(key) && (child === null || typeof child !== "object")) {
-      out[key] = child;
-    } else {
-      out[key] = redactPayloadText(child, seen);
+    if (!REDACT_ALLOW_KEYS.has(key)) continue;
+    if (REDACT_RAW_KEYS.has(key)) {
+      out[key] = copyUnscrubbed(child, seen);
+      continue;
     }
+    if (REDACT_MASK_KEYS.has(key) && typeof child === "string") {
+      out[key] = scrubFounderText(child);
+      continue;
+    }
+    out[key] = redactPayloadText(child, seen);
   }
   return out;
 }
@@ -1001,8 +1022,7 @@ export function whoNamesForCard(payload: { owners?: unknown; acl?: unknown }): s
 }
 
 function whoCell(names: string[]): string {
-  const shown = names.filter((name) => !isLowercaseLogin(name));
-  return shown.length ? shown.join(", ") : "—";
+  return names.length ? names.join(", ") : "—";
 }
 
 function isBlankCardText(text: string): boolean {
@@ -1572,7 +1592,7 @@ export function applySpokenPayloadLead(
   if (payload.idea && typeof payload.idea === "object") {
     payload.idea = { ...(payload.idea as Record<string, unknown>), snapshot: spoken };
   }
-  const boards = redactConfidentiality(formatBoardDirectory(payload.ideas));
+  const boards = scrubFounderText(formatBoardDirectory(payload.ideas));
   const spokenLead = spoken.split("\n").find((line) => line.trim().startsWith("**"))?.trim() ?? "";
   const { ok: _ok, spoken: _drop, boards: _boards, markdown: _markdown, spokenLead: _lead, ...rest } = payload;
   const safe = redactPayloadText(rest) as Record<string, unknown>;

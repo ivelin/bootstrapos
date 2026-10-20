@@ -523,22 +523,22 @@ describe("canonical board card", () => {
             row({
               id: "alpha-jargon",
               kind: "customer_check",
-              premise: "Sell one SKU under tenancy after the 83(b) with FI and fi.co/fast",
-              last: "SOSV and IABC sent an SMS about the MVP via Docusign",
-              next: "Clear the gate in this Phase on the Host holdout with Cos",
+              premise: "Sam hosts a dinner for FI/Mo and sells one SKU under tenancy with FI",
+              last: "sent an SMS about the MVP via Docusign",
+              next: "Clear the gate in this Phase on the Host holdout with Cos. A host at the fence during this phase stays.",
             }),
           ],
         },
       }),
     });
     assert.equal(founderCardBannedHit(spoken), null);
+    assert.match(spoken, /hosts a dinner/);
+    assert.match(spoken, /FI\/Mo/);
+    assert.match(spoken, /A host at the fence during this phase/);
+    assert.doesNotMatch(spoken, /services a dinner/);
     assert.match(spoken, /product/);
     assert.match(spoken, /the paid plan/);
-    assert.match(spoken, /the tax filing/);
     assert.match(spoken, /the founder program/);
-    assert.match(spoken, /advisor agreement/);
-    assert.match(spoken, /an investor/);
-    assert.match(spoken, /a trade group/);
     assert.match(spoken, /a text message/);
     assert.match(spoken, /a first version/);
     assert.match(spoken, /the signature page/);
@@ -547,7 +547,8 @@ describe("canonical board card", () => {
     assert.match(spoken, /service/);
     assert.match(spoken, /a group left out/);
     assert.match(spoken, /the helper/);
-    assert.doesNotMatch(spoken, /\bSKU\b|\btenancy\b|\bSMS\b|\bMVP\b|\bCos\b|Docusign|83\(b\)|\bFI\b|fi\.co\/fast|\bSOSV\b|\bIABC\b|\bgate\b|\bPhase\b|\bHost\b|\bholdout\b/i);
+    assert.doesNotMatch(spoken, /\bSKU\b|\btenancy\b|\bSMS\b|\bMVP\b|\bCos\b|Docusign|\bthe gate\b|\bholdout\b/i);
+    assert.doesNotMatch(spoken, /(?<![\w/])FI(?![\w/])|\bPhase\b|\bHost\b/);
   });
 
   it("shows a past date range and the reason it ended, and omits an empty past section", () => {
@@ -642,7 +643,7 @@ describe("canonical board card", () => {
       ok: true,
       company: { slug: "bravo", label: "bravo" },
       owners: [{ principal: "sam@example.test", role: "founder", displayName: "Sam" }],
-      audit: [{ why: "signed the NDA", whatChanged: { aside: "the NDA stays in the file" } }],
+      audit: [{ why: "signed the NDA", whatChanged: { founderWrittenDecision: "the NDA stays in the file" } }],
       ideas: [
         {
           slug: "default",
@@ -665,10 +666,119 @@ describe("canonical board card", () => {
     assert.equal(seen.markdown, seen.spoken);
     assert.doesNotMatch(seen.markdown, /\bnda\b/i);
     assert.doesNotMatch(seen.audit[0].why, /\bnda\b/i);
-    assert.doesNotMatch(seen.audit[0].whatChanged.aside, /\bnda\b/i);
+    assert.doesNotMatch(seen.audit[0].whatChanged.founderWrittenDecision, /\bnda\b/i);
     assert.match(seen.audit[0].why, /confidentiality promise/);
     assert.equal(seen.ideas[0].scoreboard.engagements[0].kind, "nda");
     assert.match(seen.ideas[0].scoreboard.engagements[0].state, /confidentiality promise/);
+  });
+
+  it("drops unknown keys at every depth and rewrites SAFE in markdown and JSON", () => {
+    const seen = applySpokenPayloadLead({
+      ok: true,
+      founder_email: "secret@example.test",
+      company: { slug: "alpha", label: "alpha" },
+      owners: [
+        {
+          principal: "SAFE holder sam@example.test",
+          role: "founder",
+          displayName: "Sam",
+          email: "sam@example.test",
+        },
+      ],
+      audit: [
+        {
+          why: "signed the NDA",
+          who: "the NDA clerk",
+          phone: "555-0100",
+          secret: { api_key: "sk_live_secret" },
+          whatChanged: { founderWrittenDecision: "close the SAFE" },
+        },
+      ],
+      ideas: [
+        {
+          slug: "default",
+          name: "alpha",
+          founder_email: "hidden@example.test",
+          scoreboard: {
+            schema_version: 1,
+            initiatives: [
+              {
+                ...BRAVO.initiatives[0],
+                premise: "close the SAFE",
+                internal_token: "tok_secret",
+              },
+            ],
+          },
+        },
+      ],
+    });
+    const packed = JSON.stringify(seen);
+    assert.equal(seen.founder_email, undefined);
+    assert.equal(seen.ideas[0].founder_email, undefined);
+    assert.equal(seen.audit[0].phone, undefined);
+    assert.equal(seen.audit[0].secret, undefined);
+    assert.equal(seen.ideas[0].scoreboard.initiatives[0].internal_token, undefined);
+    assert.doesNotMatch(packed, /secret@example\.test|hidden@example\.test|555-0100|sk_live_secret|tok_secret|api_key/);
+    assert.match(seen.markdown, /investment/);
+    assert.doesNotMatch(seen.markdown, /\bSAFE\b/);
+    assert.match(seen.ideas[0].scoreboard.initiatives[0].premise, /investment/);
+    assert.doesNotMatch(seen.ideas[0].scoreboard.initiatives[0].premise, /\bSAFE\b/);
+    assert.match(seen.audit[0].whatChanged.founderWrittenDecision, /investment/);
+    assert.equal(seen.owners[0].principal, "investment holder sam@example.test");
+    assert.equal(seen.owners[0].email, "sam@example.test");
+    assert.match(seen.audit[0].who, /confidentiality promise/);
+    assert.equal(seen.spokenLead, "**alpha**");
+  });
+
+  it("files a killed lead and a second check with a nested conversation under past bets", () => {
+    const spoken = formatSpokenCard({
+      label: "charlie",
+      killed: true,
+      who: ["Sam"],
+      card: {
+        company: { slug: "charlie", label: "charlie", bottleneckId: "lead" },
+        killed: true,
+        bottleneck: row({
+          id: "lead",
+          kind: "customer_check",
+          premise: "a booth at the town fair",
+          status: "closed",
+          outcome: "killed",
+          last: "the fair ended with no orders",
+          next: "—",
+        }),
+        customerChecks: [
+          {
+            ...row({
+              id: "second",
+              kind: "customer_check",
+              premise: "a second stall on the side street",
+              status: "active",
+              last: "nobody stopped",
+              next: "—",
+            }),
+            engagements: [
+              row({
+                id: "nested",
+                kind: "engagement",
+                premise: "a conversation with the cafe owner",
+                status: "waiting",
+                last: "left a note",
+                next: "—",
+                parentId: "second",
+              }),
+            ],
+          },
+        ],
+        footer: [],
+      },
+    });
+    assert.doesNotMatch(spoken, /\| \*\*Bet\*\* \|/);
+    assert.doesNotMatch(spoken, /\| \*\*Other paths/);
+    const past = spoken.split("**Past bets**")[1].split("**Background**")[0];
+    assert.match(past, /a booth at the town fair/);
+    assert.match(past, /a second stall on the side street/);
+    assert.match(past, /· · .*a conversation with the cafe owner/);
   });
 
   it("documents a signed-in user with no invite as 200 no_membership", () => {

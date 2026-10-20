@@ -309,7 +309,11 @@ describe("PR2.1 micdots Heavy-locked initiatives map", () => {
     assert.equal(wrote.card.bottleneck.premise, PAID_SITE_PREMISE);
     assert.equal(wrote.idea.scoreboard.initiatives[0].id, "mic-check-paid-site");
     assert.equal(wrote.idea.scoreboard.constraint_this_week, CONSTRAINT);
-    assert.deepEqual(wrote.idea.scoreboard.openQuestions, OPEN_QUESTIONS);
+    assert.deepEqual(wrote.idea.scoreboard.openQuestions, [
+      "Did Donna talk to Sam?",
+      "CCG SOW in draft?",
+      "Angel investment in inbox?",
+    ]);
 
     const seen = await store.getJourney(founder, { companySlug: "micdots" });
     assert.equal(seen.ok, true);

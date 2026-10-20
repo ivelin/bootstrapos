@@ -244,10 +244,16 @@ describe("PR1.1 dyeconverter Heavy-locked initiatives map", () => {
     assert.equal(wrote.idea.clocks.journeySpoken, "Write the bet");
     assert.equal(wrote.card.bottleneck.kind, "customer_check");
     assert.equal(wrote.card.bottleneck.id, "dye-check-plant");
-    assert.equal(wrote.card.bottleneck.premise, PLANT_PREMISE);
+    assert.equal(
+      wrote.card.bottleneck.premise,
+      "plants already buying pigment pay for conversion/the paid plan on one product",
+    );
     assert.equal(wrote.idea.scoreboard.initiatives[0].id, "dye-check-plant");
-    assert.equal(wrote.idea.scoreboard.constraint_this_week, CONSTRAINT);
-    assert.deepEqual(wrote.idea.scoreboard.openQuestions, FIXTURE.scoreboard.openQuestions);
+    assert.equal(wrote.idea.scoreboard.constraint_this_week, "Oterra quote to product+site+date");
+    assert.deepEqual(wrote.idea.scoreboard.openQuestions, [
+      "FI/Mo resolve?",
+      "Oterra product+site+date?",
+    ]);
 
     const seen = await store.getJourney(founder, { companySlug: "dyeconverter" });
     assert.equal(seen.ok, true);
@@ -260,7 +266,7 @@ describe("PR1.1 dyeconverter Heavy-locked initiatives map", () => {
     assert.doesNotMatch(seen.spoken, /use on their product/);
     assert.match(seen.ideas[0].snapshot, /Oterra/);
     assert.doesNotMatch(seen.ideas[0].snapshot, /\bNDA\b/i);
-    assert.equal(seen.ideas[0].constraintThisWeek, CONSTRAINT);
+    assert.equal(seen.ideas[0].constraintThisWeek, "Oterra quote to product+site+date");
     assert.doesNotMatch(seen.ideas[0].snapshot, /journey phase \d/);
     assert.doesNotMatch(seen.ideas[0].snapshot, /gate hold/i);
     const spokenLead = seen.spoken.split("| · ·")[0];

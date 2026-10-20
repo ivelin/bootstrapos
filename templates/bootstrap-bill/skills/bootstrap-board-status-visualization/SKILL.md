@@ -20,7 +20,7 @@ Use for every “where are we with COMPANY” and every “company board card”
 ## Card shape
 
 1. **Title (always first).** `**<Company>**`, then `Founder: <name>` when a display name is on the board, then one plain sentence on what it sells and to whom.
-2. **One table** with bold section rows, in this order. Other cells on a section row stay empty. Omit Other paths and Past bets when they have no rows. Always print Bet and Background.
+2. **One table** with bold section rows, in this order. Other cells on a section row stay empty. Omit Other paths and Past bets when they have no rows. Print Background on every card. Print Bet when a live bet is on the board. A killed company has no Bet. Its stopped bet is under Past bets.
    - **Bet**. The top row starts with 🎯 plus a fitting icon and a **bold** title. Nested rows indent with `· ·` and start with their own icon.
    - **Other paths (not the main bet)** when another live try exists.
    - **Past bets**.
@@ -37,8 +37,8 @@ alpha sells dispatch help to plants that already pay for it.
 | Work | State | When | Who |
 |---|---|---|---|
 | **Bet** | | | |
-| 🎯 🤝 **Get one plant to pay alpha for a weekly dispatch report** | 🟢 No plant has paid yet | Talk with bravo this week | founder@example.test, the founder |
-| · · 🏢 bravo, a plant we're talking with | 🟡 Asked, time not set | Book the call | founder@example.test |
+| 🎯 🤝 **Get one plant to pay alpha for a weekly dispatch report** | 🟢 No plant has paid yet | Talk with bravo this week | Sam |
+| · · 🏢 bravo, a plant we're talking with | 🟡 Asked, time not set | Book the call | Sam |
 | **Other paths (not the main bet)** | | | |
 | 🤝 charlie, a company we're talking with, might license the notes | 🟡 Parked | Reopen only if they come back | — |
 | **Past bets** | | | |
@@ -49,7 +49,7 @@ alpha sells dispatch help to plants that already pay for it.
 
 *🎯 the one thing that matters most · 🟢 working on it · 🟡 waiting · 🔴 dropped · ⚪ closed*
 
-**Next:** founder@example.test, the founder, talks with bravo this week.
+**Next:** Sam talks with bravo this week.
 
 ## Dots
 
