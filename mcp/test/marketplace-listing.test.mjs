@@ -1,8 +1,12 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
+import { Client } from "@modelcontextprotocol/sdk/client/index.js";
+import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 import { handleHostedReadFetch } from "../dist/hosted-handler.js";
+import { createBootstrapServer } from "../dist/server.js";
 import { REPO_ROOT } from "./helpers.mjs";
 
 const BOT_ADDRESS = /grokbot\.com|grokbot|x\.ai\/bot|@x\.ai\b/i;
@@ -30,13 +34,48 @@ async function hostedInfo() {
   return JSON.parse(text);
 }
 
+async function localInfo() {
+  const dataRoot = fs.mkdtempSync(path.join(os.tmpdir(), "bootstrap-listing-"));
+  const prev = {
+    BOOTSTRAP_DATA_ROOT: process.env.BOOTSTRAP_DATA_ROOT,
+    BOOTSTRAP_OS_ROOT: process.env.BOOTSTRAP_OS_ROOT,
+    BOOTSTRAP_INSTANCE_ROOT: process.env.BOOTSTRAP_INSTANCE_ROOT,
+  };
+  process.env.BOOTSTRAP_DATA_ROOT = dataRoot;
+  process.env.BOOTSTRAP_OS_ROOT = REPO_ROOT;
+  delete process.env.BOOTSTRAP_INSTANCE_ROOT;
+  const server = createBootstrapServer("full");
+  const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
+  const client = new Client({ name: "listing-stdio", version: "0.0.0" });
+  try {
+    await Promise.all([client.connect(clientTransport), server.connect(serverTransport)]);
+    const result = await client.callTool({ name: "bootstrap_os_info", arguments: {} });
+    assert.notEqual(result.isError, true);
+    const text = result.content.map((part) => part.text ?? "").join("\n");
+    return JSON.parse(text);
+  } finally {
+    await client.close().catch(() => {});
+    await server.close().catch(() => {});
+    for (const [key, value] of Object.entries(prev)) {
+      if (value === undefined) delete process.env[key];
+      else process.env[key] = value;
+    }
+    fs.rmSync(dataRoot, { recursive: true, force: true });
+  }
+}
+
 describe("cursor catalog listing", () => {
   it("bootstrap_os_info returns marketplace false while the doc says not listed", async () => {
     const doc = fs.readFileSync(path.join(REPO_ROOT, "mcp", "docs", "MARKETPLACE.md"), "utf8");
     assert.match(doc, /not listed yet/);
     assert.match(doc, /marketplace: false/);
-    const info = await hostedInfo();
-    assert.equal(info.marketplace, false);
+    const hosted = await hostedInfo();
+    assert.equal(hosted.surface, "hosted-read");
+    assert.equal(hosted.marketplace, false);
+    const local = await localInfo();
+    assert.equal(local.surface, "full");
+    assert.equal(local.marketplace, false);
+    assert.equal(typeof local.paths, "object");
   });
 
   it("root plugin.json and mcp.json use Pirin.ai branding and the hosted pin", () => {
@@ -47,6 +86,11 @@ describe("cursor catalog listing", () => {
     assert.equal(plugin.author.email, "ivelin@pirin.ai");
     assert.equal(plugin.homepage, "https://pirin.ai/bootstrap-os");
     assert.equal(plugin.repository, "https://github.com/ivelin/bootstrapos");
+    assert.equal(plugin.version, "0.1.1");
+    const market = JSON.parse(
+      fs.readFileSync(path.join(REPO_ROOT, ".cursor-plugin", "marketplace.json"), "utf8"),
+    );
+    assert.equal(plugin.version, market.plugins[0].version);
     assert.equal("logo" in plugin, false);
     assert.doesNotMatch(JSON.stringify(plugin), BOT_ADDRESS);
 
@@ -80,5 +124,13 @@ describe("cursor catalog listing", () => {
     const readme = fs.readFileSync(path.join(REPO_ROOT, "README.md"), "utf8");
     assert.match(readme, /How to use this \(pick one\)/);
     assert.doesNotMatch(readme, /ivelin@pirin\.ai/);
+  });
+
+  it("listing copy names stage approval and invited companies", () => {
+    const listing = fs.readFileSync(path.join(REPO_ROOT, "LISTING.md"), "utf8");
+    assert.match(listing, /Moving an idea to a new stage needs your approval\./);
+    assert.doesNotMatch(listing, /clear yes before it changes your board/);
+    assert.match(listing, /You can only see companies you were invited to/);
+    assert.doesNotMatch(listing, /never sees another company's data/);
   });
 });
