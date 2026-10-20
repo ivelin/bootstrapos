@@ -4,7 +4,7 @@
     "name": "Ivelin Ivanov"
   },
   "metadata": {
-    "description": "Team marketplace listing for the preview Bootstrap OS plugin. Import from Repo only. Not a public catalog submit. Not mentee-ready hosted boards.",
+    "description": "Team marketplace listing for the preview Bootstrap OS plugin. Listed for public install. create_company is admin-only. Reviewers use a plain member account. Not mentee-ready hosted boards.",
     "version": "0.1.1"
   },
   "plugins": [

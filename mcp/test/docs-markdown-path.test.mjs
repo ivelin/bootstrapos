@@ -99,7 +99,10 @@ describe("markdown install path (zero MCP required)", () => {
       assert.ok(!firstHour.includes(HOSTED_MCP_RESOURCE_ALIAS));
       assert.match(firstHour, /Do \*\*not\*\* upload mentee work to Ivelin.s GitHub/);
       assert.ok(firstHour.includes("https://github.com/ivelin/bootstrap"));
-      assert.match(firstHour, /\*\*Not\*\* a public catalog submit/);
+      assert.match(firstHour, /The hosted connector is listed for public install/);
+      assert.match(firstHour, /create_company is admin-only/);
+      assert.match(firstHour, /Reviewers use a plain member account/);
+      assert.doesNotMatch(firstHour, /public catalog submit/);
       assert.match(firstHour, /\*\*Not\*\* mentee boards on our host/);
       assert.match(firstHour, /\*\*Not\*\* a Grok Bot marketplace bot/);
       assert.match(firstHour, /Not another Day 0 checkbox/);

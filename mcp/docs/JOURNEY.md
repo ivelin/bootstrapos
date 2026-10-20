@@ -89,6 +89,8 @@ HTTP 401 + `WWW-Authenticate: Bearer … resource_metadata=…` on gated `tools/
 
 Listed on the production pin when the journey store is attached (Cos SQL applied). The self-host stdio kit does not register them (do not lift local traces). Membership is `bootstrap_company_labels` — same companies as whoami. `whoami.role` is `member`, `super_admin`, or `unset`. Hosted callers do not call `bootstrap_init_company`; a super admin calls `create_company`, then `create_idea`. The operator applies `20260928_bootstrap_os_roles.sql` — not from a PR agent. That file does not seed a super_admin. A first-time hosted install names a real super_admin email contact. The operator inserts that row by hand, outside git, after the migration, because `bootstrap_os_grant_super_admin` cannot run when no super_admin exists yet. That function is SQL, not a connector tool. Template and test fixtures use `founder@example.test` as an illustrative `member` only, not a super_admin. Real contact addresses are never committed. Procedure: [`HOSTED_IDENTITY.md`](HOSTED_IDENTITY.md#first-super-admin-hosted-install).
 
+The hosted connector is listed for public install. `create_company` is admin-only. Reviewers use a plain member account.
+
 ## Out
 
-No login UI in this repo. No snapshot UI. No marketplace. No Grok Bot template. No FAST mentee names or emails in public markdown.
+No login UI in this repo. No snapshot UI. No Grok Bot template. No FAST mentee names or emails in public markdown.

@@ -1,6 +1,6 @@
 # Bootstrap OS plugin (preview 0.1.1)
 
-Preview package. Skills hyperlink the published OS. **Not** mentee-ready hosted boards. **Not** a public Cursor marketplace listing — we have not submitted. **Not** a second front door.
+Preview package. Skills hyperlink the published OS. **Not** mentee-ready hosted boards. The hosted connector is listed for public install. `create_company` is admin-only. Reviewers use a plain member account. **Not** a second front door.
 
 Path 1 stays default: point an AI at https://github.com/ivelin/bootstrap
 
@@ -12,7 +12,7 @@ Mentee CoS and specialists query this plugin first when the ask is where current
 
 ## Merge-gate visitor matrix (CoS smell-test)
 
-Seven cases this package must support. Thin links, not essays. Install-first: no auth. No public catalog. Optional identity (whoami + labels) is a separate matrix in [`COVERAGE.md`](COVERAGE.md) — it does not change these seven.
+Seven cases this package must support. Thin links, not essays. Install-first: no auth. The hosted connector is listed for public install. `create_company` is admin-only. Reviewers use a plain member account. Optional identity (whoami + labels) is a separate matrix in [`COVERAGE.md`](COVERAGE.md) — it does not change these seven.
 
 **Human**
 
@@ -94,15 +94,15 @@ Not a mentee dashboard. Not Path 1. Open the page only when the three gates hold
 3. Path 1 / Day 0 — no CAC / NRR / magic-number numbers.
 4. Source older than a year — mark dead or cut.
 
-## How to install (no public catalog)
+## How to install
 
-Do not `/add-plugin` a GitHub URL expecting the public catalog. We have not submitted.
+The hosted connector is listed for public install. Use `/add-plugin` from that listing. `create_company` is admin-only. Reviewers use a plain member account.
 
 **(a) Team / dashboard Import from Repo**
 
 Cursor Dashboard → Plugins → Team Marketplaces → Import from Repo → `https://github.com/ivelin/bootstrap`
 
-The repo-root [`.cursor-plugin/marketplace.json`](../.cursor-plugin/marketplace.json) lists this one plugin at `plugin/`. That is a team import, not a public catalog submit.
+The repo-root [`.cursor-plugin/marketplace.json`](../.cursor-plugin/marketplace.json) lists this one plugin at `plugin/`. Listed for public install. create_company is admin-only. Reviewers use a plain member account.
 
 **(b) Add the remote MCP**
 
@@ -139,7 +139,7 @@ Thin when-to-use + links to the published OS. They do not copy the constitution.
 
 ## Hosted MCP URL
 
-`mcp.json` pins the invite-only collab / Grok Streamable HTTP host `https://mcp.bootstrap.pirin.ai/mcp`. Free Path 1 is GitHub + install-os + local — not a hosted MCP connector. `${BOOTSTRAP_MCP_URL}` may override (default is the collab pin). Git-branch previews stay on `*.vercel.app` (undeclared deploy-only, not a pin). Not mentee-ready boards. Not a public catalog. Do not use `mcp.pirin.ai`. Contract: [`mcp/docs/HOSTED_IDENTITY.md`](../mcp/docs/HOSTED_IDENTITY.md).
+`mcp.json` pins the invite-only collab / Grok Streamable HTTP host `https://mcp.bootstrap.pirin.ai/mcp`. Free Path 1 is GitHub + install-os + local — not a hosted MCP connector. `${BOOTSTRAP_MCP_URL}` may override (default is the collab pin). Git-branch previews stay on `*.vercel.app` (undeclared deploy-only, not a pin). Not mentee-ready boards. The hosted connector is listed for public install. `create_company` is admin-only. Reviewers use a plain member account. Do not use `mcp.pirin.ai`. Contract: [`mcp/docs/HOSTED_IDENTITY.md`](../mcp/docs/HOSTED_IDENTITY.md).
 
 Collab host: cookie-less handshake 401; public OS tools stay listed after auth. Gated `bootstrap_whoami` / company labels return 401 + `WWW-Authenticate` to this MCP origin RFC 9728 (`authorization_servers` = pirin.ai login). Login is `/bootstrap-os/login` on pirin.ai (Web Builder; not this repo). The pin is the Pirin write plane (`create_company`, then `create_idea`). `~/.bootstrap-os` is a self-host kit, not the Pirin mentee path.
 

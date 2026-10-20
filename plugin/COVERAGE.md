@@ -8,7 +8,7 @@ This is a **preview package**. Not mentee-ready hosted boards. Path 1 stays the 
 
 | Lock | Where | What it proves |
 |------|--------|----------------|
-| Team listing → `plugin/` | `.cursor-plugin/marketplace.json` + Day-0 + MCP unit | One plugin. Import from Repo file shape only. Not a public catalog submit. |
+| Team listing → `plugin/` | `.cursor-plugin/marketplace.json` + Day-0 + MCP unit | One plugin. Import from Repo file shape. Listed for public install. create_company is admin-only. Reviewers use a plain member account. |
 | Connector URL | `plugin/mcp.json` | Collab / Grok pin `https://mcp.bootstrap.pirin.ai/mcp`. No Gmail/Stripe/other. |
 | `${BOOTSTRAP_MCP_URL}` default | `plugin/.cursor-plugin/plugin.json` | Optional override defaults to that host. |
 | Plugin 0.1.1 + thin skills | `plugin/plugin.json`, `skills/*/SKILL.md` | Hyperlinks to the published OS. No constitution copy. |
@@ -30,7 +30,7 @@ This is a **preview package**. Not mentee-ready hosted boards. Path 1 stays the 
 |-----|-----|
 | Cursor dashboard **Import from Repo** actually installing | Team-plan GUI. File listing is locked; the click is not. |
 | `~/.cursor/plugins/local/bootstrap-os` loading in a real Cursor window | Local copy path is documented; GUI load is not in CI. |
-| Public Cursor catalog / `/add-plugin` GitHub URL | We have **not** submitted. Do not expect it. |
+| Public Cursor catalog / `/add-plugin` GitHub URL | Listed for public install. create_company is admin-only. Reviewers use a plain member account. The catalog click is not a CI lock. |
 | Git-branch Vercel preview as the production pin | Collab pin stays `https://mcp.bootstrap.pirin.ai/mcp` on `main`. Do not advertise `bootstrap-os-mcp.vercel.app` as a Path 1 pin. Do not promote this branch to the collab hostname. |
 | Production `bootstrap_os_info.pluginPreview.version` already `0.1.1` | Draft PR. Prod still serves the last production deploy until merge + Vercel production. |
 | Git-branch preview as a mentee board | Out. The production pin is the Pirin write plane (`create_company` then `create_idea`). OSS `mcp/` is the self-host kit. |
@@ -113,7 +113,7 @@ Not Day 0 homework. Day 0 stays thesis / ≥3 groups / one snapshot. Pass only i
 
 ## After-proof efficiency visitor matrix
 
-Eight cases this page must support. Thin links, not essays. No auth. No database. No public catalog.
+Eight cases this page must support. Thin links, not essays. No auth. No database. The hosted connector is listed for public install. `create_company` is admin-only. Reviewers use a plain member account.
 
 | # | Visitor | Surface | Done means | Evidence |
 |---|---------|---------|------------|----------|

@@ -621,7 +621,10 @@ assert "https://github.com/ivelin/bootstrap" in readme
 assert "https://mcp.bootstrap.pirin.ai/mcp" in readme
 assert "~/.cursor/plugins/local/bootstrap-os" in readme
 assert "/add-plugin" in readme
-assert "we have not submitted" in readme.lower() or "We have not submitted" in readme
+assert "listed for public install" in readme.lower()
+assert "create_company is admin-only" in readme
+assert "Reviewers use a plain member account" in readme
+assert "we have not submitted" not in readme.lower()
 assert "query-os-first" in readme
 assert "0-1" in readme
 assert "## Feedback" in readme
@@ -946,7 +949,9 @@ if grep -q '### Standing rules' "$fh" \
   && grep -q 'https://mcp.bootstrap.pirin.ai/mcp' "$fh" \
   && grep -q "upload mentee work to Ivelin's GitHub" "$fh" \
   && grep -q 'https://github.com/ivelin/bootstrap' "$fh" \
-  && grep -q 'a public catalog submit' "$fh" \
+  && grep -q 'The hosted connector is listed for public install' "$fh" \
+  && grep -q 'create_company is admin-only' "$fh" \
+  && grep -q 'Reviewers use a plain member account' "$fh" \
   && grep -q 'mentee boards on our host' "$fh" \
   && grep -q 'Grok Bot marketplace bot' "$fh" \
   && grep -q 'Not another Day 0 checkbox' "$fh"; then
