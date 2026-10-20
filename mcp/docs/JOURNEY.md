@@ -1,6 +1,6 @@
 # FAST 0-1 journey (hosted board)
 
-Invite-only collab pin: [`HOSTED_IDENTITY.md`](HOSTED_IDENTITY.md). After Cos applies journey SQL on pirin.ai, production `VERCEL_ENV=production` attaches the store. Preview never attaches. Tests are **PGlite only**. Login UI stays on pirin.ai. No migrate/seed/live-probe of supabase-pirin-ai from PR agents.
+The hosted connector uses sign-in. Contract: [`HOSTED_IDENTITY.md`](HOSTED_IDENTITY.md). After Cos applies journey SQL on pirin.ai, production `VERCEL_ENV=production` attaches the store. Preview never attaches. Tests are **PGlite only**. Login UI stays on pirin.ai. No migrate/seed/live-probe of supabase-pirin-ai from PR agents.
 
 Ivelin yes 2026-09-01 (via Cos): one source of truth for a FAST mentee 0-1 journey. **Company and idea are separate abstractions**, not a flattened composite key.
 
@@ -85,11 +85,11 @@ Cos sets Vercel secrets **once** on `bootstrap-os-mcp` production: `BOOTSTRAP_BO
 | `list_provenance` | anyone who may `get_journey` | Ordered audit + gate events with before/after. Invite-only / held_label fail-closed. |
 | `put_portfolio_score` | founder + founder-authorized | Weekly Impact/Evidence/Leverage 1–5 plus required short `why` (≤280) on one live idea. Skip if fewer than two live ideas. Never changes clocks or gates. |
 
-HTTP 401 + `WWW-Authenticate: Bearer … resource_metadata=…` on gated `tools/call` without a token. Cookie-less handshake on the invite-only collab host is also 401. Path 1 founders use GitHub + local — they are not told to connect this host.
+HTTP 401 + `WWW-Authenticate: Bearer … resource_metadata=…` on gated `tools/call` without a token. The hosted connector uses sign-in. A cookie-less handshake is also 401. Path 1 founders use GitHub + local — they are not told to connect this host.
 
-Listed on the production pin when the journey store is attached (Cos SQL applied). The self-host stdio kit does not register them (do not lift local traces). Membership is `bootstrap_company_labels` — same companies as whoami. `whoami.role` is `member`, `super_admin`, or `unset`. Hosted callers do not call `bootstrap_init_company`; a super admin calls `create_company`, then `create_idea`. The operator applies `20260928_bootstrap_os_roles.sql` — not from a PR agent. That file does not seed a super_admin. A first-time hosted install names a real super_admin email contact. The operator inserts that row by hand, outside git, after the migration, because `bootstrap_os_grant_super_admin` cannot run when no super_admin exists yet. That function is SQL, not a connector tool. Template and test fixtures use `founder@example.test` as an illustrative `member` only, not a super_admin. Real contact addresses are never committed. Procedure: [`HOSTED_IDENTITY.md`](HOSTED_IDENTITY.md#first-super-admin-hosted-install).
+Registered on the production pin when the journey store is attached (Cos SQL applied). The self-host stdio kit does not register them (do not lift local traces). Membership is `bootstrap_company_labels` — same companies as whoami. `whoami.role` is `member`, `super_admin`, or `unset`. Hosted callers do not call `bootstrap_init_company`; a super admin calls `create_company`, then `create_idea`. The operator applies `20260928_bootstrap_os_roles.sql` — not from a PR agent. That file does not seed a super_admin. A first-time hosted install names a real super_admin email contact. The operator inserts that row by hand, outside git, after the migration, because `bootstrap_os_grant_super_admin` cannot run when no super_admin exists yet. That function is SQL, not a connector tool. Template and test fixtures use `founder@example.test` as an illustrative `member` only, not a super_admin. Real contact addresses are never committed. Procedure: [`HOSTED_IDENTITY.md`](HOSTED_IDENTITY.md#first-super-admin-hosted-install).
 
-The hosted connector is listed for public install. `create_company` is admin-only. Reviewers use a plain member account.
+See [mcp/docs/MARKETPLACE.md](MARKETPLACE.md).
 
 ## Out
 

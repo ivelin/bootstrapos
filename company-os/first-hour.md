@@ -89,11 +89,11 @@ On Day 0 you should hear something like: **Write the bet**, gate open, autonomy 
 
 Not another Day 0 checkbox. This hour stays thesis, ≥3 groups, one snapshot.
 
-After First Hour, the constitution stays on GitHub and [install-os](https://pirin.ai/install-os). Free Path 1 does not use a hosted MCP connector. Pirin-supported company boards are the invite-only pin `https://mcp.bootstrap.pirin.ai/mcp` ([hosted identity](https://github.com/ivelin/bootstrapos/blob/main/mcp/docs/HOSTED_IDENTITY.md)): a super admin calls `create_company`, then `create_idea`. Do not keep that company on a local install.
+After First Hour, the constitution stays on GitHub and [install-os](https://pirin.ai/install-os). Free Path 1 does not use a hosted MCP connector. The hosted connector uses sign-in. Pirin-supported company boards are `https://mcp.bootstrap.pirin.ai/mcp` ([hosted identity](https://github.com/ivelin/bootstrapos/blob/main/mcp/docs/HOSTED_IDENTITY.md)). A super admin calls `create_company`, then `create_idea`. Do not keep that company on a local install.
 
 Do **not** upload mentee work to Ivelin's GitHub.
 
-Path 1 is still `https://github.com/ivelin/bootstrapos` as the free install source. Team Import from Repo is optional. Invite-only collab uses that MCP pin. The hosted connector is listed for public install. create_company is admin-only. Reviewers use a plain member account. Git-branch `*.vercel.app` previews are **Not** mentee boards on our host. The invite-only pin is the Pirin-supported write plane (`create_company`, then `create_idea`). **Not** a Grok Bot marketplace bot.
+Path 1 is still `https://github.com/ivelin/bootstrapos` as the free install source. Team Import from Repo is optional. The hosted connector uses sign-in. See [mcp/docs/MARKETPLACE.md](../mcp/docs/MARKETPLACE.md). Git-branch `*.vercel.app` previews are **Not** mentee boards on our host. That pin is the Pirin-supported write plane (`create_company`, then `create_idea`). **Not** a Grok Bot marketplace bot.
 
 Follow the [near-term checklist](https://github.com/ivelin/bootstrapos/blob/main/company-os/operating-system.md#near-term-checklist-any-startup). Next real work is usually honest research across those groups — not a platform.
 

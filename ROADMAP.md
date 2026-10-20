@@ -186,9 +186,9 @@ These are the **only** benefits we actively invest in. Each row must keep a live
 | **1. Point an AI** | **Default forever** | https://github.com/ivelin/bootstrap — no install, no MCP |
 | **2. Optional instance / CLI + workflows** | **Shipped on main** | `./scripts/install-instance.sh` + optional `.grok/workflows` |
 | **3. Self-host kit** | **Optional OSS `mcp/`** | Your disk (`initCompany()` / `~/.bootstrap-os`) or your own Vercel + Supabase. Not the Pirin mentee source of record. Same `company-state.json` + `where-are-we.py` on disk. |
-| **4. Hosted MCP** | **Pirin write plane** | Pin `https://mcp.bootstrap.pirin.ai/mcp` (handshake 401). Super admin calls `create_company`, then `create_idea`. `plugin/` is preview. Free docs are GitHub + install-os + local — not a hosted MCP connector. Git-branch previews on `*.vercel.app` (same 401 as collab, not a silent 200 alias, not a pin, not mentee-ready boards). Contract: [`mcp/docs/HOSTED_IDENTITY.md`](mcp/docs/HOSTED_IDENTITY.md). Gated tools: HTTP 401 + `WWW-Authenticate` to this MCP origin RFC 9728 (`authorization_servers` = pirin.ai login). This repo is the resource server only. Login / OAuth stay on pirin.ai `/bootstrap-os/login` (Web Builder). No login UI and no copy-paste `bos_` mint as the mentee path. Listed for public install. create_company is admin-only. Reviewers use a plain member account. Not pirin.ai. Path 1 stays the front door. This row is not an Advance of Phase D. |
+| **4. Hosted MCP** | **Pirin write plane** | Pin `https://mcp.bootstrap.pirin.ai/mcp` (handshake 401). Super admin calls `create_company`, then `create_idea`. `plugin/` is preview. Free docs are GitHub + install-os + local. The hosted connector uses sign-in. Git-branch previews on `*.vercel.app` (same 401 as collab, not a silent 200 alias, not a pin, not mentee-ready boards). Contract: [`mcp/docs/HOSTED_IDENTITY.md`](mcp/docs/HOSTED_IDENTITY.md). Gated tools: HTTP 401 + `WWW-Authenticate` to this MCP origin RFC 9728 (`authorization_servers` = pirin.ai login). This repo is the resource server only. Login / OAuth stay on pirin.ai `/bootstrap-os/login` (Web Builder). No login UI and no copy-paste `bos_` mint as the mentee path. See [mcp/docs/MARKETPLACE.md](mcp/docs/MARKETPLACE.md). Not pirin.ai. Path 1 stays the front door. This row is not an Advance of Phase D. |
 
-Cos Advance (hosted board): invited companies write on the pin after roles SQL and a sole super_admin. Self-host `~/.bootstrap-os` is not the Pirin source of record. Path 1 stays the no-login front door. The hosted connector is listed for public install. create_company is admin-only. Reviewers use a plain member account.
+Cos Advance (hosted board): invited companies write on the pin after roles SQL and a sole super_admin. Self-host `~/.bootstrap-os` is not the Pirin source of record. Path 1 stays the no-login front door. See [mcp/docs/MARKETPLACE.md](mcp/docs/MARKETPLACE.md).
 
 MCP is **compass + logbook**, not a third harness.
 
@@ -552,7 +552,7 @@ T1 hooks (no new product):
 
 - Process pack: [`company-os/`](company-os/)  
 - Optional MCP: [`mcp/README.md`](mcp/README.md)
-- Preview plugin: [`plugin/`](plugin/). Listed for public install. create_company is admin-only. Reviewers use a plain member account.
+- Preview plugin: [`plugin/`](plugin/). See [mcp/docs/MARKETPLACE.md](mcp/docs/MARKETPLACE.md).
 - Template policy: [README](README.md#template-change-policy)  
 - PR (local MCP): https://github.com/ivelin/bootstrap/pull/1  
 

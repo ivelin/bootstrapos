@@ -11,7 +11,7 @@
 | **1. Point an AI** | Everyone (default). Constitution. | None |
 | **2. Optional instance / CLI** | Notes in your repo. Not the source of record. | `./scripts/install-instance.sh` |
 | **Self-host kit (this package)** | Your own disk or your own Vercel + Supabase | Node 20+, this package |
-| **Hosted MCP** | Pirin-supported mentees | Pin `https://mcp.bootstrap.pirin.ai/mcp` (handshake 401). Super admin calls `create_company`, then `create_idea`. Free docs = GitHub + install-os + local — not a hosted MCP connector. Git-branch previews on `*.vercel.app` (same 401 as collab, not a silent 200, not mentee-ready boards). Contract: [`docs/HOSTED_IDENTITY.md`](docs/HOSTED_IDENTITY.md). Listed for public install. create_company is admin-only. Reviewers use a plain member account. Not pirin.ai. |
+| **Hosted MCP** | Pirin-supported mentees | Pin `https://mcp.bootstrap.pirin.ai/mcp` (handshake 401). Super admin calls `create_company`, then `create_idea`. Free docs = GitHub + install-os + local. The hosted connector uses sign-in. Git-branch previews on `*.vercel.app` (same 401 as collab, not a silent 200, not mentee-ready boards). Contract: [`docs/HOSTED_IDENTITY.md`](docs/HOSTED_IDENTITY.md). See [mcp/docs/MARKETPLACE.md](docs/MARKETPLACE.md). Not pirin.ai. |
 
 Same state as markdown: `company-state.json` + `where-are-we.py`. Isolation is hard: no shared phase/evidence across `companyId`. MCP never writes `company-os/` template files.
 
@@ -160,11 +160,11 @@ See [`config/mcp.stdio.example.json`](config/mcp.stdio.example.json).
 
 Same package. Production entry is the Vercel request handler (`api/mcp.ts` + `api/health.ts`). `npm run start:http` is a local helper only.
 
-Same public read tool names as today (`bootstrap_os_info`, docs, house-rule pins, `bootstrap_support`). Fetches the published GitHub repo (`BOOTSTRAP_OS_DOCS_SOURCE=published`). Invite-only collab host 401s cookie-less `initialize` / `tools/list` / GET SSE; public OS tools stay listed **after** auth. The pin is the Pirin write plane. Hosted callers do not call `bootstrap_init_company`. Free docs are GitHub + install-os + local — not this host as a docs CDN.
+Same public read tool names as today (`bootstrap_os_info`, docs, house-rule pins, `bootstrap_support`). Fetches the published GitHub repo (`BOOTSTRAP_OS_DOCS_SOURCE=published`). The hosted connector uses sign-in. It 401s cookie-less `initialize` / `tools/list` / GET SSE; public OS tools stay listed **after** auth. The pin is the Pirin write plane. Hosted callers do not call `bootstrap_init_company`. Free docs are GitHub + install-os + local — not this host as a docs CDN.
 
 Optional gated tools on this host only: `bootstrap_whoami` (includes `role`), `bootstrap_list_companies` (alias `bootstrap_list_company_labels`), `bootstrap_use_company`, `invite_member`, `accept_invite`, and `create_company`. Unauthenticated calls return HTTP 401 + `WWW-Authenticate` pointing at this MCP origin RFC 9728 (`authorization_servers` = pirin.ai login). Login UI is `/bootstrap-os/login` (Web Builder), not this repo. Accept path is in-chat; outsider signup is `?invite=` — [`docs/INVITE.md`](docs/INVITE.md). A super admin calls `create_company`, then `create_idea`. Contract: [`docs/HOSTED_IDENTITY.md`](docs/HOSTED_IDENTITY.md).
 
-Invite-only collab / Grok pin is `https://mcp.bootstrap.pirin.ai/mcp`. Git-branch public preview is `*.vercel.app` (undeclared deploy-only, not a pin). Project `bootstrap-os-mcp` under `ivelins-projects-9f9b7132`. Not mentee-ready boards. Listed for public install. create_company is admin-only. Reviewers use a plain member account. Not pirin.ai. Path 1 stays the front door.
+The hosted connector uses sign-in. The pin is `https://mcp.bootstrap.pirin.ai/mcp`. Git-branch public preview is `*.vercel.app` (undeclared deploy-only, not a pin). Project `bootstrap-os-mcp` under `ivelins-projects-9f9b7132`. Not mentee-ready boards. See [mcp/docs/MARKETPLACE.md](docs/MARKETPLACE.md). Not pirin.ai. Path 1 stays the front door.
 
 ```bash
 cd mcp
@@ -244,4 +244,4 @@ GitHub Actions: `.github/workflows/mcp-ci.yml` (Node 20 + 22).
 
 Runbooks: [`docs/COLD_PATH.md`](docs/COLD_PATH.md) · [`docs/CLIENT_CONNECT.md`](docs/CLIENT_CONNECT.md) · [`docs/JOURNEY.md`](docs/JOURNEY.md) · [`docs/E2E_ROLEPLAY.md`](docs/E2E_ROLEPLAY.md) · [`QA.md`](QA.md)
 
-**This branch:** gated journey tools + SQL (PGlite tests only). Not on the production pin. Do not merge. Invite-only collab pin: [`docs/HOSTED_IDENTITY.md`](docs/HOSTED_IDENTITY.md). Journey contract: [`docs/JOURNEY.md`](docs/JOURNEY.md).
+**This branch:** gated journey tools + SQL (PGlite tests only). Not on the production pin. Do not merge. The hosted connector uses sign-in. Contract: [`docs/HOSTED_IDENTITY.md`](docs/HOSTED_IDENTITY.md). Journey contract: [`docs/JOURNEY.md`](docs/JOURNEY.md).

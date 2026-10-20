@@ -43,7 +43,7 @@ Do **not** run these from a PR cloud agent. Optional maintainer probe of **read-
 
 `mcp/test/preview-live.mjs` is the optional handshake/`/health` probe. It is **not** in `npm run ci`. It must **not** call invited whoami, mutate prod, or apply migrations.
 
-The hosted connector is listed for public install. `create_company` is admin-only. Reviewers use a plain member account.
+See [mcp/docs/MARKETPLACE.md](MARKETPLACE.md).
 
 ## Out
 
