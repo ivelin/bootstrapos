@@ -8,6 +8,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { MemoryJourneyStore, defaultScoreboard } from "../dist/journey.js";
+import { cardPersonName } from "../dist/board-plain-words.js";
 import {
   applySpokenPayloadLead,
   cardFromScoreboard,
@@ -491,10 +492,10 @@ describe("canonical board card", () => {
     assert.match(seen.markdown, /a booth at the town fair/);
     assert.match(seen.markdown, /2026-08-01 to 2026-08-03: the booth made no sales/);
     assert.match(seen.markdown, /🎯 🤝 \*\*Nothing is in play yet\*\*/);
-    assert.match(seen.markdown, /🟢 Name the next bet/);
+    assert.match(seen.markdown, /⚪ Name the next bet/);
+    assert.match(seen.markdown, /Leave this stopped/);
     const killedGreens = seen.markdown.split("\n").filter((line) => line.startsWith("|") && line.includes("🟢"));
-    assert.equal(killedGreens.length, 1);
-    assert.match(killedGreens[0], /🎯/);
+    assert.equal(killedGreens.length, 0);
     assert.doesNotMatch(seen.markdown, /stop if nobody pays/);
     assert.doesNotMatch(seen.markdown, /The goal is/);
   });
@@ -678,6 +679,32 @@ describe("canonical board card", () => {
     assert.equal(seen.owners[0].principal, "founder@example.test");
   });
 
+  it("names a person from a plain string, a login, or an email local part", () => {
+    assert.equal(cardPersonName("Zoë Ångström"), "Zoë");
+    assert.equal(cardPersonName("sam"), null);
+    assert.equal(cardPersonName("tester1@example.test"), null);
+    assert.equal(cardPersonName("a@b.test"), "a");
+  });
+
+  it("prints Founder: not named yet when who is empty or only a lowercase login", () => {
+    const card = cardFromScoreboard({
+      slug: "bravo",
+      label: "bravo",
+      journeyPhase: 1,
+      gate: "hold",
+      scoreboard: { initiatives: BRAVO.initiatives },
+    });
+    const empty = formatSpokenCard({ label: "bravo", who: [], card });
+    assert.match(empty, /^Founder: not named yet$/m);
+    assert.doesNotMatch(empty, /\| \*\*Background\*\* \|/);
+    const login = formatSpokenCard({ label: "bravo", who: ["sam"], card });
+    assert.match(login, /^Founder: not named yet$/m);
+    assert.doesNotMatch(login, /\| sam \|/);
+    const named = formatSpokenCard({ label: "bravo", who: ["Zoë Ångström"], card });
+    assert.match(named, /^Founder: Zoë$/m);
+    assert.match(named, /\| Zoë \|/);
+  });
+
   it("prints display names, founder first, and never a login or the next-step placeholder", () => {
     const seen = applySpokenPayloadLead({
       ok: true,
@@ -848,7 +875,8 @@ describe("canonical board card", () => {
     });
     assert.match(spoken, /\| \*\*Bet\*\* \|/);
     assert.match(spoken, /🎯 🤝 \*\*Nothing is in play yet\*\*/);
-    assert.equal(spoken.split("\n").filter((line) => line.startsWith("|") && line.includes("🟢")).length, 1);
+    assert.match(spoken, /⚪ Name the next bet/);
+    assert.equal(spoken.split("\n").filter((line) => line.startsWith("|") && line.includes("🟢")).length, 0);
     assert.doesNotMatch(spoken, /\| \*\*Other paths/);
     const past = spoken.split("**Past bets**")[1].split("**Background**")[0];
     assert.match(past, /a booth at the town fair/);

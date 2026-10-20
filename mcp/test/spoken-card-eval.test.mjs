@@ -175,8 +175,13 @@ function assertFounderCard(text) {
   assert.doesNotMatch(lines[0], /biggest problem right now/);
   assert.doesNotMatch(raw, /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b/);
   const greens = raw.split("\n").filter((line) => line.startsWith("|") && line.includes("🟢"));
-  assert.equal(greens.length, 1, greens.join("\n"));
-  assert.match(greens[0], /🎯/);
+  if (/Leave this stopped/.test(raw)) {
+    assert.equal(greens.length, 0, greens.join("\n"));
+    assert.match(raw, /⚪ Name the next bet/);
+  } else {
+    assert.equal(greens.length, 1, greens.join("\n"));
+    assert.match(greens[0], /🎯/);
+  }
   assert.doesNotMatch(raw, /\| What we're working on \|/);
   const headers = raw.split("\n").filter((line) => line.startsWith("| Work |"));
   assert.equal(headers.length, 1);

@@ -7,7 +7,6 @@ bravo sells to one cafe owner.
 |---|---|---|---|
 | **Bet** | | | |
 | 🎯 🤝 **a weekly shop report for one cafe** | 🟢 Menu tasted, no order yet | Ask for the first order | Sam |
-| **Background** | | | |
 
 *🎯 the one thing that matters most · 🟢 working on it · 🟡 waiting · 🔴 dropped · ⚪ closed*
 
