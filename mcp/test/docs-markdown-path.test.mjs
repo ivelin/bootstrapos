@@ -109,10 +109,15 @@ describe("markdown install path (zero MCP required)", () => {
         "utf8",
       );
       assert.match(marketplace, /not listed yet/);
-      assert.match(marketplace, /shown to every signed-in member/);
+      assert.match(marketplace, /shown to every signed-in account/);
       assert.match(marketplace, /super admin/);
+      assert.match(marketplace, /HTTP 200/);
+      assert.match(marketplace, /`status` 403/);
+      assert.doesNotMatch(marketplace, /HTTP 403/);
       assert.match(marketplace, /ask_admin/);
+      assert.match(marketplace, /does not include `ask_admin`/);
       assert.match(marketplace, /plain member account/);
+      assert.match(marketplace, /https:\/\/mcp\.bootstrap\.pirin\.ai\/mcp/);
       assert.match(marketplace, /marketplace: false/);
       assert.match(marketplace, /listing time/);
       assert.match(firstHour, /\*\*Not\*\* mentee boards on our host/);

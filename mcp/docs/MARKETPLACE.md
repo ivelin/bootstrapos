@@ -2,8 +2,12 @@
 
 A Cursor plugin marketplace submission is planned. The plugin is not listed yet.
 
-`create_company` is shown to every signed-in member. Only a super admin can run it. Anyone else gets HTTP 403 `ask_admin` when no admin store is attached. A member call with the store attached is HTTP 403 with no extra error code.
+`create_company` is shown to every signed-in account. Only a super admin can run it. A call that reaches the tool and is not from a super admin is HTTP 200. The tool result has `status` 403. When no admin store is attached, that result includes `ask_admin`. The database path returns `status` 403 and does not include `ask_admin`.
 
 Catalog reviewers use a plain member account.
 
+The hosted endpoint is `https://mcp.bootstrap.pirin.ai/mcp`.
+
 `bootstrap_os_info` keeps `marketplace: false` until the plugin is listed. The flag flips to `true` at listing time.
+
+Cursor's publish page reads `plugin.json` and `mcp.json` at the repository root. The listing copy is `LISTING.md` in that same root. Cursor's checklist also names a plugin `README.md`. This repository's `README.md` stays the OS template. Team Import from Repo still uses `.cursor-plugin/marketplace.json` and source `plugin/`.
