@@ -182,6 +182,8 @@ Later grants and revokes use SQL. `bootstrap_os_grant_super_admin` and `bootstra
 
 Do not run `preview-live.mjs` on PR cloud agents. Draft prod synthetic checks are Cos-only — same doc.
 
+The hosted connector is listed for public install. `create_company` is admin-only. Reviewers use a plain member account.
+
 ## Out
 
-No mentee roster. No usage analytics as proof. No founder-update write. No WebMCP. No marketplace. No billing. No login UI in this repo. Insights/Apply stay email-only. No public Path 1 hosted MCP pin. No open login (a JWT without a mentee row sees no company rows). No prod Resend from this repo. QR image / SMS later — [`INVITE.md`](INVITE.md).
+No mentee roster. No usage analytics as proof. No founder-update write. No WebMCP. No billing. No login UI in this repo. Insights/Apply stay email-only. No public Path 1 hosted MCP pin. No open login (a JWT without a mentee row sees no company rows). No prod Resend from this repo. QR image / SMS later — [`INVITE.md`](INVITE.md).
