@@ -1402,9 +1402,13 @@ function registerJourneyTools(server: McpServer, ctx: HostedRequestContext) {
       from: z.string().optional().describe("Inclusive start timestamp (ISO)."),
       to: z.string().optional().describe("Inclusive end timestamp (ISO)."),
       before: z
-        .string()
+        .object({
+          at: z.string(),
+          kind: z.string(),
+          id: z.string(),
+        })
         .optional()
-        .describe("Exclusive cursor. Pass the oldest at from the previous page."),
+        .describe("Exclusive cursor. Pass nextBefore from the previous page."),
     },
     async (input) => {
       const store = storeOf();

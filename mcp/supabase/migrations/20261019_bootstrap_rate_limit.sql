@@ -547,13 +547,14 @@ END;
 $$;
 
 DROP FUNCTION IF EXISTS public.bootstrap_os_list_provenance(text, text, timestamptz, timestamptz);
+DROP FUNCTION IF EXISTS public.bootstrap_os_list_provenance(text, text, timestamptz, timestamptz, timestamptz);
 
 CREATE OR REPLACE FUNCTION public.bootstrap_os_list_provenance(
   p_company text,
   p_idea text DEFAULT NULL,
   p_from timestamptz DEFAULT NULL,
   p_to timestamptz DEFAULT NULL,
-  p_before timestamptz DEFAULT NULL
+  p_before jsonb DEFAULT NULL
 ) RETURNS jsonb
 LANGUAGE plpgsql
 SECURITY DEFINER
@@ -569,6 +570,7 @@ DECLARE
   events jsonb;
   v_page_max int;
   v_truncated boolean;
+  v_next jsonb;
 BEGIN
   IF NOT public.bootstrap_os_held_label(p_company) THEN
     RETURN jsonb_build_object('ok', false, 'error', 'company not visible');
@@ -587,12 +589,14 @@ BEGIN
   END IF;
 
   WITH matched AS (
-    SELECT kind, event_at, payload
+    SELECT kind, event_at, event_id, payload
     FROM (
       SELECT
         'audit'::text AS kind,
         a.at AS event_at,
+        a.id AS event_id,
         jsonb_build_object(
+          'id', a.id,
           'at', a.at,
           'who', a.who,
           'client', a.client,
@@ -605,12 +609,21 @@ BEGIN
         AND (iid IS NULL OR a.idea_id = iid)
         AND (p_from IS NULL OR a.at >= p_from)
         AND (p_to IS NULL OR a.at <= p_to)
-        AND (p_before IS NULL OR a.at < p_before)
+        AND (
+          p_before IS NULL
+          OR (a.at, 'audit'::text, a.id) < (
+            (p_before ->> 'at')::timestamptz,
+            p_before ->> 'kind',
+            (p_before ->> 'id')::uuid
+          )
+        )
       UNION ALL
       SELECT
         'gate'::text,
         e.at,
+        e.id,
         jsonb_build_object(
+          'id', e.id,
           'at', e.at,
           'who', e.who,
           'action', e.action,
@@ -623,19 +636,34 @@ BEGIN
         AND (iid IS NULL OR e.idea_id = iid)
         AND (p_from IS NULL OR e.at >= p_from)
         AND (p_to IS NULL OR e.at <= p_to)
-        AND (p_before IS NULL OR e.at < p_before)
+        AND (
+          p_before IS NULL
+          OR (e.at, 'gate'::text, e.id) < (
+            (p_before ->> 'at')::timestamptz,
+            p_before ->> 'kind',
+            (p_before ->> 'id')::uuid
+          )
+        )
     ) AS raw
   )
   SELECT
-    coalesce(jsonb_agg((payload || jsonb_build_object('kind', kind)) ORDER BY event_at, kind), '[]'::jsonb),
-    coalesce(jsonb_agg(payload ORDER BY event_at, kind) FILTER (WHERE kind = 'audit'), '[]'::jsonb),
-    coalesce(jsonb_agg(payload ORDER BY event_at, kind) FILTER (WHERE kind = 'gate'), '[]'::jsonb),
-    coalesce(bool_or(total_rows > v_page_max), false)
-  INTO events, audit, gates, v_truncated
+    coalesce(jsonb_agg((payload || jsonb_build_object('kind', kind)) ORDER BY event_at, kind, event_id), '[]'::jsonb),
+    coalesce(jsonb_agg(payload ORDER BY event_at, kind, event_id) FILTER (WHERE kind = 'audit'), '[]'::jsonb),
+    coalesce(jsonb_agg(payload ORDER BY event_at, kind, event_id) FILTER (WHERE kind = 'gate'), '[]'::jsonb),
+    coalesce(bool_or(total_rows > v_page_max), false),
+    CASE
+      WHEN count(*) = 0 THEN NULL
+      ELSE jsonb_build_object(
+        'at', (array_agg(event_at ORDER BY event_at, kind, event_id))[1],
+        'kind', (array_agg(kind ORDER BY event_at, kind, event_id))[1],
+        'id', (array_agg(event_id ORDER BY event_at, kind, event_id))[1]
+      )
+    END
+  INTO events, audit, gates, v_truncated, v_next
   FROM (
-    SELECT kind, event_at, payload, count(*) OVER () AS total_rows
+    SELECT kind, event_at, event_id, payload, count(*) OVER () AS total_rows
     FROM matched
-    ORDER BY event_at DESC, kind DESC
+    ORDER BY event_at DESC, kind DESC, event_id DESC
     LIMIT v_page_max
   ) AS page;
 
@@ -646,10 +674,11 @@ BEGIN
     'events', events,
     'audit', audit,
     'gateEvents', gates,
-    'truncated', coalesce(v_truncated, false)
+    'truncated', coalesce(v_truncated, false),
+    'nextBefore', v_next
   );
 END;
 $$;
 
-GRANT EXECUTE ON FUNCTION public.bootstrap_os_list_provenance(text, text, timestamptz, timestamptz, timestamptz)
+GRANT EXECUTE ON FUNCTION public.bootstrap_os_list_provenance(text, text, timestamptz, timestamptz, jsonb)
   TO authenticated;

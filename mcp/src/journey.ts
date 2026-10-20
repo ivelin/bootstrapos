@@ -482,6 +482,20 @@ export type AuditEventRow = {
   whatChanged: Record<string, unknown>;
 };
 
+export type ProvenanceCursor = {
+  at: string;
+  kind: string;
+  id: string;
+};
+
+export type ProvenancePageQuery = {
+  companySlug: string;
+  ideaSlug?: string;
+  from?: string;
+  to?: string;
+  before?: ProvenanceCursor;
+};
+
 export function isGateDecision(value: string): value is GateDecision {
   return (GATE_DECISIONS as readonly string[]).includes(value);
 }
@@ -1069,10 +1083,7 @@ export type JourneyStore = {
       client?: string;
     },
   ): Promise<unknown>;
-  listProvenance(
-    actor: JourneyActor,
-    query: { companySlug: string; ideaSlug?: string; from?: string; to?: string; before?: string },
-  ): Promise<unknown>;
+  listProvenance(actor: JourneyActor, query: ProvenancePageQuery): Promise<unknown>;
   listKilledIdeas(
     actor: JourneyActor,
     query: { companySlug: string },
@@ -2061,10 +2072,7 @@ export class MemoryJourneyStore implements JourneyStore {
     return { ok: true, removed };
   }
 
-  async listProvenance(
-    actor: JourneyActor,
-    query: { companySlug: string; ideaSlug?: string; from?: string; to?: string; before?: string },
-  ): Promise<unknown> {
+  async listProvenance(actor: JourneyActor, query: ProvenancePageQuery): Promise<unknown> {
     if (!actor.authenticated || !actor.principal) {
       return forbidden("unauthenticated");
     }
@@ -2079,13 +2087,18 @@ export class MemoryJourneyStore implements JourneyStore {
     const ideaId = query.ideaSlug ? ideas[0]?.id : undefined;
     const fromMs = query.from ? Date.parse(query.from) : Number.NaN;
     const toMs = query.to ? Date.parse(query.to) : Number.NaN;
-    const beforeMs = query.before ? Date.parse(query.before) : Number.NaN;
+    const before = query.before;
     const inRange = (iso: string) => {
       const t = Date.parse(iso);
       if (Number.isFinite(fromMs) && t < fromMs) return false;
       if (Number.isFinite(toMs) && t > toMs) return false;
-      if (Number.isFinite(beforeMs) && t >= beforeMs) return false;
       return true;
+    };
+    const beforeCursor = (row: ProvenanceCursor) => {
+      if (!before) return true;
+      if (row.at !== before.at) return row.at < before.at;
+      if (row.kind !== before.kind) return row.kind < before.kind;
+      return row.id < before.id;
     };
     const slugOf = (id: string | null) =>
       id ? (this.ideas.find((row) => row.id === id)?.slug ?? null) : null;
@@ -2097,12 +2110,14 @@ export class MemoryJourneyStore implements JourneyStore {
       })
       .map((row) => ({
         kind: "audit" as const,
+        id: row.id,
         at: row.at,
         who: row.who,
         client: row.client,
         ideaSlug: slugOf(row.ideaId),
         whatChanged: row.whatChanged,
-      }));
+      }))
+      .filter(beforeCursor);
     const gateRows = this.events
       .filter((row) => {
         const idea = this.ideas.find((i) => i.id === row.ideaId);
@@ -2112,21 +2127,27 @@ export class MemoryJourneyStore implements JourneyStore {
       })
       .map((row) => ({
         kind: "gate" as const,
+        id: row.id,
         at: row.at,
         who: row.who,
         action: row.action,
         why: row.why,
         ideaSlug: slugOf(row.ideaId),
-      }));
-    const ordered = [...auditRows, ...gateRows].sort(
-      (a, b) => a.at.localeCompare(b.at) || a.kind.localeCompare(b.kind),
-    );
+      }))
+      .filter(beforeCursor);
+    const ordered = [...auditRows, ...gateRows].sort((a, b) => {
+      if (a.at !== b.at) return a.at < b.at ? -1 : 1;
+      if (a.kind !== b.kind) return a.kind < b.kind ? -1 : 1;
+      if (a.id !== b.id) return a.id < b.id ? -1 : 1;
+      return 0;
+    });
     const truncated = ordered.length > PROVENANCE_PAGE_MAX;
     const capped = truncated ? ordered.slice(-PROVENANCE_PAGE_MAX) : ordered;
     const audit = capped.flatMap((row) =>
       row.kind === "audit"
         ? [
             {
+              id: row.id,
               at: row.at,
               who: row.who,
               client: row.client,
@@ -2140,6 +2161,7 @@ export class MemoryJourneyStore implements JourneyStore {
       row.kind === "gate"
         ? [
             {
+              id: row.id,
               at: row.at,
               who: row.who,
               action: row.action,
@@ -2157,6 +2179,9 @@ export class MemoryJourneyStore implements JourneyStore {
       audit,
       gateEvents,
       truncated,
+      nextBefore: capped.length
+        ? { at: capped[0].at, kind: capped[0].kind, id: capped[0].id }
+        : null,
     };
   }
 

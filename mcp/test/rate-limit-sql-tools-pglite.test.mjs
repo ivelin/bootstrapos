@@ -115,7 +115,7 @@ describe("replaced SQL tools as authenticated", { concurrency: false }, () => {
       GRANT EXECUTE ON FUNCTION public.bootstrap_mcp_invite_member(text, text) TO authenticated;
       GRANT EXECUTE ON FUNCTION public.bootstrap_os_create_idea(text, text, text, boolean, text) TO authenticated;
       GRANT EXECUTE ON FUNCTION public.bootstrap_os_post_comment(text, text, text) TO authenticated;
-      GRANT EXECUTE ON FUNCTION public.bootstrap_os_list_provenance(text, text, timestamptz, timestamptz, timestamptz) TO authenticated;
+      GRANT EXECUTE ON FUNCTION public.bootstrap_os_list_provenance(text, text, timestamptz, timestamptz, jsonb) TO authenticated;
     `);
     await db.query("SELECT set_config('app.auth_uid', $1, false)", [FOUNDER]);
     await db.query("SELECT set_config('app.actor_email', $1, false)", ["founder@example.test"]);
@@ -235,16 +235,108 @@ describe("replaced SQL tools as authenticated", { concurrency: false }, () => {
     assert.equal(page.ok, true, JSON.stringify(page).slice(0, 200));
     assert.equal(page.events.length, 100);
     assert.equal(page.truncated, true);
-    const oldest = page.events[0].at;
+    assert.ok(page.nextBefore);
     const next = await callTool(
-      "SELECT public.bootstrap_os_list_provenance('alpha', NULL, NULL, NULL, $1) AS body",
-      [oldest],
+      "SELECT public.bootstrap_os_list_provenance('alpha', NULL, NULL, NULL, $1::jsonb) AS body",
+      [JSON.stringify(page.nextBefore)],
     );
     assert.equal(next.ok, true);
     assert.ok(next.events.length > 0);
     assert.ok(next.events.length < 100);
     assert.equal(next.truncated, false);
-    assert.ok(next.events.every((event) => event.at < oldest));
+  });
+
+  it("walks every tied audit and gate row once and truncates only before the last page", async () => {
+    const company = await db.query("SELECT id FROM bootstrap_os.companies WHERE slug = 'alpha'");
+    const idea = await db.query("SELECT id FROM bootstrap_os.ideas WHERE slug = 'bet01'");
+    const companyId = company.rows[0].id;
+    const ideaId = idea.rows[0].id;
+    const at = "2024-06-01T00:00:00.000Z";
+    for (let n = 0; n < 55; n += 1) {
+      await db.query(
+        `INSERT INTO bootstrap_os.audit_events (company_id, who, client, what_changed, at)
+         VALUES ($1, 'founder@example.test', 'mcp', '{"op":"tie"}'::jsonb, $2)`,
+        [companyId, at],
+      );
+      await db.query(
+        `INSERT INTO bootstrap_os.gate_events (idea_id, action, at, why, who)
+         VALUES ($1, 'hold', $2, 'tie', 'founder@example.test')`,
+        [ideaId, at],
+      );
+    }
+    const seen = [];
+    let cursor = null;
+    let truncated = true;
+    let pages = 0;
+    while (truncated) {
+      pages += 1;
+      assert.ok(pages < 6);
+      const page = await callTool(
+        "SELECT public.bootstrap_os_list_provenance('alpha', NULL, $1, $1, $2::jsonb) AS body",
+        [at, cursor ? JSON.stringify(cursor) : null],
+      );
+      assert.equal(page.ok, true, JSON.stringify(page).slice(0, 240));
+      for (const event of page.events) seen.push(`${event.kind}:${event.id}`);
+      if (page.truncated) {
+        assert.equal(page.events.length, 100);
+        assert.ok(page.nextBefore);
+        cursor = page.nextBefore;
+      }
+      truncated = page.truncated;
+    }
+    assert.equal(pages > 1, true);
+    assert.equal(seen.length, 110);
+    assert.equal(new Set(seen).size, 110);
+    assert.ok(seen.some((key) => key.startsWith("audit:")));
+    assert.ok(seen.some((key) => key.startsWith("gate:")));
+  });
+
+  it("refuses a comment when the byte cap row is missing and writes nothing", async () => {
+    await db.query("DELETE FROM public.bootstrap_request_cap WHERE name = 'comment_body_bytes'");
+    try {
+      const before = await db.query("SELECT count(*)::int AS n FROM bootstrap_os.comments");
+      const body = await callTool(
+        "SELECT public.bootstrap_os_post_comment('alpha', 'bet01', $1) AS body",
+        ["z".repeat(5000)],
+      );
+      assert.equal(body.ok, false);
+      assert.equal(body.error, "rate_limiter_unavailable");
+      const after = await db.query("SELECT count(*)::int AS n FROM bootstrap_os.comments");
+      assert.equal(after.rows[0].n, before.rows[0].n);
+    } finally {
+      await db.query(
+        "INSERT INTO public.bootstrap_request_cap (name, max_value) VALUES ('comment_body_bytes', 4096)",
+      );
+    }
+  });
+
+  it("refuses provenance when the page cap row is missing", async () => {
+    await db.query("DELETE FROM public.bootstrap_request_cap WHERE name = 'provenance_page_rows'");
+    try {
+      const body = await callTool(
+        "SELECT public.bootstrap_os_list_provenance('alpha', NULL, NULL, NULL, NULL) AS body",
+      );
+      assert.equal(body.ok, false);
+      assert.equal(body.error, "rate_limiter_unavailable");
+    } finally {
+      await db.query(
+        "INSERT INTO public.bootstrap_request_cap (name, max_value) VALUES ('provenance_page_rows', 100)",
+      );
+    }
+  });
+
+  it("refuses bootstrap_hosted_take when the action cap row is missing", async () => {
+    await db.query("DELETE FROM public.bootstrap_rate_cap WHERE action = 'create_company'");
+    try {
+      const rows = await db.query("SELECT public.bootstrap_hosted_take('create_company') AS body");
+      const body = rows.rows[0].body;
+      assert.equal(body.ok, false);
+      assert.equal(body.error, "rate_limiter_unavailable");
+    } finally {
+      await db.query(
+        "INSERT INTO public.bootstrap_rate_cap (action, max_per_window, window_seconds) VALUES ('create_company', 5, 86400)",
+      );
+    }
   });
 
   it("a thrown limiter returns a refusal and writes no company", async () => {
@@ -283,5 +375,75 @@ describe("replaced SQL tools as authenticated", { concurrency: false }, () => {
     assert.match(body.message, /could not be reached/);
     const after = await db.query("SELECT count(*)::int AS n FROM public.bootstrap_os_companies");
     assert.equal(after.rows[0].n, before.rows[0].n);
+  });
+
+  it("a thrown limiter returns a refusal and writes no invite outbox row", async () => {
+    const before = await db.query("SELECT count(*)::int AS n FROM public.bootstrap_mcp_invite_outbox");
+    await db.exec(`
+      CREATE OR REPLACE FUNCTION public.bootstrap_hosted_take(p_action text)
+      RETURNS jsonb LANGUAGE plpgsql AS $$
+      BEGIN
+        RAISE EXCEPTION 'limiter down';
+      END;
+      $$;
+    `);
+    const body = await callTool(
+      "SELECT public.bootstrap_mcp_invite_member('extra-throw@example.test', 'alpha') AS body",
+    );
+    assert.equal(body.ok, false);
+    assert.equal(body.error, "rate_limiter_unavailable");
+    const after = await db.query("SELECT count(*)::int AS n FROM public.bootstrap_mcp_invite_outbox");
+    assert.equal(after.rows[0].n, before.rows[0].n);
+  });
+
+  it("a limiter body without ok returns a refusal and writes no invite outbox row", async () => {
+    const before = await db.query("SELECT count(*)::int AS n FROM public.bootstrap_mcp_invite_outbox");
+    await db.exec(`
+      CREATE OR REPLACE FUNCTION public.bootstrap_hosted_take(p_action text)
+      RETURNS jsonb LANGUAGE sql AS $$ SELECT '{}'::jsonb $$;
+    `);
+    const body = await callTool(
+      "SELECT public.bootstrap_mcp_invite_member('extra-empty@example.test', 'alpha') AS body",
+    );
+    assert.equal(body.ok, false);
+    assert.equal(body.error, "rate_limiter_unavailable");
+    const after = await db.query("SELECT count(*)::int AS n FROM public.bootstrap_mcp_invite_outbox");
+    assert.equal(after.rows[0].n, before.rows[0].n);
+  });
+
+  it("a thrown limiter returns a refusal and writes no idea", async () => {
+    await db.exec(`
+      CREATE OR REPLACE FUNCTION public.bootstrap_hosted_take(p_action text)
+      RETURNS jsonb LANGUAGE plpgsql AS $$
+      BEGIN
+        RAISE EXCEPTION 'limiter down';
+      END;
+      $$;
+    `);
+    const body = await callTool(
+      "SELECT public.bootstrap_os_create_idea('alpha', 'bet-throw', 'bet-throw', true, 'new 0-1 board') AS body",
+    );
+    assert.equal(body.ok, false);
+    assert.equal(body.error, "rate_limiter_unavailable");
+    const count = await db.query(
+      "SELECT count(*)::int AS n FROM bootstrap_os.ideas WHERE slug = 'bet-throw'",
+    );
+    assert.equal(count.rows[0].n, 0);
+  });
+
+  it("a limiter body without ok returns a refusal and writes no idea", async () => {
+    await db.exec(`
+      CREATE OR REPLACE FUNCTION public.bootstrap_hosted_take(p_action text)
+      RETURNS jsonb LANGUAGE sql AS $$ SELECT '{}'::jsonb $$;
+    `);
+    const body = await callTool(
+      "SELECT public.bootstrap_os_create_idea('alpha', 'bet-empty', 'bet-empty', true, 'new 0-1 board') AS body",
+    );
+    assert.equal(body.ok, false);
+    assert.equal(body.error, "rate_limiter_unavailable");
+    const count = await db.query(
+      "SELECT count(*)::int AS n FROM bootstrap_os.ideas WHERE slug = 'bet-empty'",
+    );
+    assert.equal(count.rows[0].n, 0);
   });
 });
