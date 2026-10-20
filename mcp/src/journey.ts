@@ -66,6 +66,14 @@ export {
 } from "./initiative-card.js";
 import type { JourneyAclRole, JourneyActor } from "./journey-auth.js";
 import {
+  COMMENT_BODY_MAX_BYTES,
+  COMMENT_TOO_LONG_MESSAGE,
+  HOSTED_DAILY_CAPS,
+  PROVENANCE_PAGE_MAX,
+  hostedActorKey,
+} from "./hosted-caps.js";
+import { memoryRateLimiter, type RateDecision, type RateLimiter } from "./rate-limit.js";
+import {
   enqueueBoardNotify,
   isHttpsWebhookUrl,
   normalizeSubscribePrincipal,
@@ -481,6 +489,20 @@ export type AuditEventRow = {
   at: string;
   client: string;
   whatChanged: Record<string, unknown>;
+};
+
+export type ProvenanceCursor = {
+  at: string;
+  kind: string;
+  id: string;
+};
+
+export type ProvenancePageQuery = {
+  companySlug: string;
+  ideaSlug?: string;
+  from?: string;
+  to?: string;
+  before?: ProvenanceCursor;
 };
 
 export function isGateDecision(value: string): value is GateDecision {
@@ -1073,10 +1095,7 @@ export type JourneyStore = {
       client?: string;
     },
   ): Promise<unknown>;
-  listProvenance(
-    actor: JourneyActor,
-    query: { companySlug: string; ideaSlug?: string; from?: string; to?: string },
-  ): Promise<unknown>;
+  listProvenance(actor: JourneyActor, query: ProvenancePageQuery): Promise<unknown>;
   listKilledIdeas(
     actor: JourneyActor,
     query: { companySlug: string },
@@ -1126,6 +1145,24 @@ function notFound(message: string) {
   return { ok: false, error: message };
 }
 
+function journeyRateRefusal(decision: Extract<RateDecision, { ok: false }>) {
+  if (decision.reason === "rate_limited") {
+    return {
+      ok: false as const,
+      error: decision.reason,
+      reason: decision.reason,
+      message: decision.message,
+      retryAt: decision.retryAt,
+    };
+  }
+  return {
+    ok: false as const,
+    error: decision.reason,
+    reason: decision.reason,
+    message: decision.message,
+  };
+}
+
 function forbidden(message: string) {
   return { ok: false, error: message };
 }
@@ -1134,6 +1171,7 @@ export class MemoryJourneyStore implements JourneyStore {
   readonly kind = "memory" as const;
   private seq = 0;
   allowMemberComments = false;
+  private readonly limiter: RateLimiter;
 
   constructor(
     private companies: CompanyRow[],
@@ -1145,7 +1183,10 @@ export class MemoryJourneyStore implements JourneyStore {
     private subscribers: BoardSubscriberRow[] = [],
     private notifyOutbox: NotifyOutboxRow[] = [],
     readonly webhookDeliveries: WebhookDelivery[] = [],
-  ) {}
+    options?: { limiter?: RateLimiter },
+  ) {
+    this.limiter = options?.limiter ?? memoryRateLimiter();
+  }
 
   actorOnAllowlist(actor: JourneyActor): boolean {
     return rlsVisibleAcl(this.acl, actor).length > 0;
@@ -1327,6 +1368,13 @@ export class MemoryJourneyStore implements JourneyStore {
     if (this.ideasFor(company.id, slug).length > 0) {
       return forbidden(IDEA_ALREADY_EXISTS);
     }
+    const decision = await this.limiter.take({
+      actorId: hostedActorKey(actor),
+      action: "create_idea",
+      limit: HOSTED_DAILY_CAPS.create_idea.limit,
+      windowMs: HOSTED_DAILY_CAPS.create_idea.windowMs,
+    });
+    if (!decision.ok) return journeyRateRefusal(decision);
     const idea: IdeaRow = {
       id: this.nextId("id"),
       companyId: company.id,
@@ -1747,6 +1795,14 @@ export class MemoryJourneyStore implements JourneyStore {
       return notFound(IDEA_NOT_FOUND_COMMENT);
     }
     const idea = ideas[0];
+    if (typeof input.body === "string" && Buffer.byteLength(input.body, "utf8") > COMMENT_BODY_MAX_BYTES) {
+      return {
+        ok: false,
+        error: "comment_too_long",
+        reason: "comment_too_long",
+        message: COMMENT_TOO_LONG_MESSAGE,
+      };
+    }
     const snap = ideaBoardSnapshot(idea);
     const before = snap.clocks;
     this.comments.push({
@@ -2032,10 +2088,7 @@ export class MemoryJourneyStore implements JourneyStore {
     return { ok: true, removed };
   }
 
-  async listProvenance(
-    actor: JourneyActor,
-    query: { companySlug: string; ideaSlug?: string; from?: string; to?: string },
-  ): Promise<unknown> {
+  async listProvenance(actor: JourneyActor, query: ProvenancePageQuery): Promise<unknown> {
     if (!actor.authenticated || !actor.principal) {
       return forbidden("unauthenticated");
     }
@@ -2050,28 +2103,38 @@ export class MemoryJourneyStore implements JourneyStore {
     const ideaId = query.ideaSlug ? ideas[0]?.id : undefined;
     const fromMs = query.from ? Date.parse(query.from) : Number.NaN;
     const toMs = query.to ? Date.parse(query.to) : Number.NaN;
+    const before = query.before;
     const inRange = (iso: string) => {
       const t = Date.parse(iso);
       if (Number.isFinite(fromMs) && t < fromMs) return false;
       if (Number.isFinite(toMs) && t > toMs) return false;
       return true;
     };
+    const beforeCursor = (row: ProvenanceCursor) => {
+      if (!before) return true;
+      if (row.at !== before.at) return row.at < before.at;
+      if (row.kind !== before.kind) return row.kind < before.kind;
+      return row.id < before.id;
+    };
     const slugOf = (id: string | null) =>
       id ? (this.ideas.find((row) => row.id === id)?.slug ?? null) : null;
-    const audit = this.audit
+    const auditRows = this.audit
       .filter((row) => {
         if (row.companyId !== company.id) return false;
         if (ideaId && row.ideaId !== ideaId) return false;
         return inRange(row.at);
       })
       .map((row) => ({
+        kind: "audit" as const,
+        id: row.id,
         at: row.at,
         who: row.who,
         client: row.client,
         ideaSlug: slugOf(row.ideaId),
         whatChanged: row.whatChanged,
-      }));
-    const gateEvents = this.events
+      }))
+      .filter(beforeCursor);
+    const gateRows = this.events
       .filter((row) => {
         const idea = this.ideas.find((i) => i.id === row.ideaId);
         if (!idea || idea.companyId !== company.id) return false;
@@ -2079,23 +2142,62 @@ export class MemoryJourneyStore implements JourneyStore {
         return inRange(row.at);
       })
       .map((row) => ({
+        kind: "gate" as const,
+        id: row.id,
         at: row.at,
         who: row.who,
         action: row.action,
         why: row.why,
         ideaSlug: slugOf(row.ideaId),
-      }));
-    const events = [
-      ...audit.map((row) => ({ kind: "audit" as const, ...row })),
-      ...gateEvents.map((row) => ({ kind: "gate" as const, ...row })),
-    ].sort((a, b) => a.at.localeCompare(b.at) || a.kind.localeCompare(b.kind));
+      }))
+      .filter(beforeCursor);
+    const ordered = [...auditRows, ...gateRows].sort((a, b) => {
+      if (a.at !== b.at) return a.at < b.at ? -1 : 1;
+      if (a.kind !== b.kind) return a.kind < b.kind ? -1 : 1;
+      if (a.id !== b.id) return a.id < b.id ? -1 : 1;
+      return 0;
+    });
+    const truncated = ordered.length > PROVENANCE_PAGE_MAX;
+    const capped = truncated ? ordered.slice(-PROVENANCE_PAGE_MAX) : ordered;
+    const audit = capped.flatMap((row) =>
+      row.kind === "audit"
+        ? [
+            {
+              id: row.id,
+              at: row.at,
+              who: row.who,
+              client: row.client,
+              ideaSlug: row.ideaSlug,
+              whatChanged: row.whatChanged,
+            },
+          ]
+        : [],
+    );
+    const gateEvents = capped.flatMap((row) =>
+      row.kind === "gate"
+        ? [
+            {
+              id: row.id,
+              at: row.at,
+              who: row.who,
+              action: row.action,
+              why: row.why,
+              ideaSlug: row.ideaSlug,
+            },
+          ]
+        : [],
+    );
     return {
       ok: true,
       company: { slug: company.slug, label: company.label },
       idea: query.ideaSlug ? normalizeSlug(query.ideaSlug) : null,
-      events,
+      events: capped,
       audit,
       gateEvents,
+      truncated,
+      nextBefore: capped.length
+        ? { at: capped[0].at, kind: capped[0].kind, id: capped[0].id }
+        : null,
     };
   }
 
