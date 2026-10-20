@@ -25,11 +25,11 @@ If you see "No boards yet", you are signed in, and no board has been shared with
 - "Invite bill@example.test to alpha." Sends a teammate an invite to a company you already belong to.
 - "Create a company called charlie." `create_company` is shown to every signed-in account. Only a super admin can run it.
 
-The connector asks for a clear yes before it changes your board.
+Moving an idea to a new stage needs your approval.
 
 ## Your data
 
-- You only see companies you were invited to. One company never sees another company's data.
+- You can only see companies you were invited to.
 - Sign-in happens on pirin.ai. The connector never sees your password.
 - Changes are written to an audit trail.
 
