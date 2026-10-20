@@ -26,7 +26,6 @@ import {
   bannedCardHit,
   maskSecrets,
   cardPersonName,
-  firstNameOf,
   hideCardEmails,
   isInternalNote,
   isKillCondition,
@@ -201,29 +200,7 @@ export function founderCardBannedHit(text: string): string | null {
 
 export function spokenBottleneckLineOf(text: string): string {
   const opener = String(text ?? "").match(/\*\*The #1 bottleneck is\s+(.+?)\.\*\*/);
-  if (opener) return opener[1].trim().replace(/\.$/, "");
-  const lines = String(text ?? "")
-    .split("\n")
-    .map((line) => line.trim())
-    .filter(Boolean);
-  const titleAt = lines.findIndex((line) => line.startsWith("**") && !line.startsWith("**Next"));
-  if (titleAt >= 0 && !lines[titleAt].includes(":")) {
-    const sells = lines.slice(titleAt + 1).find((line) => {
-      if (line.startsWith("Founder:")) return false;
-      if (line.startsWith("|") || line.startsWith("*🎯")) return false;
-      if (line.startsWith("**")) return false;
-      return true;
-    });
-    const sentence = (sells ?? "").replace(/\.$/, "");
-    const wrapped = sentence.match(/^.+?\s+sells\s+(.+)$/i);
-    return (wrapped?.[1] ?? sentence).trim();
-  }
-  const old = String(text ?? "").match(
-    /\*\*[^*]*biggest problem right now:\s*([^*]+?)\.?\*\*/,
-  );
-  if (old) return old[1].trim().replace(/\.$/, "");
-  const legacy = String(text ?? "").match(/^Bottleneck #1:\s*(.*)$/m);
-  return legacy ? legacy[1].trim() : "";
+  return opener ? opener[1].trim().replace(/\.$/, "") : "";
 }
 
 function allowPaperOf(source: unknown): boolean {
@@ -1214,7 +1191,7 @@ function spokenSections(
   if (!bet.length) {
     bet.push({
       work: "🎯 🤝 **Nothing is in play yet**",
-      state: "🟢 Name the next bet",
+      state: killed ? "⚪ Name the next bet" : "🟢 Name the next bet",
       next: killed ? "Leave this stopped" : "Name what done looks like",
       who,
     });
@@ -1222,8 +1199,8 @@ function spokenSections(
   return { bet, other, past: pastBucket, background };
 }
 
-function sectionLines(title: string, rows: SpokenRow[], keepEmpty = false): string[] {
-  if (!rows.length && !keepEmpty) return [];
+function sectionLines(title: string, rows: SpokenRow[]): string[] {
+  if (!rows.length) return [];
   return [
     `| ${title} | | | |`,
     ...rows.map(
@@ -1347,13 +1324,14 @@ export function formatSpokenCard(input: {
   const stuck = !stuckRaw || stuckRaw === "none yet" || isInternalNote(stuckRaw) ? "nothing is stuck yet" : stuckRaw;
   const opener = `**The #1 bottleneck is ${stuck.replace(/\.+$/, "")}.**`;
   const whoNames = (input.who ?? [])
-    .map((name) => (name.includes("@") ? cardPersonName(name) ?? "" : firstNameOf(name)))
+    .map((name) => cardPersonName(name) ?? "")
     .filter((name) => name.length > 0);
-  const founder = whoNames[0] ?? "";
+  const founderName = whoNames[0] ?? "";
+  const founder = founderName || "not named yet";
   const headline = [
     opener,
     `**${label}**`,
-    founder ? `Founder: ${founder}` : "",
+    `Founder: ${founder}`,
     sellsSentence(label, plainCardText(input.buyer ?? "")),
   ]
     .filter(Boolean)
@@ -1381,11 +1359,13 @@ export function formatSpokenCard(input: {
     ...sectionLines(FOUNDER_CARD_SECTIONS[0], sections.bet),
     ...sectionLines(FOUNDER_CARD_SECTIONS[1], sections.other),
     ...sectionLines(FOUNDER_CARD_SECTIONS[2], sections.past),
-    ...sectionLines(FOUNDER_CARD_SECTIONS[3], sections.background, true),
+    ...sectionLines(FOUNDER_CARD_SECTIONS[3], sections.background),
   ];
   const step = nextSentence(killed ? null : card?.bottleneck ?? null, killed);
   const namedStep =
-    founder && step && !step.toLowerCase().includes(founder.toLowerCase()) ? `${founder} — ${step}` : step;
+    founderName && step && !step.toLowerCase().includes(founderName.toLowerCase())
+      ? `${founderName} — ${step}`
+      : step;
   const next = introducePeople(`**Next:** ${namedStep}`, seen);
   const lines = [
     headline,

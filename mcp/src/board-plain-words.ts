@@ -137,8 +137,8 @@ export function cardPersonName(row: unknown): string | null {
   if (typeof row === "string") {
     if (TESTER_LOGIN.test(row)) return null;
     if (row.includes("@")) return emailLocalPart(row);
-    if (isLowercaseLogin(row)) return null;
-    return firstNameOf(row);
+    const name = firstNameOf(row);
+    return name || null;
   }
   if (typeof row !== "object") return null;
   const rec = row as {

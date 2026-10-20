@@ -288,6 +288,8 @@ describe("canonical board card", () => {
     };
     const rejected = normalizeInitiatives([first, second]);
     assert.equal(rejected.ok, false);
+    assert.equal(normalizeInitiatives(["nope"]).ok, false);
+    assert.equal(normalizeInitiatives([{ journeyPhase: 1 }]).ok, false);
     const card = cardFromScoreboard({
       slug: "alpha",
       label: "alpha",
@@ -681,12 +683,17 @@ describe("canonical board card", () => {
 
   it("names a person from a plain string, a login, or an email local part", () => {
     assert.equal(cardPersonName("Zoë Ångström"), "Zoë");
-    assert.equal(cardPersonName("sam"), null);
+    assert.equal(cardPersonName("sam"), "sam");
     assert.equal(cardPersonName("tester1@example.test"), null);
     assert.equal(cardPersonName("a@b.test"), "a");
+    assert.equal(cardPersonName({ display_name: "Ada Lovelace" }), "Ada");
+    assert.equal(cardPersonName({ email: "ada@example.test" }), "ada");
+    assert.equal(cardPersonName({ principal: "Ada Lovelace" }), "Ada");
+    assert.equal(cardPersonName({ principal: "tester1" }), null);
+    assert.equal(cardPersonName(1), null);
   });
 
-  it("prints Founder: not named yet when who is empty or only a lowercase login", () => {
+  it("prints Founder: not named yet when who is empty, and keeps a short name", () => {
     const card = cardFromScoreboard({
       slug: "bravo",
       label: "bravo",
@@ -698,8 +705,8 @@ describe("canonical board card", () => {
     assert.match(empty, /^Founder: not named yet$/m);
     assert.doesNotMatch(empty, /\| \*\*Background\*\* \|/);
     const login = formatSpokenCard({ label: "bravo", who: ["sam"], card });
-    assert.match(login, /^Founder: not named yet$/m);
-    assert.doesNotMatch(login, /\| sam \|/);
+    assert.match(login, /^Founder: sam$/m);
+    assert.match(login, /\| sam \|/);
     const named = formatSpokenCard({ label: "bravo", who: ["Zoë Ångström"], card });
     assert.match(named, /^Founder: Zoë$/m);
     assert.match(named, /\| Zoë \|/);

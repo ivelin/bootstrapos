@@ -21,9 +21,9 @@ Use for every “where are we with COMPANY” and every “company board card”
 ## Card shape
 
 1. **Opener (always first).** `**The #1 bottleneck is <what is stuck>.**`
-2. **Title.** `**<Company>**`, then `Founder: <first name>`. When no name is stored, the founder line uses the email local part. Then `<Company> sells to <buyer>.`
-3. **One table** with bold section rows, in this order. Other cells on a section row stay empty. Omit Other paths and Past bets when they have no rows. Print Background on every card. Print Bet on every card, including a board with no live target bet. That row is still the 🎯 bet.
-   - **Bet**. Exactly one 🟢 row, and it is this 🎯 row. Nested rows indent with `· ·` and start with their own icon. They are not green.
+2. **Title.** `**<Company>**`, then `Founder: <first name>`. When no name is stored, the founder line uses the email local part. When nobody is stored, the line is `Founder: not named yet`. Then `<Company> sells to <buyer>.`
+3. **One table** with bold section rows, in this order. Other cells on a section row stay empty. Omit Other paths, Past bets, and Background when they have no rows. Print Bet on every card, including a board with no live target bet. That row is still the 🎯 bet.
+   - **Bet**. On a live board, exactly one 🟢 row, and it is this 🎯 row. On a stopped board the same row is ⚪ and the next step is to leave it stopped. Nested rows indent with `· ·` and start with their own icon. They are not green.
    - **Other paths (not the main bet)** when another live try exists.
    - **Past bets**. Every past bet shows its start date, its end date, and the reason it ended: `start to end: reason`.
    - **Background**. When `scoreboard.pnl` exists, one plain `Money` row sits under Background. Other money paperwork keeps its own icon.
@@ -61,7 +61,7 @@ A board with no stored name prints `Founder: founder` when the stored principal 
 ## Dots
 
 - 🎯 the one thing that matters most
-- 🟢 working on it. Exactly one row, and it is the 🎯 bet.
+- 🟢 working on it. On a live board, exactly one row, and it is the 🎯 bet. A stopped board uses ⚪ on that row.
 - 🟡 waiting
 - 🔴 dropped
 - ⚪ closed
