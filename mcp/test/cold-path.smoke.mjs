@@ -49,7 +49,7 @@ try {
 
   // 6. Status plain + house rules
   const plain = whereAreWePlain(readState());
-  assert.match(plain, /\*\*charlie\*\*:/);
+  assert.match(plain, /^\*\*charlie\*\*$/m);
   assert.match(plain, /\| Work \| State \| When \| Who \|/);
   assert.match(plain, /\*🎯 the one thing that matters most/);
   assert.match(plain, /\*\*Next:\*\*/);

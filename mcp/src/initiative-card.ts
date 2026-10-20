@@ -21,6 +21,18 @@
  * Advance. NDA ≠ Try. Ask / Do is not a card. progress[] is not card body.
  */
 
+import {
+  applyPlainWords,
+  bannedCardHit,
+  maskSecrets,
+  displayNameFrom,
+  isInternalNote,
+  isKillCondition,
+  isLowercaseLogin,
+  REDACT_ALLOW_KEYS,
+  REDACT_MASK_KEYS,
+  REDACT_RAW_KEYS,
+} from "./board-plain-words.js";
 import { formatSpokenJourney } from "./clock-map.js";
 import {
   engagementsOf,
@@ -183,33 +195,25 @@ export const FOUNDER_CARD_SECTIONS = [
 
 /** Founder-facing card text. Internal enums are unchanged. */
 export function founderCardBannedHit(text: string): string | null {
-  const rules: RegExp[] = [
-    /\bP0\b/,
-    /\bFAST\b/,
-    /\bSOPA\b/i,
-    /\bSAFE\b/,
-    /\bengagements?\b/i,
-    /\bcustomer bets?\b/i,
-    /\bBottleneck #1\b/i,
-    /\bcustomer_check\b/,
-    /\bNDAs?\b/i,
-    /\bjourney phase \d/i,
-    /\bloop stage\b/i,
-    /\bwipLimit\b/,
-    /\bmermaid\b/i,
-  ];
-  for (const rule of rules) {
-    const hit = String(text ?? "").match(rule);
-    if (hit) return hit[0];
-  }
-  return null;
+  return bannedCardHit(text);
 }
 
 export function spokenBottleneckLineOf(text: string): string {
-  const title = String(text ?? "").match(/^\*\*[^*]+\*\*:\s*(.+)$/m);
-  if (title) {
-    const sells = title[1].split(/\.\s*The goal is\s+/i)[0] ?? title[1];
-    return sells.trim().replace(/\.$/, "");
+  const lines = String(text ?? "")
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean);
+  const titleAt = lines.findIndex((line) => line.startsWith("**") && !line.startsWith("**Next"));
+  if (titleAt >= 0 && !lines[titleAt].includes(":")) {
+    const sells = lines.slice(titleAt + 1).find((line) => {
+      if (line.startsWith("Founder:")) return false;
+      if (line.startsWith("|") || line.startsWith("*🎯")) return false;
+      if (line.startsWith("**")) return false;
+      return true;
+    });
+    const sentence = (sells ?? "").replace(/\.$/, "");
+    const wrapped = sentence.match(/^.+?\s+sells\s+(.+)$/i);
+    return (wrapped?.[1] ?? sentence).trim();
   }
   const old = String(text ?? "").match(
     /\*\*[^*]*biggest problem right now:\s*([^*]+?)\.?\*\*/,
@@ -446,6 +450,7 @@ export function initiativesFromLegacy(
     constraint_this_week?: unknown;
     supporting?: unknown;
     engagements?: unknown;
+    killPostmortem?: unknown;
   },
   opts: SpokenCardOpts = {},
 ): Initiative[] {
@@ -454,7 +459,13 @@ export function initiativesFromLegacy(
     typeof scoreboard.constraint_this_week === "string"
       ? scoreboard.constraint_this_week.trim()
       : "";
-  // Killed boards must not invent a live customer bet with measure pay-or-use.
+  const postmortem =
+    scoreboard.killPostmortem && typeof scoreboard.killPostmortem === "object"
+      ? (scoreboard.killPostmortem as { why?: unknown })
+      : undefined;
+  const endedBecause =
+    opts.killed && typeof postmortem?.why === "string" ? postmortem.why.trim().slice(0, TEXT_MAX) : "";
+  // A killed board keeps the bet as a closed row. It must not stay a live pay-or-use check.
   if (constraint && !opts.killed) {
     rows.push({
       id: "legacy-constraint",
@@ -466,6 +477,20 @@ export function initiativesFromLegacy(
       last: "",
       next: constraint.slice(0, TEXT_MAX),
       outcome: "none",
+      impact: "none",
+      evidence: "stated",
+    });
+  } else if (constraint && opts.killed) {
+    rows.push({
+      id: "legacy-constraint",
+      kind: "customer_check",
+      premise: constraint.slice(0, TEXT_MAX),
+      measure: "killed",
+      killLine: "",
+      status: "closed",
+      last: endedBecause,
+      next: "—",
+      outcome: "killed",
       impact: "none",
       evidence: "stated",
     });
@@ -488,7 +513,7 @@ export function initiativesFromLegacy(
     if (row.clock && row.clock !== "—") mapped.clock = row.clock.slice(0, 32);
     rows.push(mapped);
   });
-  const parentId = rows.find((row) => row.kind === "customer_check")?.id;
+  const parentId = rows.find((row) => row.kind === "customer_check" && row.status !== "closed")?.id;
   const engagements = engagementsOf(scoreboard);
   engagements.forEach((row: EngagementRow, i) => {
     const nda = row.kind === "nda";
@@ -681,7 +706,7 @@ export function cardBodyOmitsProgress(cardText: string, progress: string[] | und
 /** Lead is the founder card through the legend. progress[] must not write it. */
 export function snapshotLeadOmitsProgress(snapshot: string, progress: string[] | undefined): boolean {
   if (!progress?.length) return true;
-  const headline = snapshot.search(/^\*\*[^*]+\*\*:/m);
+  const headline = snapshot.search(/^\*\*[^*]+\*\*/m);
   const legacy = snapshot.indexOf("WHERE ARE WE —");
   const start = headline >= 0 ? headline : legacy;
   if (start < 0) return progress.every((note) => !snapshot.includes(note));
@@ -694,20 +719,6 @@ export function snapshotLeadOmitsProgress(snapshot: string, progress: string[] |
 
 export const JOURNEY_PHASE_DUMP = /journey phase \d/;
 export const GATE_HOLD_DUMP = /gate hold/i;
-
-/** OS vocabulary only. One company's words do not belong in this table. */
-const PLAIN_SWAPS: Array<[RegExp, string]> = [
-  [/\bP0\b/g, ""],
-  [/\bFAST\b/g, "advisor agreement"],
-  [/\bSOPA\b/gi, "stock option paperwork"],
-  [/\bSAFE\b/g, "investment"],
-  [/\bengagements\b/gi, "conversations"],
-  [/\bengagement\b/gi, "a conversation"],
-  [/\bcustomer bets\b/gi, "tries with buyers"],
-  [/\bcustomer bet\b/gi, "a try with buyers"],
-  [/\bcustomer checks?\b/gi, "a try with buyers"],
-  [/\bBottleneck #1\b/gi, "the main bet"],
-];
 
 /**
  * Replace NDA without breaking the sentence. "the NDA" stays "the confidentiality
@@ -728,49 +739,75 @@ export function redactConfidentiality(value: string): string {
   return text;
 }
 
-const REDACT_TEXT_KEYS = new Set([
-  "premise",
-  "measure",
-  "killLine",
-  "last",
-  "next",
-  "clock",
-  "constraintThisWeek",
-  "constraint_this_week",
-  "hypothesis",
-  "killedCard",
-  "account",
-  "note",
-  "summary",
-  "body",
-  "snapshot",
-  "lessonsLearned",
-  "actionableInsights",
-  "whatWereNotDoing",
-  "founderWrittenDecision",
-]);
+/** Same words on the card and in JSON. Email addresses are held aside so a rewrite cannot cut them. */
+function scrubFounderText(value: string): string {
+  return applyPlainWords(redactConfidentiality(value));
+}
 
-const REDACT_TEXT_LIST_KEYS = new Set(["openQuestions", "progress"]);
+const FREE_TEXT_KEYS = new Set(["why", "note", "premise"]);
 
-/** Copy founder-facing strings. Leave kind, id, and other enums alone (`nda` stays a kind). */
-function redactPayloadText(value: unknown, seen = new WeakSet<object>()): unknown {
-  if (!value || typeof value !== "object") return value;
-  if (seen.has(value)) return value;
-  seen.add(value);
-  if (Array.isArray(value)) return value.map((item) => redactPayloadText(item, seen));
-  const out: Record<string, unknown> = {};
-  for (const [key, child] of Object.entries(value)) {
-    if (typeof child === "string" && REDACT_TEXT_KEYS.has(key)) {
-      out[key] = redactConfidentiality(child);
-    } else if (Array.isArray(child) && REDACT_TEXT_LIST_KEYS.has(key)) {
-      out[key] = child.map((item) => (typeof item === "string" ? redactConfidentiality(item) : redactPayloadText(item, seen)));
-    } else if (child && typeof child === "object") {
-      out[key] = redactPayloadText(child, seen);
-    } else {
-      out[key] = child;
+const droppedRedactKeyNames: string[] = [];
+
+export function resetDroppedRedactKeys(): void {
+  droppedRedactKeyNames.length = 0;
+}
+
+export function droppedRedactKeys(): string[] {
+  return droppedRedactKeyNames.slice();
+}
+
+/** Enum tokens and id lists. Nested arrays stay literal. Nested objects use the allowlist. */
+function copyUnscrubbed(value: unknown, stack: WeakSet<object>): unknown {
+  if (value === null || typeof value !== "object") return value;
+  if (stack.has(value)) return null;
+  if (Array.isArray(value)) {
+    stack.add(value);
+    try {
+      return value.map((item) => copyUnscrubbed(item, stack));
+    } finally {
+      stack.delete(value);
     }
   }
-  return out;
+  return redactPayloadText(value, stack);
+}
+
+/**
+ * Allowlist at every depth. Unknown keys are dropped.
+ * The stack is the current path, so a shared object is redacted again and a cycle is null.
+ * why, note, and premise lose addresses and sk_live_ / sk_test_ tokens.
+ * principal, who, and email keep the stored address.
+ */
+function redactPayloadText(value: unknown, stack: WeakSet<object>): unknown {
+  if (typeof value === "string") return scrubFounderText(value);
+  if (!value || typeof value !== "object") return value;
+  if (stack.has(value)) return null;
+  stack.add(value);
+  try {
+    if (Array.isArray(value)) return value.map((item) => redactPayloadText(item, stack));
+    const out: Record<string, unknown> = {};
+    for (const [key, child] of Object.entries(value)) {
+      if (!REDACT_ALLOW_KEYS.has(key)) {
+        droppedRedactKeyNames.push(key);
+        continue;
+      }
+      if (REDACT_RAW_KEYS.has(key)) {
+        out[key] = copyUnscrubbed(child, stack);
+        continue;
+      }
+      if (FREE_TEXT_KEYS.has(key) && typeof child === "string") {
+        out[key] = maskSecrets(scrubFounderText(child));
+        continue;
+      }
+      if (REDACT_MASK_KEYS.has(key) && typeof child === "string") {
+        out[key] = scrubFounderText(child);
+        continue;
+      }
+      out[key] = redactPayloadText(child, stack);
+    }
+    return out;
+  } finally {
+    stack.delete(value);
+  }
 }
 
 function plainCardText(value: unknown): string {
@@ -778,7 +815,7 @@ function plainCardText(value: unknown): string {
   text = text.replace(/\s+/g, " ").trim();
   for (const rule of SPOKEN_HIDE) text = text.replace(rule, "");
   text = redactConfidentiality(text);
-  for (const [rule, to] of PLAIN_SWAPS) text = text.replace(rule, to);
+  text = applyPlainWords(text);
   text = text.replace(/\bpaper cannot promote\b/gi, "");
   text = text.replace(/\bcannot promote\b/gi, "");
   return text.replace(/\s+/g, " ").replace(/\s+([.,;])/g, "$1").trim();
@@ -891,9 +928,10 @@ type SpokenRow = {
   who: string;
 };
 
-function statusDot(row: Initiative): string {
+function statusDot(row: Initiative, allowGreen: boolean): string {
   if (row.outcome === "killed") return "🔴";
   if (row.status === "closed") return "⚪";
+  if (!allowGreen) return "🟡";
   if (row.status === "waiting" || row.status === "proposed") return "🟡";
   if (row.status === "active") return "🟢";
   return "⚪";
@@ -953,16 +991,9 @@ function introducePeople(text: string, seen: Set<string>): string {
   });
 }
 
-function goalPhrase(measure: unknown): string {
-  const raw = typeof measure === "string" ? measure.trim() : "";
-  if (/^pay or use$/i.test(raw)) return "someone pays or uses it";
-  const text = plainCardText(measure).replace(/\.$/, "");
-  return text || "to name what done looks like";
-}
-
-function whereItStands(row: Initiative): string {
+function whereItStands(row: Initiative, allowGreen: boolean): string {
   const last = plainCardText(row.last) || "Not started";
-  const dot = statusDot(row);
+  const dot = statusDot(row, allowGreen);
   return last.startsWith(dot) ? last : `${dot} ${last}`;
 }
 
@@ -974,65 +1005,75 @@ function workLabel(row: Initiative, opts: { bottleneck: boolean; depth: number; 
   return `${indent}${icon} ${body}`;
 }
 
-function whoFromPrincipal(principal: string): string {
-  const raw = principal.trim();
-  if (!raw) return "";
-  if (raw.includes("@")) {
-    const local = raw.split("@")[0] ?? "";
-    const first = local.split(/[._-]/).filter(Boolean)[0] ?? "";
-    return first;
-  }
-  // A subject id is plumbing. A short label can be a first name.
-  if (/[_-]/.test(raw)) return "";
-  return raw.split(/\s+/).filter(Boolean)[0] ?? "";
+const CARD_WHO_ROLES = new Set(["founder", "founder_authorized"]);
+
+function roleRank(role: string): number {
+  if (role === "founder") return 0;
+  if (role === "founder_authorized") return 1;
+  return 2;
 }
 
-export function whoNamesFromOwners(owners: unknown): string[] {
-  if (!Array.isArray(owners)) return [];
+function namedPeople(rows: unknown): string[] {
+  if (!Array.isArray(rows)) return [];
+  const ranked: Array<{ name: string; rank: number }> = [];
+  for (const row of rows) {
+    if (!row || typeof row !== "object") {
+      const name = displayNameFrom(row);
+      if (name) ranked.push({ name, rank: 2 });
+      continue;
+    }
+    const rec = row as { role?: unknown };
+    const role = String(rec.role ?? "");
+    if (role && !CARD_WHO_ROLES.has(role)) continue;
+    const name = displayNameFrom(row);
+    if (name) ranked.push({ name, rank: roleRank(role) });
+  }
+  ranked.sort((a, b) => a.rank - b.rank);
   const names: string[] = [];
-  for (const row of owners) {
-    const principal =
-      typeof row === "string"
-        ? row
-        : row && typeof row === "object"
-          ? String((row as { principal?: unknown }).principal ?? "")
-          : "";
-    const name = whoFromPrincipal(principal);
-    if (name && !names.includes(name)) names.push(name);
+  for (const row of ranked) {
+    if (!names.includes(row.name)) names.push(row.name);
   }
   return names;
 }
 
-const CARD_WHO_ROLES = new Set(["founder", "founder_authorized"]);
+export function whoNamesFromOwners(owners: unknown): string[] {
+  return namedPeople(owners);
+}
 
-/** Who is a first name from ACL. Hosted boards store founder_authorized, not founder. */
+/** Display names only. Founder first. Logins and tester accounts stay off the card. */
 export function whoNamesForCard(payload: { owners?: unknown; acl?: unknown }): string[] {
-  const fromOwners = whoNamesFromOwners(payload.owners);
-  if (fromOwners.length) return fromOwners;
-  if (!Array.isArray(payload.acl)) return [];
-  const rows = payload.acl.filter((row) => {
-    if (!row || typeof row !== "object") return false;
-    return CARD_WHO_ROLES.has(String((row as { role?: unknown }).role ?? ""));
-  });
-  return whoNamesFromOwners(rows);
+  const fromOwners = namedPeople(payload.owners);
+  const fromAcl = namedPeople(payload.acl);
+  const names: string[] = [];
+  for (const name of [...fromOwners, ...fromAcl]) {
+    if (!names.includes(name)) names.push(name);
+  }
+  return names;
 }
 
 function whoCell(names: string[]): string {
   return names.length ? names.join(", ") : "—";
 }
 
-function whyEnded(row: Initiative): string {
-  const why = plainCardText(row.killLine);
+function isBlankCardText(text: string): boolean {
+  return !text || /^(not started|untitled|none yet|—|-)$/i.test(text);
+}
+
+function endedReason(row: Initiative): string {
   const last = plainCardText(row.last);
-  return why || last || "why it ended is not recorded";
+  const kill = plainCardText(row.killLine);
+  if (last && !isBlankCardText(last) && !isInternalNote(last) && !isKillCondition(last)) return last;
+  if (kill && !isBlankCardText(kill) && !isInternalNote(kill) && !isKillCondition(kill)) return kill;
+  return "";
 }
 
 function pastState(row: Initiative): string {
-  const dot = statusDot(row);
-  const why = whyEnded(row);
+  const dot = statusDot(row, false);
+  const why = endedReason(row);
   const clock = plainCardText(row.clock ?? "");
-  if (clock && clock !== "—") return `${dot} ${clock}: ${why}`;
-  return `${dot} ${why}`;
+  const range = clock && clock !== "—" ? clock : "";
+  const body = [range, why].filter(Boolean).join(": ");
+  return body ? `${dot} ${body}` : dot;
 }
 
 function pushSpokenRow(
@@ -1040,7 +1081,9 @@ function pushSpokenRow(
   row: Initiative,
   opts: { bottleneck: boolean; depth: number; seen: Set<string>; who: string; past?: boolean },
 ): void {
-  const state = opts.past ? pastState(row) : whereItStands(row);
+  if (isInternalNote(plainCardText(row.premise))) return;
+  const allowGreen = Boolean(opts.bottleneck && opts.depth === 0 && !opts.past);
+  const state = opts.past ? pastState(row) : whereItStands(row, allowGreen);
   out.push({
     work: introducePeople(workLabel(row, opts), opts.seen),
     state: introducePeople(state, opts.seen),
@@ -1054,10 +1097,11 @@ function spokenSections(
   alsoLive: string[],
   seen: Set<string>,
   who: string,
+  killed: boolean,
 ): { bet: SpokenRow[]; other: SpokenRow[]; past: SpokenRow[]; background: SpokenRow[] } {
   const bet: SpokenRow[] = [];
   const other: SpokenRow[] = [];
-  const past: SpokenRow[] = [];
+  const pastBucket: SpokenRow[] = [];
   const background: SpokenRow[] = [];
   const checks = card?.customerChecks ?? [];
   const footer = card?.footer ?? [];
@@ -1074,25 +1118,49 @@ function spokenSections(
     if (rendered.has(check.id)) return;
     rendered.add(check.id);
     const shown = isBottleneck && bottleneck ? { ...check, ...bottleneck, engagements: check.engagements } : check;
-    pushSpokenRow(bucket, shown, { bottleneck: isBottleneck, depth, seen, who });
+    const past = bucket === pastBucket;
+    pushSpokenRow(bucket, shown, { bottleneck: isBottleneck, depth, seen, who, past });
     for (const child of check.engagements ?? []) {
       rendered.add(child.id);
-      pushSpokenRow(bucket, child, { bottleneck: false, depth: depth + 1, seen, who });
+      pushSpokenRow(bucket, child, { bottleneck: false, depth: depth + 1, seen, who, past });
     }
     for (const follow of live) {
       if (follow.parentId === check.id) emit(bucket, follow, depth + 1, false);
     }
   };
 
-  if (bottleneck && bottleneck.kind === "customer_check") {
+  if (killed && bottleneck && !rendered.has(bottleneck.id)) {
+    rendered.add(bottleneck.id);
+    pushSpokenRow(
+      pastBucket,
+      { ...bottleneck, status: "closed", outcome: "killed" },
+      { bottleneck: false, depth: 0, seen, who, past: true },
+    );
+  }
+
+  if (!killed && bottleneck && bottleneck.kind === "customer_check") {
     const match = checks.find((row) => row.id === bottleneck.id);
     emit(bet, match ?? { ...bottleneck, engagements: [] }, 0, true);
-  } else if (bottleneck) {
+  } else if (!killed && bottleneck) {
     rendered.add(bottleneck.id);
     pushSpokenRow(bet, bottleneck, { bottleneck: true, depth: 0, seen, who });
   }
 
-  for (const check of live) emit(other, check, 0, false);
+  for (const check of killed ? checks : live) {
+    const shown = killed
+      ? {
+          ...check,
+          status: "closed" as const,
+          outcome: "killed" as const,
+          engagements: (check.engagements ?? []).map((child) => ({
+            ...child,
+            status: "closed" as const,
+            outcome: "killed" as const,
+          })),
+        }
+      : check;
+    emit(killed ? pastBucket : other, shown, 0, false);
+  }
 
   const rest = footer.filter((row) => !rendered.has(row.id));
   const liveOrphans = rest.filter(
@@ -1116,13 +1184,13 @@ function spokenSections(
 
   const remaining = footer.filter((row) => !rendered.has(row.id));
   for (const row of remaining.filter((item) => !isBackground(item))) {
-    pushSpokenRow(past, row, { bottleneck: false, depth: row.parentId ? 1 : 0, seen, who, past: true });
+    pushSpokenRow(pastBucket, row, { bottleneck: false, depth: row.parentId ? 1 : 0, seen, who, past: true });
   }
   for (const row of remaining.filter((item) => isBackground(item))) {
     pushSpokenRow(background, row, { bottleneck: false, depth: 0, seen, who });
   }
 
-  if (!bet.length) {
+  if (!killed && !bet.length) {
     bet.push({
       work: "🎯 🤝 **Nothing on the board yet**",
       state: "⚪ Not started",
@@ -1130,19 +1198,11 @@ function spokenSections(
       who,
     });
   }
-  if (!past.length) {
-    past.push({
-      work: "🔎 No past bets recorded",
-      state: "⚪ None recorded",
-      next: "Ask why it ended",
-      who,
-    });
-  }
-  return { bet, other, past, background };
+  return { bet, other, past: pastBucket, background };
 }
 
-function sectionLines(title: string, rows: SpokenRow[]): string[] {
-  if (!rows.length) return [];
+function sectionLines(title: string, rows: SpokenRow[], keepEmpty = false): string[] {
+  if (!rows.length && !keepEmpty) return [];
   return [
     `| ${title} | | | |`,
     ...rows.map(
@@ -1154,8 +1214,68 @@ function sectionLines(title: string, rows: SpokenRow[]): string[] {
 function nextSentence(row: Initiative | null, killed: boolean): string {
   if (killed) return "Leave this stopped.";
   const next = row ? plainCardText(row.next) : "";
-  if (!next) return "Name who does the next step.";
+  if (!next || next === "—") return "No step is written down yet.";
   return next.endsWith(".") ? next : `${next}.`;
+}
+
+function sellsSentence(label: string, sells: string): string {
+  const text = sells.replace(/\.+$/, "").trim();
+  if (!text || text === "none yet") return "nothing is in play yet.";
+  if (/^(nothing is|no one|nobody)\b/i.test(text)) return `${text}.`;
+  const escaped = label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  if (new RegExp(`^${escaped}\\s+sells\\b`, "i").test(text)) return `${text}.`;
+  return `${label} sells ${text}.`;
+}
+
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+function asOfLabel(value: string): string {
+  const iso = value.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (!iso) return value.trim();
+  const month = MONTHS[Number(iso[2]) - 1];
+  if (!month) return value.trim();
+  return `${month} ${Number(iso[3])}`;
+}
+
+function dollars(value: number): string {
+  if (!Number.isFinite(value)) return "";
+  const rounded = Math.round(value * 100) / 100;
+  return Number.isInteger(rounded) ? `$${rounded}` : `$${rounded.toFixed(2)}`;
+}
+
+type PnlShape = {
+  days?: unknown;
+  revenue?: unknown;
+  costs?: unknown;
+  costsUnknown?: unknown;
+  asOf?: unknown;
+};
+
+function moneySpokenRow(pnl: PnlShape, who: string): SpokenRow | null {
+  const days = typeof pnl.days === "number" && pnl.days > 0 ? pnl.days : 30;
+  const revenue = typeof pnl.revenue === "number" ? dollars(pnl.revenue) : "";
+  const costs = typeof pnl.costs === "number" ? dollars(pnl.costs) : "";
+  const unknown = pnl.costsUnknown === true || pnl.costs == null;
+  if (!revenue && !costs && !unknown) return null;
+  const rev = revenue || "$0";
+  const costPart = costs
+    ? `about ${costs} measured costs${unknown ? ", some unknown" : ""}`
+    : "measured costs unknown";
+  const asOf = typeof pnl.asOf === "string" && pnl.asOf.trim() ? asOfLabel(pnl.asOf) : "";
+  const when = asOf ? ` (${asOf})` : "";
+  return {
+    work: `💵 Money (last ${days} days)`,
+    state: `🟡 ${rev} revenue; ${costPart}${when}`,
+    next: "Updated weekly",
+    who,
+  };
+}
+
+function pnlOf(source: unknown): PnlShape | null {
+  const sb = scoreboardRecordOf(source);
+  const raw = sb && (sb as { pnl?: unknown }).pnl;
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;
+  return raw as PnlShape;
 }
 
 /** Founder-voice card. No journey integers, gate labels, WIP, OS version, or kind slugs. */
@@ -1173,6 +1293,9 @@ export function formatSpokenCard(input: {
   alsoLive?: string[];
   /** ACL founder principals, or already-short names. Missing stays —. */
   who?: string[];
+  pnl?: PnlShape | null;
+  /** Killed sibling boards. Internal notes are dropped. */
+  pastBoards?: Array<{ title: string; range?: string; reason?: string }>;
 }): string {
   const rawLabel = input.label.trim() || "company";
   const label = rawLabel.toLowerCase() === "default" ? "company" : rawLabel;
@@ -1184,34 +1307,47 @@ export function formatSpokenCard(input: {
   };
   const seen = new Set<string>();
   let sells = plainCardText(spokenBottleneckPremise(card, input.constraintThisWeek, opts));
-  let goal = goalPhrase(card?.bottleneck?.measure);
   if (killed) {
-    sells = plainCardText((input.killedCard ?? "").replace(/^☠\s*/, "")) || "Killed";
-    goal = "to leave this stopped";
-  } else if (!sells || sells === "none yet") {
-    sells = "nothing is in play yet";
-    goal = "to name what done looks like";
+    const fromCard = plainCardText(
+      (input.killedCard ?? "").replace(/^☠\s*/, "").replace(/^Killed\s+[—-]\s*/, ""),
+    );
+    if (fromCard && !isInternalNote(fromCard)) sells = fromCard;
   }
-  sells = sells.replace(/\.$/, "");
-  const problem = plainCardText(input.constraintThisWeek).replace(/\.$/, "");
-  const problemClause =
-    problem &&
-    problem.toLowerCase() !== "none yet" &&
-    !sells.toLowerCase().includes(problem.toLowerCase())
-      ? ` The problem is ${problem}.`
-      : "";
-  const headline = introducePeople(`**${label}**: ${sells}.${problemClause} The goal is ${goal}.`, seen);
+  if (!sells || sells === "none yet") sells = "nothing is in play yet";
+  const whoNames = (input.who ?? []).filter((name) => !isLowercaseLogin(name));
+  const founder = whoNames[0] ?? "";
+  const headline = [`**${label}**`, founder ? `Founder: ${founder}` : "", sellsSentence(label, sells)]
+    .filter(Boolean)
+    .join("\n");
   const alsoLive = (input.alsoLive ?? []).map((name) => name.trim()).filter(Boolean);
-  const who = whoCell(input.who ?? []);
-  const sections = spokenSections(card, alsoLive, seen, who);
+  const who = whoCell(whoNames);
+  const sections = spokenSections(card, alsoLive, seen, who, killed);
+  for (const board of input.pastBoards ?? []) {
+    const title = plainCardText(board.title);
+    const reason = plainCardText(board.reason ?? "");
+    const range = plainCardText(board.range ?? "");
+    if (!title || isInternalNote(title)) continue;
+    if (isInternalNote(reason) && !range) continue;
+    const shownReason = reason && !isInternalNote(reason) && !isKillCondition(reason) ? reason : "";
+    const body = [range, shownReason].filter(Boolean).join(": ");
+    sections.past.push({
+      work: `🔎 ${title}`,
+      state: body ? `🔴 ${body}` : "🔴",
+      next: "—",
+      who,
+    });
+  }
+  const money = moneySpokenRow(input.pnl ?? {}, who);
+  if (input.pnl && money) sections.background.unshift(money);
   const table = [
     ...sectionLines(FOUNDER_CARD_SECTIONS[0], sections.bet),
     ...sectionLines(FOUNDER_CARD_SECTIONS[1], sections.other),
     ...sectionLines(FOUNDER_CARD_SECTIONS[2], sections.past),
-    ...sectionLines(FOUNDER_CARD_SECTIONS[3], sections.background),
+    ...sectionLines(FOUNDER_CARD_SECTIONS[3], sections.background, true),
   ];
   const step = nextSentence(killed ? null : card?.bottleneck ?? null, killed);
-  const namedStep = who !== "—" && !step.toLowerCase().includes(who.toLowerCase()) ? `${who} — ${step}` : step;
+  const namedStep =
+    founder && step && !step.toLowerCase().includes(founder.toLowerCase()) ? `${founder} — ${step}` : step;
   const next = introducePeople(`**Next:** ${namedStep}`, seen);
   const lines = [
     headline,
@@ -1299,21 +1435,73 @@ function enrichIdeaCard(
   });
 }
 
-function liveIdeaNames(payload: Record<string, unknown>): string[] {
-  const list = Array.isArray(payload.ideas)
-    ? payload.ideas
-    : payload.idea && typeof payload.idea === "object"
-      ? [payload.idea]
-      : [];
-  const names: string[] = [];
-  for (const idea of list) {
-    if (!idea || typeof idea !== "object" || Array.isArray(idea)) continue;
-    if (isKilledSource(idea)) continue;
-    const rec = idea as Record<string, unknown>;
-    const name = String(rec.name || rec.slug || "").trim();
-    if (name && !names.includes(name)) names.push(name);
+function payloadIdeas(payload: Record<string, unknown>): Record<string, unknown>[] {
+  if (Array.isArray(payload.ideas)) {
+    return payload.ideas.filter((idea): idea is Record<string, unknown> => Boolean(idea) && typeof idea === "object" && !Array.isArray(idea));
   }
-  return names;
+  if (payload.idea && typeof payload.idea === "object" && !Array.isArray(payload.idea)) {
+    return [payload.idea as Record<string, unknown>];
+  }
+  return [];
+}
+
+function liveChecks(idea: Record<string, unknown>): Initiative[] {
+  if (isKilledSource(idea)) return [];
+  const sb = scoreboardRecordOf(idea);
+  if (!sb) return [];
+  return initiativesOf(sb).filter(
+    (row) =>
+      row.kind === "customer_check" &&
+      row.status !== "closed" &&
+      row.outcome !== "killed" &&
+      !isInternalNote(row.premise),
+  );
+}
+
+function ideaScore(idea: Record<string, unknown>): number {
+  if (isKilledSource(idea)) return 0;
+  const live = liveChecks(idea);
+  if (!live.length) return 1;
+  if (live.some((row) => hasNamedAccountWithDate(row))) return 4;
+  if (live.some((row) => row.status === "active")) return 3;
+  return 2;
+}
+
+function pickLeadIndex(ideas: Record<string, unknown>[]): number {
+  let best = 0;
+  let score = -1;
+  ideas.forEach((idea, index) => {
+    const next = ideaScore(idea);
+    if (next > score) {
+      score = next;
+      best = index;
+    }
+  });
+  return best;
+}
+
+function pastBoardOf(idea: Record<string, unknown>): { title: string; range?: string; reason?: string } | null {
+  if (!isKilledSource(idea)) return null;
+  const title = String(idea.name || idea.slug || "").trim();
+  if (!title) return null;
+  const post =
+    idea.killPostmortem && typeof idea.killPostmortem === "object"
+      ? (idea.killPostmortem as { why?: unknown; lessonsLearned?: unknown })
+      : undefined;
+  const decision =
+    idea.killedDecision && typeof idea.killedDecision === "object"
+      ? (idea.killedDecision as { at?: unknown; why?: unknown })
+      : undefined;
+  const why = typeof post?.why === "string" ? post.why : "";
+  const lesson = typeof post?.lessonsLearned === "string" ? post.lessonsLearned : "";
+  const decisionWhy = typeof decision?.why === "string" ? decision.why : "";
+  const card =
+    typeof idea.killedCard === "string"
+      ? idea.killedCard.replace(/^☠\s*/, "").replace(/^Killed\s+[—-]\s*/, "")
+      : "";
+  const reason = why || decisionWhy || lesson || card;
+  const range = typeof decision?.at === "string" ? decision.at : "";
+  return { title, ...(range ? { range } : {}), ...(reason ? { reason } : {}) };
 }
 
 function spokenInputFromIdea(
@@ -1343,6 +1531,7 @@ function spokenInputFromIdea(
     allowPaperBottleneck: allowPaperOf(sb),
     alsoLive,
     who: whoNamesForCard(payload),
+    pnl: pnlOf(idea),
   };
 }
 
@@ -1370,7 +1559,7 @@ function applySpokenToIdea(
 /** Payload lead is spoken. Snapshot is the same founder sentence, not a clock dump. */
 export function applySpokenPayloadLead(
   raw: unknown,
-  opts: { expand?: boolean } = {},
+  opts: { expand?: boolean; redact?: boolean } = {},
 ): unknown {
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) return raw;
   const payload = { ...(raw as Record<string, unknown>) };
@@ -1381,14 +1570,13 @@ export function applySpokenPayloadLead(
       ? (payload.company as { label?: string; slug?: string })
       : undefined;
   const fallbackLabel = (company?.label || company?.slug || "").trim();
-  const leadRaw =
-    (Array.isArray(payload.ideas) ? payload.ideas[0] : undefined) ||
-    (payload.idea && typeof payload.idea === "object" ? payload.idea : undefined);
-  if (leadRaw && typeof leadRaw === "object") {
-    const lead = leadRaw as Record<string, unknown>;
-    const sb = scoreboardRecordOf(lead);
+  const originals = payloadIdeas(payload);
+  const leadIndex = originals.length ? pickLeadIndex(originals) : 0;
+  const leadRaw = originals[leadIndex];
+  if (leadRaw) {
+    const sb = scoreboardRecordOf(leadRaw);
     if (sb || payload.supporting || payload.engagements || !payload.card) {
-      payload.card = enrichIdeaCard(lead, payload, fallbackLabel);
+      payload.card = enrichIdeaCard(leadRaw, payload, fallbackLabel);
     }
   }
   if (Array.isArray(payload.ideas)) {
@@ -1400,44 +1588,50 @@ export function applySpokenPayloadLead(
   if (payload.card && typeof payload.card === "object") {
     payload.card = compactCardCompany(payload.card as InitiativeCard, expand);
   }
-  const leadIdea =
-    (Array.isArray(payload.ideas) ? payload.ideas[0] : undefined) ||
-    (payload.idea && typeof payload.idea === "object" ? payload.idea : undefined);
-  const leadRec =
-    leadIdea && typeof leadIdea === "object" ? (leadIdea as Record<string, unknown>) : undefined;
+  const refreshed = payloadIdeas(payload);
+  const leadRec = refreshed[leadIndex];
   const spokenCard =
     (payload.card as InitiativeCard | undefined) ||
     (leadRec?.card && typeof leadRec.card === "object" ? (leadRec.card as InitiativeCard) : undefined);
-  const live = liveIdeaNames(payload);
-  const leadName = leadRec
-    ? String(leadRec.name || leadRec.slug || "").trim()
-    : "";
-  const alsoLive = live.length >= 2 ? live.filter((name) => name !== leadName) : [];
-  const spoken = formatSpokenCard(
-    leadRec
-      ? spokenInputFromIdea(leadRec, payload, fallbackLabel, spokenCard, alsoLive)
-      : {
-          label: fallbackLabel || spokenCard?.company?.label || "company",
-          card: spokenCard,
-          alsoLive,
-        },
-  );
-  if (Array.isArray(payload.ideas) && payload.ideas[0] && typeof payload.ideas[0] === "object") {
-    payload.ideas[0] = { ...(payload.ideas[0] as Record<string, unknown>), snapshot: spoken };
+  const leadName = leadRec ? String(leadRec.name || leadRec.slug || "").trim() : "";
+  const alsoLive = refreshed
+    .filter((idea, index) => index !== leadIndex && liveChecks(idea).length > 0)
+    .map((idea) => String(idea.name || idea.slug || "").trim())
+    .filter((name) => name && name !== leadName);
+  const leadScoreboard = leadRec ? scoreboardRecordOf(leadRec) : undefined;
+  const leadHasCheck = leadScoreboard
+    ? initiativesOf(leadScoreboard).some((row) => row.kind === "customer_check")
+    : false;
+  const pastBoards = refreshed
+    .map((idea, index) => ({ idea, index }))
+    .filter(({ idea, index }) => isKilledSource(idea) && (index !== leadIndex || !leadHasCheck))
+    .map(({ idea }) => pastBoardOf(idea))
+    .filter((row): row is { title: string; range?: string; reason?: string } => Boolean(row));
+  const spokenInput = leadRec
+    ? { ...spokenInputFromIdea(leadRec, payload, fallbackLabel, spokenCard, alsoLive), pastBoards }
+    : {
+        label: fallbackLabel || spokenCard?.company?.label || "company",
+        card: spokenCard,
+        alsoLive,
+        pastBoards,
+      };
+  const spoken = formatSpokenCard(spokenInput);
+  if (Array.isArray(payload.ideas) && payload.ideas[leadIndex] && typeof payload.ideas[leadIndex] === "object") {
+    payload.ideas[leadIndex] = { ...(payload.ideas[leadIndex] as Record<string, unknown>), snapshot: spoken };
   }
   if (payload.idea && typeof payload.idea === "object") {
     payload.idea = { ...(payload.idea as Record<string, unknown>), snapshot: spoken };
   }
-  const boards = redactConfidentiality(formatBoardDirectory(payload.ideas));
+  const boards = scrubFounderText(formatBoardDirectory(payload.ideas));
   const spokenLead = spoken.split("\n").find((line) => line.trim().startsWith("**"))?.trim() ?? "";
   const { ok: _ok, spoken: _drop, boards: _boards, markdown: _markdown, spokenLead: _lead, ...rest } = payload;
-  const safe = redactPayloadText(rest) as Record<string, unknown>;
+  const safe = opts.redact === false ? rest : (redactPayloadText(rest, new WeakSet()) as Record<string, unknown>);
   return { ok: true, spoken, spokenLead, markdown: spoken, boards, ...safe };
 }
 
 export function compactJourneyPayload(
   raw: unknown,
-  opts: { expandAudit?: boolean } = {},
+  opts: { expandAudit?: boolean; redact?: boolean } = {},
 ): unknown {
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) return raw;
   const payload = { ...(raw as Record<string, unknown>) };
@@ -1446,5 +1640,8 @@ export function compactJourneyPayload(
     payload.audit = [];
     payload.auditVia = AUDIT_VIA_PROVENANCE;
   }
-  return applySpokenPayloadLead(payload, { expand: Boolean(opts.expandAudit) });
+  return applySpokenPayloadLead(payload, {
+    expand: Boolean(opts.expandAudit),
+    redact: opts.redact,
+  });
 }

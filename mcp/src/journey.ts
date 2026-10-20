@@ -125,6 +125,14 @@ export type Scoreboard = {
   engagements?: EngagementRow[];
   /** OS 2.8.19 report card rows. New writes prefer this. Dual-read dead for card lead when this is present. */
   initiatives?: Initiative[];
+  /** Money window for the board card. Never invented on read. */
+  pnl?: {
+    days?: number;
+    revenue?: number | null;
+    costs?: number | null;
+    costsUnknown?: boolean;
+    asOf?: string;
+  };
 };
 
 /** Weekly Impact / Evidence / Leverage labels. Integers 1–5. OS never auto-promotes. */
@@ -442,6 +450,7 @@ export type AclRow = {
   principal: string;
   principalKind: "email" | "sub";
   role: JourneyAclRole;
+  displayName?: string;
 };
 
 export type IdeaRow = {
@@ -693,6 +702,7 @@ export type JourneyOwner = {
   principal: string;
   principalKind: AclRow["principalKind"];
   role: "founder";
+  displayName?: string;
 };
 
 export function ownersFromAcl(acl: AclRow[], companyId: string): JourneyOwner[] {
@@ -702,19 +712,21 @@ export function ownersFromAcl(acl: AclRow[], companyId: string): JourneyOwner[] 
       principal: row.principal,
       principalKind: row.principalKind,
       role: "founder" as const,
+      ...(row.displayName ? { displayName: row.displayName } : {}),
     }));
 }
 
 export function companyAclView(
   acl: AclRow[],
   companyId: string,
-): Array<{ principal: string; principalKind: AclRow["principalKind"]; role: JourneyAclRole }> {
+): Array<{ principal: string; principalKind: AclRow["principalKind"]; role: JourneyAclRole; displayName?: string }> {
   return acl
     .filter((row) => row.companyId === companyId)
     .map((row) => ({
       principal: row.principal,
       principalKind: row.principalKind,
       role: row.role,
+      ...(row.displayName ? { displayName: row.displayName } : {}),
     }));
 }
 
@@ -1257,6 +1269,7 @@ export class MemoryJourneyStore implements JourneyStore {
   async getJourney(
     actor: JourneyActor,
     query: { companySlug?: string; ideaSlug?: string; expandMeetingDoc?: boolean },
+    opts: { redact?: boolean } = {},
   ): Promise<unknown> {
     if (!actor.authenticated || !actor.principal) {
       return forbidden("unauthenticated");
@@ -1315,9 +1328,12 @@ export class MemoryJourneyStore implements JourneyStore {
         ),
       ),
       audit: this.auditFor(company.id, query.ideaSlug ? ideas[0]?.id : undefined),
-      note: `Same payload for team / advisor / board / investor prep. Views are generated. Owner comes from ACL — do not invent. Prefer webhook notify over polling. Comments never mutate gates or Advance. constraint_this_week is the honest biggest bottleneck, not a fun side quest. ${CONSTRAINT_TEACHING_PICTURE} Audit is append-only. Portfolio scores are founder/advisor labels — they cannot Advance or Kill. Control plane order is primary → supporting → engagements. Supporting cannot promote. Founder board is a bold company name, what it sells and to whom, and the goal, then one table (Work | State | When | Who), then a legend and a Next line. Plain words. Stored kind stays customer_check. When initiatives[] is present, dual-read of progress/supporting/engagements is dead for the card lead. progress[] is not card body. Default get_journey omits full audit (list_provenance). Not ~/.bootstrap-os.`,
+      note: `Same payload for team / advisor / board / investor prep. Views are generated. Owner comes from ACL — do not invent. Prefer webhook notify over polling. Comments never mutate gates or Advance. constraint_this_week is the honest biggest bottleneck, not a fun side quest. ${CONSTRAINT_TEACHING_PICTURE} Audit is append-only. Portfolio scores are founder/advisor labels — they cannot Advance or Kill. Control plane order is primary → supporting → engagements. Supporting cannot promote. Founder board is a bold company name, a founder line, and one sentence on what it sells and to whom, then one table (Work | State | When | Who), then a legend and a Next line. Plain words. Stored kind stays customer_check. When initiatives[] is present, dual-read of progress/supporting/engagements is dead for the card lead. progress[] is not card body. Default get_journey omits full audit (list_provenance). Not ~/.bootstrap-os.`,
     };
-    return compactJourneyPayload(payload, { expandAudit: Boolean(query.expandMeetingDoc) });
+    return compactJourneyPayload(payload, {
+      expandAudit: Boolean(query.expandMeetingDoc),
+      redact: opts.redact,
+    });
   }
 
   async createIdea(
@@ -1384,7 +1400,7 @@ export class MemoryJourneyStore implements JourneyStore {
         after: ideaBoardSnapshot(idea),
       },
     });
-    return this.getJourney(actor, { companySlug: company.slug, ideaSlug: slug });
+    return this.getJourney(actor, { companySlug: company.slug, ideaSlug: slug }, { redact: false });
   }
 
   async putJourney(
@@ -1660,7 +1676,7 @@ export class MemoryJourneyStore implements JourneyStore {
       ...(portfolioSkip ? { portfolioSkip } : {}),
       audit,
       notify,
-    });
+    }, { redact: false });
   }
 
   async putPortfolioScore(

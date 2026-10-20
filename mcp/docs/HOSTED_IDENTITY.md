@@ -173,7 +173,7 @@ Later grants and revokes use SQL. `bootstrap_os_grant_super_admin` and `bootstra
 | | |
 |--|--|
 | HTTP 401 + exact `WWW-Authenticate` | `mcp/test/identity.test.mjs` |
-| Invited JWT authenticates; uninvited → `not_invited` | `mcp/test/identity.test.mjs` + `identity-pglite.test.mjs` |
+| Invited JWT authenticates; signed-in with no invite → 200 `no_membership` | `mcp/test/identity.test.mjs` + `identity-pglite.test.mjs` |
 | FORCE RLS | `mcp/test/identity-pglite.test.mjs` |
 | SQL file locks | `mcp/test/identity-rls.test.mjs` (no network) |
 | CTO/PM role-play matrix + draft prod synthetic SRE | [`E2E_ROLEPLAY.md`](E2E_ROLEPLAY.md) · `mcp/test/e2e-roleplay-matrix.test.mjs` |

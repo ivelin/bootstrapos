@@ -1,17 +1,20 @@
-**alpha**: dispatch help for plant operators. The problem is one operator at bravo plant pays for a weekly report. The goal is one paid weekly report used in their shop.
+**alpha**
+Founder: Sam
+alpha sells dispatch help for plant operators.
 
 | Work | State | When | Who |
 |---|---|---|---|
 | **Bet** | | | |
-| 🎯 🤝 **dispatch help for plant operators** | 🟢 Two shops looked, none has paid (Oct 1) | Send the price list this week | sam |
-| · · 🏢 the confidentiality promise for bravo plant was sent | 🟡 Asked Sep 30 | Wait for a paid week | sam |
+| 🎯 🤝 **dispatch help for plant operators** | 🟢 Two shops looked, none has paid (Oct 1) | Send the price list this week | Sam |
+| · · 🏢 the confidentiality promise for bravo plant was sent | 🟡 Asked Sep 30 | Wait for a paid week | Sam |
 | **Other paths (not the main bet)** | | | |
-| 🤝 sell bottles in grocery stores | 🟡 Parked until one shop pays | Revisit in December | sam |
+| 🤝 sell bottles in grocery stores | 🟡 Parked until one shop pays | Revisit in December | Sam |
 | **Past bets** | | | |
-| 🔎 sell online direct to home buyers | 🔴 2026-09-01/2026-09-10: shipping cost too high | — | sam |
+| 🔎 sell online direct to home buyers | 🔴 2026-09-01/2026-09-10: Shipping cost too high | — | Sam |
 | **Background** | | | |
-| 💵 investment from an angel | 🟡 Not signed yet | — | sam |
+| 💵 Money (last 30 days) | 🟡 $0 revenue; about $4 measured costs, some unknown (Oct 2) | Updated weekly | Sam |
+| 💵 investment from an angel | 🟡 Not signed yet | — | Sam |
 
 *🎯 the one thing that matters most · 🟢 working on it · 🟡 waiting · 🔴 dropped · ⚪ closed*
 
-**Next:** sam — Send the price list this week.
+**Next:** Sam — Send the price list this week.
