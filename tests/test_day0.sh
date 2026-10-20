@@ -571,7 +571,7 @@ else
   not_ok "2.8.7 must live in the OS section with first-hour and ai-instructions pointers"
 fi
 
-# --- r) preview plugin 0.1.1: team Import from Repo + hyperlink-only skills ---
+# --- r) preview plugin 0.1.1: marketplace doc pointer + hyperlink-only skills ---
 if [ -f plugin/plugin.json ] && [ -f plugin/mcp.json ] \
   && [ -f plugin/.cursor-plugin/plugin.json ] \
   && [ -f .cursor-plugin/marketplace.json ] \
@@ -581,7 +581,7 @@ if [ -f plugin/plugin.json ] && [ -f plugin/mcp.json ] \
   && [ -f plugin/skills/first-hour/SKILL.md ] \
   && [ -f plugin/skills/query-os-first/SKILL.md ] \
   && [ -f plugin/COVERAGE.md ]; then
-  ok "plugin manifests, team marketplace listing, thin skills, and coverage story exist"
+  ok "plugin manifests, marketplace doc pointer, thin skills, and coverage story exist"
 else
   not_ok "plugin/ must have plugin.json, mcp.json, query-os-first, COVERAGE.md, and repo-root marketplace.json"
 fi
@@ -621,7 +621,20 @@ assert "https://github.com/ivelin/bootstrap" in readme
 assert "https://mcp.bootstrap.pirin.ai/mcp" in readme
 assert "~/.cursor/plugins/local/bootstrap-os" in readme
 assert "/add-plugin" in readme
-assert "we have not submitted" in readme.lower() or "We have not submitted" in readme
+assert "mcp/docs/MARKETPLACE.md" in readme
+assert "listed for public install" not in readme.lower()
+assert "plain member account" not in readme
+assert "The hosted connector uses sign-in" in readme
+listing = pathlib.Path("mcp/docs/MARKETPLACE.md").read_text()
+assert "planned" in listing.lower()
+assert "not listed yet" in listing.lower()
+assert "shown to every signed-in member" in listing
+assert "super admin" in listing
+assert "ask_admin" in listing
+assert "plain member account" in listing
+assert "marketplace: false" in listing
+assert "listing time" in listing
+assert "we have not submitted" not in readme.lower()
 assert "query-os-first" in readme
 assert "0-1" in readme
 assert "## Feedback" in readme
@@ -793,7 +806,7 @@ assert "push mentee files to ivelin/bootstrap" in coverage
 print("plugin lock ok")
 PY
 then
-  ok "plugin skills only hyperlink the published OS; team Import from Repo listed"
+  ok "plugin skills only hyperlink the published OS; marketplace doc holds the listing facts"
 else
   not_ok "plugin must stay thin hyperlinks; one hosted MCP connector; team marketplace.json at plugin/"
 fi
@@ -946,7 +959,10 @@ if grep -q '### Standing rules' "$fh" \
   && grep -q 'https://mcp.bootstrap.pirin.ai/mcp' "$fh" \
   && grep -q "upload mentee work to Ivelin's GitHub" "$fh" \
   && grep -q 'https://github.com/ivelin/bootstrap' "$fh" \
-  && grep -q 'a public catalog submit' "$fh" \
+  && grep -q 'mcp/docs/MARKETPLACE.md' "$fh" \
+  && grep -q 'The hosted connector uses sign-in' "$fh" \
+  && ! grep -q 'listed for public install' "$fh" \
+  && ! grep -q 'plain member account' "$fh" \
   && grep -q 'mentee boards on our host' "$fh" \
   && grep -q 'Grok Bot marketplace bot' "$fh" \
   && grep -q 'Not another Day 0 checkbox' "$fh"; then

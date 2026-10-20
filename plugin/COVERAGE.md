@@ -1,6 +1,6 @@
 # Plugin 0.1.1 — coverage story (this PR, not a product)
 
-Process bar stays on **Vercel’s current** Git integration, preview, env, and tests. No second CI host. Free Path 1 is GitHub + install-os + local — not a hosted MCP connector. Invite-only collab / Grok pin `https://mcp.bootstrap.pirin.ai/mcp`: handshake 401. Optional gated identity (whoami + labels) uses the existing pirin.ai Supabase — not a new Neon, not company-state. Contract: [`mcp/docs/HOSTED_IDENTITY.md`](../mcp/docs/HOSTED_IDENTITY.md).
+Process bar stays on **Vercel’s current** Git integration, preview, env, and tests. No second CI host. Free Path 1 is GitHub + install-os + local. The hosted connector uses sign-in. Pin `https://mcp.bootstrap.pirin.ai/mcp`. Handshake 401. Optional gated identity (whoami + labels) uses the existing pirin.ai Supabase — not a new Neon, not company-state. Contract: [`mcp/docs/HOSTED_IDENTITY.md`](../mcp/docs/HOSTED_IDENTITY.md).
 
 This is a **preview package**. Not mentee-ready hosted boards. Path 1 stays the front door.
 
@@ -8,7 +8,7 @@ This is a **preview package**. Not mentee-ready hosted boards. Path 1 stays the 
 
 | Lock | Where | What it proves |
 |------|--------|----------------|
-| Team listing → `plugin/` | `.cursor-plugin/marketplace.json` + Day-0 + MCP unit | One plugin. Import from Repo file shape only. Not a public catalog submit. |
+| Team file shape → `plugin/` | `.cursor-plugin/marketplace.json` + Day-0 + MCP unit | One plugin. Import from Repo file shape. See [mcp/docs/MARKETPLACE.md](../mcp/docs/MARKETPLACE.md). |
 | Connector URL | `plugin/mcp.json` | Collab / Grok pin `https://mcp.bootstrap.pirin.ai/mcp`. No Gmail/Stripe/other. |
 | `${BOOTSTRAP_MCP_URL}` default | `plugin/.cursor-plugin/plugin.json` | Optional override defaults to that host. |
 | Plugin 0.1.1 + thin skills | `plugin/plugin.json`, `skills/*/SKILL.md` | Hyperlinks to the published OS. No constitution copy. |
@@ -18,7 +18,7 @@ This is a **preview package**. Not mentee-ready hosted boards. Path 1 stays the 
 | OS 2.8.8 house rule (once) | `company-os/operating-system.md` | Full text of *there is no optimal price until people have paid and stayed*. Pointers only elsewhere. |
 | OS 2.8.9 house rule (once) | `company-os/operating-system.md` | Full text of *do not automate a step that should not exist*. One bottleneck this week. Pointers only elsewhere. |
 | Day 0 question (once) | `company-os/operating-system.md` | Full text of *lifestyle or swinging for the fences*. First-hour / Path 1 keep a short pin + link. |
-| After First Hour standing rules (once) | `company-os/first-hour.md` | Full line: Path 1 is GitHub + install-os — not a hosted MCP connector; the pin `https://mcp.bootstrap.pirin.ai/mcp` is the Pirin write plane (`create_company` then `create_idea`). Do not upload mentee work to Ivelin's GitHub. Path 1 stays `https://github.com/ivelin/bootstrap`. Skills / plugin README pin + link only. |
+| After First Hour standing rules (once) | `company-os/first-hour.md` | Full line: Free Path 1 does not use a hosted MCP connector. The hosted connector uses sign-in. See [mcp/docs/MARKETPLACE.md](../mcp/docs/MARKETPLACE.md). The pin `https://mcp.bootstrap.pirin.ai/mcp` is the Pirin write plane (`create_company` then `create_idea`). Do not upload mentee work to Ivelin's GitHub. Path 1 stays `https://github.com/ivelin/bootstrap`. Skills / plugin README pin + link only. |
 | Hosted-read surface (local) | `mcp` unit + HTTP smoke | `/health` → `ok`. Public read tools. Gated whoami/labels 401 + WWW-Authenticate. No company-state. `marketplace: false`. |
 | Optional identity + RLS | `identity.test.mjs` + `identity-rls.test.mjs` + `identity-pglite.test.mjs` | 401 + exact pirin.ai challenge. PGlite FORCE RLS (never the live project). Ivelin fixture labels. |
 | Skill OS links | plugin-hyperlinks unit | Skills only hyperlink the published OS. |
@@ -30,7 +30,7 @@ This is a **preview package**. Not mentee-ready hosted boards. Path 1 stays the 
 |-----|-----|
 | Cursor dashboard **Import from Repo** actually installing | Team-plan GUI. File listing is locked; the click is not. |
 | `~/.cursor/plugins/local/bootstrap-os` loading in a real Cursor window | Local copy path is documented; GUI load is not in CI. |
-| Public Cursor catalog / `/add-plugin` GitHub URL | We have **not** submitted. Do not expect it. |
+| Public Cursor catalog / `/add-plugin` GitHub URL | See [mcp/docs/MARKETPLACE.md](../mcp/docs/MARKETPLACE.md). The catalog click is not a CI lock. |
 | Git-branch Vercel preview as the production pin | Collab pin stays `https://mcp.bootstrap.pirin.ai/mcp` on `main`. Do not advertise `bootstrap-os-mcp.vercel.app` as a Path 1 pin. Do not promote this branch to the collab hostname. |
 | Production `bootstrap_os_info.pluginPreview.version` already `0.1.1` | Draft PR. Prod still serves the last production deploy until merge + Vercel production. |
 | Git-branch preview as a mentee board | Out. The production pin is the Pirin write plane (`create_company` then `create_idea`). OSS `mcp/` is the self-host kit. |
@@ -50,7 +50,7 @@ Seven cases. Skills/README make the four **agent** behaviors inevitable. Skip GU
 
 | # | Visitor | Surface | Done means | Evidence |
 |---|---------|---------|------------|----------|
-| H1 | Installing founder | `first-hour` + README (a)(b)(c) | First hour + plugin + GitHub / local. No hosted MCP URL on Path 1. No auth/DB on Path 1. Invite-only collab pin `https://mcp.bootstrap.pirin.ai/mcp`. | File lock |
+| H1 | Installing founder | `first-hour` + README (a)(b)(c) | First hour + plugin + GitHub / local. No hosted MCP URL on Path 1. No auth/DB on Path 1. The hosted connector uses sign-in at `https://mcp.bootstrap.pirin.ai/mcp`. | File lock |
 | H2 | Mentee CoS, where on 0-1 | `query-os-first` | Query this plugin first. Cite OS five journey rungs. | File lock + GitHub 200 |
 | H3 | Specialist, conversation = GTM? | `query-os-first` + `house-rule-pins` | Spoken yes cannot promote. Refuse. Cite OS. | File lock + GitHub 200 |
 | A1 | Agent install-first | `first-hour` | Plugin + this connector only. | File lock |
@@ -62,7 +62,7 @@ HTTP pin (`/`, `/health`, `/mcp`) stays a live check. **Not on this matrix:** Cu
 
 ## Optional identity visitor matrix (labels only)
 
-Does **not** replace the seven-case matrix. Login is optional. Install-first still says no auth.
+Does **not** replace the seven-case matrix. Path 1 still says no auth. The hosted connector uses sign-in.
 
 | # | Visitor | Surface | Done means | Evidence |
 |---|---------|---------|------------|----------|
@@ -80,7 +80,7 @@ Company and idea are separate. Write after a gate / founder yes. The weekly cons
 
 | # | Visitor | Surface | Done means | Evidence |
 |---|---------|---------|------------|----------|
-| H1 | Installing founder | `first-hour` + README | Plugin + production pin. No auth/DB on that pin. | File lock |
+| H1 | Installing founder | `first-hour` + README | Plugin + production pin. The hosted connector uses sign-in. No database on that pin. | File lock |
 | H2 | Mentee CoS on 0-1 | `query-os-first` + `when-to-write` | Query OS first. Company vs idea. Owner from ACL. Notify over poll. Cite five journey rungs. | File lock + `scoreboardMayCarryOwner()===false` |
 | H3 | Specialist, GTM-or-not | `query-os-first` + pins | Spoken yes cannot promote. Refuse. Cite OS. | File lock |
 | A1 | Agent install-first | `first-hour` | Plugin + connector only. Public OS: no login. | File lock |
@@ -113,7 +113,7 @@ Not Day 0 homework. Day 0 stays thesis / ≥3 groups / one snapshot. Pass only i
 
 ## After-proof efficiency visitor matrix
 
-Eight cases this page must support. Thin links, not essays. No auth. No database. No public catalog.
+Eight cases this page must support. Thin links, not essays. The hosted connector uses sign-in. No database. See [mcp/docs/MARKETPLACE.md](../mcp/docs/MARKETPLACE.md).
 
 | # | Visitor | Surface | Done means | Evidence |
 |---|---------|---------|------------|----------|
@@ -131,7 +131,7 @@ Eight cases this page must support. Thin links, not essays. No auth. No database
 Stay on Vercel Git:
 
 1. PR check **Vercel** → Ready (this branch).
-2. Invite-only collab pin `https://mcp.bootstrap.pirin.ai` — `/` + `/health` stay 200; cookie-less `/mcp` initialize / GET SSE / tools/list are HTTP 401 + WWW-Authenticate (`main` only). Undeclared deploy Host `bootstrap-os-mcp.vercel.app` is the same 401 (not a Path 1 pin).
+2. Hosted connector `https://mcp.bootstrap.pirin.ai` uses sign-in. `/` + `/health` stay 200. Cookie-less `/mcp` initialize / GET SSE / tools/list are HTTP 401 + WWW-Authenticate (`main` only). Undeclared deploy Host `bootstrap-os-mcp.vercel.app` is the same 401 (not a Path 1 pin).
 3. PR #17 public preview (Vercel Authentication off): `https://bootstrap-os-mcp-git-cursor-ho-16df4d-ivelins-projects-9f9b7132.vercel.app/mcp`. Cookie-less initialize / GET SSE / tools/list are MCP 401 + WWW-Authenticate to **this preview origin** well-known (`resource` = this preview MCP URL, `authorization_servers` = live `https://www.pirin.ai/bootstrap-os/login`). Not Vercel `{protection}`. Not live pirin.ai RFC 9728 (that `resource` is still the vercel.app alias). Not the dead #143 git preview. Collab-host handshake + gated whoami/labels 401 with WWW-Authenticate to **this MCP origin** well-known (`https://mcp.bootstrap.pirin.ai/.well-known/oauth-protected-resource`, `resource` = `https://mcp.bootstrap.pirin.ai/mcp`).
 
 ## Env

@@ -288,7 +288,11 @@ describe("merge-gate visitor matrix (CoS smell-test)", () => {
     assert.ok(!after[0].includes(PATH1));
     assert.match(after[0], /Do \*\*not\*\* upload mentee work to Ivelin.s GitHub/);
     assert.ok(after[0].includes("https://github.com/ivelin/bootstrap"));
-    assert.match(after[0], /\*\*Not\*\* a public catalog submit/);
+    assert.match(after[0], /mcp\/docs\/MARKETPLACE\.md/);
+    assert.match(after[0], /The hosted connector uses sign-in/);
+    assert.doesNotMatch(after[0], /listed for public install/);
+    assert.doesNotMatch(after[0], /plain member account/);
+    assert.doesNotMatch(after[0], /public catalog submit/);
     assert.match(after[0], /\*\*Not\*\* a Grok Bot marketplace bot/);
     assert.match(after[0], /Not another Day 0 checkbox/);
 
@@ -406,7 +410,11 @@ describe("merge-gate visitor matrix (CoS smell-test)", () => {
     const body = fs.readFileSync(README, "utf8");
     assert.match(body, /~\/\.cursor\/plugins\/local\/bootstrap-os/);
     assert.match(body, /\/add-plugin/);
-    assert.match(body, /[Ww]e have not submitted/);
+    assert.match(body, /mcp\/docs\/MARKETPLACE\.md/);
+    assert.match(body, /The hosted connector uses sign-in/);
+    assert.doesNotMatch(body, /listed for public install/i);
+    assert.doesNotMatch(body, /plain member account/);
+    assert.doesNotMatch(body, /we have not submitted/i);
     const market = JSON.parse(fs.readFileSync(MARKET, "utf8"));
     assert.equal(market.plugins.length, 1);
     assert.equal(market.plugins[0].source, "plugin");
