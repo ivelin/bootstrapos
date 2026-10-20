@@ -50,9 +50,9 @@ function splitTop(body) {
   return parts;
 }
 
-function jsonbKeys(body) {
+function buildObjectKeys(body) {
   const keys = new Set();
-  const re = /jsonb_build_object\s*\(/g;
+  const re = /jsonb?_build_object\s*\(/gi;
   let match;
   while ((match = re.exec(body))) {
     const inner = takeParen(body, match.index + match[0].length - 1);
@@ -65,32 +65,37 @@ function jsonbKeys(body) {
   return keys;
 }
 
-function functionBodies(sql, name) {
-  const bodies = [];
-  const re = new RegExp(`FUNCTION (?:bootstrap_os\\.|public\\.)?${name}\\b`, "g");
+function insertAuditKeys(sql) {
+  const keys = new Set();
+  const re = /INSERT\s+INTO\s+(?:bootstrap_os\.)?audit_events\s*\(/gi;
   let match;
   while ((match = re.exec(sql))) {
-    const as = sql.indexOf("$$", match.index);
-    const end = sql.indexOf("$$", as + 2);
-    if (as < 0 || end < 0) break;
-    bodies.push(sql.slice(as, end));
+    const open = match.index + match[0].length - 1;
+    const columns = takeParen(sql, open);
+    for (const col of splitTop(columns)) {
+      const hit = col.match(/([A-Za-z_][A-Za-z0-9_]*)/);
+      if (hit) keys.add(hit[1]);
+    }
+    const end = sql.indexOf(";", open);
+    for (const key of buildObjectKeys(sql.slice(match.index, end === -1 ? sql.length : end))) keys.add(key);
   }
-  return bodies;
+  return keys;
+}
+
+function sqlFiles() {
+  return fs.readdirSync(SQL_DIR).filter((name) => name.endsWith(".sql")).sort();
 }
 
 function sqlEmittedKeys() {
   const keys = new Set();
-  for (const file of fs.readdirSync(SQL_DIR).filter((name) => name.includes("bootstrap_os") && name.endsWith(".sql"))) {
+  for (const file of sqlFiles()) {
     const sql = fs.readFileSync(path.join(SQL_DIR, file), "utf8");
+    for (const key of buildObjectKeys(sql)) keys.add(key);
+    for (const key of insertAuditKeys(sql)) keys.add(key);
     const call = /emit_audit\s*\(/g;
     let match;
     while ((match = call.exec(sql))) {
-      for (const key of jsonbKeys(takeParen(sql, match.index + match[0].length - 1))) keys.add(key);
-    }
-    for (const name of ["idea_board_snapshot", "enqueue_board_notify", "bootstrap_os_get_journey"]) {
-      for (const body of functionBodies(sql, name)) {
-        for (const key of jsonbKeys(body)) keys.add(key);
-      }
+      for (const key of buildObjectKeys(takeParen(sql, match.index + match[0].length - 1))) keys.add(key);
     }
   }
   return keys;
@@ -116,7 +121,7 @@ function memoryEmittedKeys() {
       }
     }
     const body = src.slice(open, end);
-    for (const key of body.matchAll(/(?:^|[,{]\s*)([A-Za-z_][A-Za-z0-9_]*)\s*:/g)) keys.add(key[1]);
+    for (const key of body.matchAll(/(?:^|[,{]\s*)([A-Za-z_][A-Za-z0-9_]*)\s*(?::|,|\})/g)) keys.add(key[1]);
   }
   return keys;
 }
@@ -130,8 +135,27 @@ function board(extra = {}) {
   });
 }
 
+const SECRET_KEYS_STAY_OFF = [
+  "authCard",
+  "inviteToken",
+  "invitee_email",
+  "inviterEmail",
+  "inviter_email",
+  "mailFrom",
+  "mentee_id",
+  "qrPayload",
+  "queuedMail",
+  "signupUrl",
+  "token",
+  "url",
+  "webhookUrl",
+];
+
 describe("spoken payload allowlist", () => {
   it("keeps every audit, snapshot, notify, and get_journey key the SQL and the memory store emit", () => {
+    const files = sqlFiles();
+    assert.ok(files.length > 20);
+    assert.ok(files.some((name) => !name.includes("bootstrap_os")));
     const emitted = new Set([...sqlEmittedKeys(), ...memoryEmittedKeys()]);
     assert.ok(emitted.has("journey_phase"));
     assert.ok(emitted.has("comment_id"));
@@ -140,9 +164,16 @@ describe("spoken payload allowlist", () => {
     assert.ok(emitted.has("event"));
     assert.ok(emitted.has("summary"));
     assert.ok(emitted.has("source"));
-    const missing = [...emitted].filter((key) => !REDACT_ALLOW_KEYS.has(key)).sort();
+    assert.ok(emitted.has("what_changed"));
+    assert.ok(emitted.has("company_id"));
+    assert.ok(emitted.has("principal"));
+    assert.ok(emitted.has("ideaId"));
+    for (const key of SECRET_KEYS_STAY_OFF) {
+      assert.equal(emitted.has(key), true, key);
+      assert.equal(REDACT_ALLOW_KEYS.has(key), false, key);
+    }
+    const missing = [...emitted].filter((key) => !SECRET_KEYS_STAY_OFF.includes(key) && !REDACT_ALLOW_KEYS.has(key)).sort();
     assert.deepEqual(missing, []);
-    assert.equal(REDACT_ALLOW_KEYS.has("webhookUrl"), false);
   });
 
   it("keeps snake_case phase fields inside whatChanged before and after", () => {
@@ -184,17 +215,30 @@ describe("spoken payload allowlist", () => {
     assert.deepEqual(seen.controlPlaneOrder, [["primary", "supporting", "engagements"]]);
   });
 
-  it("masks addresses and secret tokens in who, principal, and why", () => {
+  it("masks addresses and secret tokens in why, note, and premise only", () => {
     const seen = board({
       owners: [{ principal: "SAFE holder sam@example.test", role: "founder", email: "sam@example.test" }],
-      audit: [{ who: "sam@example.test", why: "close the SAFE with sk_live_abc and sk_test_def" }],
+      note: "mail sam@example.test holds sk_live_note",
+      audit: [
+        {
+          who: "sam@example.test",
+          principal: "advisor-cos@example.test",
+          why: "close the SAFE with sk_live_abc and sk_test_def",
+          premise: "the booth SAFE sk_test_prem",
+        },
+      ],
     });
-    assert.equal(seen.owners[0].principal, "investment holder [redacted]");
+    assert.equal(seen.owners[0].principal, "investment holder sam@example.test");
     assert.equal(seen.owners[0].email, "sam@example.test");
-    assert.equal(seen.audit[0].who, "[redacted]");
+    assert.equal(seen.audit[0].who, "sam@example.test");
+    assert.equal(seen.audit[0].principal, "advisor-cos@example.test");
     assert.match(seen.audit[0].why, /investment/);
     assert.doesNotMatch(seen.audit[0].why, /@|sk_live_|sk_test_/);
     assert.match(seen.audit[0].why, /\[redacted\]/);
+    assert.doesNotMatch(seen.note, /@|sk_live_/);
+    assert.match(seen.note, /\[redacted\]/);
+    assert.match(seen.audit[0].premise, /investment/);
+    assert.doesNotMatch(seen.audit[0].premise, /sk_test_|@/);
   });
 
   it("leaves create_idea JSON stored and still redacts the following get_journey", async () => {
@@ -218,15 +262,86 @@ describe("spoken payload allowlist", () => {
     const seen = await store.getJourney(actor, { companySlug: "corehaul", ideaSlug: "booth-bet" });
     assert.equal(seen.ok, true);
     assert.match(seen.note, /\bconversations\b/);
-    assert.equal(
-      seen.owners.some((row) => row.principal === "founder-core@example.test"),
-      false,
-    );
-    assert.ok(seen.owners.some((row) => row.principal === "[redacted]"));
+    assert.ok(seen.owners.some((row) => row.principal === "founder-core@example.test"));
+    assert.ok(seen.acl.some((row) => row.principal === "founder-core@example.test"));
   });
 
-  it("drops nothing while reading the fixture boards", async () => {
+  it("drops nothing while reading the fixture boards and the write flows", async () => {
     resetDroppedRedactKeys();
+    const store = fixtureJourneyStore();
+    const founder = {
+      authenticated: true,
+      principal: "founder-core@example.test",
+      email: "founder-core@example.test",
+    };
+    const advisor = {
+      authenticated: true,
+      principal: "advisor-cos@example.test",
+      email: "advisor-cos@example.test",
+    };
+    const created = await store.createIdea(founder, {
+      companySlug: "corehaul",
+      ideaSlug: "flow-bet",
+      founderYes: true,
+      why: "plants pay for a weekly booth report",
+    });
+    assert.equal(created.ok, true);
+    const wrote = await store.putJourney(founder, {
+      companySlug: "corehaul",
+      ideaSlug: "flow-bet",
+      constraintThisWeek: "talk to one plant",
+      why: "plants pay for the booth report",
+      founderYes: true,
+      gateEnrichment: {
+        whatChanged: "named the booth",
+        whatWereNotDoing: "not a side page",
+      },
+    });
+    assert.equal(wrote.ok, true);
+    const comment = await store.postComment(advisor, {
+      companySlug: "corehaul",
+      ideaSlug: "flow-bet",
+      body: "a note from the advisor",
+    });
+    assert.equal(comment.ok, true);
+    const granted = await store.subscribeBoard(founder, {
+      companySlug: "corehaul",
+      principal: "advisor-cos@example.test",
+      principalKind: "email",
+      webhookUrl: "https://hooks.example.test/core",
+    });
+    assert.equal(granted.ok, true);
+    const removed = await store.unsubscribeBoard(founder, {
+      companySlug: "corehaul",
+      principal: "advisor-cos@example.test",
+      principalKind: "email",
+    });
+    assert.equal(removed.ok, true);
+    const acl = await store.changeAcl(founder, {
+      companySlug: "corehaul",
+      principal: "helper@example.test",
+      principalKind: "email",
+      role: "advisor",
+      op: "grant",
+    });
+    assert.equal(acl.ok, true);
+    const second = await store.createIdea(founder, {
+      companySlug: "corehaul",
+      ideaSlug: "flow-other",
+      founderYes: true,
+      why: "plants pay for a second booth report",
+    });
+    assert.equal(second.ok, true);
+    const scored = await store.putPortfolioScore(founder, {
+      companySlug: "corehaul",
+      ideaSlug: "flow-bet",
+      impact: 3,
+      evidence: 2,
+      leverage: 4,
+      why: "the booth is the one they already pay for",
+      founderYes: true,
+    });
+    assert.equal(scored.ok, true);
     for (const file of ["dyeconverter-initiatives.json", "micdots-initiatives.json"]) {
       const fixture = JSON.parse(fs.readFileSync(path.join(HERE, "fixtures", file), "utf8"));
       board({
@@ -240,7 +355,6 @@ describe("spoken payload allowlist", () => {
         ],
       });
     }
-    const store = fixtureJourneyStore();
     for (const [companySlug, email] of [
       ["dyeconverter", "founder-dye@example.test"],
       ["corehaul", "founder-core@example.test"],

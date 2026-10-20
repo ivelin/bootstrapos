@@ -508,8 +508,7 @@ describe("journey views + tools (memory store)", () => {
     assert.doesNotMatch(JSON.stringify(advisorProv), /hooks\.example\.test|webhookUrl/);
     const subAudit = advisorBoard.audit.find((a) => a.whatChanged?.via === "subscribe_board");
     assert.ok(subAudit);
-    assert.equal(subAudit.whatChanged.after.principal, "[redacted]");
-    assert.doesNotMatch(subAudit.whatChanged.after.principal, /@/);
+    assert.equal(subAudit.whatChanged.after.principal, "advisor-cos@example.test");
     assert.equal(subAudit.whatChanged.after.webhookUrl, undefined);
 
     const wrote = await store.putJourney(founder, {
@@ -562,7 +561,7 @@ describe("journey views + tools (memory store)", () => {
     const seen = await store.getJourney(founder, { companySlug: "corehaul" });
     assert.deepEqual(
       seen.owners.map((row) => row.principal).sort(),
-      ["[redacted]", "sub-only-corehaul"],
+      ["founder-core@example.test", "sub-only-corehaul"],
     );
     assert.ok(seen.owners.every((row) => row.role === "founder"));
     assert.ok(seen.acl.some((row) => row.role === "advisor"));
