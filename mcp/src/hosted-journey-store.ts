@@ -23,6 +23,7 @@ import {
   type JourneyStore,
   type KillPostmortem,
   type PortfolioScore,
+  type ProvenancePageQuery,
   type Scoreboard,
   type SupportingRow,
 } from "./journey.js";
@@ -541,13 +542,14 @@ export class SupabaseJourneyStore implements JourneyStore {
 
   async listProvenance(
     _actor: JourneyActor,
-    query: { companySlug: string; ideaSlug?: string; from?: string; to?: string },
+    query: ProvenancePageQuery,
   ) {
     const hit = await this.rpc("bootstrap_os_list_provenance", {
       p_company: query.companySlug,
       p_idea: query.ideaSlug ?? null,
       p_from: query.from ?? null,
       p_to: query.to ?? null,
+      p_before: query.before ?? null,
     });
     if ("error" in hit) return { ok: false, error: hit.error };
     return hit.raw;

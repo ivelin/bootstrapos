@@ -4,6 +4,8 @@
  * Preview never attaches. Tests inject a store. No email-domain admin heuristic.
  */
 import { hostedProdIdentityAllowed } from "./identity.js";
+import { HOSTED_DAILY_CAPS, hostedActorKey, refusalMessage } from "./hosted-caps.js";
+import { memoryRateLimiter, type RateLimiter } from "./rate-limit.js";
 
 export type HostedAdminRole = "member" | "super_admin" | "unset";
 
@@ -11,6 +13,8 @@ export type AdminResult = {
   ok: boolean;
   status?: number;
   error?: string;
+  message?: string;
+  retryAt?: string;
   slug?: string;
   displayName?: string | null;
   email?: string;
@@ -90,10 +94,13 @@ export class MemoryCompanyAdminStore implements CompanyAdminStore {
   readonly companies = new Map<string, { displayName: string | null; createdBy: string }>();
   readonly roles: RoleRow[] = [];
   readonly audit: AuditRow[] = [];
+  private readonly limiter: RateLimiter;
 
   constructor(
     seed: Array<{ email: string; role: "member" | "super_admin"; labels?: string[] }> = [],
+    options?: { limiter?: RateLimiter },
   ) {
+    this.limiter = options?.limiter ?? memoryRateLimiter();
     for (const row of seed) {
       const email = row.email.toLowerCase();
       this.roles.push({ email, role: row.role, revokedAt: null });
@@ -127,6 +134,21 @@ export class MemoryCompanyAdminStore implements CompanyAdminStore {
       this.companies.has(slug) ||
       [...this.labels.values()].some((set) => set.has(slug));
     if (taken) return { ok: false, status: 409, error: "slug_taken" };
+    const decision = await this.limiter.take({
+      actorId: hostedActorKey({ email: actor }),
+      action: "create_company",
+      limit: HOSTED_DAILY_CAPS.create_company.limit,
+      windowMs: HOSTED_DAILY_CAPS.create_company.windowMs,
+    });
+    if (!decision.ok) {
+      const refused: AdminResult = {
+        ok: false,
+        error: decision.reason,
+        message: decision.message,
+      };
+      if (decision.reason === "rate_limited") refused.retryAt = decision.retryAt;
+      return refused;
+    }
     const displayName = input.displayName?.trim() ? input.displayName.trim() : null;
     this.companies.set(slug, { displayName, createdBy: actor });
     const held = this.labels.get(actor) ?? new Set<string>();
@@ -201,6 +223,25 @@ function supabaseAnonKey(): string | undefined {
 }
 
 function asResult(raw: unknown): AdminResult {
+  const blocked = refusalMessage(raw);
+  if (blocked) {
+    const record =
+      typeof raw === "string"
+        ? (JSON.parse(raw) as Record<string, unknown>)
+        : raw && typeof raw === "object"
+          ? (raw as Record<string, unknown>)
+          : {};
+    const code =
+      typeof record.error === "string"
+        ? record.error
+        : typeof record.reason === "string"
+          ? record.reason
+          : undefined;
+    const out: AdminResult = { ok: false, message: blocked };
+    if (code) out.error = code;
+    if (typeof record.retryAt === "string" && record.retryAt) out.retryAt = record.retryAt;
+    return out;
+  }
   if (!raw || typeof raw !== "object") return closed();
   const body = raw as AdminResult;
   if (typeof body.ok !== "boolean") return closed();
