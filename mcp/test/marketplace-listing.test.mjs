@@ -1,7 +1,3 @@
-/**
- * Catalog listing at the repo root, and the marketplace flag the doc still claims.
- * bootstrap_os_info stays marketplace:false while MARKETPLACE.md says not listed.
- */
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
@@ -51,7 +47,18 @@ describe("cursor catalog listing", () => {
     assert.equal(plugin.author.email, "ivelin@pirin.ai");
     assert.equal(plugin.homepage, "https://pirin.ai/bootstrap-os");
     assert.equal(plugin.repository, "https://github.com/ivelin/bootstrapos");
+    assert.equal("logo" in plugin, false);
     assert.doesNotMatch(JSON.stringify(plugin), BOT_ADDRESS);
+
+    const logo = fs.readFileSync(path.join(REPO_ROOT, "logo.png"));
+    assert.equal(logo.subarray(0, 8).toString("hex"), "89504e470d0a1a0a");
+    assert.equal(logo.subarray(12, 16).toString("ascii"), "IHDR");
+    assert.equal(logo.readUInt32BE(16), 512);
+    assert.equal(logo.readUInt32BE(20), 512);
+
+    const doc = fs.readFileSync(path.join(REPO_ROOT, "mcp", "docs", "MARKETPLACE.md"), "utf8");
+    assert.match(doc, /publish form uses `logo\.png`/);
+    assert.match(doc, /no logo field/);
 
     const mcp = JSON.parse(fs.readFileSync(path.join(REPO_ROOT, "mcp.json"), "utf8"));
     assert.equal(mcp.$schema, "https://agent-plugins.org/schemas/1.0.0/mcp.schema.json");

@@ -11,3 +11,5 @@ The hosted endpoint is `https://mcp.bootstrap.pirin.ai/mcp`.
 `bootstrap_os_info` keeps `marketplace: false` until the plugin is listed. The flag flips to `true` at listing time.
 
 Cursor's publish page reads `plugin.json` and `mcp.json` at the repository root. The listing copy is `LISTING.md` in that same root. Cursor's checklist also names a plugin `README.md`. This repository's `README.md` stays the OS template. Team Import from Repo still uses `.cursor-plugin/marketplace.json` and source `plugin/`.
+
+The publish form uses `logo.png` at the repository root. That file is the 512px image. `plugin.json` has no logo field, because the Agent Plugins 1.0.0 schema rejects unknown fields.
