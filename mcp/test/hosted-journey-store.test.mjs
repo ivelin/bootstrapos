@@ -41,7 +41,7 @@ describe("hosted membership journey store", () => {
     assert.equal(board.ok, true);
     assert.equal(board.ideas[0].slug, "default");
     assert.ok(Array.isArray(board.owners));
-    assert.ok(board.owners.some((row) => row.principal === "founder@example.test"));
+    assert.ok(board.owners.some((row) => row.principal === "[redacted]"));
     assert.equal(board.ideas[0].clocks.journeyPhase, 1);
     assert.match(board.ideas[0].visualFlow, /mermaid/);
     assert.equal(
@@ -69,7 +69,7 @@ describe("hosted membership journey store", () => {
     assert.equal(after.ideas[0].clocks.journeyPhase, 1);
     assert.ok(Array.isArray(after.ideas[0].lastTransitions));
     assert.ok(after.ideas[0].lastTransitions.length >= 1);
-    assert.equal(after.ideas[0].lastTransitions[0].who, "founder@example.test");
+    assert.equal(after.ideas[0].lastTransitions[0].who, "[redacted]");
     assert.deepEqual(after.audit, []);
     assert.equal(after.auditVia, "list_provenance");
     const expanded = await store.getJourney(ivelin, {

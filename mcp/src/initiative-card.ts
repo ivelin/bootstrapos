@@ -24,6 +24,7 @@
 import {
   applyPlainWords,
   bannedCardHit,
+  maskSecrets,
   displayNameFrom,
   isInternalNote,
   isKillCondition,
@@ -743,41 +744,69 @@ function scrubFounderText(value: string): string {
   return applyPlainWords(redactConfidentiality(value));
 }
 
-/** Enum tokens and id lists. Strings stay literal. Nested objects still go through the allowlist. */
-function copyUnscrubbed(value: unknown, seen: WeakSet<object>): unknown {
+const IDENTITY_TEXT_KEYS = new Set(["who", "principal", "why"]);
+
+const droppedRedactKeyNames: string[] = [];
+
+export function resetDroppedRedactKeys(): void {
+  droppedRedactKeyNames.length = 0;
+}
+
+export function droppedRedactKeys(): string[] {
+  return droppedRedactKeyNames.slice();
+}
+
+/** Enum tokens and id lists. Nested arrays stay literal. Nested objects use the allowlist. */
+function copyUnscrubbed(value: unknown, stack: WeakSet<object>): unknown {
   if (value === null || typeof value !== "object") return value;
+  if (stack.has(value)) return null;
   if (Array.isArray(value)) {
-    return value.map((item) =>
-      item !== null && typeof item === "object" ? redactPayloadText(item, seen) : item,
-    );
+    stack.add(value);
+    try {
+      return value.map((item) => copyUnscrubbed(item, stack));
+    } finally {
+      stack.delete(value);
+    }
   }
-  return redactPayloadText(value, seen);
+  return redactPayloadText(value, stack);
 }
 
 /**
  * Allowlist at every depth. Unknown keys are dropped.
- * email, principal, and who are scrubbed. kind stays raw, so `nda` stays a kind.
+ * The stack is the current path, so a shared object is redacted again and a cycle is null.
+ * who, principal, and why lose addresses and sk_live_ / sk_test_ tokens.
  */
-function redactPayloadText(value: unknown, seen = new WeakSet<object>()): unknown {
+function redactPayloadText(value: unknown, stack: WeakSet<object>): unknown {
   if (typeof value === "string") return scrubFounderText(value);
   if (!value || typeof value !== "object") return value;
-  if (seen.has(value)) return value;
-  seen.add(value);
-  if (Array.isArray(value)) return value.map((item) => redactPayloadText(item, seen));
-  const out: Record<string, unknown> = {};
-  for (const [key, child] of Object.entries(value)) {
-    if (!REDACT_ALLOW_KEYS.has(key)) continue;
-    if (REDACT_RAW_KEYS.has(key)) {
-      out[key] = copyUnscrubbed(child, seen);
-      continue;
+  if (stack.has(value)) return null;
+  stack.add(value);
+  try {
+    if (Array.isArray(value)) return value.map((item) => redactPayloadText(item, stack));
+    const out: Record<string, unknown> = {};
+    for (const [key, child] of Object.entries(value)) {
+      if (!REDACT_ALLOW_KEYS.has(key)) {
+        droppedRedactKeyNames.push(key);
+        continue;
+      }
+      if (REDACT_RAW_KEYS.has(key)) {
+        out[key] = copyUnscrubbed(child, stack);
+        continue;
+      }
+      if (IDENTITY_TEXT_KEYS.has(key) && typeof child === "string") {
+        out[key] = maskSecrets(scrubFounderText(child));
+        continue;
+      }
+      if (REDACT_MASK_KEYS.has(key) && typeof child === "string") {
+        out[key] = scrubFounderText(child);
+        continue;
+      }
+      out[key] = redactPayloadText(child, stack);
     }
-    if (REDACT_MASK_KEYS.has(key) && typeof child === "string") {
-      out[key] = scrubFounderText(child);
-      continue;
-    }
-    out[key] = redactPayloadText(child, seen);
+    return out;
+  } finally {
+    stack.delete(value);
   }
-  return out;
 }
 
 function plainCardText(value: unknown): string {
@@ -1529,7 +1558,7 @@ function applySpokenToIdea(
 /** Payload lead is spoken. Snapshot is the same founder sentence, not a clock dump. */
 export function applySpokenPayloadLead(
   raw: unknown,
-  opts: { expand?: boolean } = {},
+  opts: { expand?: boolean; redact?: boolean } = {},
 ): unknown {
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) return raw;
   const payload = { ...(raw as Record<string, unknown>) };
@@ -1595,13 +1624,13 @@ export function applySpokenPayloadLead(
   const boards = scrubFounderText(formatBoardDirectory(payload.ideas));
   const spokenLead = spoken.split("\n").find((line) => line.trim().startsWith("**"))?.trim() ?? "";
   const { ok: _ok, spoken: _drop, boards: _boards, markdown: _markdown, spokenLead: _lead, ...rest } = payload;
-  const safe = redactPayloadText(rest) as Record<string, unknown>;
+  const safe = opts.redact === false ? rest : (redactPayloadText(rest, new WeakSet()) as Record<string, unknown>);
   return { ok: true, spoken, spokenLead, markdown: spoken, boards, ...safe };
 }
 
 export function compactJourneyPayload(
   raw: unknown,
-  opts: { expandAudit?: boolean } = {},
+  opts: { expandAudit?: boolean; redact?: boolean } = {},
 ): unknown {
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) return raw;
   const payload = { ...(raw as Record<string, unknown>) };
@@ -1610,5 +1639,8 @@ export function compactJourneyPayload(
     payload.audit = [];
     payload.auditVia = AUDIT_VIA_PROVENANCE;
   }
-  return applySpokenPayloadLead(payload, { expand: Boolean(opts.expandAudit) });
+  return applySpokenPayloadLead(payload, {
+    expand: Boolean(opts.expandAudit),
+    redact: opts.redact,
+  });
 }

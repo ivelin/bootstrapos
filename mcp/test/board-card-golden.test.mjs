@@ -724,7 +724,7 @@ describe("canonical board card", () => {
     assert.match(seen.ideas[0].scoreboard.initiatives[0].premise, /investment/);
     assert.doesNotMatch(seen.ideas[0].scoreboard.initiatives[0].premise, /\bSAFE\b/);
     assert.match(seen.audit[0].whatChanged.founderWrittenDecision, /investment/);
-    assert.equal(seen.owners[0].principal, "investment holder sam@example.test");
+    assert.equal(seen.owners[0].principal, "investment holder [redacted]");
     assert.equal(seen.owners[0].email, "sam@example.test");
     assert.match(seen.audit[0].who, /confidentiality promise/);
     assert.equal(seen.spokenLead, "**alpha**");

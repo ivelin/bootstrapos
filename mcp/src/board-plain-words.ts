@@ -70,6 +70,13 @@ export const BANNED_ON_CARD: RegExp[] = [
 
 const EMAIL = /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b/g;
 
+/** Replace addresses and live or test secret tokens. Call after plain-word rewrite. */
+export function maskSecrets(value: string): string {
+  return value
+    .replace(/\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b/g, "[redacted]")
+    .replace(/\bsk_(?:live|test)_[A-Za-z0-9_-]+/g, "[redacted]");
+}
+
 export function applyPlainWords(text: string): string {
   const emails: string[] = [];
   let masked = text.replace(EMAIL, (token) => {
@@ -162,7 +169,15 @@ export const REDACT_RAW_KEYS = new Set([
   "loopStage",
   "wipLimit",
   "client",
+  "commentId",
+  "comment_id",
   "controlPlaneOrder",
+  "current_gate",
+  "event",
+  "journey_phase",
+  "loop_stage",
+  "principal_kind",
+  "source",
   "sub",
   "resource",
   "formula",
@@ -170,7 +185,7 @@ export const REDACT_RAW_KEYS = new Set([
   "prefer",
 ]);
 
-/** Identity strings. Scrubbed like other prose. Addresses stay. */
+/** The email field keeps the address. who and principal are masked in the walker. */
 export const REDACT_MASK_KEYS = new Set(["email", "principal", "who"]);
 
 /**
@@ -270,6 +285,7 @@ export const REDACT_ALLOW_KEYS = new Set([
   "snapshot",
   "spoken",
   "spokenLead",
+  "summary",
   "stage",
   "state",
   "supporting",

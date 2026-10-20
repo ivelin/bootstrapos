@@ -86,7 +86,7 @@ function attachCardFromScoreboard(raw: unknown): unknown {
     ...(card ? { card } : {}),
     ideas,
   };
-  return applySpokenPayloadLead(next);
+  return applySpokenPayloadLead(next, { redact: false });
 }
 
 function supabaseUrl(): string | undefined {
