@@ -64,7 +64,8 @@ function stockSentence(code: string, raw: Record<string, unknown>): string {
 
 export function refusalMessage(raw: unknown): string | null {
   const body = asRecord(raw);
-  if (!body || body.ok !== false) return null;
+  if (!body || body.ok === true) return null;
+  if (body.ok !== false) return LIMITER_UNAVAILABLE_MESSAGE;
   const code = recognizedCode(body);
   if (!code) return null;
   return usableMessage(body.message) ?? stockSentence(code, body);

@@ -250,6 +250,9 @@ BEGIN
     RETURN jsonb_build_object('ok', false, 'error', 'rate_limiter_unavailable', 'reason', 'rate_limiter_unavailable', 'message', 'The limiter could not be reached. This action was refused.');
   END;
   IF coalesce((v_rate ->> 'ok')::boolean, false) IS DISTINCT FROM true THEN
+    IF coalesce(v_rate ->> 'error', v_rate ->> 'reason', '') = '' THEN
+      RETURN jsonb_build_object('ok', false, 'error', 'rate_limiter_unavailable', 'reason', 'rate_limiter_unavailable', 'message', 'The limiter could not be reached. This action was refused.');
+    END IF;
     RETURN v_rate;
   END IF;
 
@@ -394,6 +397,9 @@ BEGIN
     RETURN jsonb_build_object('ok', false, 'error', 'rate_limiter_unavailable', 'reason', 'rate_limiter_unavailable', 'message', 'The limiter could not be reached. This action was refused.');
   END;
   IF coalesce((v_rate ->> 'ok')::boolean, false) IS DISTINCT FROM true THEN
+    IF coalesce(v_rate ->> 'error', v_rate ->> 'reason', '') = '' THEN
+      RETURN jsonb_build_object('ok', false, 'error', 'rate_limiter_unavailable', 'reason', 'rate_limiter_unavailable', 'message', 'The limiter could not be reached. This action was refused.');
+    END IF;
     RETURN v_rate;
   END IF;
 
@@ -454,6 +460,9 @@ BEGIN
     RETURN jsonb_build_object('ok', false, 'error', 'rate_limiter_unavailable', 'reason', 'rate_limiter_unavailable', 'message', 'The limiter could not be reached. This action was refused.');
   END;
   IF coalesce((v_rate ->> 'ok')::boolean, false) IS DISTINCT FROM true THEN
+    IF coalesce(v_rate ->> 'error', v_rate ->> 'reason', '') = '' THEN
+      RETURN jsonb_build_object('ok', false, 'error', 'rate_limiter_unavailable', 'reason', 'rate_limiter_unavailable', 'message', 'The limiter could not be reached. This action was refused.');
+    END IF;
     RETURN v_rate;
   END IF;
   INSERT INTO bootstrap_os.ideas (company_id, slug, name, journey_phase, loop_stage, current_gate, scoreboard)
@@ -537,11 +546,14 @@ BEGIN
 END;
 $$;
 
+DROP FUNCTION IF EXISTS public.bootstrap_os_list_provenance(text, text, timestamptz, timestamptz);
+
 CREATE OR REPLACE FUNCTION public.bootstrap_os_list_provenance(
   p_company text,
   p_idea text DEFAULT NULL,
   p_from timestamptz DEFAULT NULL,
-  p_to timestamptz DEFAULT NULL
+  p_to timestamptz DEFAULT NULL,
+  p_before timestamptz DEFAULT NULL
 ) RETURNS jsonb
 LANGUAGE plpgsql
 SECURITY DEFINER
@@ -556,6 +568,7 @@ DECLARE
   gates jsonb;
   events jsonb;
   v_page_max int;
+  v_truncated boolean;
 BEGIN
   IF NOT public.bootstrap_os_held_label(p_company) THEN
     RETURN jsonb_build_object('ok', false, 'error', 'company not visible');
@@ -573,12 +586,7 @@ BEGIN
     WHERE i.company_id = cid AND i.slug = v_idea;
   END IF;
 
-  SELECT
-    coalesce(jsonb_agg((payload || jsonb_build_object('kind', kind)) ORDER BY event_at, kind), '[]'::jsonb),
-    coalesce(jsonb_agg(payload ORDER BY event_at, kind) FILTER (WHERE kind = 'audit'), '[]'::jsonb),
-    coalesce(jsonb_agg(payload ORDER BY event_at, kind) FILTER (WHERE kind = 'gate'), '[]'::jsonb)
-  INTO events, audit, gates
-  FROM (
+  WITH matched AS (
     SELECT kind, event_at, payload
     FROM (
       SELECT
@@ -597,6 +605,7 @@ BEGIN
         AND (iid IS NULL OR a.idea_id = iid)
         AND (p_from IS NULL OR a.at >= p_from)
         AND (p_to IS NULL OR a.at <= p_to)
+        AND (p_before IS NULL OR a.at < p_before)
       UNION ALL
       SELECT
         'gate'::text,
@@ -614,7 +623,18 @@ BEGIN
         AND (iid IS NULL OR e.idea_id = iid)
         AND (p_from IS NULL OR e.at >= p_from)
         AND (p_to IS NULL OR e.at <= p_to)
+        AND (p_before IS NULL OR e.at < p_before)
     ) AS raw
+  )
+  SELECT
+    coalesce(jsonb_agg((payload || jsonb_build_object('kind', kind)) ORDER BY event_at, kind), '[]'::jsonb),
+    coalesce(jsonb_agg(payload ORDER BY event_at, kind) FILTER (WHERE kind = 'audit'), '[]'::jsonb),
+    coalesce(jsonb_agg(payload ORDER BY event_at, kind) FILTER (WHERE kind = 'gate'), '[]'::jsonb),
+    coalesce(bool_or(total_rows > v_page_max), false)
+  INTO events, audit, gates, v_truncated
+  FROM (
+    SELECT kind, event_at, payload, count(*) OVER () AS total_rows
+    FROM matched
     ORDER BY event_at DESC, kind DESC
     LIMIT v_page_max
   ) AS page;
@@ -625,7 +645,11 @@ BEGIN
     'idea', v_idea,
     'events', events,
     'audit', audit,
-    'gateEvents', gates
+    'gateEvents', gates,
+    'truncated', coalesce(v_truncated, false)
   );
 END;
 $$;
+
+GRANT EXECUTE ON FUNCTION public.bootstrap_os_list_provenance(text, text, timestamptz, timestamptz, timestamptz)
+  TO authenticated;

@@ -1401,6 +1401,10 @@ function registerJourneyTools(server: McpServer, ctx: HostedRequestContext) {
       idea: z.string().optional().describe("Optional idea. Omit for every idea under the company."),
       from: z.string().optional().describe("Inclusive start timestamp (ISO)."),
       to: z.string().optional().describe("Inclusive end timestamp (ISO)."),
+      before: z
+        .string()
+        .optional()
+        .describe("Exclusive cursor. Pass the oldest at from the previous page."),
     },
     async (input) => {
       const store = storeOf();
@@ -1419,6 +1423,7 @@ function registerJourneyTools(server: McpServer, ctx: HostedRequestContext) {
             ideaSlug: parsed.ideaSlug,
             from: input.from,
             to: input.to,
+            before: input.before,
           }),
         );
       } catch (e) {

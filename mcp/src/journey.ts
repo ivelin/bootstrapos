@@ -1071,7 +1071,7 @@ export type JourneyStore = {
   ): Promise<unknown>;
   listProvenance(
     actor: JourneyActor,
-    query: { companySlug: string; ideaSlug?: string; from?: string; to?: string },
+    query: { companySlug: string; ideaSlug?: string; from?: string; to?: string; before?: string },
   ): Promise<unknown>;
   listKilledIdeas(
     actor: JourneyActor,
@@ -2063,7 +2063,7 @@ export class MemoryJourneyStore implements JourneyStore {
 
   async listProvenance(
     actor: JourneyActor,
-    query: { companySlug: string; ideaSlug?: string; from?: string; to?: string },
+    query: { companySlug: string; ideaSlug?: string; from?: string; to?: string; before?: string },
   ): Promise<unknown> {
     if (!actor.authenticated || !actor.principal) {
       return forbidden("unauthenticated");
@@ -2079,10 +2079,12 @@ export class MemoryJourneyStore implements JourneyStore {
     const ideaId = query.ideaSlug ? ideas[0]?.id : undefined;
     const fromMs = query.from ? Date.parse(query.from) : Number.NaN;
     const toMs = query.to ? Date.parse(query.to) : Number.NaN;
+    const beforeMs = query.before ? Date.parse(query.before) : Number.NaN;
     const inRange = (iso: string) => {
       const t = Date.parse(iso);
       if (Number.isFinite(fromMs) && t < fromMs) return false;
       if (Number.isFinite(toMs) && t > toMs) return false;
+      if (Number.isFinite(beforeMs) && t >= beforeMs) return false;
       return true;
     };
     const slugOf = (id: string | null) =>
@@ -2119,7 +2121,8 @@ export class MemoryJourneyStore implements JourneyStore {
     const ordered = [...auditRows, ...gateRows].sort(
       (a, b) => a.at.localeCompare(b.at) || a.kind.localeCompare(b.kind),
     );
-    const capped = ordered.length <= PROVENANCE_PAGE_MAX ? ordered : ordered.slice(-PROVENANCE_PAGE_MAX);
+    const truncated = ordered.length > PROVENANCE_PAGE_MAX;
+    const capped = truncated ? ordered.slice(-PROVENANCE_PAGE_MAX) : ordered;
     const audit = capped.flatMap((row) =>
       row.kind === "audit"
         ? [
@@ -2153,6 +2156,7 @@ export class MemoryJourneyStore implements JourneyStore {
       events: capped,
       audit,
       gateEvents,
+      truncated,
     };
   }
 

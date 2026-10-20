@@ -27,8 +27,12 @@ const MAX_WINDOW_MS = MAX_WINDOW_SECONDS * 1000;
 const SWEEP_LIMIT = 32;
 const UNAVAILABLE_MESSAGE = "The limiter could not be reached. This action was refused.";
 
-const TAKE_SQL =
-  "select public.bootstrap_rate_take($1::text, $2::text, $3::int, $4::int, $5::timestamptz) as decision";
+const FUNCTION_NAME_RE = /^[a-z_][a-z0-9_]*(\.[a-z_][a-z0-9_]*)?$/;
+const DEFAULT_TAKE_FUNCTION = "public.bootstrap_rate_take";
+
+function takeSql(functionName: string): string {
+  return `select ${functionName}($1::text, $2::text, $3::int, $4::int, $5::timestamptz) as decision`;
+}
 
 type Bucket = { taken: number; windowMs: number };
 
@@ -195,14 +199,21 @@ function decisionFromPayload(value: unknown): RateDecision {
   return unavailable();
 }
 
-export function postgresRateLimiter(query: RateQuery): RateLimiter {
+export function postgresRateLimiter(
+  query: RateQuery,
+  functionName: string = DEFAULT_TAKE_FUNCTION,
+): RateLimiter {
+  if (!FUNCTION_NAME_RE.test(functionName)) {
+    return { async take() { return unavailable(); } };
+  }
+  const sql = takeSql(functionName);
   return {
     async take(input) {
       const checked = check(input);
       if (isRefusal(checked)) return checked;
       const at = input.now ?? new Date();
       try {
-        const result = await query(TAKE_SQL, [
+        const result = await query(sql, [
           checked.actorId,
           checked.action,
           checked.limit,

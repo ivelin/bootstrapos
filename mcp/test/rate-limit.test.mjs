@@ -86,6 +86,24 @@ describe("memory and postgres rate limiters", () => {
     assert.deepEqual(seen.params.slice(0, 4), ["founder@example.test", "invite_member", 20, 86400]);
     assert.equal(seen.params[4], now);
     assert.doesNotMatch(seen.sql, /founder@example\.test/);
+
+    let custom;
+    const named = postgresRateLimiter(async (sql, params) => {
+      custom = { sql, params };
+      return { rows: [{ decision: { ok: true, remaining: 4 } }] };
+    }, "ringful.rate_take");
+    assert.deepEqual(await named.take(takeInput({ action: "create_company", limit: 5 })), {
+      ok: true,
+      remaining: 4,
+    });
+    assert.match(custom.sql, /^select ringful\.rate_take\(\$1::text/);
+    let called = false;
+    const rejected = postgresRateLimiter(async () => {
+      called = true;
+      return { rows: [] };
+    }, "public.bootstrap_rate_take; drop table public.bootstrap_rate_window");
+    assert.deepEqual(await rejected.take(takeInput()), UNAVAILABLE);
+    assert.equal(called, false);
   });
 
   it("rejects bad arguments, a limit under 1, and a thrown clock without writing a slot", async () => {
@@ -176,6 +194,8 @@ describe("hosted caps and refusal sentences", () => {
     assert.equal(refusalMessage('{"ok":false,"reason":"comment_too_long"}'), "Comment is longer than 4 KB.");
     assert.equal(refusalMessage({ ok: true }), null);
     assert.equal(refusalMessage({ ok: false, error: "slug_taken" }), null);
+    assert.equal(refusalMessage({}), UNAVAILABLE.message);
+    assert.equal(refusalMessage({ remaining: 1 }), UNAVAILABLE.message);
     assert.equal(refusalMessage("not json"), null);
   });
 });
