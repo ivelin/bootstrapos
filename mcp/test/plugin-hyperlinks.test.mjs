@@ -36,7 +36,7 @@ function skillFiles() {
 }
 
 describe("preview plugin (hyperlink only)", () => {
-  it("has portable Agent Plugins manifests and a team Import from Repo listing", () => {
+  it("has portable Agent Plugins manifests and a marketplace doc pointer", () => {
     const pluginJson = JSON.parse(fs.readFileSync(path.join(PLUGIN, "plugin.json"), "utf8"));
     assert.equal(pluginJson.$schema, "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json");
     assert.equal(pluginJson.name, "bootstrap-os");
@@ -74,6 +74,12 @@ describe("preview plugin (hyperlink only)", () => {
     assert.equal(market.plugins.length, 1);
     assert.equal(market.plugins[0].name, "bootstrap-os");
     assert.equal(market.plugins[0].source, "plugin");
+    for (const manifest of [pluginJson, cursorPlugin, market]) {
+      const text = JSON.stringify(manifest);
+      assert.match(text, /mcp\/docs\/MARKETPLACE\.md/);
+      assert.doesNotMatch(text, /plain member account/);
+      assert.doesNotMatch(text, /listed for public install/i);
+    }
     assert.ok(!fs.existsSync(path.join(PLUGIN, "operating-system.md")));
     assert.ok(fs.existsSync(path.join(REPO_ROOT, "mcp", "vercel.json")));
     assert.ok(fs.existsSync(path.join(REPO_ROOT, "mcp", "api", "mcp.ts")));

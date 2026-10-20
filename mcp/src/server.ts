@@ -183,7 +183,7 @@ function registerReadTools(server: McpServer, surface: McpSurface, hosted?: Host
         pluginPreview: {
           path: "plugin/",
           version: "0.1.1",
-          note: "Preview Agent Plugin 0.1.1. Skills hyperlink the published OS. Team Import from Repo only — not a public catalog submit. Not mentee-ready hosted boards. Path 1 stays the front door.",
+          note: "Preview Agent Plugin 0.1.1. Skills hyperlink the published OS. See mcp/docs/MARKETPLACE.md. Not mentee-ready hosted boards. Path 1 stays the front door.",
         },
         commit: process.env.VERCEL_GIT_COMMIT_SHA?.trim() || null,
       };

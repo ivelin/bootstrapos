@@ -49,7 +49,7 @@ company-os/operating-system.md         company-os/live-runtime.md
 | [`examples/`](examples/) | Pointers to public live instances (illustration only) |
 | [`.grok/workflows/`](.grok/workflows/) | Optional Grok Build workflows (path 2) — company-operating-loop, user-research, ready-for-human-eyes |
 | [`mcp/`](mcp/) | **OSS self-host kit** (stdio on your disk, or your own Vercel + Supabase). Not the Pirin mentee source of record. The hosted pin is the Pirin write plane. |
-| [`plugin/`](plugin/) | **Preview** Cursor/Grok Agent Plugin — skills hyperlink this pack. Team Import from Repo only — not a public catalog submit. |
+| [`plugin/`](plugin/) | **Preview** Cursor/Grok Agent Plugin — skills hyperlink this pack. See [mcp/docs/MARKETPLACE.md](mcp/docs/MARKETPLACE.md). |
 
 This repo is **template only**. Filled company state never lives here.
 
@@ -95,11 +95,11 @@ Disk bootstrap: [`mcp/README.md`](mcp/README.md).
 
 ### 4. Hosted MCP (Pirin product write plane)
 
-Pin `https://mcp.bootstrap.pirin.ai/mcp`. A super admin calls `create_company`, then `create_idea`. A first-time hosted install names a real super_admin email contact; the operator seeds that row by hand, outside git, after the roles migration, because `bootstrap_os_grant_super_admin` cannot run until one super_admin exists. That function is SQL, not a connector tool. The committed fixture is an illustrative member only, not a super_admin. Real contact addresses are never committed. Procedure: [`mcp/docs/HOSTED_IDENTITY.md`](mcp/docs/HOSTED_IDENTITY.md#first-super-admin-hosted-install). Login is `/bootstrap-os/login` on pirin.ai (Web Builder; not this repo). The pin 401s the handshake. Gated tools return 401 + `WWW-Authenticate` to this MCP origin RFC 9728 (`authorization_servers` = pirin.ai login). Free docs are GitHub + [install-os](https://pirin.ai/bootstrap-os) + local — not a hosted MCP connector. Path 1 stays the front door. Path 1 markdown stays the constitution. Contract: [`mcp/docs/HOSTED_IDENTITY.md`](mcp/docs/HOSTED_IDENTITY.md).
+Pin `https://mcp.bootstrap.pirin.ai/mcp`. A super admin calls `create_company`, then `create_idea`. A first-time hosted install names a real super_admin email contact; the operator seeds that row by hand, outside git, after the roles migration, because `bootstrap_os_grant_super_admin` cannot run until one super_admin exists. That function is SQL, not a connector tool. The committed fixture is an illustrative member only, not a super_admin. Real contact addresses are never committed. Procedure: [`mcp/docs/HOSTED_IDENTITY.md`](mcp/docs/HOSTED_IDENTITY.md#first-super-admin-hosted-install). Login is `/bootstrap-os/login` on pirin.ai (Web Builder; not this repo). The pin 401s the handshake. Gated tools return 401 + `WWW-Authenticate` to this MCP origin RFC 9728 (`authorization_servers` = pirin.ai login). Free docs are GitHub + [install-os](https://pirin.ai/bootstrap-os) + local. The hosted connector uses sign-in. See [mcp/docs/MARKETPLACE.md](mcp/docs/MARKETPLACE.md). Path 1 stays the front door. Path 1 markdown stays the constitution. Contract: [`mcp/docs/HOSTED_IDENTITY.md`](mcp/docs/HOSTED_IDENTITY.md).
 
-A **preview** plugin lives in [`plugin/`](plugin/): thin skills that hyperlink this repo. Team Import from Repo only — not a public catalog submit. It is not a second front door. The Vercel production Host is the same 401, not a silent 200 alias. Git-branch previews are not mentee-ready boards.
+A **preview** plugin lives in [`plugin/`](plugin/): thin skills that hyperlink this repo. See [mcp/docs/MARKETPLACE.md](mcp/docs/MARKETPLACE.md). It is not a second front door. The Vercel production Host is the same 401, not a silent 200 alias. Git-branch previews are not mentee-ready boards.
 
-There is a **preview** git-branch read adapter on `*.vercel.app` (not mentee-ready boards, not a public catalog submit, not pirin.ai, not a Path 1 pin). `plugin/mcp.json` pins the collab host; `${BOOTSTRAP_MCP_URL}` can override. No day-one SaaS boards. Do not use `mcp.pirin.ai` (dead).
+There is a **preview** git-branch read adapter on `*.vercel.app` (not mentee-ready boards, not pirin.ai, not a Path 1 pin). See [mcp/docs/MARKETPLACE.md](mcp/docs/MARKETPLACE.md). `plugin/mcp.json` pins the hosted connector; `${BOOTSTRAP_MCP_URL}` can override. No day-one SaaS boards. Do not use `mcp.pirin.ai` (dead).
 
 Invited founders who want Bill: [Install Bootstrap Bill](docs/install-bill.md). That is not Path 1.
 
@@ -173,7 +173,7 @@ Treat promotion into this template as rare, deliberate work — not a continuous
 | Operating system blueprint | **v2.8.19** |
 | Live runtime | **v2.8.19** |
 | OSS `mcp/` self-host kit | Disk bootstrap via `initCompany()`, or your own Vercel + Supabase. Not the Pirin mentee source of record. |
-| Preview plugin | **0.1.1** — [`plugin/`](plugin/). Skills hyperlink this pack. Team Import from Repo only — not a public catalog submit. Not mentee-ready hosted boards. |
+| Preview plugin | **0.1.1** — [`plugin/`](plugin/). Skills hyperlink this pack. See [mcp/docs/MARKETPLACE.md](mcp/docs/MARKETPLACE.md). Not mentee-ready hosted boards. |
 
 ### Recent portable additions
 
@@ -226,7 +226,7 @@ House rule. Full text: [operating-system.md](company-os/operating-system.md#hous
 House rule. Full text: [operating-system.md](company-os/operating-system.md#house-rule-there-is-no-optimal-price-until-people-have-paid-and-stayed). Same family as 2.8.6 / 2.8.7; do not merge. Stay current; do not guide to where the puck has been. Day 0 / Path 1 question (not a house rule; not this essay): [lifestyle or swinging for the fences](company-os/operating-system.md#day-0-lifestyle-or-swinging-for-the-fences).
 
 **v2.8.7 — a security program cannot promote**  
-House rule. Full text: [operating-system.md](company-os/operating-system.md#house-rule-a-security-program-cannot-promote). Preview plugin pointer (not a house rule): [`plugin/`](plugin/) — hyperlinks only; team Import from Repo only, not a public catalog submit; hosted read adapter is preview, not mentee-ready boards.
+House rule. Full text: [operating-system.md](company-os/operating-system.md#house-rule-a-security-program-cannot-promote). Preview plugin pointer (not a house rule): [`plugin/`](plugin/) — hyperlinks only. See [mcp/docs/MARKETPLACE.md](mcp/docs/MARKETPLACE.md). Hosted read adapter is preview, not mentee-ready boards.
 
 **v2.8.6 — marketing volume cannot promote**  
 House rule. Full text: [operating-system.md](company-os/operating-system.md#house-rule-marketing-volume-cannot-promote). Writing: [Say it once. Link. No filler.](company-os/operating-system.md#how-this-os-may-change-stability-contract)
@@ -264,7 +264,7 @@ Light synthetic product sandbox + real interest tests before heavy build.
 - Invite-only: [Install Bootstrap Bill](docs/install-bill.md)  
 - Public live instances (illustration only): see [`examples/`](examples/)
 - OSS self-host kit: [`mcp/README.md`](mcp/README.md). Pirin write plane: `https://mcp.bootstrap.pirin.ai/mcp`.
-- Preview plugin (team Import from Repo only — not a public catalog submit): [`plugin/`](plugin/)
+- Preview plugin ([`plugin/`](plugin/)). See [mcp/docs/MARKETPLACE.md](mcp/docs/MARKETPLACE.md).
 - Starter legal templates (hyperlink only): [operating-system.md](company-os/operating-system.md#starter-legal-templates)
 - Cap-table modeler (hyperlink only): [operating-system.md](company-os/operating-system.md#cap-table-modeler)
 - After-proof efficiency (hyperlink only; fences + proof + they asked): [after-proof-efficiency.md](company-os/after-proof-efficiency.md)

@@ -99,7 +99,22 @@ describe("markdown install path (zero MCP required)", () => {
       assert.ok(!firstHour.includes(HOSTED_MCP_RESOURCE_ALIAS));
       assert.match(firstHour, /Do \*\*not\*\* upload mentee work to Ivelin.s GitHub/);
       assert.ok(firstHour.includes("https://github.com/ivelin/bootstrap"));
-      assert.match(firstHour, /\*\*Not\*\* a public catalog submit/);
+      assert.match(firstHour, /mcp\/docs\/MARKETPLACE\.md/);
+      assert.match(firstHour, /The hosted connector uses sign-in/);
+      assert.doesNotMatch(firstHour, /listed for public install/);
+      assert.doesNotMatch(firstHour, /plain member account/);
+      assert.doesNotMatch(firstHour, /public catalog submit/);
+      const marketplace = fs.readFileSync(
+        path.join(REPO_ROOT, "mcp", "docs", "MARKETPLACE.md"),
+        "utf8",
+      );
+      assert.match(marketplace, /not listed yet/);
+      assert.match(marketplace, /shown to every signed-in member/);
+      assert.match(marketplace, /super admin/);
+      assert.match(marketplace, /ask_admin/);
+      assert.match(marketplace, /plain member account/);
+      assert.match(marketplace, /marketplace: false/);
+      assert.match(marketplace, /listing time/);
       assert.match(firstHour, /\*\*Not\*\* mentee boards on our host/);
       assert.match(firstHour, /\*\*Not\*\* a Grok Bot marketplace bot/);
       assert.match(firstHour, /Not another Day 0 checkbox/);
