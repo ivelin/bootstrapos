@@ -131,8 +131,8 @@ describe("OS 2.8.17 implicit loop (quality bar, not card)", () => {
     const founder = bearer("founder-core@example.test");
     const seen = await store.getJourney(founder, { companySlug: "corehaul" });
     const snap = seen.ideas[0].snapshot;
-    assert.match(seen.spoken, /nothing is in play yet/);
-    assert.match(snap, /nothing is in play yet/);
+    assert.match(seen.spoken, /nothing is in play yet/i);
+    assert.match(snap, /nothing is in play yet/i);
     assert.doesNotMatch(seen.spoken, /The goal is/);
     assert.match(seen.spoken, /\*\*Next:\*\*/);
     assert.doesNotMatch(snap, /journey phase \d/);

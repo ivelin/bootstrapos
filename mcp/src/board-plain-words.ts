@@ -112,21 +112,68 @@ export function isLowercaseLogin(value: string): boolean {
   return true;
 }
 
-export function displayNameFrom(row: unknown): string | null {
+const EMAIL_ADDRESS = /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b/;
+
+/** The part before @. Tester logins are not a name. */
+export function emailLocalPart(value: string): string | null {
+  const match = String(value ?? "").match(EMAIL_ADDRESS);
+  if (!match) return null;
+  if (TESTER_LOGIN.test(match[0])) return null;
+  const local = match[0].split("@")[0] ?? "";
+  return local || null;
+}
+
+export function firstNameOf(value: string): string {
+  const word = value.trim().split(/\s+/).filter(Boolean)[0] ?? "";
+  return word.replace(/[,.]+$/g, "");
+}
+
+/**
+ * Name printed on the card. First name when one is stored.
+ * Otherwise the email local part. Never the address itself.
+ */
+export function cardPersonName(row: unknown): string | null {
   if (!row) return null;
-  if (typeof row === "string") return isLowercaseLogin(row) ? null : row.trim();
+  if (typeof row === "string") {
+    if (TESTER_LOGIN.test(row)) return null;
+    if (row.includes("@")) return emailLocalPart(row);
+    if (isLowercaseLogin(row)) return null;
+    return firstNameOf(row);
+  }
   if (typeof row !== "object") return null;
-  const rec = row as { displayName?: unknown; display_name?: unknown; principal?: unknown };
+  const rec = row as {
+    displayName?: unknown;
+    display_name?: unknown;
+    principal?: unknown;
+    email?: unknown;
+  };
   const explicit =
     typeof rec.displayName === "string"
       ? rec.displayName
       : typeof rec.display_name === "string"
         ? rec.display_name
         : "";
-  if (explicit.trim() && !isLowercaseLogin(explicit)) return explicit.trim();
-  const principal = typeof rec.principal === "string" ? rec.principal.trim() : "";
-  if (!principal || isLowercaseLogin(principal)) return null;
-  return principal;
+  if (explicit.trim() && !TESTER_LOGIN.test(explicit) && !isLowercaseLogin(explicit)) {
+    return firstNameOf(explicit);
+  }
+  const principal =
+    typeof rec.principal === "string"
+      ? rec.principal
+      : typeof rec.email === "string"
+        ? rec.email
+        : "";
+  if (!principal.trim() || TESTER_LOGIN.test(principal)) return null;
+  if (principal.includes("@")) return emailLocalPart(principal);
+  if (!isLowercaseLogin(principal)) return firstNameOf(principal);
+  return null;
+}
+
+/** Card speech only. JSON principal and who keep the stored address. */
+export function hideCardEmails(value: string): string {
+  return String(value ?? "").replace(
+    /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b/g,
+    (token) => emailLocalPart(token) ?? "",
+  );
 }
 
 export function isInternalNote(text: string): boolean {

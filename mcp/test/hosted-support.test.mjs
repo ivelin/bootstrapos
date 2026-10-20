@@ -146,7 +146,12 @@ describe("hosted MCP support escape hatch", () => {
     assert.match(String(supportTool.description ?? ""), /bootstrap@pirin\.ai/);
     assert.doesNotMatch(String(supportTool.description ?? ""), /webhook|resend|mentee/i);
 
+    const priorCommit = process.env.VERCEL_GIT_COMMIT_SHA;
+    process.env.VERCEL_GIT_COMMIT_SHA = "abc123def";
     const info = parseTool(await rpc("tools/call", { name: "bootstrap_os_info", arguments: {} }, 3));
+    if (priorCommit === undefined) delete process.env.VERCEL_GIT_COMMIT_SHA;
+    else process.env.VERCEL_GIT_COMMIT_SHA = priorCommit;
+    assert.equal(info.commit, "abc123def");
     assert.equal(info.surface, "hosted-read");
     assert.equal(info.founderVoice, FOUNDER_INTRO);
     assert.match(String(info.doNotRecite), /Say founderVoice, then the board/);

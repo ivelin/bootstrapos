@@ -169,10 +169,14 @@ const SECTION_ORDER = ["Bet", "Other paths (not the main bet)", "Past bets", "Ba
 function assertFounderCard(text) {
   const raw = String(text);
   const lines = raw.split("\n").filter((line) => line.trim());
-  assert.match(lines[0], /^\*\*[^*]+\*\*$/);
+  assert.match(lines[0], /^\*\*The #1 bottleneck is .+\.\*\*$/);
   assert.doesNotMatch(raw, /The goal is/);
   assert.doesNotMatch(raw, /The problem is/);
   assert.doesNotMatch(lines[0], /biggest problem right now/);
+  assert.doesNotMatch(raw, /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b/);
+  const greens = raw.split("\n").filter((line) => line.startsWith("|") && line.includes("🟢"));
+  assert.equal(greens.length, 1, greens.join("\n"));
+  assert.match(greens[0], /🎯/);
   assert.doesNotMatch(raw, /\| What we're working on \|/);
   const headers = raw.split("\n").filter((line) => line.startsWith("| Work |"));
   assert.equal(headers.length, 1);
@@ -669,8 +673,9 @@ describe("spoken-card plain words", () => {
     assertFounderCard(spoken);
     assert.equal(spoken.split("charlie, a company we're talking with").length - 1, 1);
     assert.match(spoken, /· · 🏢 charlie, a company we're talking with/);
-    assert.match(spoken, /founder@example\.test, the founder, calls/);
-    assert.equal(spoken.split("the founder").length - 1, 1);
+    assert.match(spoken, /founder calls/);
+    assert.doesNotMatch(spoken, /@/);
+    assert.equal(spoken.split("the founder").length - 1, 0);
     assert.match(spoken, /operators who already pay for dispatch at bravo plant/);
     assert.match(spoken, /^\| 🎯 /m);
     assert.equal(card.customerChecks[0].engagements[0].kind, "engagement");
@@ -696,9 +701,9 @@ describe("spoken-card plain words", () => {
     });
     const spoken = formatSpokenCard({ label: "alpha", card });
     assertFounderCard(spoken);
-    assert.match(spoken, /charlie@example\.test, the founder,/);
-    assert.match(spoken, /founder@example\.test, the founder,/);
-    assert.equal(spoken.split("the founder").length - 1, 2);
+    assert.match(spoken, /charlie and founder call/);
+    assert.doesNotMatch(spoken, /@/);
+    assert.equal(spoken.split("the founder").length - 1, 0);
     assert.match(spoken, /GC\/PM/);
     assert.match(spoken, /\bMLS\b/);
     assert.match(spoken, /foreign-entity/);
@@ -788,19 +793,23 @@ describe("spoken-card plain words", () => {
 describe("spoken-card rejects the old shape", () => {
   it("fails the old headline, old columns, a missing Next line, a bad section, a missing target, and a banned word", () => {
     const good = [
+      "**The #1 bottleneck is no plant has paid.**",
       "**alpha**",
-      "alpha sells dispatch help to plants.",
+      "Founder: Sam",
+      "alpha sells to plant operators.",
       "",
       "| Work | State | When | Who |",
       "|---|---|---|---|",
       "| **Bet** | | | |",
-      "| 🎯 🤝 **Get one plant to pay** | 🟢 No plant has paid yet | Talk this week | — |",
+      "| 🎯 🤝 **Get one plant to pay** | 🟢 No plant has paid yet | Talk this week | Sam |",
       "",
       "*🎯 the one thing that matters most · 🟢 working on it · 🟡 waiting · 🔴 dropped · ⚪ closed*",
-      "**Next:** founder@example.test talks this week.",
+      "**Next:** Sam talks this week.",
     ].join("\n");
     assert.doesNotThrow(() => assertFounderCard(good));
-    assert.throws(() => assertFounderCard(good.replace("**alpha**", "**alpha's biggest problem right now:")));
+    assert.throws(() =>
+      assertFounderCard(good.replace("**The #1 bottleneck is no plant has paid.**", "**alpha's biggest problem right now:")),
+    );
     assert.throws(() =>
       assertFounderCard(good.replace("| Work | State | When | Who |", "| What we're working on | Where it stands | What happens next | Who |")),
     );

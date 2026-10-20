@@ -25,10 +25,11 @@ import {
   applyPlainWords,
   bannedCardHit,
   maskSecrets,
-  displayNameFrom,
+  cardPersonName,
+  firstNameOf,
+  hideCardEmails,
   isInternalNote,
   isKillCondition,
-  isLowercaseLogin,
   REDACT_ALLOW_KEYS,
   REDACT_MASK_KEYS,
   REDACT_RAW_KEYS,
@@ -199,6 +200,8 @@ export function founderCardBannedHit(text: string): string | null {
 }
 
 export function spokenBottleneckLineOf(text: string): string {
+  const opener = String(text ?? "").match(/\*\*The #1 bottleneck is\s+(.+?)\.\*\*/);
+  if (opener) return opener[1].trim().replace(/\.$/, "");
   const lines = String(text ?? "")
     .split("\n")
     .map((line) => line.trim())
@@ -816,6 +819,7 @@ function plainCardText(value: unknown): string {
   for (const rule of SPOKEN_HIDE) text = text.replace(rule, "");
   text = redactConfidentiality(text);
   text = applyPlainWords(text);
+  text = hideCardEmails(text);
   text = text.replace(/\bpaper cannot promote\b/gi, "");
   text = text.replace(/\bcannot promote\b/gi, "");
   return text.replace(/\s+/g, " ").replace(/\s+([.,;])/g, "$1").trim();
@@ -899,7 +903,7 @@ const SPOKEN_HIDE = [
 ];
 
 function sanitizeSpoken(text: string): string {
-  let out = text;
+  let out = hideCardEmails(text);
   for (const re of SPOKEN_HIDE) {
     out = out.replace(re, "");
   }
@@ -931,9 +935,9 @@ type SpokenRow = {
 function statusDot(row: Initiative, allowGreen: boolean): string {
   if (row.outcome === "killed") return "🔴";
   if (row.status === "closed") return "⚪";
-  if (!allowGreen) return "🟡";
-  if (row.status === "waiting" || row.status === "proposed") return "🟡";
-  if (row.status === "active") return "🟢";
+  // The target bet is the only green row, including when it is still proposed or waiting.
+  if (allowGreen) return "🟢";
+  if (row.status === "waiting" || row.status === "proposed" || row.status === "active") return "🟡";
   return "⚪";
 }
 
@@ -1018,14 +1022,14 @@ function namedPeople(rows: unknown): string[] {
   const ranked: Array<{ name: string; rank: number }> = [];
   for (const row of rows) {
     if (!row || typeof row !== "object") {
-      const name = displayNameFrom(row);
+      const name = cardPersonName(row);
       if (name) ranked.push({ name, rank: 2 });
       continue;
     }
     const rec = row as { role?: unknown };
     const role = String(rec.role ?? "");
     if (role && !CARD_WHO_ROLES.has(role)) continue;
-    const name = displayNameFrom(row);
+    const name = cardPersonName(row);
     if (name) ranked.push({ name, rank: roleRank(role) });
   }
   ranked.sort((a, b) => a.rank - b.rank);
@@ -1040,7 +1044,7 @@ export function whoNamesFromOwners(owners: unknown): string[] {
   return namedPeople(owners);
 }
 
-/** Display names only. Founder first. Logins and tester accounts stay off the card. */
+/** First names, or the email local part when no name is stored. Founder first. */
 export function whoNamesForCard(payload: { owners?: unknown; acl?: unknown }): string[] {
   const fromOwners = namedPeople(payload.owners);
   const fromAcl = namedPeople(payload.acl);
@@ -1067,13 +1071,30 @@ function endedReason(row: Initiative): string {
   return "";
 }
 
+function reasonWithoutRange(reason: string): string {
+  return reason
+    .replace(
+      /\b20\d{2}-\d{2}-\d{2}\b(?:\s*(?:\/|to|—|–|-)\s*\b20\d{2}-\d{2}-\d{2}\b)?\s*:?\s*/g,
+      "",
+    )
+    .trim();
+}
+
+/** Every past bet names a start, an end, and why it ended. Missing pieces stay visible. */
+function pastSpan(range: string, reason: string): string {
+  const dates = range.match(/\b20\d{2}-\d{2}-\d{2}\b/g) ?? [];
+  const start = dates[0] || "start not recorded";
+  const end = dates[1] || dates[0] || "end not recorded";
+  const why = reasonWithoutRange(reason) || "reason not recorded";
+  return `${start} to ${end}: ${why}`;
+}
+
 function pastState(row: Initiative): string {
   const dot = statusDot(row, false);
-  const why = endedReason(row);
   const clock = plainCardText(row.clock ?? "");
-  const range = clock && clock !== "—" ? clock : "";
-  const body = [range, why].filter(Boolean).join(": ");
-  return body ? `${dot} ${body}` : dot;
+  const last = plainCardText(row.last);
+  const dates = clock.match(/\b20\d{2}-\d{2}-\d{2}\b/g) ?? last.match(/\b20\d{2}-\d{2}-\d{2}\b/g) ?? [];
+  return `${dot} ${pastSpan(dates.join("/"), endedReason(row))}`;
 }
 
 function pushSpokenRow(
@@ -1190,11 +1211,11 @@ function spokenSections(
     pushSpokenRow(background, row, { bottleneck: false, depth: 0, seen, who });
   }
 
-  if (!killed && !bet.length) {
+  if (!bet.length) {
     bet.push({
-      work: "🎯 🤝 **Nothing on the board yet**",
-      state: "⚪ Not started",
-      next: "Name what done looks like",
+      work: "🎯 🤝 **Nothing is in play yet**",
+      state: "🟢 Name the next bet",
+      next: killed ? "Leave this stopped" : "Name what done looks like",
       who,
     });
   }
@@ -1218,13 +1239,22 @@ function nextSentence(row: Initiative | null, killed: boolean): string {
   return next.endsWith(".") ? next : `${next}.`;
 }
 
-function sellsSentence(label: string, sells: string): string {
-  const text = sells.replace(/\.+$/, "").trim();
-  if (!text || text === "none yet") return "nothing is in play yet.";
-  if (/^(nothing is|no one|nobody)\b/i.test(text)) return `${text}.`;
+/** Buyer, not the bet title. A missing buyer stays an honest empty. */
+function sellsSentence(label: string, buyer: string): string {
+  const text = buyer.replace(/\.+$/, "").trim();
+  if (!text || text === "none yet") return `${label} sells to nobody named yet.`;
   const escaped = label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   if (new RegExp(`^${escaped}\\s+sells\\b`, "i").test(text)) return `${text}.`;
-  return `${label} sells ${text}.`;
+  return `${label} sells to ${text}.`;
+}
+
+export function buyerText(source: unknown, card?: InitiativeCard | null): string {
+  const sb = scoreboardRecordOf(source);
+  const hypothesis = typeof sb?.hypothesis === "string" ? sb.hypothesis.trim() : "";
+  const title = (card?.bottleneck?.premise ?? "").trim();
+  if (!hypothesis) return "";
+  if (title && hypothesis.toLowerCase() === title.toLowerCase()) return "";
+  return hypothesis;
 }
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
@@ -1264,8 +1294,8 @@ function moneySpokenRow(pnl: PnlShape, who: string): SpokenRow | null {
   const asOf = typeof pnl.asOf === "string" && pnl.asOf.trim() ? asOfLabel(pnl.asOf) : "";
   const when = asOf ? ` (${asOf})` : "";
   return {
-    work: `💵 Money (last ${days} days)`,
-    state: `🟡 ${rev} revenue; ${costPart}${when}`,
+    work: "Money",
+    state: `last ${days} days: ${rev} revenue; ${costPart}${when}`,
     next: "Updated weekly",
     who,
   };
@@ -1294,6 +1324,8 @@ export function formatSpokenCard(input: {
   /** ACL founder principals, or already-short names. Missing stays —. */
   who?: string[];
   pnl?: PnlShape | null;
+  /** Who buys. Not the bet title. Empty stays "nobody named yet". */
+  buyer?: string;
   /** Killed sibling boards. Internal notes are dropped. */
   pastBoards?: Array<{ title: string; range?: string; reason?: string }>;
 }): string {
@@ -1306,17 +1338,24 @@ export function formatSpokenCard(input: {
     allowPaperBottleneck: Boolean(input.allowPaperBottleneck),
   };
   const seen = new Set<string>();
-  let sells = plainCardText(spokenBottleneckPremise(card, input.constraintThisWeek, opts));
-  if (killed) {
-    const fromCard = plainCardText(
-      (input.killedCard ?? "").replace(/^☠\s*/, "").replace(/^Killed\s+[—-]\s*/, ""),
-    );
-    if (fromCard && !isInternalNote(fromCard)) sells = fromCard;
-  }
-  if (!sells || sells === "none yet") sells = "nothing is in play yet";
-  const whoNames = (input.who ?? []).filter((name) => !isLowercaseLogin(name));
+  const killedReason = plainCardText(
+    (input.killedCard ?? "").replace(/^☠\s*/, "").replace(/^Killed\s+[—-]\s*/, ""),
+  );
+  const stuckRaw = killed
+    ? killedReason
+    : plainCardText(spokenBottleneckPremise(card, input.constraintThisWeek, opts));
+  const stuck = !stuckRaw || stuckRaw === "none yet" || isInternalNote(stuckRaw) ? "nothing is stuck yet" : stuckRaw;
+  const opener = `**The #1 bottleneck is ${stuck.replace(/\.+$/, "")}.**`;
+  const whoNames = (input.who ?? [])
+    .map((name) => (name.includes("@") ? cardPersonName(name) ?? "" : firstNameOf(name)))
+    .filter((name) => name.length > 0);
   const founder = whoNames[0] ?? "";
-  const headline = [`**${label}**`, founder ? `Founder: ${founder}` : "", sellsSentence(label, sells)]
+  const headline = [
+    opener,
+    `**${label}**`,
+    founder ? `Founder: ${founder}` : "",
+    sellsSentence(label, plainCardText(input.buyer ?? "")),
+  ]
     .filter(Boolean)
     .join("\n");
   const alsoLive = (input.alsoLive ?? []).map((name) => name.trim()).filter(Boolean);
@@ -1329,10 +1368,9 @@ export function formatSpokenCard(input: {
     if (!title || isInternalNote(title)) continue;
     if (isInternalNote(reason) && !range) continue;
     const shownReason = reason && !isInternalNote(reason) && !isKillCondition(reason) ? reason : "";
-    const body = [range, shownReason].filter(Boolean).join(": ");
     sections.past.push({
       work: `🔎 ${title}`,
-      state: body ? `🔴 ${body}` : "🔴",
+      state: `🔴 ${pastSpan(range, shownReason)}`,
       next: "—",
       who,
     });
@@ -1531,6 +1569,7 @@ function spokenInputFromIdea(
     allowPaperBottleneck: allowPaperOf(sb),
     alsoLive,
     who: whoNamesForCard(payload),
+    buyer: buyerText(idea, card),
     pnl: pnlOf(idea),
   };
 }

@@ -1,6 +1,7 @@
+**The #1 bottleneck is a weekly shop report for one cafe.**
 **bravo**
 Founder: Sam
-bravo sells a weekly shop report for one cafe.
+bravo sells to one cafe owner.
 
 | Work | State | When | Who |
 |---|---|---|---|

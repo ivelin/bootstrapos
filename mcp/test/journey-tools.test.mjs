@@ -110,7 +110,7 @@ describe("journey views + tools (memory store)", () => {
     assert.equal(idea.clocks.journeySpoken, "Write the bet");
     assert.equal(idea.clocks.loopSpoken, "Ask");
     assert.match(idea.snapshot, /CoreHaul/);
-    assert.match(idea.snapshot, /nothing is in play yet/);
+    assert.match(idea.snapshot, /nothing is in play yet/i);
     assert.equal(idea.constraintThisWeek, "");
     assert.match(idea.visualFlow, /Constraint this week:/);
     assert.equal(idea.meetingDoc, undefined);
@@ -339,10 +339,10 @@ describe("journey views + tools (memory store)", () => {
 
     const empty = await store.getJourney(founder, { companySlug: "corehaul" });
     assert.equal(empty.ideas[0].constraintThisWeek, "");
-    assert.match(empty.spoken, /nothing is in play yet/);
+    assert.match(empty.spoken, /nothing is in play yet/i);
     assert.doesNotMatch(empty.spoken, /The goal is/);
     assert.match(empty.spoken, /\*\*Next:\*\*/);
-    assert.match(empty.ideas[0].snapshot, /nothing is in play yet/);
+    assert.match(empty.ideas[0].snapshot, /nothing is in play yet/i);
 
     const tooLong = await store.putJourney(founder, {
       companySlug: "corehaul",
@@ -422,7 +422,7 @@ describe("journey views + tools (memory store)", () => {
     const stillEmpty = await store.getJourney(founder, { companySlug: "corehaul" });
     assert.equal(stillEmpty.ok, true);
     assert.equal(stillEmpty.ideas[0].constraintThisWeek, "");
-    assert.match(stillEmpty.ideas[0].snapshot, /nothing is in play yet/);
+    assert.match(stillEmpty.ideas[0].snapshot, /nothing is in play yet/i);
 
     const written = await store.putJourney(founder, {
       companySlug: "corehaul",
@@ -440,7 +440,8 @@ describe("journey views + tools (memory store)", () => {
 
     const seen = await store.getJourney(founder, { companySlug: "corehaul" });
     assert.equal(seen.ideas[0].constraintThisWeek, "new landing page");
-    assert.match(seen.ideas[0].snapshot, /sells new landing page/);
+    assert.match(seen.ideas[0].snapshot, /The #1 bottleneck is new landing page/);
+    assert.match(seen.ideas[0].snapshot, /sells to nobody named yet/);
     assert.doesNotMatch(seen.ideas[0].snapshot, /The goal is/);
     assert.match(seen.spoken, /new landing page/);
     assert.match(seen.ideas[0].constraintChallenge, /fun side quest/);
