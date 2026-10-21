@@ -1009,7 +1009,7 @@ describe("canonical board card", () => {
       "plants pay for conversion/tenancy on one product",
     );
     assert.equal(applyPlainWords("conversion/tenancy"), "conversion/tenancy");
-    assert.equal(founderCardBannedHit("conversion/tenancy"), "tenancy");
+    assert.equal(founderCardBannedHit("conversion/tenancy"), null);
     assert.equal(founderCardBannedHit("paid tenancy"), "tenancy");
     assert.equal(
       applyPlainWords("see `SAFE` at https://x.test/SAFE?q=NDA"),
@@ -1030,6 +1030,52 @@ describe("canonical board card", () => {
       assert.equal(applyPlainWords(gloss), gloss);
       assert.equal(applyPlainWords(applyPlainWords(gloss)), gloss);
     }
+  });
+
+  it("glosses slash forms on the card and keeps conversion/tenancy", () => {
+    function cardText(label, last, premise = "a weekly shop report") {
+      return formatSpokenCard({
+        label,
+        who: ["Sam"],
+        card: cardFromScoreboard({
+          slug: label,
+          label,
+          journeyPhase: 1,
+          gate: "hold",
+          scoreboard: {
+            initiatives: [
+              row({
+                id: `${label}-slash`,
+                kind: "customer_check",
+                premise,
+                last,
+                next: "Ask again",
+              }),
+            ],
+          },
+        }),
+      });
+    }
+
+    const safeFast = cardText("alpha", "SAFE/FAST");
+    assert.match(safeFast, /investment\/advisor agreement/);
+    assert.equal(founderCardBannedHit(safeFast), null);
+
+    const mvp = cardText("bravo", "/MVP");
+    assert.match(mvp, /\/a first version/);
+    assert.equal(founderCardBannedHit(mvp), null);
+
+    const sku = cardText("charlie", "a/b/SKU");
+    assert.match(sku, /a\/b\/product/);
+    assert.equal(founderCardBannedHit(sku), null);
+
+    const example = cardText("alpha", "e.g./SKU");
+    assert.match(example, /e\.g\.\/product/);
+    assert.equal(founderCardBannedHit(example), null);
+
+    const compound = cardText("bravo", "Noted", "plants pay for conversion/tenancy");
+    assert.match(compound, /conversion\/tenancy/);
+    assert.equal(founderCardBannedHit(compound), null);
   });
 
   it("does not print the internal label default", () => {
@@ -1490,7 +1536,7 @@ describe("canonical board card", () => {
     assert.equal(applyPlainWords("P0"), "");
     assert.equal(applyPlainWords("pre-tenancy"), "pre-the paid plan");
     assert.equal(applyPlainWords("file.SKU"), "file.product");
-    assert.equal(applyPlainWords("/tenancy left"), "/tenancy left");
+    assert.equal(applyPlainWords("/tenancy left"), "/the paid plan left");
     assert.equal(founderCardBannedHit("/tenancy left"), "tenancy");
   });
 

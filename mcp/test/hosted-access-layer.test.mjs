@@ -24,6 +24,7 @@ import {
   setIdentityStoreForTests,
 } from "../dist/identity.js";
 import { MemoryInviteStore, setInviteStoreForTests } from "../dist/invite.js";
+import { syntheticAccessToken } from "../dist/journey-auth.js";
 import { fixtureJourneyStore, setJourneyStoreForTests } from "../dist/journey.js";
 
 const IVELIN_TOKEN = "bos_ivelin_fixture_token_xx";
@@ -158,14 +159,64 @@ describe("hosted access layer (one login, many companies)", () => {
     const putProps = put.inputSchema?.properties ?? {};
     assert.match(String(putProps.founder?.description ?? ""), /Company founder name/);
     assert.match(String(putProps.scoreboard?.description ?? ""), /scoreboard\.buyer/);
-    const initiativeProps = putProps.initiatives?.items?.properties ?? {};
-    assert.match(String(initiativeProps.start?.description ?? ""), /Past-bet start/);
-    assert.match(String(initiativeProps.end?.description ?? ""), /Past-bet end/);
     const watch = listed.result.tools.find((t) => t.name === "enable_board_watch");
     assert.ok(watch);
     assert.equal(watch.description, TOOL_ENABLE_BOARD_WATCH);
     assert.match(watch.description, /Turn on board updates for Bill/);
     assert.doesNotMatch(watch.description, /webhook|subscribe_board|https URL/i);
+  });
+
+  it("put_journey then get_journey keeps past-bet start and end", async () => {
+    setIdentityStoreForTests(ivelinMemoryFixture(IVELIN_TOKEN));
+    setJourneyStoreForTests(
+      new HostedMembershipJourneyStore((actor) =>
+        actor.email === IVELIN_SEED_EMAIL ? [...IVELIN_SEED_LABELS] : [],
+      ),
+    );
+    const token = syntheticAccessToken({
+      email: IVELIN_SEED_EMAIL,
+      sub: "auth-ivelin",
+      extra: { exp: Math.floor(Date.now() / 1000) + 3600 },
+    });
+    const wrote = parseTool(
+      await rpc(
+        "tools/call",
+        {
+          name: "put_journey",
+          arguments: {
+            company: "alpha",
+            why: "record when the past bet ran",
+            founderYes: true,
+            initiatives: [
+              {
+                id: "alpha-past",
+                kind: "customer_check",
+                premise: "an old booth",
+                measure: "someone pays",
+                killLine: "stop if nobody pays",
+                status: "closed",
+                last: "the booth made no sales",
+                next: "Ask again",
+                outcome: "killed",
+                impact: "learning",
+                evidence: "observed",
+                start: "2026-01-04",
+                end: "2026-02-11",
+              },
+            ],
+          },
+        },
+        20,
+        token,
+      ),
+    );
+    assert.equal(wrote.ok, true, JSON.stringify(wrote));
+    const read = parseTool(
+      await rpc("tools/call", { name: "get_journey", arguments: { company: "alpha" } }, 21, token),
+    );
+    const past = read.ideas[0].scoreboard.initiatives.find((row) => row.id === "alpha-past");
+    assert.equal(past.start, "2026-01-04");
+    assert.equal(past.end, "2026-02-11");
   });
 
   it("whoami and list_companies return companies for the seed user", async () => {
