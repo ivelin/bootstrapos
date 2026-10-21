@@ -14,4 +14,4 @@ Bootstrap OS is harness-agnostic. These are the named agent environments we targ
 
 Any assistant that can read a URL or call MCP with a Bearer is still first-class. Named rows are distribution targets, not a required stack.
 
-Free GitHub docs: https://pirin.ai/bootstrap-os and this repo. The invite-only connector is the way onto your bet board. Invite + accept: [`mcp/docs/INVITE.md`](../mcp/docs/INVITE.md).
+Free GitHub docs are in this repo. https://pirin.ai/bootstrap-os is the install page. The invite-only connector is the way onto your bet board. Invite + accept: [`mcp/docs/INVITE.md`](../mcp/docs/INVITE.md).
