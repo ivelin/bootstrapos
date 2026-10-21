@@ -1133,8 +1133,17 @@ describe("canonical board card", () => {
     assert.equal(founderCardBannedHit("advisor agreement offered 7 May (fi.co/FAST)"), "FAST");
     assert.equal(founderCardBannedHit("[sign the SAFE](https://x.test/ok)"), "SAFE");
     assert.equal(founderCardBannedHit("send the FAST draft"), "FAST");
+    assert.equal(founderCardBannedHit("https://SAFE"), "SAFE");
+    assert.equal(founderCardBannedHit("https://P0"), "P0");
+    assert.equal(founderCardBannedHit("https://SAFE.NDA"), "SAFE");
+    assert.equal(founderCardBannedHit("http://x.test/SAFE"), "SAFE");
+    assert.equal(founderCardBannedHit("see `SAFE`"), null);
+    assert.equal(founderCardBannedHit("see ```\nSAFE\n```"), null);
+    assert.equal(founderCardBannedHit("see `SAFE` then send the FAST draft"), "FAST");
     assert.equal(founderCardBannedHit("advisor agreement offered 7 May (https://fi.co/fast)"), null);
     assert.equal(founderCardBannedHit("see https://x.test/SAFE?q=NDA"), null);
+    assert.equal(applyPlainWords("the P0.fix/it now"), "the fix/it now");
+    assert.notEqual(applyPlainWords("the P0.fix/it now"), "the.fix/it now");
     const spoken = formatSpokenCard({
       label: "alpha",
       who: ["Sam"],
@@ -1162,6 +1171,7 @@ describe("canonical board card", () => {
     assert.match(spoken, /https:\/\/x\.test\/SAFE\?q=NDA/);
     assert.doesNotMatch(spoken, /confidentiality/);
     assert.doesNotMatch(spoken, /investment/);
+    assert.equal(founderCardBannedHit(spoken), null);
     const seen = applySpokenPayloadLead({
       ok: true,
       company: { slug: "alpha", label: "alpha", founder: "Sam" },
