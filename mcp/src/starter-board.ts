@@ -30,7 +30,10 @@ export class MemoryStarterStore implements StarterBoardStore {
   private readonly byEmail = new Map<string, StarterBoardRecord>();
   private readonly inflight = new Map<string, Promise<StarterCreateResult>>();
 
-  constructor(private readonly onCreated?: (email: string, slug: string) => void) {}
+  constructor(
+    private readonly onCreated?: (email: string, slug: string) => void,
+    private readonly nextSlug: () => string = randomStarterSlug,
+  ) {}
 
   async create(email: string): Promise<StarterCreateResult> {
     const owner = email.trim().toLowerCase();
@@ -51,9 +54,9 @@ export class MemoryStarterStore implements StarterBoardStore {
     const existing = this.byEmail.get(owner);
     if (existing) return { ok: true, created: false, board: existing };
     const used = new Set([...this.byEmail.values()].map((board) => board.slug));
-    let slug = randomStarterSlug();
+    let slug = this.nextSlug();
     for (let attempt = 0; attempt < 8 && used.has(slug); attempt += 1) {
-      slug = randomStarterSlug();
+      slug = this.nextSlug();
     }
     if (used.has(slug)) return { ok: false, error: "starter_cap" };
     const board: StarterBoardRecord = {

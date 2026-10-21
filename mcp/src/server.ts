@@ -168,8 +168,7 @@ function membershipPayload(
   };
 }
 
-async function starterRefusesLiveTools(slug: string | undefined, accessToken?: string): Promise<boolean> {
-  if (!slug) return false;
+async function starterRefusesLiveTools(slug: string, accessToken?: string): Promise<boolean> {
   const starter = resolveStarterStore(accessToken);
   if (!starter) return false;
   return starter.isSandbox(slug);

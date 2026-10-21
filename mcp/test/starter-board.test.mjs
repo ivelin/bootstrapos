@@ -277,6 +277,25 @@ describe("starter bet board (memory, never prod)", { concurrency: false }, () =>
     assert.equal(adminCompany.error, "ask_admin");
   });
 
+  it("retries a colliding slug and stops when every try collides", async () => {
+    let n = 0;
+    const store = new MemoryStarterStore(undefined, () => {
+      n += 1;
+      return n < 3 ? "sbaaaaaaaa" : "sbbbbbbbbb";
+    });
+    const first = await store.create("one@example.test");
+    const second = await store.create("two@example.test");
+    assert.equal(first.ok && first.board.slug, "sbaaaaaaaa");
+    assert.equal(second.ok && second.board.slug, "sbbbbbbbbb");
+
+    const stuck = new MemoryStarterStore(undefined, () => "sbcccccccc");
+    const held = await stuck.create("three@example.test");
+    assert.equal(held.ok, true);
+    const capped = await stuck.create("four@example.test");
+    assert.deepEqual(capped, { ok: false, error: "starter_cap" });
+    assert.equal(stuck.count(), 1);
+  });
+
   it("refuses a second memory row and a blank email", async () => {
     const store = new MemoryStarterStore();
     const created = await store.create("Founder@Example.TEST");
