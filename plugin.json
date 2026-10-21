@@ -1,0 +1,15 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "bootstrap-os",
+  "version": "0.1.1",
+  "description": "Bootstrap OS hosted connector from Pirin.ai. An invite-only company board for solo founders in the 0-to-1 journey. Sign in on pirin.ai.",
+  "author": {
+    "name": "Pirin.ai",
+    "email": "ivelin@pirin.ai",
+    "url": "https://pirin.ai"
+  },
+  "homepage": "https://pirin.ai/bootstrap-os",
+  "repository": "https://github.com/ivelin/bootstrapos",
+  "license": "Apache-2.0",
+  "keywords": ["bootstrap-os", "company-os", "founders", "mcp"]
+}

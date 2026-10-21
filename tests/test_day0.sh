@@ -628,7 +628,11 @@ assert "The hosted connector uses sign-in" in readme
 listing = pathlib.Path("mcp/docs/MARKETPLACE.md").read_text()
 assert "planned" in listing.lower()
 assert "not listed yet" in listing.lower()
-assert "shown to every signed-in member" in listing
+assert "shown to every signed-in account" in listing
+assert "HTTP 200" in listing
+assert "`status` 403" in listing
+assert "HTTP 403" not in listing
+assert "https://mcp.bootstrap.pirin.ai/mcp" in listing
 assert "super admin" in listing
 assert "ask_admin" in listing
 assert "plain member account" in listing
