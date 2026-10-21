@@ -274,4 +274,59 @@ describe("PGlite starter bet board (isolated, never prod)", { concurrency: false
     ).rows[0].n;
     assert.equal(left, 0);
   });
+
+  it("an authenticated founder can subscribe to a normal company and cannot subscribe to a starter board", async () => {
+    await db.query("SELECT set_config('app.force_starter_collision', '', false)");
+    await db.query("SELECT set_config('app.force_starter_race', '', false)");
+    await db.exec("DROP TRIGGER IF EXISTS starter_test_collide ON bootstrap_os.companies");
+    await db.exec("DROP TRIGGER IF EXISTS starter_test_race ON bootstrap_os.companies");
+    const opened = (
+      await asEmail("subscriber@example.test", "SELECT public.bootstrap_os_create_starter_board() AS body")
+    )[0].body;
+    assert.equal(opened.ok, true);
+    const starterId = (
+      await db.query("SELECT id FROM bootstrap_os.companies WHERE slug = $1", [opened.slug])
+    ).rows[0].id;
+    const alpha = (
+      await db.query(
+        "INSERT INTO bootstrap_os.companies (slug, label) VALUES ('alpha', 'Alpha') RETURNING id",
+      )
+    ).rows[0].id;
+    await db.exec(`
+      GRANT USAGE ON SCHEMA bootstrap_os TO authenticated;
+      GRANT INSERT ON TABLE bootstrap_os.board_subscribers TO authenticated;
+    `);
+    try {
+      await db.query("SET ROLE authenticated");
+      await db.query("INSERT INTO bootstrap_os.board_subscribers (company_id) VALUES ($1)", [alpha]);
+      await assert.rejects(
+        db.query("INSERT INTO bootstrap_os.board_subscribers (company_id) VALUES ($1)", [starterId]),
+        /cannot send webhooks/,
+      );
+    } finally {
+      await db.query("RESET ROLE");
+    }
+    const defs = (
+      await db.query(`
+        SELECT p.proname, p.prosecdef,
+               COALESCE(p.proconfig::text, '') AS config,
+               has_function_privilege('authenticated', p.oid, 'execute') AS executable
+        FROM pg_proc p
+        JOIN pg_namespace n ON n.oid = p.pronamespace
+        WHERE p.proname IN (
+          'starter_boards_locked',
+          'starter_acl_owner_only',
+          'starter_block_webhook',
+          'starter_block_subscriber',
+          'bootstrap_mcp_invites_block_starter'
+        )
+      `)
+    ).rows;
+    assert.equal(defs.length, 5);
+    for (const row of defs) {
+      assert.equal(row.prosecdef, true, row.proname);
+      assert.match(row.config, /search_path/, row.proname);
+      assert.equal(row.executable, false, row.proname);
+    }
+  });
 });

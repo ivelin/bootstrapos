@@ -19,6 +19,7 @@ REVOKE ALL ON TABLE bootstrap_os.starter_boards FROM PUBLIC, anon, authenticated
 CREATE OR REPLACE FUNCTION bootstrap_os.starter_boards_locked()
 RETURNS trigger
 LANGUAGE plpgsql
+SECURITY DEFINER
 SET search_path = bootstrap_os, public
 AS $$
 BEGIN
@@ -36,6 +37,7 @@ REVOKE ALL ON FUNCTION bootstrap_os.starter_boards_locked() FROM PUBLIC, anon, a
 CREATE OR REPLACE FUNCTION bootstrap_os.starter_acl_owner_only()
 RETURNS trigger
 LANGUAGE plpgsql
+SECURITY DEFINER
 SET search_path = bootstrap_os, public
 AS $$
 DECLARE
@@ -66,6 +68,7 @@ REVOKE ALL ON FUNCTION bootstrap_os.starter_acl_owner_only() FROM PUBLIC, anon, 
 CREATE OR REPLACE FUNCTION bootstrap_os.starter_block_webhook()
 RETURNS trigger
 LANGUAGE plpgsql
+SECURITY DEFINER
 SET search_path = bootstrap_os, public
 AS $$
 BEGIN
@@ -88,6 +91,7 @@ REVOKE ALL ON FUNCTION bootstrap_os.starter_block_webhook() FROM PUBLIC, anon, a
 CREATE OR REPLACE FUNCTION bootstrap_os.starter_block_subscriber()
 RETURNS trigger
 LANGUAGE plpgsql
+SECURITY DEFINER
 SET search_path = bootstrap_os, public
 AS $$
 BEGIN
@@ -264,6 +268,7 @@ GRANT EXECUTE ON FUNCTION public.bootstrap_os_create_starter_board() TO authenti
 CREATE OR REPLACE FUNCTION public.bootstrap_mcp_invites_block_starter()
 RETURNS trigger
 LANGUAGE plpgsql
+SECURITY DEFINER
 SET search_path = public, bootstrap_os
 AS $$
 BEGIN
