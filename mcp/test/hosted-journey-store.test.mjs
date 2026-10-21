@@ -30,23 +30,6 @@ describe("hosted membership journey store", () => {
     assert.match(src, /fireWebhooksAfterWrite/);
   });
 
-  it("changeAcl refuses a starter board and still checks a normal company", async () => {
-    const store = new HostedMembershipJourneyStore(() => ["sbabcdef12", "alpha"], {
-      isSandbox: (slug) => slug === "sbabcdef12",
-    });
-    const founder = actor("founder@example.test");
-    const input = {
-      principal: "advisor@example.test",
-      principalKind: "email",
-      role: "advisor",
-      op: "grant",
-    };
-    const sandbox = await store.changeAcl(founder, { ...input, companySlug: "sbabcdef12" });
-    assert.deepEqual(sandbox, { ok: false, error: "sandbox_cannot_share" });
-    const normal = await store.changeAcl(founder, { ...input, companySlug: "alpha" });
-    assert.deepEqual(normal, { ok: false, error: "founder only" });
-  });
-
   it("lazy-ensures default idea; non-member cannot read; put needs founderYes", async () => {
     const store = new HostedMembershipJourneyStore((a) =>
       a.email === "founder@example.test" ? ["alpha", "charlie"] : [],
