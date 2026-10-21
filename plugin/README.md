@@ -1,8 +1,8 @@
 # Bootstrap OS plugin (preview 0.1.1)
 
-Preview package. Skills hyperlink the published OS. **Not** mentee-ready hosted boards. See [mcp/docs/MARKETPLACE.md](../mcp/docs/MARKETPLACE.md). **Not** a second front door.
+Preview package. Skills hyperlink the published OS. **Not** mentee-ready hosted boards. See [mcp/docs/MARKETPLACE.md](../mcp/docs/MARKETPLACE.md). **Not** the way onto the bet board.
 
-Path 1 stays default: point an AI at https://github.com/ivelin/bootstrap
+Free GitHub docs are the alternative. Point an AI at https://github.com/ivelin/bootstrap
 
 Coverage (what CI locks vs what it does not): [`COVERAGE.md`](COVERAGE.md). Visitor matrix is only for surfaces a mentee agent is told to see. Free Path 1 is GitHub + install-os + local. The hosted connector uses sign-in. Pin `https://mcp.bootstrap.pirin.ai/mcp`. Contract: [`mcp/docs/HOSTED_IDENTITY.md`](../mcp/docs/HOSTED_IDENTITY.md). PR #17 public (no Vercel SSO) preview for the 401 / pirin.ai login loop: `https://bootstrap-os-mcp-git-cursor-ho-16df4d-ivelins-projects-9f9b7132.vercel.app/mcp`.
 

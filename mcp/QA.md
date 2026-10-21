@@ -68,7 +68,7 @@ Ready-for-human-eyes for invite links: this host never sends. pirin-ai productio
 - **State:** self-host disk under `BOOTSTRAP_DATA_ROOT` (default `~/.bootstrap-os`). Pirin boards are not that directory.
 - **Failure modes:** missing state file, unknown companyId, template demo mode when no instance — tools return structured errors, not silent success.
 - **Secrets:** do not put API keys in company state; traces may be shared carefully (no PII). Identity tests use PGlite. Supabase env is live on `bootstrap-os-mcp` — do not print it. Never service role.
-- **Rollback:** Vercel → Deployments → Redeploy / previous production on `bootstrap-os-mcp`. Path 1 (point an AI) remains the default forever; disable MCP client config to fall back. Hosted read adapter is preview only. Logs: Vercel project logs. Liveness: `GET /health`.
+- **Rollback:** Vercel → Deployments → Redeploy / previous production on `bootstrap-os-mcp`. Free GitHub docs remain the alternative. Disable the MCP client config to fall back to them. Hosted read adapter is preview only. Logs: Vercel project logs. Liveness: `GET /health`.
 - **Runbooks:** [`docs/COLD_PATH.md`](docs/COLD_PATH.md), [`docs/CLIENT_CONNECT.md`](docs/CLIENT_CONNECT.md)
 - **E2E / draft prod synthetic SRE:** [`docs/E2E_ROLEPLAY.md`](docs/E2E_ROLEPLAY.md) (say once). Not PR live-probe.
 

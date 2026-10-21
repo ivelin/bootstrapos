@@ -4,11 +4,11 @@
 
 **What this is / is not:** see root [`ROADMAP.md` §0](../ROADMAP.md) — MCP is adapter furniture to the control plane, not a second OS, harness, or memory product.
 
-**Markdown is the constitution.** Front door is still **path 1**: point an AI at https://github.com/ivelin/bootstrapos — no install. Path 2 is optional instance files / CLI + `.grok/workflows`. **This package is the OSS self-host kit** (stdio on your disk via `initCompany()`, or deploy `mcp/` on your own Vercel + Supabase). It is not the Pirin-supported mentee source of record. The Pirin write plane is the hosted pin. Several ideas are allowed. Each company is its own board. Rank and kill per board.
+**Markdown is the constitution.** The invite-only connector is the way onto your bet board. Free GitHub docs are the alternative. Point an AI at https://github.com/ivelin/bootstrapos. No install. Path 2 is optional instance files, the CLI, and `.grok/workflows`. **This package is the OSS self-host kit** (stdio on your disk via `initCompany()`, or deploy `mcp/` on your own Vercel + Supabase). It is not the Pirin-supported mentee source of record. The Pirin write plane is the hosted pin. Several ideas are allowed. Each company is its own board. Rank and kill per board.
 
 | Path | Who it is for | Dependency |
 |------|----------------|------------|
-| **1. Point an AI** | Everyone (default). Constitution. | None |
+| **1. Point an AI** | Free GitHub docs. Constitution. | None |
 | **2. Optional instance / CLI** | Notes in your repo. Not the source of record. | `./scripts/install-instance.sh` |
 | **Self-host kit (this package)** | Your own disk or your own Vercel + Supabase | Node 20+, this package |
 | **Hosted MCP** | Pirin-supported mentees | Pin `https://mcp.bootstrap.pirin.ai/mcp` (handshake 401). Super admin calls `create_company`, then `create_idea`. Free docs = GitHub + install-os + local. The hosted connector uses sign-in. Git-branch previews on `*.vercel.app` (same 401 as collab, not a silent 200, not mentee-ready boards). Contract: [`docs/HOSTED_IDENTITY.md`](docs/HOSTED_IDENTITY.md). See [mcp/docs/MARKETPLACE.md](docs/MARKETPLACE.md). Not pirin.ai. |
@@ -164,7 +164,7 @@ Same public read tool names as today (`bootstrap_os_info`, docs, house-rule pins
 
 Optional gated tools on this host only: `bootstrap_whoami` (includes `role`), `bootstrap_list_companies` (alias `bootstrap_list_company_labels`), `bootstrap_use_company`, `invite_member`, `accept_invite`, and `create_company`. Unauthenticated calls return HTTP 401 + `WWW-Authenticate` pointing at this MCP origin RFC 9728 (`authorization_servers` = pirin.ai login). Login UI is `/bootstrap-os/login` (Web Builder), not this repo. Accept path is in-chat; outsider signup is `?invite=` — [`docs/INVITE.md`](docs/INVITE.md). A super admin calls `create_company`, then `create_idea`. Contract: [`docs/HOSTED_IDENTITY.md`](docs/HOSTED_IDENTITY.md).
 
-The hosted connector uses sign-in. The pin is `https://mcp.bootstrap.pirin.ai/mcp`. Git-branch public preview is `*.vercel.app` (undeclared deploy-only, not a pin). Project `bootstrap-os-mcp` under `ivelins-projects-9f9b7132`. Not mentee-ready boards. See [mcp/docs/MARKETPLACE.md](docs/MARKETPLACE.md). Not pirin.ai. Path 1 stays the front door.
+The hosted connector uses sign-in. The pin is `https://mcp.bootstrap.pirin.ai/mcp`. Git-branch public preview is `*.vercel.app` (undeclared deploy-only, not a pin). Project `bootstrap-os-mcp` under `ivelins-projects-9f9b7132`. Not mentee-ready boards. See [mcp/docs/MARKETPLACE.md](docs/MARKETPLACE.md). Not pirin.ai. Free GitHub docs are the alternative.
 
 ```bash
 cd mcp
@@ -205,7 +205,7 @@ Never deploy this adapter to `v0-pirin-ai-founder-studio` or any pirin.ai host.
 
 ## Non-goals
 
-- Replacing the open-source markdown pack or becoming the front door
+- Replacing the open-source markdown pack or becoming the way onto the bet board
 - Auto-advancing journey phases
 - Blended multi-idea scoreboard
 - Writing into `company-os/` template files

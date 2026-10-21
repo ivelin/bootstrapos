@@ -131,7 +131,7 @@ function activeScopeNote() {
 
 function adoptionOrder(surface: McpSurface) {
   const shared = {
-    path1: `Point an AI at ${PUBLISHED_REPO} — constitution, no install. Default front door.`,
+    path1: `Point an AI at ${PUBLISHED_REPO}. Constitution, no install. Free GitHub docs are the alternative.`,
     path2: "Optional notes in your repo (./scripts/install-instance.sh). Not the source of record.",
     path4Hosted: PATH4_HONESTY,
   };
@@ -204,7 +204,7 @@ function registerReadTools(server: McpServer, surface: McpSurface, hosted?: Host
         pluginPreview: {
           path: "plugin/",
           version: "0.1.1",
-          note: "Preview Agent Plugin 0.1.1. Skills hyperlink the published OS. See mcp/docs/MARKETPLACE.md. Not mentee-ready hosted boards. Path 1 stays the front door.",
+          note: "Preview Agent Plugin 0.1.1. Skills hyperlink the published OS. See mcp/docs/MARKETPLACE.md. Not mentee-ready hosted boards. Free GitHub docs are the alternative.",
         },
         commit: process.env.VERCEL_GIT_COMMIT_SHA?.trim() || null,
       };

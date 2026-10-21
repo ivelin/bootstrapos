@@ -276,7 +276,7 @@ describe("merge-gate visitor matrix (CoS smell-test)", () => {
     assert.equal(path1MayCiteEfficiencyNumbers(), false);
   });
 
-  it("After First Hour: query MCP; refuse upload to Ivelin's GitHub; Path 1 stays the front door", () => {
+  it("After First Hour: query MCP; refuse upload to Ivelin's GitHub; Free GitHub docs are the alternative", () => {
     const firstHourOs = fs.readFileSync(
       path.join(REPO_ROOT, "company-os", "first-hour.md"),
       "utf8",

@@ -49,4 +49,4 @@ If the note includes company names, customers, or anything else private, email [
 
 A public GitHub issue is fine only when nothing private is in it: https://github.com/ivelin/bootstrap
 
-After you are on the hosted board, you can also file `submit_feedback` once you say yes in the chat. The mailbox is still the front door. Details: [Feedback](install-bill.md#4-feedback).
+After you are on the hosted board, you can also file `submit_feedback` once you say yes in the chat. The mailbox is still where that note goes. Details: [Feedback](install-bill.md#4-feedback).

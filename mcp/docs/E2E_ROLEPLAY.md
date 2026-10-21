@@ -39,7 +39,7 @@ Do **not** run these from a PR cloud agent. Optional maintainer probe of **read-
 | Whoami invited | Bearer Cos already has (seed founder fixture) | `authenticated: true`, companies include `alpha`. |
 | Whoami empty | No `Authorization` | HTTP **401** (same challenge) |
 | Deploy Host | `https://bootstrap-os-mcp.vercel.app` | Same handshake **401**. Not a Path 1 pin. Not a silent 200. |
-| Rollback | Vercel project `bootstrap-os-mcp` → Deployments → Redeploy / previous production | Path 1 (GitHub) stays the front door |
+| Rollback | Vercel project `bootstrap-os-mcp` → Deployments → Redeploy / previous production | Free GitHub docs stay the alternative |
 
 `mcp/test/preview-live.mjs` is the optional handshake/`/health` probe. It is **not** in `npm run ci`. It must **not** call invited whoami, mutate prod, or apply migrations.
 

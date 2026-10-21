@@ -57,9 +57,9 @@ This repo is **template only**. Filled company state never lives here.
 
 ## How to use this (pick one)
 
-Compatible paths. Start at **1**. Later rungs are opt-in. Several ideas are allowed; each stays *your* company on its own board.
+The invite-only connector is the way onto your bet board. Free GitHub docs are the alternative. Several ideas are allowed. Each stays *your* company on its own board.
 
-### 1. Point an AI at this pack (default)
+### 1. Point an AI at this pack
 
 No copy, no script, no CLI, no MCP. Use what applies to *your* startup immediately.
 
@@ -79,7 +79,7 @@ Hands-on page: [Install Bootstrap OS](https://pirin.ai/bootstrap-os).
 
 > **Deprecated (October 2, 2026).** The laptop kit and `~/.bootstrap-os` get no more fixes. [Move off a local install](docs/migrate-from-local.md).
 
-Optional. Script or hand copy — [Install](#install-in-your-company). Optional Grok Build workflows live in [`.grok/workflows/`](.grok/workflows/) (`company-operating-loop`, `user-research`, `ready-for-human-eyes`) if present — same rung, not the only front door. One idea per repo is fine; several ideas each get their own board.
+Optional. Use the script or copy by hand. [Install](#install-in-your-company). Optional Grok Build workflows live in [`.grok/workflows/`](.grok/workflows/) (`company-operating-loop`, `user-research`, `ready-for-human-eyes`) if present. One idea per repo is fine. Several ideas each get their own board.
 
 ### 3. Self-host kit (optional)
 
@@ -103,9 +103,9 @@ This bet board has no bet yet. Name the first bet, who it is for, and what you s
 
 Open your private starter bet board. Next tool is `create_starter_board`. Name the first bet on this bet board. Next tool is `create_idea`.
 
-Pin `https://mcp.bootstrap.pirin.ai/mcp`. A super admin calls `create_company`, then `create_idea`. A first-time hosted install names a real super_admin email contact; the operator seeds that row by hand, outside git, after the roles migration, because `bootstrap_os_grant_super_admin` cannot run until one super_admin exists. That function is SQL, not a connector tool. The committed fixture is an illustrative member only, not a super_admin. Real contact addresses are never committed. Procedure: [`mcp/docs/HOSTED_IDENTITY.md`](mcp/docs/HOSTED_IDENTITY.md#first-super-admin-hosted-install). Login is `/bootstrap-os/login` on pirin.ai (Web Builder; not this repo). The pin 401s the handshake. Gated tools return 401 + `WWW-Authenticate` to this MCP origin RFC 9728 (`authorization_servers` = pirin.ai login). Free docs are GitHub + [install-os](https://pirin.ai/bootstrap-os) + local. The hosted connector uses sign-in. See [mcp/docs/MARKETPLACE.md](mcp/docs/MARKETPLACE.md). Path 1 stays the front door. Path 1 markdown stays the constitution. Contract: [`mcp/docs/HOSTED_IDENTITY.md`](mcp/docs/HOSTED_IDENTITY.md).
+Pin `https://mcp.bootstrap.pirin.ai/mcp`. A super admin calls `create_company`, then `create_idea`. A first-time hosted install names a real super_admin email contact; the operator seeds that row by hand, outside git, after the roles migration, because `bootstrap_os_grant_super_admin` cannot run until one super_admin exists. That function is SQL, not a connector tool. The committed fixture is an illustrative member only, not a super_admin. Real contact addresses are never committed. Procedure: [`mcp/docs/HOSTED_IDENTITY.md`](mcp/docs/HOSTED_IDENTITY.md#first-super-admin-hosted-install). Login is `/bootstrap-os/login` on pirin.ai (Web Builder; not this repo). The pin 401s the handshake. Gated tools return 401 + `WWW-Authenticate` to this MCP origin RFC 9728 (`authorization_servers` = pirin.ai login). Free docs are GitHub + [install-os](https://pirin.ai/bootstrap-os) + local. The hosted connector uses sign-in. See [mcp/docs/MARKETPLACE.md](mcp/docs/MARKETPLACE.md). Free GitHub docs are the alternative. Path 1 markdown stays the constitution. Contract: [`mcp/docs/HOSTED_IDENTITY.md`](mcp/docs/HOSTED_IDENTITY.md).
 
-A **preview** plugin lives in [`plugin/`](plugin/): thin skills that hyperlink this repo. See [mcp/docs/MARKETPLACE.md](mcp/docs/MARKETPLACE.md). It is not a second front door. The Vercel production Host is the same 401, not a silent 200 alias. Git-branch previews are not mentee-ready boards.
+A **preview** plugin lives in [`plugin/`](plugin/): thin skills that hyperlink this repo. See [mcp/docs/MARKETPLACE.md](mcp/docs/MARKETPLACE.md). It is not the way onto the bet board. The Vercel production Host is the same 401, not a silent 200 alias. Git-branch previews are not mentee-ready boards.
 
 There is a **preview** git-branch read adapter on `*.vercel.app` (not mentee-ready boards, not pirin.ai, not a Path 1 pin). See [mcp/docs/MARKETPLACE.md](mcp/docs/MARKETPLACE.md). `plugin/mcp.json` pins the hosted connector; `${BOOTSTRAP_MCP_URL}` can override. No day-one SaaS boards. Do not use `mcp.pirin.ai` (dead).
 
@@ -123,7 +123,7 @@ Optional (path 2). From this repo:
 ./scripts/install-instance.sh /path/to/your-company
 ```
 
-That copies `templates/` into the target and merges [`company-os/ai-instructions.md`](company-os/ai-instructions.md) into the instance `AGENTS.md`. If present, optional Grok Build workflows also copy to `.grok/workflows/`. You can run them with `grok` by name without making install the only front door.
+That copies `templates/` into the target and merges [`company-os/ai-instructions.md`](company-os/ai-instructions.md) into the instance `AGENTS.md`. If present, optional Grok Build workflows also copy to `.grok/workflows/`. You can run them with `grok` by name. Install stays optional.
 
 Then do **Day 0 (~60 minutes)**: [`company-os/first-hour.md`](company-os/first-hour.md) (also copied to `docs/company-os/first-hour.md` in the target). Fill thesis, ≥3 ICP scorecards, first “Where are we?” — *your* company only. The two-minute figure is the snapshot *read*, not this hour.
 
