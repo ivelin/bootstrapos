@@ -137,7 +137,10 @@ function rewriteTerms(input: string): string {
         consumed = consumed.replace(new RegExp(`\\b${article[1]}\\s+$`, "i"), "");
       }
       let end = index + hit[0].length;
-      if (!replacement && /[.,;:!?]/.test(text[end] ?? "")) end += 1;
+      if (!replacement && /^[.,;:!?](?=\w)/.test(text.slice(end))) end += 1;
+      if (!replacement && /https:\/\/$/.test(consumed) && !/^[A-Za-z0-9-]/.test(text.slice(end))) {
+        consumed = consumed.replace(/https:\/\/$/, "");
+      }
       out += consumed + replacement;
       last = end;
     }
