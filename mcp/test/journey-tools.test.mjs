@@ -1098,4 +1098,114 @@ describe("journey views + tools (memory store)", () => {
     const afterClear = await store.getJourney(founder, { companySlug: "alpha" });
     assert.equal(afterClear.company.founder, undefined);
   });
+
+  it("rejects a non-text bottleneck and keeps omitted board rows", async () => {
+    const store = new MemoryJourneyStore(
+      [{ id: "co-alpha", slug: "alpha", label: "alpha" }],
+      [
+        {
+          companyId: "co-alpha",
+          principal: "founder@example.test",
+          principalKind: "email",
+          role: "founder",
+          displayName: "Ada Admin",
+        },
+      ],
+      [
+        {
+          id: "idea-alpha",
+          companyId: "co-alpha",
+          slug: "default",
+          name: "alpha",
+          journeyPhase: 1,
+          loopStage: 1,
+          currentGate: "hold",
+          scoreboard: defaultScoreboard(),
+        },
+        {
+          id: "idea-bravo",
+          companyId: "co-alpha",
+          slug: "bravo",
+          name: "bravo",
+          journeyPhase: 1,
+          loopStage: 1,
+          currentGate: "hold",
+          scoreboard: defaultScoreboard(),
+        },
+      ],
+      [],
+      [],
+    );
+    const founder = bearer("founder@example.test");
+    const bad = await store.putJourney(founder, {
+      companySlug: "alpha",
+      ideaSlug: "default",
+      why: "a clock is not the bottleneck",
+      founderYes: true,
+      scoreboard: { schema_version: 1, constraint_this_week: 4 },
+    });
+    assert.equal(bad.ok, false);
+    const seeded = await store.putJourney(founder, {
+      companySlug: "alpha",
+      ideaSlug: "default",
+      why: "seed the board rows",
+      founderYes: true,
+      scoreboard: {
+        schema_version: 1,
+        portfolioScore: { impact: 2, evidence: 2, leverage: 2, why: "two live bets" },
+        supporting: [
+          {
+            role: "advisor",
+            state: "promise",
+            clock: "—",
+            nextAction: "send the note",
+            lastObservedFact: "office hours tip recorded",
+          },
+        ],
+        engagements: [{ account: "alpha cafe", kind: "quote", state: "promise" }],
+      },
+    });
+    assert.equal(seeded.ok, true, seeded.error);
+    assert.equal(seeded.idea.scoreboard.portfolioScore.impact, 2);
+    assert.equal(seeded.idea.scoreboard.supporting[0].role, "advisor");
+    assert.equal(seeded.idea.scoreboard.engagements[0].account, "alpha cafe");
+    const dated = await store.putJourney(founder, {
+      companySlug: "alpha",
+      ideaSlug: "default",
+      why: "add the past bet without repeating the other rows",
+      founderYes: true,
+      scoreboard: {
+        schema_version: 1,
+        initiatives: [
+          {
+            id: "alpha-live",
+            kind: "customer_check",
+            premise: "a weekly shop report",
+            measure: "someone pays",
+            killLine: "stop if nobody pays",
+            status: "active",
+            last: "Noted",
+            next: "Ask again",
+            outcome: "none",
+            impact: "learning",
+            evidence: "stated",
+          },
+        ],
+      },
+    });
+    assert.equal(dated.ok, true, dated.error);
+    assert.equal(dated.idea.scoreboard.portfolioScore.impact, 2);
+    assert.equal(dated.idea.scoreboard.initiatives[0].id, "alpha-live");
+    const kept = await store.putJourney(founder, {
+      companySlug: "alpha",
+      ideaSlug: "default",
+      why: "leave the stored rows",
+      founderYes: true,
+      scoreboard: { schema_version: 1, buyer: "cafe owners" },
+    });
+    assert.equal(kept.ok, true, kept.error);
+    assert.equal(kept.idea.scoreboard.buyer, "cafe owners");
+    assert.equal(kept.idea.scoreboard.portfolioScore.impact, 2);
+    assert.equal(kept.idea.scoreboard.initiatives[0].id, "alpha-live");
+  });
 });
