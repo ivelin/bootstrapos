@@ -66,7 +66,9 @@ describe("invite mail contract (never prod Resend)", { concurrency: false }, () 
     assert.match(mail.text, /Invited by founder@example\.test/);
     assert.match(mail.text, /Sign in or create your account as member@example\.test/);
     const fixturePath = path.join(__dirname, "fixtures", "invite-base-camp.txt");
-    const fixture = fs.readFileSync(fixturePath, "utf8").replace(/\n$/, "");
+    const fixture = fs.readFileSync(fixturePath, "utf8");
+    assert.equal(fixture.endsWith("\n"), true);
+    assert.equal(mail.text.endsWith("\n"), true);
     assert.equal(mail.text, fixture);
     assert.equal(Buffer.compare(Buffer.from(mail.text), Buffer.from(fixture)), 0);
     assert.match(mail.text, /a private bet board on Bootstrap OS/);
