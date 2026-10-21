@@ -256,7 +256,7 @@ Agents should start sessions with focus → do work → record when ready (`log_
 | **Status** | **Next** after Phase B human-eyes green or explicit iterate |
 | **From field** | Thesis change → pilot evidence (MicDots class); multi-company dogfood claim needs per-company boards |
 
-### Phase D — Invite-only connector
+### Phase D — Hosted read path
 
 | | |
 |--|--|

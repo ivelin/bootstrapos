@@ -1,9 +1,9 @@
 ---
 name: path-1-default
-description: Legacy name. Use when a founder asks how to begin without the hosted connector, which path to pick, whether they need MCP or this plugin, or lifestyle vs swinging for the fences. Point an AI at the published repo. Day 0 is about 60 minutes; Path 1 is chat plus a weekly ritual. The two-minute figure is the snapshot read, not the hour. After First Hour — query the published OS on GitHub / install-os / local; do not upload mentee work to Ivelin's GitHub. Path 1 is GitHub + install-os + local. The hosted connector uses sign-in. Free GitHub docs are the alternative.
+description: Free GitHub docs. Use when a founder asks how to begin without the hosted connector, which path to pick, whether they need MCP or this plugin, or lifestyle vs swinging for the fences. Point an AI at the published repo. Day 0 is about 60 minutes; Path 1 is chat plus a weekly ritual. The two-minute figure is the snapshot read, not the hour. After First Hour — query the published OS on GitHub / install-os / local; do not upload mentee work to Ivelin's GitHub. Path 1 is GitHub + install-os + local. The hosted connector uses sign-in. Free GitHub docs are the alternative.
 ---
 
-# Free GitHub docs (legacy name path-1-default)
+# Path 1
 
 When to use: the free GitHub docs. Any harness.
 

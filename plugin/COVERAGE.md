@@ -123,7 +123,7 @@ Eight cases this page must support. Thin links, not essays. The hosted connector
 | H4 | Cites LTV:CAC 3x or T2D3 as the aim | `house-rule-pins` + page | Stale. Cite the page | File lock |
 | A1 | Agent empty-context | `query-os-first` + MCP gate | Do not invent stage, price, or these metrics | File lock + `emptyContextMayInventEfficiencyMetrics()===false` |
 | A2 | Agent exit without fences+proof | `query-os-first` | Refuse. Two clocks | File lock + gate false |
-| A3 | Agent Path 1 / Day 0 | `path-1-default` (legacy name) + `first-hour` | No CAC / NRR / magic-number numbers | File lock |
+| A3 | Agent Path 1 / Day 0 | `path-1-default` + `first-hour` | No CAC / NRR / magic-number numbers | File lock |
 | A4 | Source older than a year | the page | Mark dead or cut | File lock |
 
 ## Preview checks
