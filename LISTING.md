@@ -6,7 +6,7 @@ This plugin is not listed in the Cursor marketplace yet.
 
 ## What you need
 
-- An invite. Boards are invite-only. Someone already on your company board sends the invite to your email.
+- An invite. Boards are invite-only. Someone already on your bet board sends the invite to your email.
 - A pirin.ai sign-in that uses that same email. You can create the account when you first sign in.
 
 ## How to connect

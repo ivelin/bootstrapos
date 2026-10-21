@@ -70,9 +70,9 @@ export const BANNED_ON_CARD: RegExp[] = [
 
 const EMAIL = /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b/g;
 
-function linkPattern(): RegExp {
-  return /(?:https?:\/\/|www\.)[^\s)]+|\b[a-z0-9](?:[a-z0-9-]*[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]*[a-z0-9])?)+\/[^\s)]*/gi;
-}
+const HTTPS_URL = /https?:\/\/[^\s)]+/gi;
+const FENCED_CODE = /```[\s\S]*?```/g;
+const INLINE_CODE = /`[^`\n]+`/g;
 
 function holdTokens(text: string, pattern: RegExp, mark: string, store: string[]): string {
   pattern.lastIndex = 0;
@@ -91,12 +91,20 @@ function restoreTokens(text: string, mark: string, store: string[]): string {
   return out;
 }
 
-/** Links stay literal. A banned word inside a URL is not card speech. */
-function maskLinks(text: string, store: string[]): string {
-  return holdTokens(text, linkPattern(), "\u0001", store);
+/**
+ * Hold fenced code, inline code, then real https URLs.
+ * www tokens and bare word.word/ paths stay in the sentence so a banned term there is still filtered.
+ */
+export function protectSpeech(text: string): { text: string; restore: (value: string) => string } {
+  const spans: string[] = [];
+  let masked = holdTokens(text, FENCED_CODE, "\u0002", spans);
+  masked = holdTokens(masked, INLINE_CODE, "\u0002", spans);
+  masked = holdTokens(masked, HTTPS_URL, "\u0002", spans);
+  return {
+    text: masked,
+    restore: (value: string) => restoreTokens(value, "\u0002", spans),
+  };
 }
-
-type WordSegment = { text: string; frozen: boolean };
 
 function globalRule(rule: RegExp): RegExp {
   return new RegExp(rule.source, rule.flags);
@@ -107,59 +115,39 @@ function fillTemplate(template: string, match: RegExpMatchArray): string {
 }
 
 /**
- * One pass per rule. Inserted text is frozen, so a gloss is never rewritten again.
- * A term glued on with / . or - is dropped instead of glossed.
- * "paid " + "the paid plan" stays "the paid plan".
+ * One pass per rule on the text as it stands, so a rule does not rescan its own insertion.
+ * A later rule still sees that gloss. Gloss strings do not contain a later rule's term.
+ * "paid " + "the paid plan" stays "the paid plan". A slash or dot neighbor stays.
  */
 function rewriteTerms(input: string): string {
-  let segments: WordSegment[] = [{ text: input, frozen: false }];
+  let text = input;
   for (const [rule, to] of PLAIN_WORD_REWRITES) {
-    const next: WordSegment[] = [];
-    for (const seg of segments) {
-      if (seg.frozen || !seg.text) {
-        next.push(seg);
-        continue;
+    const re = globalRule(rule);
+    const hits = [...text.matchAll(re)];
+    if (!hits.length) continue;
+    let out = "";
+    let last = 0;
+    for (const hit of hits) {
+      const index = hit.index ?? 0;
+      let consumed = text.slice(last, index);
+      const replacement = fillTemplate(to, hit);
+      const article = replacement.match(/^the\s+([A-Za-z]+)\b/i);
+      if (article && new RegExp(`\\b${article[1]}\\s+$`, "i").test(consumed)) {
+        consumed = consumed.replace(new RegExp(`\\b${article[1]}\\s+$`, "i"), "");
       }
-      const re = globalRule(rule);
-      let last = 0;
-      let matched = false;
-      for (const hit of seg.text.matchAll(re)) {
-        matched = true;
-        const index = hit.index ?? 0;
-        const before = seg.text.slice(last, index);
-        const prev = index > 0 ? seg.text[index - 1] : "";
-        if (prev === "/" || prev === "." || prev === "-") {
-          const trimmed = before.slice(0, -1);
-          if (trimmed) next.push({ text: trimmed, frozen: false });
-          last = index + hit[0].length;
-          continue;
-        }
-        let consumed = before;
-        const replacement = fillTemplate(to, hit);
-        const article = replacement.match(/^the\s+([A-Za-z]+)\b/i);
-        if (article && new RegExp(`\\b${article[1]}\\s+$`, "i").test(consumed)) {
-          consumed = consumed.replace(new RegExp(`\\b${article[1]}\\s+$`, "i"), "");
-        }
-        if (consumed) next.push({ text: consumed, frozen: false });
-        if (replacement) next.push({ text: replacement, frozen: true });
-        last = index + hit[0].length;
-      }
-      const tail = seg.text.slice(last);
-      if (!matched) next.push(seg);
-      else if (tail) next.push({ text: tail, frozen: false });
+      out += consumed + replacement;
+      last = index + hit[0].length;
     }
-    segments = next.length ? next : [{ text: "", frozen: false }];
+    text = out + text.slice(last);
   }
-  return segments.map((seg) => seg.text).join("");
+  return text;
 }
 
-/** Storage slug. Not a word a founder wrote. Links stay untouched. */
+/** Exact label "default", or a trailing "on default". A founder sentence that uses the word stays. */
 function hideStorageSlug(text: string): string {
+  if (text.trim().toLowerCase() === "default") return "";
   return text
-    .replace(/\s+\bon\s+default\b/gi, "")
-    .replace(/\bon\s+default\b\s*/gi, "")
-    .replace(/\s+\bdefault\b/gi, "")
-    .replace(/\bdefault\b/gi, "")
+    .replace(/(?:^|\s+)on\s+default(?=[.!?]?$)/i, "")
     .replace(/[ \t]{2,}/g, " ")
     .replace(/[ \t]+([.,;:!?])/g, "$1");
 }
@@ -172,20 +160,19 @@ export function maskSecrets(value: string): string {
 }
 
 export function applyPlainWords(text: string): string {
+  const held = protectSpeech(text);
   const emails: string[] = [];
-  const links: string[] = [];
-  let masked = holdTokens(text, EMAIL, "\u0000", emails);
-  masked = maskLinks(masked, links);
+  let masked = holdTokens(held.text, EMAIL, "\u0000", emails);
   masked = rewriteTerms(masked);
   masked = masked.replace(/\b(?:the|an?)\s+(?=(?:the|an?)\b)/gi, "");
   masked = hideStorageSlug(masked);
-  masked = restoreTokens(masked, "\u0001", links);
-  return restoreTokens(masked, "\u0000", emails);
+  masked = restoreTokens(masked, "\u0000", emails);
+  return held.restore(masked);
 }
 
 export function bannedCardHit(text: string): string | null {
-  const links: string[] = [];
-  const masked = maskLinks(String(text ?? ""), links);
+  const urls: string[] = [];
+  const masked = holdTokens(String(text ?? ""), HTTPS_URL, "\u0001", urls);
   for (const rule of BANNED_ON_CARD) {
     const hit = masked.match(rule);
     if (hit) return hit[0];

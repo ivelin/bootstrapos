@@ -445,7 +445,10 @@ export type CompanyRow = {
   id: string;
   slug: string;
   label: string;
-  /** Person who founded the company. Not the admin who created the board. */
+  /**
+   * Display name for the card. Not the admin who created the board.
+   * No store writes this field. Memory and hosted SQL persist the ACL role.
+   */
   founder?: string;
   /** Same company snapshot. No rungs. Cannot promote. */
   supporting?: SupportingRow[];

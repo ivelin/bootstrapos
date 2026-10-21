@@ -29,6 +29,7 @@ import {
   hideCardEmails,
   isInternalNote,
   isKillCondition,
+  protectSpeech,
   REDACT_ALLOW_KEYS,
   REDACT_MASK_KEYS,
   REDACT_RAW_KEYS,
@@ -735,9 +736,10 @@ export function redactConfidentiality(value: string): string {
   return text;
 }
 
-/** Same words on the card and in JSON. Email addresses are held aside so a rewrite cannot cut them. */
+/** Same words on the card and in JSON. Code and https URLs are held before any rewrite. */
 function scrubFounderText(value: string): string {
-  return applyPlainWords(redactConfidentiality(value));
+  const held = protectSpeech(value);
+  return held.restore(applyPlainWords(redactConfidentiality(held.text)));
 }
 
 const FREE_TEXT_KEYS = new Set(["why", "note", "premise"]);
@@ -798,6 +800,10 @@ function redactPayloadText(value: unknown, stack: WeakSet<object>): unknown {
         out[key] = scrubFounderText(child);
         continue;
       }
+      if (key === "founder" && typeof child === "string") {
+        out[key] = hideCardEmails(scrubFounderText(child));
+        continue;
+      }
       out[key] = redactPayloadText(child, stack);
     }
     return out;
@@ -810,8 +816,8 @@ function plainCardText(value: unknown): string {
   let text = typeof value === "string" ? value : "";
   text = text.replace(/\s+/g, " ").trim();
   for (const rule of SPOKEN_HIDE) text = text.replace(rule, "");
-  text = redactConfidentiality(text);
-  text = applyPlainWords(text);
+  const held = protectSpeech(text);
+  text = held.restore(applyPlainWords(redactConfidentiality(held.text)));
   text = hideCardEmails(text);
   text = text.replace(/\bpaper cannot promote\b/gi, "");
   text = text.replace(/\bcannot promote\b/gi, "");
@@ -1053,7 +1059,7 @@ function founderRoleName(rows: unknown): string {
   return "";
 }
 
-/** Stored company founder, then a person whose role is founder. Empty when neither is stored. */
+/** company.founder when set, else idea, scoreboard, then ACL role founder. No store writes company.founder. */
 export function founderLineName(input: {
   company?: unknown;
   owners?: unknown;

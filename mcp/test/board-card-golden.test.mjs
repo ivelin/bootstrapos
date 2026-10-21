@@ -1014,6 +1014,10 @@ describe("canonical board card", () => {
       applyPlainWords("see `SAFE` at https://x.test/SAFE?q=NDA"),
       "see `SAFE` at https://x.test/SAFE?q=NDA",
     );
+    assert.equal(
+      applyPlainWords("see ```SAFE``` at https://x.test/SAFE?q=NDA"),
+      "see ```SAFE``` at https://x.test/SAFE?q=NDA",
+    );
     assert.doesNotMatch(applyPlainWords("paid tenancy"), /paid the paid plan/);
     assert.equal(applyPlainWords("payment default risk"), "payment default risk");
     assert.equal(applyPlainWords("on default plan"), "on default plan");
