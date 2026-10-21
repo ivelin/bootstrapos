@@ -5,7 +5,7 @@
  * Company: stage (spoken 5 rungs), gate, wipLimit=1 on customer_check until
  * paid use, bottleneckId (derived).
  * Initiative: id, kind, premise, measure, killLine, status, last, next,
- * outcome, impact, evidence, clock?, parentId?
+ * outcome, impact, evidence, clock?, parentId?, start?, end?
  * Kinds v1 ONLY: customer_check | engagement | capital | legal | advisor
  *
  * Rank is computed by rankInitiatives, not stored. No priority integer.
@@ -80,6 +80,9 @@ export type Initiative = {
   evidence: InitiativeEvidence;
   clock?: string;
   parentId?: string;
+  /** Stored span. Preferred over dates scraped from clock or last. */
+  start?: string;
+  end?: string;
 };
 
 export type CustomerCheckRow = Initiative & { engagements: Initiative[] };
@@ -279,6 +282,15 @@ function asClock(raw: unknown): string | undefined {
   return t.slice(0, 32);
 }
 
+/** ISO day, or the stored text. Blank and a dash are missing. */
+function storedDate(raw: unknown): string | undefined {
+  if (typeof raw !== "string") return undefined;
+  const t = raw.trim();
+  if (!t || t === "—" || t === "-") return undefined;
+  const iso = t.match(/^(20\d{2}-\d{2}-\d{2})/);
+  return (iso ? iso[1] : t).slice(0, 64);
+}
+
 function asId(raw: unknown): string | undefined {
   if (typeof raw !== "string") return undefined;
   const id = raw.trim().toLowerCase();
@@ -374,6 +386,10 @@ export function normalizeInitiatives(
     };
     const clock = asClock(rec.clock);
     if (clock) row.clock = clock;
+    const start = storedDate(rec.start);
+    if (start) row.start = start;
+    const end = storedDate(rec.end);
+    if (end) row.end = end;
     const parentId = asId(rec.parentId);
     if (parentId) row.parentId = parentId;
     rows.push(row);
@@ -1021,6 +1037,45 @@ export function whoNamesFromOwners(owners: unknown): string[] {
   return namedPeople(owners);
 }
 
+function personLabel(value: unknown): string {
+  return cardPersonName(value) ?? "";
+}
+
+/** Role founder only. founder_authorized is an admin grant, not the founder line. */
+function founderRoleName(rows: unknown): string {
+  if (!Array.isArray(rows)) return "";
+  for (const row of rows) {
+    if (!row || typeof row !== "object") continue;
+    if (String((row as { role?: unknown }).role ?? "") !== "founder") continue;
+    const name = cardPersonName(row);
+    if (name) return name;
+  }
+  return "";
+}
+
+/** Stored company founder, then a person whose role is founder. Empty when neither is stored. */
+export function founderLineName(input: {
+  company?: unknown;
+  owners?: unknown;
+  acl?: unknown;
+  idea?: unknown;
+}): string {
+  const company =
+    input.company && typeof input.company === "object"
+      ? (input.company as { founder?: unknown }).founder
+      : undefined;
+  const fromCompany = personLabel(company);
+  if (fromCompany) return fromCompany;
+  const idea =
+    input.idea && typeof input.idea === "object" ? (input.idea as Record<string, unknown>) : undefined;
+  const fromIdea = idea ? personLabel(idea.founder) : "";
+  if (fromIdea) return fromIdea;
+  const sb = idea ? scoreboardRecordOf(idea) : undefined;
+  const fromBoard = sb ? personLabel(sb.founder) : "";
+  if (fromBoard) return fromBoard;
+  return founderRoleName(input.owners) || founderRoleName(input.acl);
+}
+
 /** First names, or the email local part when no name is stored. Founder first. */
 export function whoNamesForCard(payload: { owners?: unknown; acl?: unknown }): string[] {
   const fromOwners = namedPeople(payload.owners);
@@ -1066,8 +1121,20 @@ function pastSpan(range: string, reason: string): string {
   return `${start} to ${end}: ${why}`;
 }
 
+function datePrefix(value: string | undefined): string {
+  if (!value) return "";
+  const iso = value.match(/^(20\d{2}-\d{2}-\d{2})/);
+  return iso ? iso[1] : value.trim();
+}
+
 function pastState(row: Initiative): string {
   const dot = statusDot(row, false);
+  if (row.start || row.end) {
+    const start = datePrefix(row.start) || "start not recorded";
+    const end = datePrefix(row.end) || "end not recorded";
+    const why = reasonWithoutRange(endedReason(row)) || "reason not recorded";
+    return `${dot} ${start} to ${end}: ${why}`;
+  }
   const clock = plainCardText(row.clock ?? "");
   const last = plainCardText(row.last);
   const dates = clock.match(/\b20\d{2}-\d{2}-\d{2}\b/g) ?? last.match(/\b20\d{2}-\d{2}-\d{2}\b/g) ?? [];
@@ -1219,7 +1286,7 @@ function nextSentence(row: Initiative | null, killed: boolean): string {
 /** Buyer, not the bet title. A missing buyer stays an honest empty. */
 function sellsSentence(label: string, buyer: string): string {
   const text = buyer.replace(/\.+$/, "").trim();
-  if (!text || text === "none yet") return `${label} sells to nobody named yet.`;
+  if (!text || /^none yet$/i.test(text)) return `${label} sells to buyer not named yet.`;
   const escaped = label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   if (new RegExp(`^${escaped}\\s+sells\\b`, "i").test(text)) return `${text}.`;
   return `${label} sells to ${text}.`;
@@ -1227,11 +1294,20 @@ function sellsSentence(label: string, buyer: string): string {
 
 export function buyerText(source: unknown, card?: InitiativeCard | null): string {
   const sb = scoreboardRecordOf(source);
-  const hypothesis = typeof sb?.hypothesis === "string" ? sb.hypothesis.trim() : "";
+  const buyer = typeof sb?.buyer === "string" ? sb.buyer.trim() : "";
+  if (!buyer || /^none yet$/i.test(buyer)) return "";
   const title = (card?.bottleneck?.premise ?? "").trim();
-  if (!hypothesis) return "";
-  if (title && hypothesis.toLowerCase() === title.toLowerCase()) return "";
-  return hypothesis;
+  if (title && buyer.toLowerCase() === title.toLowerCase()) return "";
+  const ideaConstraint =
+    source && typeof source === "object" && !Array.isArray(source)
+      ? (source as { constraintThisWeek?: unknown }).constraintThisWeek
+      : undefined;
+  const constraint =
+    (typeof sb?.constraint_this_week === "string" && sb.constraint_this_week.trim()) ||
+    (typeof ideaConstraint === "string" && ideaConstraint.trim()) ||
+    "";
+  if (constraint && buyer.toLowerCase() === constraint.toLowerCase()) return "";
+  return buyer;
 }
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
@@ -1259,20 +1335,31 @@ type PnlShape = {
 };
 
 function moneySpokenRow(pnl: PnlShape, who: string): SpokenRow | null {
+  if (!pnl || typeof pnl !== "object" || Array.isArray(pnl)) return null;
   const days = typeof pnl.days === "number" && pnl.days > 0 ? pnl.days : 30;
-  const revenue = typeof pnl.revenue === "number" ? dollars(pnl.revenue) : "";
-  const costs = typeof pnl.costs === "number" ? dollars(pnl.costs) : "";
-  const unknown = pnl.costsUnknown === true || pnl.costs == null;
-  if (!revenue && !costs && !unknown) return null;
-  const rev = revenue || "$0";
-  const costPart = costs
-    ? `about ${costs} measured costs${unknown ? ", some unknown" : ""}`
-    : "measured costs unknown";
   const asOf = typeof pnl.asOf === "string" && pnl.asOf.trim() ? asOfLabel(pnl.asOf) : "";
   const when = asOf ? ` (${asOf})` : "";
+  const revenueIsNumber = typeof pnl.revenue === "number";
+  const costsIsNumber = typeof pnl.costs === "number";
+  const unknown = pnl.costsUnknown === true || pnl.costs == null;
+  if (revenueIsNumber || costsIsNumber || unknown) {
+    const rev = revenueIsNumber ? dollars(pnl.revenue as number) : "";
+    const costDollars = costsIsNumber ? dollars(pnl.costs as number) : "";
+    if (!rev && !costDollars && !unknown) return null;
+    const shownRev = rev || "$0";
+    const costPart = costDollars
+      ? `about ${costDollars} measured costs${unknown ? ", some unknown" : ""}`
+      : "measured costs unknown";
+    return {
+      work: "Money",
+      state: `last ${days} days: ${shownRev} revenue; ${costPart}${when}`,
+      next: "Updated weekly",
+      who,
+    };
+  }
   return {
     work: "Money",
-    state: `last ${days} days: ${rev} revenue; ${costPart}${when}`,
+    state: `last ${days} days: revenue not recorded; measured costs unknown${when}`,
     next: "Updated weekly",
     who,
   };
@@ -1301,8 +1388,13 @@ export function formatSpokenCard(input: {
   /** ACL founder principals, or already-short names. Missing stays —. */
   who?: string[];
   pnl?: PnlShape | null;
-  /** Who buys. Not the bet title. Empty stays "nobody named yet". */
+  /** Who buys. Not the bet title. Empty stays "buyer not named yet". */
   buyer?: string;
+  /**
+   * Company founder. Pass "" when none is stored so the line stays
+   * "not named yet" instead of the first admin. Omit to use who[0].
+   */
+  founder?: string;
   /** Killed sibling boards. Internal notes are dropped. */
   pastBoards?: Array<{ title: string; range?: string; reason?: string }>;
 }): string {
@@ -1326,8 +1418,10 @@ export function formatSpokenCard(input: {
   const whoNames = (input.who ?? [])
     .map((name) => cardPersonName(name) ?? "")
     .filter((name) => name.length > 0);
-  const founderName = whoNames[0] ?? "";
-  const founder = founderName || "not named yet";
+  const founder =
+    input.founder !== undefined
+      ? cardPersonName(input.founder) || "not named yet"
+      : whoNames[0] || "not named yet";
   const headline = [
     opener,
     `**${label}**`,
@@ -1353,8 +1447,8 @@ export function formatSpokenCard(input: {
       who,
     });
   }
-  const money = moneySpokenRow(input.pnl ?? {}, who);
-  if (input.pnl && money) sections.background.unshift(money);
+  const money = input.pnl ? moneySpokenRow(input.pnl, who) : null;
+  if (money) sections.background.unshift(money);
   const table = [
     ...sectionLines(FOUNDER_CARD_SECTIONS[0], sections.bet),
     ...sectionLines(FOUNDER_CARD_SECTIONS[1], sections.other),
@@ -1362,10 +1456,10 @@ export function formatSpokenCard(input: {
     ...sectionLines(FOUNDER_CARD_SECTIONS[3], sections.background),
   ];
   const step = nextSentence(killed ? null : card?.bottleneck ?? null, killed);
+  const actor = whoNames[0] ?? "";
+  const prefix = actor ? `${actor} — ` : "";
   const namedStep =
-    founderName && step && !step.toLowerCase().includes(founderName.toLowerCase())
-      ? `${founderName} — ${step}`
-      : step;
+    prefix && step && !step.toLowerCase().startsWith(prefix.toLowerCase()) ? `${prefix}${step}` : step;
   const next = introducePeople(`**Next:** ${namedStep}`, seen);
   const lines = [
     headline,
@@ -1551,6 +1645,12 @@ function spokenInputFromIdea(
     who: whoNamesForCard(payload),
     buyer: buyerText(idea, card),
     pnl: pnlOf(idea),
+    founder: founderLineName({
+      company: payload.company,
+      owners: payload.owners,
+      acl: payload.acl,
+      idea,
+    }),
   };
 }
 
@@ -1626,14 +1726,29 @@ export function applySpokenPayloadLead(
     .filter(({ idea, index }) => isKilledSource(idea) && (index !== leadIndex || !leadHasCheck))
     .map(({ idea }) => pastBoardOf(idea))
     .filter((row): row is { title: string; range?: string; reason?: string } => Boolean(row));
-  const spokenInput = leadRec
+  const spokenInput: Parameters<typeof formatSpokenCard>[0] = leadRec
     ? { ...spokenInputFromIdea(leadRec, payload, fallbackLabel, spokenCard, alsoLive), pastBoards }
     : {
         label: fallbackLabel || spokenCard?.company?.label || "company",
         card: spokenCard,
         alsoLive,
         pastBoards,
+        who: whoNamesForCard(payload),
+        founder: founderLineName({
+          company: payload.company,
+          owners: payload.owners,
+          acl: payload.acl,
+        }),
       };
+  if (!spokenInput.pnl) {
+    for (const idea of refreshed) {
+      const found = pnlOf(idea);
+      if (found) {
+        spokenInput.pnl = found;
+        break;
+      }
+    }
+  }
   const spoken = formatSpokenCard(spokenInput);
   if (Array.isArray(payload.ideas) && payload.ideas[leadIndex] && typeof payload.ideas[leadIndex] === "object") {
     payload.ideas[leadIndex] = { ...(payload.ideas[leadIndex] as Record<string, unknown>), snapshot: spoken };

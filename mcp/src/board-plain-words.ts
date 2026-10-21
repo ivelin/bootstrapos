@@ -70,6 +70,100 @@ export const BANNED_ON_CARD: RegExp[] = [
 
 const EMAIL = /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b/g;
 
+function linkPattern(): RegExp {
+  return /(?:https?:\/\/|www\.)[^\s)]+|\b[a-z0-9](?:[a-z0-9-]*[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]*[a-z0-9])?)+\/[^\s)]*/gi;
+}
+
+function holdTokens(text: string, pattern: RegExp, mark: string, store: string[]): string {
+  pattern.lastIndex = 0;
+  return text.replace(pattern, (token) => {
+    const tokenMark = `${mark}${store.length}${mark}`;
+    store.push(token);
+    return tokenMark;
+  });
+}
+
+function restoreTokens(text: string, mark: string, store: string[]): string {
+  let out = text;
+  store.forEach((token, index) => {
+    out = out.replaceAll(`${mark}${index}${mark}`, token);
+  });
+  return out;
+}
+
+/** Links stay literal. A banned word inside a URL is not card speech. */
+function maskLinks(text: string, store: string[]): string {
+  return holdTokens(text, linkPattern(), "\u0001", store);
+}
+
+type WordSegment = { text: string; frozen: boolean };
+
+function globalRule(rule: RegExp): RegExp {
+  return new RegExp(rule.source, rule.flags);
+}
+
+function fillTemplate(template: string, match: RegExpMatchArray): string {
+  return template.replace(/\$(\d)/g, (_all, n: string) => match[Number(n)] ?? "");
+}
+
+/**
+ * One pass per rule. Inserted text is frozen, so a gloss is never rewritten again.
+ * A term glued on with / . or - is dropped instead of glossed.
+ * "paid " + "the paid plan" stays "the paid plan".
+ */
+function rewriteTerms(input: string): string {
+  let segments: WordSegment[] = [{ text: input, frozen: false }];
+  for (const [rule, to] of PLAIN_WORD_REWRITES) {
+    const next: WordSegment[] = [];
+    for (const seg of segments) {
+      if (seg.frozen || !seg.text) {
+        next.push(seg);
+        continue;
+      }
+      const re = globalRule(rule);
+      let last = 0;
+      let matched = false;
+      for (const hit of seg.text.matchAll(re)) {
+        matched = true;
+        const index = hit.index ?? 0;
+        const before = seg.text.slice(last, index);
+        const prev = index > 0 ? seg.text[index - 1] : "";
+        if (prev === "/" || prev === "." || prev === "-") {
+          const trimmed = before.slice(0, -1);
+          if (trimmed) next.push({ text: trimmed, frozen: false });
+          last = index + hit[0].length;
+          continue;
+        }
+        let consumed = before;
+        const replacement = fillTemplate(to, hit);
+        const article = replacement.match(/^the\s+([A-Za-z]+)\b/i);
+        if (article && new RegExp(`\\b${article[1]}\\s+$`, "i").test(consumed)) {
+          consumed = consumed.replace(new RegExp(`\\b${article[1]}\\s+$`, "i"), "");
+        }
+        if (consumed) next.push({ text: consumed, frozen: false });
+        if (replacement) next.push({ text: replacement, frozen: true });
+        last = index + hit[0].length;
+      }
+      const tail = seg.text.slice(last);
+      if (!matched) next.push(seg);
+      else if (tail) next.push({ text: tail, frozen: false });
+    }
+    segments = next.length ? next : [{ text: "", frozen: false }];
+  }
+  return segments.map((seg) => seg.text).join("");
+}
+
+/** Storage slug. Not a word a founder wrote. Links stay untouched. */
+function hideStorageSlug(text: string): string {
+  return text
+    .replace(/\s+\bon\s+default\b/gi, "")
+    .replace(/\bon\s+default\b\s*/gi, "")
+    .replace(/\s+\bdefault\b/gi, "")
+    .replace(/\bdefault\b/gi, "")
+    .replace(/[ \t]{2,}/g, " ")
+    .replace(/[ \t]+([.,;:!?])/g, "$1");
+}
+
 /** Replace addresses and live or test secret tokens. Call after plain-word rewrite. */
 export function maskSecrets(value: string): string {
   return value
@@ -79,22 +173,21 @@ export function maskSecrets(value: string): string {
 
 export function applyPlainWords(text: string): string {
   const emails: string[] = [];
-  let masked = text.replace(EMAIL, (token) => {
-    const mark = `\u0000${emails.length}\u0000`;
-    emails.push(token);
-    return mark;
-  });
-  for (const [rule, to] of PLAIN_WORD_REWRITES) masked = masked.replace(rule, to);
+  const links: string[] = [];
+  let masked = holdTokens(text, EMAIL, "\u0000", emails);
+  masked = maskLinks(masked, links);
+  masked = rewriteTerms(masked);
   masked = masked.replace(/\b(?:the|an?)\s+(?=(?:the|an?)\b)/gi, "");
-  emails.forEach((email, index) => {
-    masked = masked.replace(`\u0000${index}\u0000`, email);
-  });
-  return masked;
+  masked = hideStorageSlug(masked);
+  masked = restoreTokens(masked, "\u0001", links);
+  return restoreTokens(masked, "\u0000", emails);
 }
 
 export function bannedCardHit(text: string): string | null {
+  const links: string[] = [];
+  const masked = maskLinks(String(text ?? ""), links);
   for (const rule of BANNED_ON_CARD) {
-    const hit = String(text ?? "").match(rule);
+    const hit = masked.match(rule);
     if (hit) return hit[0];
   }
   return null;
@@ -257,6 +350,7 @@ export const REDACT_ALLOW_KEYS = new Set([
   "before",
   "body",
   "bottleneck",
+  "buyer",
   "boards",
   "card",
   "challenges",
@@ -285,6 +379,7 @@ export const REDACT_ALLOW_KEYS = new Set([
   "duplicate",
   "emailOptIn",
   "emailQueued",
+  "end",
   "engagements",
   "error",
   "errorCode",
@@ -292,6 +387,7 @@ export const REDACT_ALLOW_KEYS = new Set([
   "evidenceLinks",
   "expiresAt",
   "footer",
+  "founder",
   "from",
   "founderWrittenDecision",
   "gate",
@@ -362,6 +458,7 @@ export const REDACT_ALLOW_KEYS = new Set([
   "spokenLead",
   "summary",
   "stage",
+  "start",
   "state",
   "subscriber",
   "subscribers",

@@ -248,19 +248,19 @@ function registerReadTools(server: McpServer, surface: McpSurface, hosted?: Host
 
   server.tool(
     "bootstrap_list_docs",
-    "List the process notes. Not a company board.",
+    "List the process notes. Not a bet board.",
     {},
     async () => text(await loadOsDocList()),
   );
 
   server.tool(
     "bootstrap_get_doc",
-    "Read one process note when they ask. Not a company board.",
+    "Read one process note when they ask. Not a bet board.",
     {
       doc: z
         .enum(DOC_KEYS as unknown as [DocKey, ...DocKey[]])
         .describe(
-          "Which note. Not a company board.",
+          "Which note. Not a bet board.",
         ),
     },
     async ({ doc }) => {
@@ -274,7 +274,7 @@ function registerReadTools(server: McpServer, surface: McpSurface, hosted?: Host
 
   server.tool(
     "bootstrap_get_ai_instructions",
-    "The short rules for how to help. Not a company board.",
+    "The short rules for how to help. Not a bet board.",
     {},
     async () => {
       try {
@@ -1252,7 +1252,7 @@ function registerJourneyTools(server: McpServer, ctx: HostedRequestContext) {
 
   server.tool(
     "subscribe_board",
-    "Grant a webhook (and optional email enqueue) to an ACL member on a company board. Founder or founder-authorized. Gated. Production pin after Cos applies subscriber SQL. Email is not sent from this host.",
+    "Grant a webhook (and optional email enqueue) to an ACL member on a bet board. Founder or founder-authorized. Gated. Production pin after Cos applies subscriber SQL. Email is not sent from this host.",
     {
       company: z.string().describe("Company slug"),
       idea: z.string().optional().describe("Optional idea scope. Omit for the whole company."),

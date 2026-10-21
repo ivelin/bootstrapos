@@ -1,11 +1,11 @@
 ---
 name: Bootstrap board status visualization
 description: >-
-  Use for every where-are-we / company board card: a bold #1 bottleneck
+  Use for every where-are-we / bet card: a bold #1 bottleneck
   sentence, a bold company name, a founder line, one sentence on who buys,
   then one table. Live get_journey first; never invent.
 ---
-Use for every “where are we with COMPANY” and every “company board card” request, for every founder. Locked 2026-10-02 at 4:55 PM CT. If a reader has to ask what a word means, rewrite it. Do not invent a second format.
+Use for every “where are we with COMPANY” and every “bet card” request, for every founder. Locked 2026-10-02 at 4:55 PM CT. If a reader has to ask what a word means, rewrite it. Do not invent a second format.
 
 ## Source of truth
 
@@ -21,14 +21,14 @@ Use for every “where are we with COMPANY” and every “company board card”
 ## Card shape
 
 1. **Opener (always first).** `**The #1 bottleneck is <what is stuck>.**`
-2. **Title.** `**<Company>**`, then `Founder: <first name>`. When no name is stored, the founder line uses the email local part. When nobody is stored, the line is `Founder: not named yet`. Then `<Company> sells to <buyer>.`
+2. **Title.** `**<Company>**`, then `Founder: <first name>`. Prefer the stored company founder. When that founder is only an email, use the local part. When no founder is stored, the line is `Founder: not named yet`. Then `<Company> sells to <buyer>.` When no buyer is stored, say `buyer not named yet`.
 3. **One table** with bold section rows, in this order. Other cells on a section row stay empty. Omit Other paths, Past bets, and Background when they have no rows. Print Bet on every card, including a board with no live target bet. That row is still the 🎯 bet.
    - **Bet**. On a live board, exactly one 🟢 row, and it is this 🎯 row. On a stopped board the same row is ⚪ and the next step is to leave it stopped. Nested rows indent with `· ·` and start with their own icon. They are not green.
    - **Other paths (not the main bet)** when another live try exists.
    - **Past bets**. Every past bet shows its start date, its end date, and the reason it ended: `start to end: reason`.
    - **Background**. When `scoreboard.pnl` exists, one plain `Money` row sits under Background. Other money paperwork keeps its own icon.
 4. The status dot sits at the start of the State cell: 🟢 working on it, 🟡 waiting, 🔴 dropped, ⚪ closed. Only the 🎯 bet is 🟢.
-5. **Legend, then Next.** `*🎯 the one thing that matters most · 🟢 working on it · 🟡 waiting · 🔴 dropped · ⚪ closed*` then `**Next:**` one plain sentence on who does what next.
+5. **Legend, then Next.** `*🎯 the one thing that matters most · 🟢 working on it · 🟡 waiting · 🔴 dropped · ⚪ closed*` then `**Next:**` in the form `who — what`.
 6. **Who.** First names. If no name is stored, the email local part. Rendered card text (spoken and markdown) never shows an email address. JSON `principal` and `who` stay the stored address.
 
 Fixture shape (alpha / bravo / charlie / founder@example.test only):

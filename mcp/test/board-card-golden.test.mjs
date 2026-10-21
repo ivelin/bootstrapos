@@ -11,9 +11,11 @@ import { MemoryJourneyStore, defaultScoreboard } from "../dist/journey.js";
 import { applyPlainWords, cardPersonName } from "../dist/board-plain-words.js";
 import {
   applySpokenPayloadLead,
+  buyerText,
   cardFromScoreboard,
   formatSpokenCard,
   founderCardBannedHit,
+  founderLineName,
   normalizeInitiatives,
   redactConfidentiality,
 } from "../dist/initiative-card.js";
@@ -215,6 +217,7 @@ function withOwner(spec) {
           ...defaultScoreboard(),
           constraint_this_week: spec.constraint,
           hypothesis: spec.buyer,
+          buyer: spec.buyer,
           initiatives: spec.initiatives,
           ...(spec.pnl ? { pnl: spec.pnl } : {}),
         },
@@ -365,7 +368,8 @@ describe("canonical board card", () => {
     );
     assert.equal(seen.ok, true);
     assert.match(seen.markdown, /\| Sam \|/);
-    assert.match(seen.markdown, /^Founder: Sam$/m);
+    assert.match(seen.markdown, /^Founder: not named yet$/m);
+    assert.doesNotMatch(seen.markdown, /^Founder: Sam$/m);
     assert.doesNotMatch(seen.markdown, /tester1/);
     assert.doesNotMatch(seen.markdown, /sub-only-alpha/);
     assert.doesNotMatch(seen.markdown, /\| sam \|/);
@@ -430,6 +434,7 @@ describe("canonical board card", () => {
           scoreboard: {
             schema_version: 1,
             hypothesis: BRAVO.buyer,
+            buyer: BRAVO.buyer,
             initiatives: [BRAVO.initiatives[0]],
           },
         },
@@ -1124,6 +1129,175 @@ describe("canonical board card", () => {
     assert.match(spoken, /fi\.co\/FAST/);
     assert.doesNotMatch(spoken, /fi\.co\/advisor/);
     assert.equal(founderCardBannedHit(spoken), null);
+  });
+
+  it("keeps a stored span, a named buyer, and a money row on the odd paths", () => {
+    const stored = normalizeInitiatives([
+      row({ id: "alpha-blank", kind: "customer_check", premise: "blank dates", start: 1, end: "" }),
+      row({
+        id: "alpha-dash",
+        kind: "customer_check",
+        premise: "dash dates",
+        status: "closed",
+        start: "—",
+        end: "-",
+      }),
+      row({
+        id: "alpha-text",
+        kind: "customer_check",
+        premise: "text dates",
+        status: "closed",
+        start: "spring",
+        end: "x".repeat(80),
+      }),
+    ]);
+    assert.equal(stored.ok, true);
+    assert.equal(stored.value[0].start, undefined);
+    assert.equal(stored.value[1].end, undefined);
+    assert.equal(stored.value[2].start, "spring");
+    assert.equal(stored.value[2].end.length, 64);
+
+    const card = cardFromScoreboard({
+      slug: "alpha",
+      label: "alpha",
+      journeyPhase: 1,
+      gate: "hold",
+      scoreboard: {
+        initiatives: [
+          row({
+            id: "alpha-open",
+            kind: "customer_check",
+            premise: "a weekly shop report",
+            next: "Sam — Ask for the order",
+          }),
+          row({
+            id: "alpha-start",
+            kind: "customer_check",
+            premise: "a start with no end",
+            status: "closed",
+            outcome: "killed",
+            last: "—",
+            killLine: "stop if nobody pays",
+            start: "2026-05-01",
+          }),
+          row({
+            id: "alpha-end",
+            kind: "customer_check",
+            premise: "an end with no start",
+            status: "closed",
+            outcome: "learned",
+            last: "the fair ended",
+            end: "2026-07-01",
+          }),
+          row({
+            id: "alpha-words",
+            kind: "customer_check",
+            premise: "a written span",
+            status: "closed",
+            outcome: "learned",
+            last: "buyers walked past",
+            start: "spring",
+          }),
+        ],
+      },
+    });
+    const spoken = formatSpokenCard({
+      label: "alpha",
+      who: ["Sam"],
+      buyer: "alpha sells widgets",
+      card,
+      pnl: { days: 0, revenue: 12.5, costs: 3, costsUnknown: false, asOf: "not-a-date" },
+    });
+    assert.match(spoken, /alpha sells widgets\./);
+    assert.match(spoken, /2026-05-01 to end not recorded: reason not recorded/);
+    assert.match(spoken, /start not recorded to 2026-07-01: the fair ended/);
+    assert.match(spoken, /spring to end not recorded: buyers walked past/);
+    assert.match(spoken, /last 30 days: \$12\.50 revenue; about \$3 measured costs \(not-a-date\)/);
+    assert.match(spoken, /\*\*Next:\*\* Sam — Ask for the order\./);
+    assert.doesNotMatch(spoken, /Sam — Sam —/);
+
+    const costsOnly = formatSpokenCard({
+      label: "alpha",
+      who: ["Sam"],
+      card,
+      pnl: { costs: 8 },
+    });
+    assert.match(costsOnly, /last 30 days: \$0 revenue; about \$8 measured costs/);
+    assert.doesNotMatch(costsOnly, /some unknown|revenue not recorded/);
+    const missingCosts = formatSpokenCard({
+      label: "alpha",
+      who: ["Sam"],
+      card,
+      pnl: { revenue: {}, costs: null, asOf: "2026-13-01" },
+    });
+    assert.match(missingCosts, /\$0 revenue; measured costs unknown \(2026-13-01\)/);
+    const quiet = formatSpokenCard({
+      label: "alpha",
+      who: ["Sam"],
+      card,
+      pnl: { revenue: Number.NaN, costs: Number.NaN },
+    });
+    assert.doesNotMatch(quiet, /\| Money \|/);
+    const listed = formatSpokenCard({ label: "alpha", who: ["Sam"], card, pnl: [] });
+    assert.doesNotMatch(listed, /\| Money \|/);
+
+    assert.equal(buyerText({ buyer: "none yet" }), "");
+    assert.equal(buyerText({ buyer: "a weekly shop report" }, card), "");
+    assert.equal(buyerText({ buyer: "same bet", constraint_this_week: "same bet" }), "");
+    assert.equal(
+      buyerText({ constraintThisWeek: "cafe owners", scoreboard: { buyer: "cafe owners" } }, card),
+      "",
+    );
+    assert.equal(buyerText(null), "");
+    assert.equal(founderLineName({ company: "alpha", idea: { founder: "Nina Alvarez" } }), "Nina");
+    assert.equal(
+      founderLineName({ idea: { scoreboard: { founder: "Lee Chen" } } }),
+      "Lee",
+    );
+    assert.equal(
+      founderLineName({
+        owners: [{ role: "founder_authorized", displayName: "Ada Admin" }],
+        acl: [{ role: "founder", displayName: "Jo Park" }],
+      }),
+      "Jo",
+    );
+    assert.equal(founderLineName({ owners: "nope", acl: null }), "");
+
+    const ownMoney = applySpokenPayloadLead({
+      ok: true,
+      company: { slug: "alpha", label: "alpha" },
+      owners: [{ principal: "sam@example.test", role: "founder", displayName: "Sam" }],
+      ideas: [
+        {
+          slug: "shop",
+          name: "shop report",
+          founder: "Nina Alvarez",
+          scoreboard: {
+            schema_version: 1,
+            buyer: "one cafe owner",
+            initiatives: [BRAVO.initiatives[0]],
+            pnl: { days: 14, revenue: 5, costs: 1, asOf: "2026-10-02" },
+          },
+        },
+        {
+          slug: "default",
+          name: "alpha",
+          scoreboard: {
+            schema_version: 1,
+            initiatives: [],
+            pnl: { asOf: "2026-10-19", revenue: {}, costs: [{ line: "hosting" }] },
+          },
+        },
+      ],
+    });
+    assert.match(ownMoney.markdown, /^Founder: Nina$/m);
+    assert.match(ownMoney.markdown, /last 14 days: \$5 revenue; about \$1 measured costs \(Oct 2\)/);
+    assert.doesNotMatch(ownMoney.markdown, /revenue not recorded/);
+
+    assert.equal(applyPlainWords("P0"), "");
+    assert.equal(applyPlainWords("pre-tenancy"), "pre");
+    assert.equal(applyPlainWords("file.SKU"), "file");
+    assert.equal(applyPlainWords("/tenancy left"), " left");
   });
 
   it("documents a signed-in user with no invite as 200 no_membership", () => {
