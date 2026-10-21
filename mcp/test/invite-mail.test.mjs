@@ -5,6 +5,7 @@ import { afterEach, describe, it } from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import {
   INVITE_MAIL_FROM,
   INVITE_MAIL_NOTE,
@@ -16,12 +17,16 @@ import {
   buildInviteMail,
   deliverInviteMailDryRun,
   inviteSignupUrl,
+  inviterNameForKick,
   notifyPirinInviteMail,
   resolveInviteMailMode,
   setInviteMailSinkForTests,
   shouldPostPirinInviteMail,
 } from "../dist/invite-mail.js";
+import { actorClaimsFromAccessToken, syntheticAccessToken } from "../dist/journey-auth.js";
 import { REPO_ROOT } from "./helpers.mjs";
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 afterEach(() => {
   setInviteMailSinkForTests(undefined);
@@ -60,7 +65,12 @@ describe("invite mail contract (never prod Resend)", { concurrency: false }, () 
     assert.match(mail.text, /Base camp is ready\./);
     assert.match(mail.text, /Invited by founder@example\.test/);
     assert.match(mail.text, /Sign in or create your account as member@example\.test/);
-    assert.match(mail.text, /a private company board on Bootstrap OS/);
+    const fixturePath = path.join(__dirname, "fixtures", "invite-base-camp.txt");
+    const fixture = fs.readFileSync(fixturePath, "utf8").replace(/\n$/, "");
+    assert.equal(mail.text, fixture);
+    assert.equal(Buffer.compare(Buffer.from(mail.text), Buffer.from(fixture)), 0);
+    assert.match(mail.text, /a private bet board on Bootstrap OS/);
+    assert.match(mail.text, /Connect it to the bet board/);
     assert.match(mail.text, /https:\/\/pirin\.ai\/bootstrap-os\/login\?invite=inv_fixture_token_xxxxxxxx/);
     assert.match(mail.text, new RegExp(BOOTSTRAP_MCP_CONNECT_LEAD.replace(/[.]/g, "\\.")));
     assert.match(mail.text, /https:\/\/mcp\.bootstrap\.pirin\.ai\/mcp/);
@@ -154,7 +164,26 @@ describe("invite mail contract (never prod Resend)", { concurrency: false }, () 
     const postedBody = JSON.parse(hits[0].body);
     assert.equal(postedBody.inviteeEmail, "member@example.test");
     assert.equal(postedBody.inviteToken, "inv_fixture_token_xxxxxxxx");
-    assert.equal(postedBody.inviterName, "founder@example.test");
+    assert.equal(postedBody.inviterName, undefined);
+    assert.equal(Object.hasOwn(postedBody, "inviterName"), false);
+    assert.equal(inviterNameForKick("founder@example.test", "founder@example.test"), undefined);
+    assert.equal(inviterNameForKick("Ada", "founder@example.test"), "Ada");
+    const namedClaims = actorClaimsFromAccessToken(
+      syntheticAccessToken({
+        email: "founder@example.test",
+        sub: "auth-founder",
+        extra: { name: "Ada", user_metadata: { full_name: "Ada Lovelace" } },
+      }),
+    );
+    assert.equal(namedClaims?.name, "Ada");
+    const emailName = actorClaimsFromAccessToken(
+      syntheticAccessToken({
+        email: "founder@example.test",
+        sub: "auth-founder",
+        extra: { name: "founder@example.test" },
+      }),
+    );
+    assert.equal(emailName?.name, undefined);
 
     const named = [];
     await notifyPirinInviteMail(

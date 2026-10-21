@@ -2,6 +2,7 @@
  * Isolated PGlite for the starter bet board migration.
  * Never supabase-pirin-ai. Never prod. Fictional addresses only.
  */
+import { createHash } from "node:crypto";
 import { after, before, describe, it } from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
@@ -33,10 +34,24 @@ CREATE TABLE bootstrap_os.companies (
   label text NOT NULL
 );
 CREATE TABLE bootstrap_os.company_acl (
-  company_id uuid NOT NULL REFERENCES bootstrap_os.companies (id),
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  company_id uuid NOT NULL REFERENCES bootstrap_os.companies (id) ON DELETE CASCADE,
   principal text NOT NULL,
   principal_kind text NOT NULL,
-  role text NOT NULL
+  role text NOT NULL,
+  CONSTRAINT company_acl_unique UNIQUE (company_id, principal, principal_kind)
+);
+CREATE TABLE bootstrap_os.board_subscribers (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  company_id uuid NOT NULL REFERENCES bootstrap_os.companies (id) ON DELETE CASCADE
+);
+CREATE TABLE bootstrap_os.notify_outbox (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  company_id uuid NOT NULL REFERENCES bootstrap_os.companies (id) ON DELETE CASCADE,
+  channel text NOT NULL
+);
+CREATE TABLE public.bootstrap_os_companies (
+  slug text PRIMARY KEY
 );
 CREATE TABLE public.bootstrap_mcp_mentees (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -65,10 +80,7 @@ describe("PGlite starter bet board (isolated, never prod)", { concurrency: false
   before(async () => {
     db = new PGlite();
     await db.exec(HARNESS);
-    const sql = fs
-      .readFileSync(SQL, "utf8")
-      .replace(/CREATE EXTENSION IF NOT EXISTS pgcrypto;/, "-- PGlite: md5 and gen_random_uuid are built in");
-    await db.exec(sql);
+    await db.exec(fs.readFileSync(SQL, "utf8"));
   });
 
   after(async () => {
@@ -91,6 +103,10 @@ describe("PGlite starter bet board (isolated, never prod)", { concurrency: false
     assert.equal(first.invites, false);
     assert.equal(first.promotable, false);
     assert.match(first.slug, /^sb[0-9a-f]{8}$/);
+    assert.notEqual(
+      first.slug,
+      `sb${createHash("md5").update("founder@example.test").digest("hex").slice(0, 8)}`,
+    );
 
     const second = (
       await asEmail("founder@example.test", "SELECT public.bootstrap_os_create_starter_board() AS body")
@@ -119,7 +135,23 @@ describe("PGlite starter bet board (isolated, never prod)", { concurrency: false
       db.query("UPDATE bootstrap_os.starter_boards SET owner_email = owner_email"),
       /cannot be promoted/,
     );
-    await assert.rejects(db.query("DELETE FROM bootstrap_os.starter_boards"), /cannot be promoted/);
+    const portfolio = (
+      await db.query("SELECT bootstrap_os.portfolio_view(c.id) AS view FROM bootstrap_os.companies c WHERE c.slug = $1", [
+        first.slug,
+      ])
+    ).rows[0].view;
+    assert.equal(portfolio.applies, false);
+    assert.equal(portfolio.reason, "a starter bet board is not in the portfolio");
+    const adminCount = (
+      await db.query("SELECT public.bootstrap_os_admin_company_count() AS n")
+    ).rows[0].n;
+    assert.equal(adminCount, 0);
+    await db.query("INSERT INTO public.bootstrap_os_companies (slug) VALUES ('alpha')");
+    await db.query("INSERT INTO public.bootstrap_os_companies (slug) VALUES ($1)", [first.slug]);
+    const adminAfter = (
+      await db.query("SELECT public.bootstrap_os_admin_company_count() AS n")
+    ).rows[0].n;
+    assert.equal(adminAfter, 1);
     await assert.rejects(
       db.query(
         "INSERT INTO public.bootstrap_mcp_invites (company_label, invitee_email) VALUES ($1, 'member@example.test')",
@@ -128,14 +160,118 @@ describe("PGlite starter bet board (isolated, never prod)", { concurrency: false
       /cannot send invites/,
     );
 
-    const taken = (
-      await db.query("SELECT 'sb' || substr(md5('other@example.test'), 1, 8) AS slug")
-    ).rows[0].slug;
-    await db.query("INSERT INTO bootstrap_os.companies (slug, label) VALUES ($1, 'taken')", [taken]);
-    const capped = (
+    await db.exec(`
+      CREATE OR REPLACE FUNCTION public.bootstrap_os_held_label(p_company text)
+      RETURNS boolean LANGUAGE sql AS $$
+        SELECT lower(coalesce(current_setting('app.actor_email', true), '')) = 'founder@example.test'
+      $$;
+      CREATE SEQUENCE IF NOT EXISTS public.starter_collision_ticks;
+      CREATE OR REPLACE FUNCTION public.starter_test_collide()
+      RETURNS trigger LANGUAGE plpgsql AS $fn$
+      BEGIN
+        IF current_setting('app.force_starter_collision', true) = '1'
+           AND NEW.slug LIKE 'sb%'
+           AND nextval('public.starter_collision_ticks') = 1 THEN
+          RAISE unique_violation USING MESSAGE = 'slug collision';
+        END IF;
+        RETURN NEW;
+      END
+      $fn$;
+      CREATE TRIGGER starter_test_collide
+        BEFORE INSERT ON bootstrap_os.companies
+        FOR EACH ROW EXECUTE FUNCTION public.starter_test_collide();
+      CREATE OR REPLACE FUNCTION public.starter_test_race()
+      RETURNS trigger LANGUAGE plpgsql AS $fn$
+      BEGIN
+        IF current_setting('app.force_starter_race', true) = '1' THEN
+          PERFORM set_config('app.force_starter_race', '0', true);
+          INSERT INTO bootstrap_os.starter_boards (company_id, owner_email)
+          SELECT id, NULLIF(current_setting('app.actor_email', true), '')
+          FROM bootstrap_os.companies WHERE slug = 'winner';
+        END IF;
+        RETURN NEW;
+      END
+      $fn$;
+      CREATE TRIGGER starter_test_race
+        AFTER INSERT ON bootstrap_os.companies
+        FOR EACH ROW EXECUTE FUNCTION public.starter_test_race();
+    `);
+
+    await db.query("SELECT set_config('app.force_starter_collision', '1', false)");
+    const collided = (
       await asEmail("other@example.test", "SELECT public.bootstrap_os_create_starter_board() AS body")
     )[0].body;
-    assert.equal(capped.ok, false);
-    assert.equal(capped.error, "starter_cap");
+    assert.equal(collided.ok, true);
+    assert.equal(collided.created, true);
+    assert.match(collided.slug, /^sb[0-9a-f]{8}$/);
+
+    await db.query("INSERT INTO bootstrap_os.companies (slug, label) VALUES ('winner', 'Winner')");
+    await db.query("SELECT set_config('app.force_starter_race', '1', false)");
+    const raced = (
+      await asEmail("racer@example.test", "SELECT public.bootstrap_os_create_starter_board() AS body")
+    )[0].body;
+    assert.equal(raced.ok, true);
+    assert.equal(raced.created, false);
+    assert.equal(raced.slug, "winner");
+    const starters = (
+      await db.query("SELECT count(*)::int AS n FROM bootstrap_os.starter_boards WHERE owner_email = 'racer@example.test'")
+    ).rows[0].n;
+    assert.equal(starters, 1);
+
+    const advisor = (
+      await asEmail(
+        "founder@example.test",
+        "SELECT public.bootstrap_os_change_acl($1, 'advisor@example.test', 'email', 'advisor', 'grant') AS body",
+        [first.slug],
+      )
+    )[0].body;
+    assert.equal(advisor.ok, false);
+    assert.equal(advisor.error, "sandbox_cannot_share");
+    const writer = (
+      await asEmail(
+        "founder@example.test",
+        "SELECT public.bootstrap_os_change_acl($1, 'writer@example.test', 'email', 'founder_authorized', 'grant') AS body",
+        [first.slug],
+      )
+    )[0].body;
+    assert.equal(writer.ok, false);
+    assert.equal(writer.error, "sandbox_cannot_share");
+    await assert.rejects(
+      db.query(
+        `INSERT INTO bootstrap_os.company_acl (company_id, principal, principal_kind, role)
+         SELECT id, 'advisor@example.test', 'email', 'advisor' FROM bootstrap_os.companies WHERE slug = $1`,
+        [first.slug],
+      ),
+      /cannot add members/,
+    );
+    await assert.rejects(
+      db.query(
+        `INSERT INTO bootstrap_os.board_subscribers (company_id)
+         SELECT id FROM bootstrap_os.companies WHERE slug = $1`,
+        [first.slug],
+      ),
+      /cannot send webhooks/,
+    );
+    await assert.rejects(
+      db.query(
+        `INSERT INTO bootstrap_os.notify_outbox (company_id, channel)
+         SELECT id, 'webhook' FROM bootstrap_os.companies WHERE slug = $1`,
+        [first.slug],
+      ),
+      /cannot send webhooks/,
+    );
+
+    await db.query("SET ROLE authenticated");
+    await assert.rejects(
+      () => db.query("SELECT public.bootstrap_os_starter_is_sandbox('alpha')"),
+      /permission denied/,
+    );
+    await db.query("RESET ROLE");
+
+    await db.query("DELETE FROM bootstrap_os.companies WHERE slug = $1", [first.slug]);
+    const left = (
+      await db.query("SELECT count(*)::int AS n FROM bootstrap_os.starter_boards WHERE owner_email = 'founder@example.test'")
+    ).rows[0].n;
+    assert.equal(left, 0);
   });
 });

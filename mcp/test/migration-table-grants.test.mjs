@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { PGlite } from "@electric-sql/pglite";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const MIGRATIONS = path.join(__dirname, "..", "supabase", "migrations");
@@ -312,5 +313,99 @@ describe("new migration tables state RLS and grants", () => {
       "public.bootstrap_rate_cap",
       "public.bootstrap_request_cap",
     ]);
+  });
+
+  it("pins starter_boards grants with aclexplode", async () => {
+    const db = new PGlite();
+    try {
+      await db.exec(`
+        DO $$ BEGIN CREATE ROLE anon; EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+        DO $$ BEGIN CREATE ROLE authenticated; EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+        CREATE SCHEMA IF NOT EXISTS auth;
+        CREATE SCHEMA IF NOT EXISTS bootstrap_os;
+        CREATE OR REPLACE FUNCTION auth.jwt() RETURNS jsonb LANGUAGE sql STABLE AS $$ SELECT '{}'::jsonb $$;
+        CREATE TABLE bootstrap_os.companies (
+          id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+          slug text NOT NULL UNIQUE,
+          label text NOT NULL
+        );
+        CREATE TABLE bootstrap_os.company_acl (
+          id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+          company_id uuid NOT NULL REFERENCES bootstrap_os.companies (id) ON DELETE CASCADE,
+          principal text NOT NULL,
+          principal_kind text NOT NULL,
+          role text NOT NULL
+        );
+        CREATE TABLE bootstrap_os.board_subscribers (
+          id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+          company_id uuid NOT NULL REFERENCES bootstrap_os.companies (id) ON DELETE CASCADE
+        );
+        CREATE TABLE bootstrap_os.notify_outbox (
+          id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+          company_id uuid NOT NULL REFERENCES bootstrap_os.companies (id) ON DELETE CASCADE,
+          channel text NOT NULL
+        );
+        CREATE TABLE public.bootstrap_mcp_mentees (
+          id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+          email text NOT NULL UNIQUE
+        );
+        CREATE TABLE public.bootstrap_company_labels (
+          mentee_id uuid NOT NULL REFERENCES public.bootstrap_mcp_mentees (id),
+          label text NOT NULL
+        );
+        CREATE TABLE public.bootstrap_mcp_invites (
+          id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+          company_label text NOT NULL,
+          invitee_email text NOT NULL
+        );
+      `);
+      await db.exec(fs.readFileSync(path.join(MIGRATIONS, "20261021_bootstrap_os_starter_board.sql"), "utf8"));
+      const tableAcl = await db.query(`
+        SELECT a.privilege_type, a.grantee::regrole::text AS grantee
+        FROM pg_class c
+        JOIN pg_namespace n ON n.oid = c.relnamespace
+        CROSS JOIN LATERAL aclexplode(c.relacl) AS a
+        WHERE n.nspname = 'bootstrap_os'
+          AND c.relname = 'starter_boards'
+          AND (
+            a.grantee = 0
+            OR a.grantee = (SELECT oid FROM pg_roles WHERE rolname = 'anon')
+            OR a.grantee = (SELECT oid FROM pg_roles WHERE rolname = 'authenticated')
+          )
+      `);
+      assert.deepEqual(tableAcl.rows, []);
+      const pinned = await db.query(`
+        SELECT c.relacl IS NOT NULL AS pinned
+        FROM pg_class c
+        JOIN pg_namespace n ON n.oid = c.relnamespace
+        WHERE n.nspname = 'bootstrap_os' AND c.relname = 'starter_boards'
+      `);
+      assert.equal(pinned.rows[0].pinned, true);
+      const fnAcl = await db.query(`
+        SELECT a.privilege_type
+        FROM pg_proc p
+        JOIN pg_namespace n ON n.oid = p.pronamespace
+        CROSS JOIN LATERAL aclexplode(p.proacl) AS a
+        WHERE n.nspname = 'public'
+          AND p.proname = 'bootstrap_os_starter_is_sandbox'
+          AND a.privilege_type = 'EXECUTE'
+          AND (
+            a.grantee = 0
+            OR a.grantee = (SELECT oid FROM pg_roles WHERE rolname = 'anon')
+            OR a.grantee = (SELECT oid FROM pg_roles WHERE rolname = 'authenticated')
+          )
+      `);
+      assert.deepEqual(fnAcl.rows, []);
+      const execute = await db.query(`
+        SELECT has_function_privilege('authenticated', 'public.bootstrap_os_starter_is_sandbox(text)', 'execute') AS allowed
+      `);
+      assert.equal(execute.rows[0].allowed, false);
+      const mine = await db.query(`
+        SELECT has_function_privilege('authenticated', 'public.bootstrap_os_my_starter_slug()', 'execute') AS allowed
+      `);
+      assert.equal(mine.rows[0].allowed, true);
+    } finally {
+      await db.close();
+    }
   });
 });

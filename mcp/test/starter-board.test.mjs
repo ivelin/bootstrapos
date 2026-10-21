@@ -2,6 +2,7 @@
  * Private starter bet board. One per account. No invites. No promotion.
  * Plain MCP client. No Bill. Never prod.
  */
+import { createHash } from "node:crypto";
 import { afterEach, describe, it } from "node:test";
 import assert from "node:assert/strict";
 import { handleHostedReadFetch } from "../dist/hosted-handler.js";
@@ -15,7 +16,6 @@ import {
   createStarterStore,
   resolveStarterStore,
   setStarterStoreForTests,
-  starterSlugForEmail,
 } from "../dist/starter-board.js";
 import { FIRST_BET_STEP, STARTER_BET_BOARD_STEP } from "../dist/setup-steps.js";
 
@@ -120,7 +120,11 @@ describe("starter bet board (memory, never prod)", { concurrency: false }, () =>
     assert.equal(opened.body.result.isError, undefined);
     assert.equal(first.ok, true);
     assert.equal(first.created, true);
-    assert.equal(first.company, starterSlugForEmail(EMAIL));
+    assert.match(first.company, /^sb[0-9a-f]{8}$/);
+    assert.notEqual(
+      first.company,
+      `sb${createHash("md5").update(EMAIL).digest("hex").slice(0, 8)}`,
+    );
     assert.equal(first.invites, false);
     assert.equal(first.promotable, false);
     assert.equal(first.setupSteps[0].id, FIRST_BET_STEP.id);
@@ -134,6 +138,12 @@ describe("starter bet board (memory, never prod)", { concurrency: false }, () =>
     const member = toolJson((await rpc("tools/call", { name: "bootstrap_whoami", arguments: {} }, token)).body);
     assert.deepEqual(member.companies, [first.company]);
     assert.equal(member.setupSteps, undefined);
+
+    const listed = toolJson(
+      (await rpc("tools/call", { name: "bootstrap_list_companies", arguments: {} }, token)).body,
+    );
+    assert.deepEqual(listed.companies, []);
+    assert.equal(listed.setupSteps[0].id, STARTER_BET_BOARD_STEP.id);
 
     const empty = toolJson(
       (await rpc("tools/call", { name: "get_journey", arguments: { company: first.company } }, token)).body,
@@ -177,7 +187,52 @@ describe("starter bet board (memory, never prod)", { concurrency: false }, () =>
     );
     assert.equal(filled.ideas.length, 1);
     assert.equal(filled.setupSteps, undefined);
+    assert.equal(filled.portfolio.applies, false);
+    assert.equal(filled.portfolio.reason, "a starter bet board is not in the portfolio");
     assert.doesNotMatch(named.text, /Bootstrap Bill|x\.ai\/bot/);
+
+    const subscribed = await rpc(
+      "tools/call",
+      {
+        name: "subscribe_board",
+        arguments: {
+          company: first.company,
+          principal: EMAIL,
+          principalKind: "email",
+          webhookUrl: "https://hooks.example.test/board",
+        },
+      },
+      token,
+    );
+    assert.equal(subscribed.body.result.isError, true);
+    assert.match(subscribed.body.result.content.map((part) => part.text).join("\n"), /cannot send webhooks/);
+
+    const watched = await rpc(
+      "tools/call",
+      { name: "enable_board_watch", arguments: { company: first.company } },
+      token,
+    );
+    assert.equal(watched.body.result.isError, true);
+    assert.match(watched.body.result.content.map((part) => part.text).join("\n"), /cannot send webhooks/);
+
+    const scored = await rpc(
+      "tools/call",
+      {
+        name: "put_portfolio_score",
+        arguments: {
+          company: first.company,
+          idea: "dispatch",
+          impact: 3,
+          evidence: 3,
+          leverage: 3,
+          why: "shops already pay for routing",
+          founderYes: true,
+        },
+      },
+      token,
+    );
+    assert.equal(scored.body.result.isError, true);
+    assert.match(scored.body.result.content.map((part) => part.text).join("\n"), /not in the portfolio/);
   });
 
   it("a zero-company member gets setupSteps and a super admin still reaches create_company", async () => {
@@ -227,10 +282,17 @@ describe("starter bet board (memory, never prod)", { concurrency: false }, () =>
     const created = await store.create("Founder@Example.TEST");
     assert.equal(created.ok, true);
     assert.equal(created.created, true);
-    assert.equal(created.board.slug, starterSlugForEmail("founder@example.test"));
+    assert.match(created.board.slug, /^sb[0-9a-f]{8}$/);
     const again = await store.create("founder@example.test");
     assert.equal(again.created, false);
-    assert.equal(store.count(), 1);
+    assert.equal(again.board.slug, created.board.slug);
+    const raced = await Promise.all([
+      store.create("racer@example.test"),
+      store.create("racer@example.test"),
+    ]);
+    assert.equal(raced[0].ok && raced[1].ok, true);
+    assert.equal(raced[0].board.slug, raced[1].board.slug);
+    assert.equal(store.count(), 2);
     assert.equal((await store.create("not-an-email")).ok, false);
     assert.equal(await store.isSandbox(created.board.slug), true);
     assert.equal(await store.isSandbox("alpha"), false);
@@ -257,7 +319,7 @@ describe("starter bet board (memory, never prod)", { concurrency: false }, () =>
         if (String(url).endsWith("bootstrap_os_create_starter_board")) {
           return { ok: true, status: 200, text: async () => JSON.stringify({ ok: true, created: true, slug: "sbabcdef12" }) };
         }
-        return { ok: true, status: 200, text: async () => "true" };
+        return { ok: true, status: 200, text: async () => JSON.stringify("sbabcdef12") };
       },
     );
     const created = await store.create("founder@example.test");
@@ -265,6 +327,7 @@ describe("starter bet board (memory, never prod)", { concurrency: false }, () =>
     assert.equal(created.board.slug, "sbabcdef12");
     assert.equal(created.board.invites, false);
     assert.equal(await store.isSandbox("sbabcdef12"), true);
+    assert.equal(await store.isSandbox("alpha"), false);
     assert.match(calls[0], /\/rest\/v1\/rpc\/bootstrap_os_create_starter_board$/);
 
     const down = new SupabaseStarterStore("https://fixture.example", "anon", "token", async () => ({
@@ -273,7 +336,14 @@ describe("starter bet board (memory, never prod)", { concurrency: false }, () =>
       text: async () => "nope",
     }));
     assert.equal((await down.create("founder@example.test")).error, "starter_store_unavailable");
-    assert.equal(await down.isSandbox("alpha"), false);
+    assert.equal(await down.isSandbox("alpha"), true);
+
+    const empty = new SupabaseStarterStore("https://fixture.example", "anon", "token", async () => ({
+      ok: true,
+      status: 200,
+      text: async () => "null",
+    }));
+    assert.equal(await empty.isSandbox("alpha"), false);
 
     const junk = new SupabaseStarterStore("https://fixture.example", "anon", "token", async () => ({
       ok: true,
