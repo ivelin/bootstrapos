@@ -153,6 +153,14 @@ describe("hosted access layer (one login, many companies)", () => {
     assert.match(String(companyParam?.description ?? ""), /team/i);
     assert.match(String(ideaParam?.description ?? ""), /idea/i);
     assert.doesNotMatch(JSON.stringify(journey.inputSchema), /CoreHaul/);
+    const put = listed.result.tools.find((t) => t.name === "put_journey");
+    assert.ok(put);
+    const putProps = put.inputSchema?.properties ?? {};
+    assert.match(String(putProps.founder?.description ?? ""), /Company founder name/);
+    assert.match(String(putProps.scoreboard?.description ?? ""), /scoreboard\.buyer/);
+    const initiativeProps = putProps.initiatives?.items?.properties ?? {};
+    assert.match(String(initiativeProps.start?.description ?? ""), /Past-bet start/);
+    assert.match(String(initiativeProps.end?.description ?? ""), /Past-bet end/);
     const watch = listed.result.tools.find((t) => t.name === "enable_board_watch");
     assert.ok(watch);
     assert.equal(watch.description, TOOL_ENABLE_BOARD_WATCH);
