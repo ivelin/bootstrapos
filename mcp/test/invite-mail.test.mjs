@@ -10,6 +10,9 @@ import {
   INVITE_MAIL_NOTE,
   INVITE_SIGNUP_QUERY,
   assertInviteMailFrom,
+  BOOTSTRAP_MCP_CONNECT_LEAD,
+  BOOTSTRAP_MCP_CONNECT_TAIL,
+  BOOTSTRAP_MCP_URL,
   buildInviteMail,
   deliverInviteMailDryRun,
   inviteSignupUrl,
@@ -50,15 +53,27 @@ describe("invite mail contract (never prod Resend)", { concurrency: false }, () 
     });
     assert.equal(mail.from, INVITE_MAIL_FROM);
     assert.equal(mail.to, "member@example.test");
-    assert.match(mail.subject, /founder@example\.test/);
-    assert.match(mail.subject, /alpha/);
-    assert.match(mail.text, /Who invited: founder@example\.test/);
-    assert.match(mail.text, /Invitee email: member@example\.test/);
-    assert.match(mail.text, /Company workspace: alpha/);
-    assert.match(mail.text, /Open this to sign in or create your account/);
+    assert.equal(
+      mail.subject,
+      "founder@example.test invited you to base camp: the alpha bet board",
+    );
+    assert.match(mail.text, /Base camp is ready\./);
+    assert.match(mail.text, /Invited by founder@example\.test/);
+    assert.match(mail.text, /Sign in or create your account as member@example\.test/);
+    assert.match(mail.text, /a private company board on Bootstrap OS/);
     assert.match(mail.text, /https:\/\/pirin\.ai\/bootstrap-os\/login\?invite=inv_fixture_token_xxxxxxxx/);
+    assert.match(mail.text, new RegExp(BOOTSTRAP_MCP_CONNECT_LEAD.replace(/[.]/g, "\\.")));
+    assert.match(mail.text, /https:\/\/mcp\.bootstrap\.pirin\.ai\/mcp/);
+    assert.match(mail.text, /Sign in on pirin\.ai with the invited email\. Then ask where you are\./);
+    assert.equal(BOOTSTRAP_MCP_CONNECT_LEAD, "Install the Bootstrap OS connector.");
+    assert.equal(BOOTSTRAP_MCP_URL, "https://mcp.bootstrap.pirin.ai/mcp");
+    assert.equal(
+      BOOTSTRAP_MCP_CONNECT_TAIL,
+      "Sign in on pirin.ai with the invited email. Then ask where you are.",
+    );
     assert.equal(mail.signupUrl, mail.qrPayload);
-    assert.equal((mail.text.match(/https:\/\//g) || []).length, 1);
+    assert.equal((mail.text.match(/\?invite=/g) || []).length, 1);
+    assert.equal((mail.text.match(/https:\/\//g) || []).length, 2);
     assert.match(INVITE_MAIL_NOTE, /pirin-ai sends From bootstrap@pirin.ai on production/);
     assert.match(INVITE_MAIL_NOTE, /any agentic client/);
     assert.match(INVITE_MAIL_NOTE, /Open this to sign in or create your account/);
@@ -136,7 +151,35 @@ describe("invite mail contract (never prod Resend)", { concurrency: false }, () 
     assert.equal(hits.length, 1);
     assert.equal(hits[0].url, "https://www.pirin.ai/api/bootstrap-os/invite-mail");
     assert.equal(hits[0].auth, "Bearer s");
-    assert.match(hits[0].body, /member@example.test/);
-    assert.match(hits[0].body, /inv_fixture_token_xxxxxxxx/);
+    const postedBody = JSON.parse(hits[0].body);
+    assert.equal(postedBody.inviteeEmail, "member@example.test");
+    assert.equal(postedBody.inviteToken, "inv_fixture_token_xxxxxxxx");
+    assert.equal(postedBody.inviterName, "founder@example.test");
+
+    const named = [];
+    await notifyPirinInviteMail(
+      {
+        inviteeEmail: "member@example.test",
+        invitedByEmail: "founder@example.test",
+        inviterName: "Ada",
+        companyLabel: "alpha",
+        inviteToken: "inv_fixture_token_xxxxxxxx",
+      },
+      { VERCEL_ENV: "production", BOOTSTRAP_INVITE_MAIL_SECRET: "s" },
+      async (_url, init) => {
+        named.push(JSON.parse(init.body));
+        return { status: 200 };
+      },
+    );
+    assert.equal(named[0].inviterName, "Ada");
+    const namedMail = buildInviteMail({
+      inviterEmail: "founder@example.test",
+      inviterName: "Ada",
+      inviteeEmail: "member@example.test",
+      companyWorkspace: "alpha",
+      inviteToken: "inv_fixture_token_xxxxxxxx",
+      expiresAt: "2030-01-01T00:00:00.000Z",
+    });
+    assert.equal(namedMail.subject, "Ada invited you to base camp: the alpha bet board");
   });
 });

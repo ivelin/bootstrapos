@@ -50,6 +50,8 @@ import { evaluateExternalAsk } from "./policy.js";
 import { HOUSE_RULE_LINES, HOUSE_RULE_PINS } from "./house-rules.js";
 import { anonymousWhoami, type HostedRequestContext } from "./identity-context.js";
 import { noBoardsPayload, NO_BOARDS_HINT } from "./onboarding.js";
+import { setupForEmptyCompany, setupForZeroCompany, SETUP_CATALOG } from "./setup-steps.js";
+import { resolveStarterStore } from "./starter-board.js";
 import { hostedMcpResource } from "./oauth.js";
 import {
   chooseCompany,
@@ -66,6 +68,7 @@ import {
   SUPPORT_HOWTO,
   TOOL_ACCEPT_INVITE,
   TOOL_CREATE_COMPANY,
+  TOOL_CREATE_STARTER,
   TOOL_GET_JOURNEY,
   TOOL_INVITE_MEMBER,
   TOOL_CREATE_IDEA,
@@ -92,6 +95,15 @@ import {
 } from "./invite-mail.js";
 
 export type McpSurface = "full" | "hosted-read";
+
+const READ_ONLY = { readOnlyHint: true };
+
+function withEmptyBet(payload: unknown): unknown {
+  if (!payload || typeof payload !== "object" || Array.isArray(payload)) return payload;
+  const ideas = (payload as { ideas?: unknown }).ideas;
+  if (!Array.isArray(ideas) || ideas.length > 0) return payload;
+  return { ...(payload as Record<string, unknown>), ...setupForEmptyCompany() };
+}
 
 function text(payload: unknown) {
   const body = typeof payload === "string" ? payload : JSON.stringify(payload, null, 2);
@@ -151,14 +163,16 @@ function membershipPayload(
     reason: empty ? "no_membership" : null,
     hint: empty ? NO_BOARDS_HINT : null,
     note: empty ? NO_BOARDS_HINT : NOTE_COMPANIES,
+    ...(empty ? setupForZeroCompany() : {}),
   };
 }
 
 function registerReadTools(server: McpServer, surface: McpSurface, hosted?: HostedRequestContext) {
   server.tool(
     "bootstrap_os_info",
-    "Say the founder sentence, then the live board. Support email is bootstrap@pirin.ai.",
+    "Say the founder sentence, then the live bet board. Support email is bootstrap@pirin.ai.",
     {},
+    READ_ONLY,
     async () => {
       const common = {
         osVersion: OS_VERSION,
@@ -250,6 +264,7 @@ function registerReadTools(server: McpServer, surface: McpSurface, hosted?: Host
     "bootstrap_list_docs",
     "List the process notes. Not a bet board.",
     {},
+    READ_ONLY,
     async () => text(await loadOsDocList()),
   );
 
@@ -263,6 +278,7 @@ function registerReadTools(server: McpServer, surface: McpSurface, hosted?: Host
           "Which note. Not a bet board.",
         ),
     },
+    READ_ONLY,
     async ({ doc }) => {
       try {
         return text(await loadOsDoc(doc));
@@ -276,6 +292,7 @@ function registerReadTools(server: McpServer, surface: McpSurface, hosted?: Host
     "bootstrap_get_ai_instructions",
     "The short rules for how to help. Not a bet board.",
     {},
+    READ_ONLY,
     async () => {
       try {
         return text(await loadOsDoc("ai-instructions"));
@@ -289,6 +306,7 @@ function registerReadTools(server: McpServer, surface: McpSurface, hosted?: Host
     "bootstrap_reference_clocks",
     "Week labels. Say them only when the person asks.",
     {},
+    READ_ONLY,
     async () => {
       if (surface === "hosted-read") {
         return text({
@@ -309,6 +327,7 @@ function registerReadTools(server: McpServer, surface: McpSurface, hosted?: Host
     "bootstrap_house_rule_pins",
     "Short notes with links. Open one only when they ask.",
     {},
+    READ_ONLY,
     async () =>
       text({
         publishedRepo: PUBLISHED_REPO,
@@ -317,7 +336,7 @@ function registerReadTools(server: McpServer, surface: McpSurface, hosted?: Host
       }),
   );
 
-  server.tool("bootstrap_support", TOOL_SUPPORT, {}, async () => text(SUPPORT_HOWTO));
+  server.tool("bootstrap_support", TOOL_SUPPORT, {}, READ_ONLY, async () => text(SUPPORT_HOWTO));
 }
 
 function registerGatedIdentityTools(server: McpServer, ctx: HostedRequestContext) {
@@ -329,7 +348,7 @@ function registerGatedIdentityTools(server: McpServer, ctx: HostedRequestContext
     return text(membershipPayload(who, ctx.sessionKey));
   };
 
-  server.tool("bootstrap_whoami", TOOL_WHOAMI, {}, async () => {
+  server.tool("bootstrap_whoami", TOOL_WHOAMI, {}, READ_ONLY, async () => {
     const who = ctx.whoami;
     if (!who.authenticated) {
       return err(NOTE_NOT_SIGNED_IN);
@@ -341,12 +360,13 @@ function registerGatedIdentityTools(server: McpServer, ctx: HostedRequestContext
     });
   });
 
-  server.tool("bootstrap_list_companies", TOOL_LIST_COMPANIES, {}, listCompaniesHeld);
+  server.tool("bootstrap_list_companies", TOOL_LIST_COMPANIES, {}, READ_ONLY, listCompaniesHeld);
 
   server.tool(
     "bootstrap_list_company_labels",
     TOOL_LIST_COMPANY_LABELS_ALIAS,
     {},
+    READ_ONLY,
     listCompaniesHeld,
   );
 
@@ -406,6 +426,9 @@ function registerGatedIdentityTools(server: McpServer, ctx: HostedRequestContext
     },
     async (input) => {
       if (!ctx.whoami.authenticated || !adminEmail()) return err(NOTE_NOT_SIGNED_IN);
+      if (ctx.whoami.labels.length === 0 && ctx.whoami.role !== "super_admin") {
+        return text(noBoardsPayload(ctx.whoami.email));
+      }
       const store = adminStoreOf();
       if (!store) return text(askAdminResult());
       try {
@@ -418,6 +441,36 @@ function registerGatedIdentityTools(server: McpServer, ctx: HostedRequestContext
         const blocked = refusalMessage(raw);
         if (blocked) return err(blocked);
         return text(publicAdminResult(raw));
+      } catch (e) {
+        return err(e instanceof Error ? e.message : String(e));
+      }
+    },
+  );
+
+  server.registerTool(
+    "create_starter_board",
+    {
+      description: TOOL_CREATE_STARTER,
+      inputSchema: {},
+      annotations: { readOnlyHint: false },
+      _meta: { setup: SETUP_CATALOG },
+    },
+    async () => {
+      const email = ctx.whoami.email;
+      if (!ctx.whoami.authenticated || !email) return err(NOTE_NOT_SIGNED_IN);
+      const store = resolveStarterStore(ctx.accessToken);
+      if (!store) return err("A starter bet board is not available on this surface.");
+      try {
+        const created = await store.create(email);
+        if (!created.ok) return err(created.error);
+        return text({
+          ok: true,
+          created: created.created,
+          company: created.board.slug,
+          invites: created.board.invites,
+          promotable: created.board.promotable,
+          ...setupForEmptyCompany(),
+        });
       } catch (e) {
         return err(e instanceof Error ? e.message : String(e));
       }
@@ -485,6 +538,7 @@ function registerInviteTools(server: McpServer, ctx: HostedRequestContext) {
       if (!who.authenticated || !who.email) {
         return err(NOTE_NOT_SIGNED_IN);
       }
+      if (who.labels.length === 0) return text(noBoardsPayload(who.email));
       const sessionKey = ctx.sessionKey ?? "anon";
       const choice = chooseCompany({ company, companyLabel, sessionKey, labels: who.labels });
       if (choice.kind === "none") return text(noBoardsPayload(who.email));
@@ -496,6 +550,10 @@ function registerInviteTools(server: McpServer, ctx: HostedRequestContext) {
         });
       }
       const resolved = choice.company;
+      const starter = resolveStarterStore(ctx.accessToken);
+      if (starter && (await starter.isSandbox(resolved))) {
+        return err("This starter bet board cannot send invites.");
+      }
       const store = resolveInviteStore(ctx.accessToken);
       if (!store) {
         return err(inviteFailMessage("invite_store_unset"));
@@ -959,6 +1017,7 @@ function registerJourneyTools(server: McpServer, ctx: HostedRequestContext) {
         .optional()
         .describe("snapshot is always returned. meeting_doc is a generated view, not stored."),
     },
+    READ_ONLY,
     async (input) => {
       const store = storeOf();
       const actor = ctx.actor;
@@ -972,11 +1031,13 @@ function registerJourneyTools(server: McpServer, ctx: HostedRequestContext) {
       }
       try {
         return text(
-          await store.getJourney(actor, {
-            companySlug: picked.companySlug,
-            ideaSlug: picked.ideaSlug,
-            expandMeetingDoc: input.expand === "meeting_doc",
-          }),
+          withEmptyBet(
+            await store.getJourney(actor, {
+              companySlug: picked.companySlug,
+              ideaSlug: picked.ideaSlug,
+              expandMeetingDoc: input.expand === "meeting_doc",
+            }),
+          ),
         );
       } catch (e) {
         return err(e instanceof Error ? e.message : String(e));
@@ -993,6 +1054,7 @@ function registerJourneyTools(server: McpServer, ctx: HostedRequestContext) {
       idea: z.string().optional().describe("One idea under that company. Omit for every idea."),
       expand: z.enum(["snapshot", "meeting_doc"]).optional(),
     },
+    READ_ONLY,
     async (input) => {
       const store = storeOf();
       const actor = ctx.actor;
@@ -1006,11 +1068,13 @@ function registerJourneyTools(server: McpServer, ctx: HostedRequestContext) {
       }
       try {
         return text(
-          await store.getJourney(actor, {
-            companySlug: picked.companySlug,
-            ideaSlug: picked.ideaSlug,
-            expandMeetingDoc: input.expand === "meeting_doc",
-          }),
+          withEmptyBet(
+            await store.getJourney(actor, {
+              companySlug: picked.companySlug,
+              ideaSlug: picked.ideaSlug,
+              expandMeetingDoc: input.expand === "meeting_doc",
+            }),
+          ),
         );
       } catch (e) {
         return err(e instanceof Error ? e.message : String(e));
@@ -1323,6 +1387,7 @@ function registerJourneyTools(server: McpServer, ctx: HostedRequestContext) {
     {
       company: z.string().describe("Company slug"),
     },
+    READ_ONLY,
     async (input) => {
       const store = storeOf();
       const actor = ctx.actor;
@@ -1412,6 +1477,7 @@ function registerJourneyTools(server: McpServer, ctx: HostedRequestContext) {
         .optional()
         .describe("Exclusive cursor. Pass nextBefore from the previous page."),
     },
+    READ_ONLY,
     async (input) => {
       const store = storeOf();
       const actor = ctx.actor;

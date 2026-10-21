@@ -7,11 +7,11 @@ export const HOSTED_BILL_GROK_LINE =
 
 /** What a founder should hear when this connector is introduced, then the live board. */
 export const FOUNDER_INTRO =
-  "The same connection covers every team you belong to. You can open more than one company on it. Each company is one team. Ideas under that company are the customer bets. The board shows who you are betting on, what is stuck this week, and what you already decided.\n\nIt exists to keep the founder, the team, supporters, and the AI agents aligned and grounded.\n\nYou can ask: Where are we? Which companies can I open? What is stuck this week? What did we already decide?"
+  "The same connection covers every team you belong to. You can open more than one company on it. Each company is one team. Ideas under that company are the customer bets. The bet board shows who you are betting on, what is stuck this week, and what you already decided.\n\nIt exists to keep the founder, the team, supporters, and the AI agents aligned and grounded.\n\nYou can ask: Where are we? Which companies can I open? What is stuck this week? What did we already decide?"
 
 export const HOSTED_MCP_INSTRUCTIONS = `You are connected to Bootstrap OS for the signed-in person.
 
-How you talk. They are not an engineer. On the first message, and whenever they ask what this is, say only the paragraph below and then show the live board. Stop there.
+How you talk. They are not an engineer. On the first message, and whenever they ask what this is, say only the paragraph below and then show the live bet board. Stop there.
 
 ${FOUNDER_INTRO}
 
@@ -64,10 +64,13 @@ export const TOOL_USE_COMPANY =
   "Use this company for the rest of the chat (invite and later status). The user must already belong to it. Say the company name they already use."
 
 export const TOOL_INVITE_MEMBER =
-  "Invite someone to a company you can open. Same email can join more than one company. Pass company unless you already called bootstrap_use_company."
+  "Invite someone to a bet board you can open. Same email can join more than one company. A starter bet board cannot send invites. Pass company unless you already called bootstrap_use_company."
 
 export const TOOL_ACCEPT_INVITE =
-  "Join a company with the one-time invite token. Uses the signed-in email. Same person, additional company — not a second login."
+  "Join a bet board with the one-time invite token. Accept only with the invited email. Same person, additional company — not a second login."
+
+export const TOOL_CREATE_STARTER =
+  "Open your private starter bet board. One per confirmed signup. No invites. It cannot become a real company."
 
 export const NOTE_COMPANIES =
   "Companies this login can open. Say the names in one sentence. Do not print email, role, or a table."
@@ -96,7 +99,7 @@ export const TOOL_PUT_PORTFOLIO_SCORE =
   "Weekly labels on one live bet when the company has two or more. Needs a yes in this chat and a short why. Labels do not decide the bet."
 
 export const NOTE_OS_INFO_HOSTED =
-  "The board for each company this person can open."
+  "The bet board for each company this person can open."
 
 /** Same mailbox as Bill / public feedback and invite From. Inbound howto only — MCP does not send mail. */
 export const SUPPORT_EMAIL = "bootstrap@pirin.ai";
@@ -115,4 +118,4 @@ export const SUPPORT_HOWTO = {
 } as const;
 
 export const NOTE_INVITE_SENT =
-  "They'll get an email at that address. The link says open this to sign in or create your account. After they sign in, the company shows up on their board."
+  "They'll get an email at that address. They sign in or create an account as that email, then press Accept invite. After they accept, the bet board shows up for them."

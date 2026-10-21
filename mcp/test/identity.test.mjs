@@ -355,7 +355,10 @@ describe("hosted identity (resource server, gated)", () => {
     assert.equal(zeroBoards.status, 200);
     const zeroBody = JSON.parse(await zeroBoards.text());
     const zeroText = zeroBody.result.content.map((part) => part.text).join("\n");
-    assert.match(zeroText, /No boards yet/);
+    assert.match(zeroText, /private starter bet board/);
+    const zeroPayload = JSON.parse(zeroText);
+    assert.equal(zeroPayload.setupSteps[0].id, "starter-bet-board");
+    assert.equal(zeroPayload.setupSteps[0].nextTool, "create_starter_board");
     assert.equal(zeroBody.result.isError, undefined);
 
     process.env.VERCEL_ENV = "production";

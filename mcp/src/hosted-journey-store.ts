@@ -106,9 +106,20 @@ function supabaseAnonKey(): string | undefined {
 export class HostedMembershipJourneyStore implements JourneyStore {
   readonly kind = "memory" as const;
   private readonly inner = new MemoryJourneyStore([], [], [], [], []);
+  private readonly isSandbox: (slug: string) => boolean;
 
-  constructor(private readonly labelsFor: (actor: JourneyActor) => string[]) {
+  constructor(
+    private readonly labelsFor: (actor: JourneyActor) => string[],
+    options?: { isSandbox?: (slug: string) => boolean },
+  ) {
     this.inner.allowMemberComments = true;
+    this.isSandbox = options?.isSandbox ?? (() => false);
+  }
+
+  private ensureHeld(slug: string, actor: JourneyActor): void {
+    this.inner.ensureCompanyForMember(slug, actor, {
+      seedIdea: !this.isSandbox(normalizeSlug(slug)),
+    });
   }
 
   actorOnAllowlist(actor: JourneyActor): boolean {
@@ -143,7 +154,7 @@ export class HostedMembershipJourneyStore implements JourneyStore {
     const denied = this.denyUnlessHeld(actor, query.companySlug);
     if (denied) return denied;
     const slug = normalizeSlug(query.companySlug!);
-    this.inner.ensureCompanyForMember(slug, actor);
+    this.ensureHeld(slug, actor);
     const result = (await this.inner.getJourney(actor, { ...query, companySlug: slug })) as {
       ok?: boolean;
       acl?: Array<{ principal: string; role: string }>;
@@ -161,7 +172,7 @@ export class HostedMembershipJourneyStore implements JourneyStore {
   ): Promise<unknown> {
     const denied = this.denyUnlessHeld(actor, input.companySlug);
     if (denied) return denied;
-    this.inner.ensureCompanyForMember(input.companySlug, actor);
+    this.ensureHeld(input.companySlug, actor);
     return this.inner.createIdea(actor, input);
   }
 
@@ -171,7 +182,7 @@ export class HostedMembershipJourneyStore implements JourneyStore {
   ): Promise<unknown> {
     const denied = this.denyUnlessHeld(actor, input.companySlug);
     if (denied) return denied;
-    this.inner.ensureCompanyForMember(input.companySlug, actor);
+    this.ensureHeld(input.companySlug, actor);
     return this.inner.putJourney(actor, {
       ...input,
       ideaSlug: input.ideaSlug || "default",
@@ -184,21 +195,21 @@ export class HostedMembershipJourneyStore implements JourneyStore {
   ): Promise<unknown> {
     const denied = this.denyUnlessHeld(actor, input.companySlug);
     if (denied) return denied;
-    this.inner.ensureCompanyForMember(input.companySlug, actor);
+    this.ensureHeld(input.companySlug, actor);
     return this.inner.postComment(actor, { ...input, ideaSlug: input.ideaSlug || "default" });
   }
 
   async changeAcl(actor: JourneyActor, input: Parameters<JourneyStore["changeAcl"]>[1]) {
     const denied = this.denyUnlessHeld(actor, input.companySlug);
     if (denied) return denied;
-    this.inner.ensureCompanyForMember(input.companySlug, actor);
+    this.ensureHeld(input.companySlug, actor);
     return this.inner.changeAcl(actor, input);
   }
 
   async subscribeBoard(actor: JourneyActor, input: Parameters<JourneyStore["subscribeBoard"]>[1]) {
     const denied = this.denyUnlessHeld(actor, input.companySlug);
     if (denied) return denied;
-    this.inner.ensureCompanyForMember(input.companySlug, actor);
+    this.ensureHeld(input.companySlug, actor);
     return this.inner.subscribeBoard(actor, input);
   }
 
@@ -217,7 +228,7 @@ export class HostedMembershipJourneyStore implements JourneyStore {
   ) {
     const denied = this.denyUnlessHeld(actor, input.companySlug);
     if (denied) return denied;
-    this.inner.ensureCompanyForMember(input.companySlug, actor);
+    this.ensureHeld(input.companySlug, actor);
     return this.inner.listSubscribers(actor, input);
   }
 
@@ -227,7 +238,7 @@ export class HostedMembershipJourneyStore implements JourneyStore {
   ) {
     const denied = this.denyUnlessHeld(actor, input.companySlug);
     if (denied) return denied;
-    this.inner.ensureCompanyForMember(input.companySlug, actor);
+    this.ensureHeld(input.companySlug, actor);
     return this.inner.putPortfolioScore(actor, {
       ...input,
       ideaSlug: input.ideaSlug || "default",
@@ -240,7 +251,7 @@ export class HostedMembershipJourneyStore implements JourneyStore {
   ) {
     const denied = this.denyUnlessHeld(actor, query.companySlug);
     if (denied) return denied;
-    this.inner.ensureCompanyForMember(query.companySlug, actor);
+    this.ensureHeld(query.companySlug, actor);
     return this.inner.listProvenance(actor, query);
   }
 
@@ -250,7 +261,7 @@ export class HostedMembershipJourneyStore implements JourneyStore {
   ) {
     const denied = this.denyUnlessHeld(actor, query.companySlug);
     if (denied) return denied;
-    this.inner.ensureCompanyForMember(query.companySlug, actor);
+    this.ensureHeld(query.companySlug, actor);
     return this.inner.listKilledIdeas(actor, query);
   }
 }
