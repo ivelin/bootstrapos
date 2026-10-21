@@ -1144,6 +1144,12 @@ describe("canonical board card", () => {
     assert.equal(founderCardBannedHit("see https://x.test/SAFE?q=NDA"), null);
     assert.equal(applyPlainWords("the P0.fix/it now"), "the fix/it now");
     assert.notEqual(applyPlainWords("the P0.fix/it now"), "the.fix/it now");
+    assert.equal(applyPlainWords("Ship P0."), "Ship.");
+    assert.equal(applyPlainWords("Is it P0?"), "Is it?");
+    assert.equal(applyPlainWords("P0, then ship."), ", then ship.");
+    assert.equal(applyPlainWords("the P0. Next"), "the. Next");
+    assert.equal(applyPlainWords("https://P0"), "");
+    assert.notEqual(applyPlainWords("https://P0"), "https://");
     const spoken = formatSpokenCard({
       label: "alpha",
       who: ["Sam"],
