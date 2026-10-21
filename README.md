@@ -95,6 +95,14 @@ Disk bootstrap: [`mcp/README.md`](mcp/README.md).
 
 ### 4. Hosted MCP (Pirin product write plane)
 
+The hosted invite-only connector is the product. Free GitHub docs are an alternative.
+
+You are signed in, and this account has no bet board yet. Open your private starter bet board. It stays yours alone. You cannot invite anyone, and it cannot become a real company.
+
+This bet board has no bet yet. Name the first bet, who it is for, and what you sell.
+
+Open your private starter bet board. Next tool is `create_starter_board`. Name the first bet on this bet board. Next tool is `create_idea`.
+
 Pin `https://mcp.bootstrap.pirin.ai/mcp`. A super admin calls `create_company`, then `create_idea`. A first-time hosted install names a real super_admin email contact; the operator seeds that row by hand, outside git, after the roles migration, because `bootstrap_os_grant_super_admin` cannot run until one super_admin exists. That function is SQL, not a connector tool. The committed fixture is an illustrative member only, not a super_admin. Real contact addresses are never committed. Procedure: [`mcp/docs/HOSTED_IDENTITY.md`](mcp/docs/HOSTED_IDENTITY.md#first-super-admin-hosted-install). Login is `/bootstrap-os/login` on pirin.ai (Web Builder; not this repo). The pin 401s the handshake. Gated tools return 401 + `WWW-Authenticate` to this MCP origin RFC 9728 (`authorization_servers` = pirin.ai login). Free docs are GitHub + [install-os](https://pirin.ai/bootstrap-os) + local. The hosted connector uses sign-in. See [mcp/docs/MARKETPLACE.md](mcp/docs/MARKETPLACE.md). Path 1 stays the front door. Path 1 markdown stays the constitution. Contract: [`mcp/docs/HOSTED_IDENTITY.md`](mcp/docs/HOSTED_IDENTITY.md).
 
 A **preview** plugin lives in [`plugin/`](plugin/): thin skills that hyperlink this repo. See [mcp/docs/MARKETPLACE.md](mcp/docs/MARKETPLACE.md). It is not a second front door. The Vercel production Host is the same 401, not a silent 200 alias. Git-branch previews are not mentee-ready boards.
