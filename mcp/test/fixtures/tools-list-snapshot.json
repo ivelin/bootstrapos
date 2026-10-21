@@ -1,0 +1,137 @@
+{
+  "tools": [
+    {
+      "name": "accept_invite",
+      "readOnlyHint": false
+    },
+    {
+      "name": "bootstrap_get_ai_instructions",
+      "readOnlyHint": true
+    },
+    {
+      "name": "bootstrap_get_doc",
+      "readOnlyHint": true
+    },
+    {
+      "name": "bootstrap_house_rule_pins",
+      "readOnlyHint": true
+    },
+    {
+      "name": "bootstrap_list_companies",
+      "readOnlyHint": true
+    },
+    {
+      "name": "bootstrap_list_company_labels",
+      "readOnlyHint": true
+    },
+    {
+      "name": "bootstrap_list_docs",
+      "readOnlyHint": true
+    },
+    {
+      "name": "bootstrap_os_info",
+      "readOnlyHint": true
+    },
+    {
+      "name": "bootstrap_reference_clocks",
+      "readOnlyHint": true
+    },
+    {
+      "name": "bootstrap_support",
+      "readOnlyHint": true
+    },
+    {
+      "name": "bootstrap_use_company",
+      "readOnlyHint": false
+    },
+    {
+      "name": "bootstrap_where_are_we",
+      "readOnlyHint": true
+    },
+    {
+      "name": "bootstrap_whoami",
+      "readOnlyHint": true
+    },
+    {
+      "name": "create_company",
+      "readOnlyHint": false
+    },
+    {
+      "name": "create_idea",
+      "readOnlyHint": false
+    },
+    {
+      "name": "create_starter_board",
+      "readOnlyHint": false
+    },
+    {
+      "name": "enable_board_watch",
+      "readOnlyHint": false
+    },
+    {
+      "name": "get_journey",
+      "readOnlyHint": true
+    },
+    {
+      "name": "invite_member",
+      "readOnlyHint": false
+    },
+    {
+      "name": "list_provenance",
+      "readOnlyHint": true
+    },
+    {
+      "name": "list_subscribers",
+      "readOnlyHint": true
+    },
+    {
+      "name": "post_comment",
+      "readOnlyHint": false
+    },
+    {
+      "name": "put_journey",
+      "readOnlyHint": false
+    },
+    {
+      "name": "put_portfolio_score",
+      "readOnlyHint": false
+    },
+    {
+      "name": "submit_feedback",
+      "readOnlyHint": false
+    },
+    {
+      "name": "subscribe_board",
+      "readOnlyHint": false
+    },
+    {
+      "name": "unsubscribe_board",
+      "readOnlyHint": false
+    }
+  ],
+  "setup": {
+    "setupFormatVersion": 1,
+    "zeroCompany": {
+      "setupFormatVersion": 1,
+      "setupSteps": [
+        {
+          "id": "starter-bet-board",
+          "title": "Open your private starter bet board",
+          "nextTool": "create_starter_board"
+        }
+      ],
+      "guidance": "You are signed in, and this account has no bet board yet. Open your private starter bet board. It stays yours alone. You cannot invite anyone, and it cannot become a real company."
+    },
+    "emptyCompany": {
+      "setupFormatVersion": 1,
+      "setupSteps": [
+        {
+          "id": "first-bet",
+          "title": "Name the first bet on this bet board",
+          "nextTool": "create_idea"
+        }
+      ],
+      "guidance": "This bet board has no bet yet. Name the first bet, who it is for, and what you sell."
+    }
+  }
+}

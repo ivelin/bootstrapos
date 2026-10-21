@@ -17,5 +17,8 @@ jobs:
           node-version: "22"
           cache: npm
           cache-dependency-path: mcp/package-lock.json
+      - name: PostgreSQL 16
+        run: sudo apt-get update && sudo apt-get install -y postgresql-16
+
       - name: Day-0 + spoken-card eval
         run: sh scripts/ci.sh

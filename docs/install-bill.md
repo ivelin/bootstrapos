@@ -26,7 +26,7 @@ Anyone can still run Bootstrap OS in chat with no account:
 - https://github.com/ivelin/bootstrapos
 - https://pirin.ai/bootstrap-os
 
-That is the default front door. Bill is extra, and only with an invite.
+The free GitHub docs are the alternative. Bill is an optional weekly-habit helper, and only with an invite.
 
 ## 3. Weekly board watch
 

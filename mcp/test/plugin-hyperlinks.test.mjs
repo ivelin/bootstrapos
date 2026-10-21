@@ -139,7 +139,7 @@ describe("preview plugin (hyperlink only)", () => {
     assert.match(standing, /is not GTM/);
     assert.match(standing, /Do not speak as Ivelin/);
     assert.match(standing, /Do not host mentee/);
-    assert.match(standing, /Path 1 stays the front door/);
+    assert.match(standing, /Free GitHub docs are the alternative/);
     assert.match(standing, /plugin\/README\.md#feedback/);
     assert.match(standing, /is this price optimal/);
     assert.match(standing, /old SaaS playbook/);

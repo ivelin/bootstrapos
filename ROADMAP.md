@@ -7,7 +7,7 @@
 
 | | |
 |--|--|
-| **Product** | Portable Company OS (markdown) + optional thin MCP |
+| **Product** | Hosted invite-only connector. Free GitHub docs are an alternative |
 | **Primary customer group (working)** | Solo / near-solo non-technical founders in 0→1 who thrash between AI harnesses |
 | **Job** | Stable **control plane** (two clocks, gates, sparse evidence) that survives tool switches |
 | **Non-job** | Harness, hosting platform, memory product, skill marketplace, investor network |
@@ -29,19 +29,27 @@
 | **Source of truth** | Markdown process pack (`company-os/`) + **founder’s instance** state (thesis, scores, phase, traces) | Chat history, auto-memory, skill marketplaces, or vendor project rooms |
 | **Primary user** | Non-technical or light-technical founders who must decide Advance / Iterate / Hold / Kill | Funded multi-team orgs needing multiplayer agent admin (that’s 1–n harness territory, e.g. QM-class) |
 | **Core loop** | Prove the business (slow) while learning weekly (fast); stage 7 write-back | Infinite prototype generation without gates |
-| **Success** | Founder answers “Where are we?” in <2 minutes from written state; can switch tools without losing the board | Stars, waitlists, or “we installed twelve agents” |
+| **Success** | Founder answers “Where are we?” in <2 minutes from written state; can switch tools without losing the bet board | Stars, waitlists, or “we installed twelve agents” |
 | **Teaching** | 90‑min install + OH ritual; FI-style accountability | A certification empire or content farm without dogfood |
-| **Default delivery** | **Markdown only** — zero Node required | Something you must “sign up” to think |
+| **Default delivery** | Hosted invite-only connector for any MCP client | Setup that exists only inside Bill |
 
-### MCP (optional adapter — not the OS)
+### pirin.ai headline and one-liner
+
+<!-- Provisional. Pending Ivelin's approval. Do not publish this headline until then. -->
+
+**Headline:** The invite-only connector is the way onto your bet board. The free GitHub docs are the other way.
+
+**One-liner:** PENDING
+
+### Hosted invite-only connector (the product)
 
 | | **IS** | **IS NOT** |
 |--|--------|------------|
-| **Job** | Thin **tool interface** to the same process + instance state: where-are-we, gated updates, human-eyes policy, later sparse ledger/export | A new company operating system, memory product, or harness |
-| **Value** | Enforces P1–P4 (and later P5) across Cursor/Claude/Grok/etc. without re-pasting novels | Required for mentees; replacement for reading the blueprint |
-| **State** | Reads/writes **founder-owned** files (or future private store); template `company-os/` stays read-only | Multi-tenant social graph or public leaderboard backend |
-| **Local v0.1** | Stdio server in-repo; process tools + thin `company-state.json` | Hosted SaaS, auth product, or investor network |
-| **Hosted (preview / maybe later)** | Preview: same read tool names; fetch published OS; no shared founder state. Optional gated whoami + **labels** (not boards) on the existing pirin.ai Supabase. Mentee-ready boards later only if proven | Day-one dependency; ranking; auto-ingest of all chats |
+| **Job** | The hosted invite-only connector a founder uses to reach a first bet board | A second operating system, or setup that lives only in Bill |
+| **Value** | Any MCP client gets `setupSteps` and a first bet board | Keeping setup only in Bill |
+| **State** | Hosted pin. A private starter bet board is a sandbox, one per account, no invites, and it cannot become a real company. A later founder seed invite is the only path to a real company | Promoting a starter bet board, or merging companies |
+| **Free docs** | GitHub + install-os + local, as an alternative | The only way to start |
+| **Local kit** | Optional OSS stdio server. Not the Pirin mentee source of record | The product |
 | **Noise policy** | Explicit tools only (milestone/decision/gate) | Auto skill creation, ambient memory, “agent built 40 skills today” |
 
 ### One stack picture
@@ -93,7 +101,7 @@ Update this block when reality changes. Do not invent progress.
 | **Loop stage** | **7** this week (write-back after MCP work); markdown path already shippable as docs |
 | **Autonomy posture** | **Strict** — no auto phase advances; no silent hosted launch |
 | **Ready for human eyes** | **unknown** for MCP until cold install by a non-maintainer works end-to-end |
-| **Gate** | Do not market MCP as required. Do not ship hosted until local export + dogfood ledger exist or are explicitly killed |
+| **Gate** | The hosted invite-only connector is the product. Free GitHub docs are an alternative. This row is not a phase Advance |
 | **Open questions** | Will non-technical mentees use local MCP, or only markdown + later hosted read path? Does ledger reduce thrash in a real FI cohort? Can “Claude rooms / project setup” collapse into a 90‑min Bootstrap install without tool thrash? |
 | **Last roadmap review** | 2026-08-07 (evidence scan: Gmail FI/mentees, X, public LinkedIn) |
 | **Last weekly control-plane snapshot** | **2026-08-16** in private Pirin instance (`docs/company-os/instance/WEEKLY-SNAPSHOT-2026-08-16.md`). Not in this template. |
@@ -101,7 +109,7 @@ Update this block when reality changes. Do not invent progress.
 | **Maintainer autonomy posture** | **Strict** — same as we prescribe early solo founders |
 
 **Where are we in one sentence:**  
-We pursue only P1–P6 (control plane, gates, human-eyes, harness-agnostic state, sparse evidence, teachable install). Optional MCP is a delivery path for P1–P4/P5 — not a goal in itself. Hosted/social stay out until evidence appears. **This week’s private snapshot + stage-7 exist.** That is one week, not four. M2 (non-author cold path) is still open. Do not claim mentee-ready MCP.
+We pursue only P1–P6 (control plane, gates, human-eyes, harness-agnostic state, sparse evidence, teachable install). The hosted invite-only connector is the product. Free GitHub docs are an alternative. **This week’s private snapshot + stage-7 exist.** That is one week, not four. M2 (non-author cold path) is still open. Do not claim a phase Advance from this sentence.
 
 ---
 
@@ -183,12 +191,12 @@ These are the **only** benefits we actively invest in. Each row must keep a live
 
 | Mode | Status | Rule |
 |------|--------|------|
-| **1. Point an AI** | **Default forever** | https://github.com/ivelin/bootstrap — no install, no MCP |
+| **1. Point an AI** | **The other way** | https://github.com/ivelin/bootstrap. No install. No MCP. Free GitHub docs. |
 | **2. Optional instance / CLI + workflows** | **Shipped on main** | `./scripts/install-instance.sh` + optional `.grok/workflows` |
 | **3. Self-host kit** | **Optional OSS `mcp/`** | Your disk (`initCompany()` / `~/.bootstrap-os`) or your own Vercel + Supabase. Not the Pirin mentee source of record. Same `company-state.json` + `where-are-we.py` on disk. |
-| **4. Hosted MCP** | **Pirin write plane** | Pin `https://mcp.bootstrap.pirin.ai/mcp` (handshake 401). Super admin calls `create_company`, then `create_idea`. `plugin/` is preview. Free docs are GitHub + install-os + local. The hosted connector uses sign-in. Git-branch previews on `*.vercel.app` (same 401 as collab, not a silent 200 alias, not a pin, not mentee-ready boards). Contract: [`mcp/docs/HOSTED_IDENTITY.md`](mcp/docs/HOSTED_IDENTITY.md). Gated tools: HTTP 401 + `WWW-Authenticate` to this MCP origin RFC 9728 (`authorization_servers` = pirin.ai login). This repo is the resource server only. Login / OAuth stay on pirin.ai `/bootstrap-os/login` (Web Builder). No login UI and no copy-paste `bos_` mint as the mentee path. See [mcp/docs/MARKETPLACE.md](mcp/docs/MARKETPLACE.md). Not pirin.ai. Path 1 stays the front door. This row is not an Advance of Phase D. |
+| **4. Hosted MCP** | **The product** | Pin `https://mcp.bootstrap.pirin.ai/mcp` (handshake 401). The hosted invite-only connector is the product. Free GitHub docs are an alternative. A confirmed signup can open one private starter bet board (`create_starter_board`). It cannot send invites and it cannot become a real company. A later founder seed invite is the only path to a real company. Super admin calls `create_company`, then `create_idea`, for that real company. `plugin/` is preview. The hosted connector uses sign-in. Git-branch previews on `*.vercel.app` (same 401 as collab, not a silent 200 alias, not a pin, not mentee-ready boards). Contract: [`mcp/docs/HOSTED_IDENTITY.md`](mcp/docs/HOSTED_IDENTITY.md). Gated tools: HTTP 401 + `WWW-Authenticate` to this MCP origin RFC 9728 (`authorization_servers` = pirin.ai login). This repo is the resource server only. Login / OAuth stay on pirin.ai `/bootstrap-os/login` (Web Builder). No login UI and no copy-paste `bos_` mint as the mentee path. See [mcp/docs/MARKETPLACE.md](mcp/docs/MARKETPLACE.md). Not pirin.ai. This row is not an Advance of Phase D. |
 
-Cos Advance (hosted board): invited companies write on the pin after roles SQL and a sole super_admin. Self-host `~/.bootstrap-os` is not the Pirin source of record. Path 1 stays the no-login front door. See [mcp/docs/MARKETPLACE.md](mcp/docs/MARKETPLACE.md).
+Cos Advance (hosted board): invited companies write on the pin after roles SQL and a sole super_admin. Self-host `~/.bootstrap-os` is not the Pirin source of record. See [mcp/docs/MARKETPLACE.md](mcp/docs/MARKETPLACE.md).
 
 MCP is **compass + logbook**, not a third harness.
 
@@ -235,7 +243,7 @@ Agents should start sessions with focus → do work → record when ready (`log_
 | **Dogfood** | Pirin / Bootstrap maintainer instance uses MCP weekly for “Where are we?” on *this* product |
 | **Kill if** | Cold install fails repeatedly for target mentees *and* markdown-only already covers them → keep markdown, archive MCP |
 | **Status** | **In build** — human-eyes unknown until cold path green |
-| **From field** | No email/X proof yet that non-tech FI founders want local Node MCP. Do not market B as required. |
+| **From field** | No email/X proof yet that non-tech FI founders want local Node MCP. The hosted invite-only connector is the product. Free GitHub docs are an alternative. |
 
 ### Phase C — Evidence ledger + export (next high impact)
 
@@ -248,14 +256,14 @@ Agents should start sessions with focus → do work → record when ready (`log_
 | **Status** | **Next** after Phase B human-eyes green or explicit iterate |
 | **From field** | Thesis change → pilot evidence (MicDots class); multi-company dogfood claim needs per-company boards |
 
-### Phase D — Hosted read path (optional)
+### Phase D — Hosted read path
 
 | | |
 |--|--|
-| **Ship only if** | Phase C dogfood green **and** real demand for shareable read-only export |
-| **Done means** | Same tools/names; founder owns revoke; no public ranking |
-| **Kill if** | Local export + Drive/git share is enough for dogfood cohort |
-| **Status** | **Hold** — this phase is not Advanced. |
+| **Ship** | Invite-only pin `https://mcp.bootstrap.pirin.ai/mcp` |
+| **Done means** | Same tools and names. The founder owns revoke. No public ranking. |
+| **Kill if** | Local export plus a Drive or git share is enough for the dogfood cohort |
+| **Status** | **Shipped path.** The invite-only connector is the way onto the bet board. |
 
 ---
 

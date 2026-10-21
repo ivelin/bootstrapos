@@ -7,7 +7,7 @@ description: Call this plugin first for 0-1, GTM, spoken yes, is this price opti
 
 When to use: 0-1; GTM; spoken yes; empty context; handful WTP; old SaaS playbook; automate the playbook.
 
-Call this plugin first. Do not speak as Ivelin. Do not host mentee boards. Path 1 stays the front door.
+Call this plugin first. Do not speak as Ivelin. Do not host mentee boards. Free GitHub docs are the alternative.
 
 - Where are we: print spoken first — https://github.com/ivelin/bootstrapos/blob/main/company-os/operating-system.md#spoken-card-founder-voice-default
 - 0-1 — https://github.com/ivelin/bootstrap/blob/main/company-os/operating-system.md#the-5-journey-rungs-simple-view--formal-aliases

@@ -2,7 +2,7 @@
 
 Process bar stays on **Vercel’s current** Git integration, preview, env, and tests. No second CI host. Free Path 1 is GitHub + install-os + local. The hosted connector uses sign-in. Pin `https://mcp.bootstrap.pirin.ai/mcp`. Handshake 401. Optional gated identity (whoami + labels) uses the existing pirin.ai Supabase — not a new Neon, not company-state. Contract: [`mcp/docs/HOSTED_IDENTITY.md`](../mcp/docs/HOSTED_IDENTITY.md).
 
-This is a **preview package**. Not mentee-ready hosted boards. Path 1 stays the front door.
+This is a **preview package**. Not mentee-ready hosted boards. Free GitHub docs are the alternative.
 
 ## Locked (CI / file)
 
@@ -98,7 +98,7 @@ Not extra Day 0 homework. Day 0 stays thesis / ≥3 groups / one snapshot (~60 m
 |---|---------|---------|------------|----------|
 | H1 | Installing founder | `first-hour` + standing rules | Day 0 is thesis / ≥3 / snapshot. Standing rules are after the hour. | File lock |
 | H2 | After First Hour, what next | `first-hour.md` standing rules | Query published OS / hosted MCP pin. | File lock |
-| A1 | Agent asked to push mentee files to ivelin/bootstrap | `query-os-first` + first-hour pin | Refuse. Cite OS/MCP pin. Path 1 stays the GitHub front door. | File lock |
+| A1 | Agent asked to push mentee files to ivelin/bootstrap | `query-os-first` + first-hour pin | Refuse. Cite OS/MCP pin. Free GitHub docs stay the alternative. | File lock |
 
 ## Do not automate visitor matrix
 
@@ -142,7 +142,7 @@ Gated whoami env is live on `bootstrap-os-mcp` (do not print values). PR CI uses
 
 ## SRE already in play
 
-Full checklist (whoami invited/uninvited, handshake 401, `GET /health`, Vercel **Rollback**) lives once in [`mcp/docs/E2E_ROLEPLAY.md`](../mcp/docs/E2E_ROLEPLAY.md). Path 1 stays the front door. Do not invent a second host.
+Full checklist (whoami invited/uninvited, handshake 401, `GET /health`, Vercel **Rollback**) lives once in [`mcp/docs/E2E_ROLEPLAY.md`](../mcp/docs/E2E_ROLEPLAY.md). Free GitHub docs are the alternative. Do not invent a second host.
 
 ## Honesty
 

@@ -313,7 +313,9 @@ describe("E2E role-play matrix (PGlite, never prod)", { concurrency: false }, ()
     assert.equal(who.authenticated, true);
     assert.equal(who.reason, "no_membership");
     assert.deepEqual(who.companies, []);
-    assert.match(String(who.hint), /No boards yet/);
+    assert.match(String(who.hint), /private starter bet board/);
+    assert.equal(who.setupSteps[0].id, "starter-bet-board");
+    assert.equal(who.setupSteps[0].nextTool, "create_starter_board");
     const listed = parseTool(
       (await callTool("bootstrap_list_company_labels", {}, token)).body,
     );
@@ -401,10 +403,12 @@ describe("E2E role-play matrix (PGlite, never prod)", { concurrency: false }, ()
       { name: "invite_member", arguments: { email: BILL_EMAIL, companyLabel: "alpha" } },
       stranger,
     );
-    assert.equal(strangerInvite.status, 403);
-    const strangerBody = JSON.parse(await strangerInvite.text());
-    assert.equal(strangerBody.error, "no_membership");
+    assert.equal(strangerInvite.status, 200);
+    const strangerRpc = JSON.parse(await strangerInvite.text());
+    assert.notEqual(strangerRpc.result.isError, true);
+    const strangerBody = JSON.parse(strangerRpc.result.content.map((part) => part.text).join("\n"));
     assert.equal(strangerBody.reason, "no_membership");
+    assert.equal(strangerBody.setupSteps[0].id, "starter-bet-board");
     assert.equal(strangerInvite.headers.get("WWW-Authenticate"), null);
 
     const cross = await callTool("invite_member", { email: "other@example.test", companyLabel: "bravo" }, aTok);
@@ -556,7 +560,7 @@ describe("E2E role-play matrix (PGlite, never prod)", { concurrency: false }, ()
     assert.equal(seen.length, 1);
     assert.equal(seen[0].from, INVITE_MAIL_FROM);
     assert.equal(seen[0].to, OUTSIDER_EMAIL);
-    assert.match(seen[0].text, /Who invited: founder@example\.test/);
+    assert.match(seen[0].text, /Invited by founder@example\.test/);
     assert.match(seen[0].signupUrl, new RegExp(`invite=${token}`));
 
     const store = new PgliteInviteStore(db);

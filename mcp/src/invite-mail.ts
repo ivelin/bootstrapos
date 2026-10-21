@@ -4,11 +4,16 @@
  * This repo enqueues + builds the body. pirin-ai Resend sends on production.
  * Default off here. dry-run for tests. Never blast prod mail from MCP / CI.
  */
-import { INVITE_LINK_LINE } from "./onboarding.js";
 import { PIRIN_OAUTH_ORIGIN, PIRIN_ORIGIN } from "./oauth.js";
 
 export const INVITE_MAIL_FROM = "bootstrap@pirin.ai";
 export const INVITE_SIGNUP_QUERY = "invite";
+
+/** Connect lines in the dry-run mirror. The live template owns the same three slots. */
+export const BOOTSTRAP_MCP_CONNECT_LEAD = "Install the Bootstrap OS connector.";
+export const BOOTSTRAP_MCP_URL = "https://mcp.bootstrap.pirin.ai/mcp";
+export const BOOTSTRAP_MCP_CONNECT_TAIL =
+  "Sign in on pirin.ai with the invited email. Then ask where you are.";
 
 export const INVITE_MAIL_NOTE =
   "Open this to sign in or create your account. One link, with ?invite=. This is the universal path for any agentic client. The signed-in email is matched to the invite. The token alone does not grant access. pirin-ai sends From bootstrap@pirin.ai on production.";
@@ -30,11 +35,24 @@ export type InviteMail = {
 
 export type InviteMailInput = {
   inviterEmail: string;
+  inviterName?: string;
   inviteeEmail: string;
   companyWorkspace: string;
   inviteToken: string;
   expiresAt: string;
 };
+
+export function inviterDisplayName(inviterName: string | undefined, inviterEmail: string): string {
+  const named = inviterName?.trim();
+  return named ? named : inviterEmail;
+}
+
+export function inviterNameForKick(inviterName: string | undefined, inviterEmail: string): string | undefined {
+  const named = inviterName?.trim();
+  if (!named) return undefined;
+  if (named.toLowerCase() === inviterEmail.trim().toLowerCase()) return undefined;
+  return named;
+}
 
 let mailSink: ((mail: InviteMail) => void) | undefined;
 
@@ -55,6 +73,7 @@ export type PirinInviteMailKick = {
   invitedByEmail: string;
   companyLabel: string;
   inviteToken: string;
+  inviterName?: string;
 };
 
 /** Production MCP kicks pirin to send immediately. Preview/CI never POST. */
@@ -86,6 +105,7 @@ export async function notifyPirinInviteMail(
   if (!secret) return { skipped: "secret_unset" };
   const url = pirinInviteMailUrl(env);
   if (!url) return { skipped: "url_not_pirin" };
+  const inviterName = inviterNameForKick(kick.inviterName, kick.invitedByEmail);
   const res = await fetchImpl(url, {
     method: "POST",
     headers: {
@@ -98,6 +118,7 @@ export async function notifyPirinInviteMail(
       companyLabel: kick.companyLabel,
       inviteToken: kick.inviteToken,
       signupUrl: inviteSignupUrl(kick.inviteToken),
+      ...(inviterName ? { inviterName } : {}),
     }),
     signal: AbortSignal.timeout(10_000),
   });
@@ -127,24 +148,32 @@ export function resolveInviteMailMode(
 export function buildInviteMail(input: InviteMailInput): InviteMail {
   assertInviteMailFrom(INVITE_MAIL_FROM);
   const signupUrl = inviteSignupUrl(input.inviteToken);
+  const inviterName = inviterDisplayName(input.inviterName, input.inviterEmail);
   const text = [
-    "You've been invited to a Bootstrap OS company workspace.",
+    "Base camp is ready.",
     "",
-    `Who invited: ${input.inviterEmail}`,
-    `Invitee email: ${input.inviteeEmail}`,
-    `Company workspace: ${input.companyWorkspace}`,
+    `${inviterName} invited you to ${input.companyWorkspace}, a private bet board on Bootstrap OS. Only people invited to it can join.`,
     "",
-    `${INVITE_LINK_LINE}:`,
+    "Bring your own AI agent. Connect it to the bet board, and work on it together.",
+    "",
+    "Enter base camp:",
     signupUrl,
     "",
-    `Expires: ${input.expiresAt}`,
+    `Sign in or create your account as ${input.inviteeEmail}, then press Accept invite. Invited by ${input.inviterEmail}.`,
     "",
-    INVITE_MAIL_NOTE,
+    "Connect your agent:",
+    BOOTSTRAP_MCP_CONNECT_LEAD,
+    BOOTSTRAP_MCP_URL,
+    BOOTSTRAP_MCP_CONNECT_TAIL,
+    "",
+    "Not expecting this? You can ignore this email. Nothing happens unless you accept.",
+    "",
+    "Bootstrap OS, by pirin.ai",
   ].join("\n");
   return {
     from: INVITE_MAIL_FROM,
     to: input.inviteeEmail,
-    subject: `${input.inviterEmail} invited you to ${input.companyWorkspace} on Bootstrap OS`,
+    subject: `${inviterName} invited you to base camp: the ${input.companyWorkspace} bet board`,
     text,
     signupUrl,
     qrPayload: signupUrl,

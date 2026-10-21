@@ -71,6 +71,16 @@ On Day 0 you should hear something like: **Write the bet**, gate open, autonomy 
 
 ---
 
+## Connector first
+
+You are signed in, and this account has no bet board yet. Open your private starter bet board. It stays yours alone. You cannot invite anyone, and it cannot become a real company.
+
+This bet board has no bet yet. Name the first bet, who it is for, and what you sell.
+
+Open your private starter bet board with `create_starter_board`. Name the first bet on this bet board with `create_idea`.
+
+Call `invite_member` to invite an email onto a bet board you can open. They `accept_invite` only with that invited email. Each bet board stays isolated. A login sees only the bet boards that email was invited to. A private starter bet board cannot send invites and cannot become a real company. A later founder seed invite is the only path to a real company.
+
 ## Done when
 
 - [ ] Thesis written and labeled a hypothesis
@@ -89,7 +99,7 @@ On Day 0 you should hear something like: **Write the bet**, gate open, autonomy 
 
 Not another Day 0 checkbox. This hour stays thesis, ≥3 groups, one snapshot.
 
-After First Hour, the constitution stays on GitHub and [install-os](https://pirin.ai/install-os). Free Path 1 does not use a hosted MCP connector. The hosted connector uses sign-in. Pirin-supported company boards are `https://mcp.bootstrap.pirin.ai/mcp` ([hosted identity](https://github.com/ivelin/bootstrapos/blob/main/mcp/docs/HOSTED_IDENTITY.md)). A super admin calls `create_company`, then `create_idea`. Do not keep that company on a local install.
+After First Hour, the constitution stays on GitHub and [install-os](https://pirin.ai/install-os). Free Path 1 does not use a hosted MCP connector. The hosted connector uses sign-in. The hosted invite-only connector is how a founder reaches a bet board. Free GitHub docs are an alternative. Pirin-supported bet boards are `https://mcp.bootstrap.pirin.ai/mcp` ([hosted identity](https://github.com/ivelin/bootstrapos/blob/main/mcp/docs/HOSTED_IDENTITY.md)). Call `invite_member`, then `accept_invite` only with the invited email. Each bet board stays isolated. A super admin calls `create_company`, then `create_idea`, for a real company. A starter bet board is not that company. Do not keep that company on a local install.
 
 Do **not** upload mentee work to Ivelin's GitHub.
 

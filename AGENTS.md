@@ -7,10 +7,10 @@ This repository is the **portable Bootstrap OS template** only.
 1. Prefer editing instance examples under product repos or a self-host data root, not this template, unless the founder explicitly approved a **template** change.
 2. Never add a filled product thesis, beachhead market, or company scores into `company-os/` — those belong in consumer instances (`docs/company-os/applied-here.md`, `company/state/`, or `BOOTSTRAP_DATA_ROOT/instances/<id>/`).
 3. When helping a founder adopt the OS, present the Day-0 order from [README.md](README.md#how-to-use-this-pick-one):
-   - **Path 1 — Point an AI** at https://github.com/ivelin/bootstrapos — no install. Default front door.
+   - **Path 1 — Point an AI** at https://github.com/ivelin/bootstrapos — no install. Free GitHub docs are the alternative.
    - **Path 2 — Optional instance/CLI** (`./scripts/install-instance.sh`) + optional `.grok/workflows`.
    - **Path 3 — Self-host kit.** OSS [`mcp/`](mcp/) on your disk (`initCompany()` / `~/.bootstrap-os`) or your own Vercel + Supabase. Not the Pirin-supported mentee source of record. Do not require it.
-   - **Path 4 — Hosted MCP is the Pirin product write plane.** Pin `https://mcp.bootstrap.pirin.ai/mcp` (handshake 401). A super admin calls `create_company`, then `create_idea`. [`plugin/`](plugin/) is preview. Free docs = GitHub + install-os + local. The hosted connector uses sign-in. Git-branch previews on `*.vercel.app` (same 401 as collab, not a silent 200 alias, not a pin, not mentee-ready boards). Contract: [`mcp/docs/HOSTED_IDENTITY.md`](mcp/docs/HOSTED_IDENTITY.md). See [mcp/docs/MARKETPLACE.md](mcp/docs/MARKETPLACE.md). Not pirin.ai. Path 1 stays the front door.
+   - **Path 4 — Hosted MCP is the Pirin product write plane.** Pin `https://mcp.bootstrap.pirin.ai/mcp` (handshake 401). A super admin calls `create_company`, then `create_idea`. [`plugin/`](plugin/) is preview. Free docs = GitHub + install-os + local. The hosted connector uses sign-in. Git-branch previews on `*.vercel.app` (same 401 as collab, not a silent 200 alias, not a pin, not mentee-ready boards). Contract: [`mcp/docs/HOSTED_IDENTITY.md`](mcp/docs/HOSTED_IDENTITY.md). See [mcp/docs/MARKETPLACE.md](mcp/docs/MARKETPLACE.md). Not pirin.ai. Free GitHub docs are the alternative.
 4. Hard company-control rules for founders live in [`company-os/ai-instructions.md`](company-os/ai-instructions.md) — paste that block into *their* `AGENTS.md` (or keep via MCP + short pointer).
 
 See [README.md](README.md#template-change-policy).

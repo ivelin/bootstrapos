@@ -4,7 +4,7 @@ Fixtures only (`alpha` / `bravo` / `charlie`, `@example.test`). Never production
 
 ## What it checks
 
-Invite mail is one link (“Open this to sign in or create your account”). A verified session with a pending invite accepts that invite and `bootstrap_whoami` shows the board. A verified session with zero boards is HTTP **200** `reason: no_membership` and the hint “No boards yet. Ask your inviter to resend the invite to this email.” A missing or rejected token is HTTP **401** `error: invalid_token` with the specific `reason`. A membership-required tool with no board is HTTP **403** `error: no_membership` and does not send `WWW-Authenticate`. Repeating Allow reuses one user and one OAuth subject. A revoked access token is a clean 401; another live token for that user still works. A membership written in the database is visible on the next call.
+Invite mail is one signup link plus the MCP connect lines. A verified session with a pending invite accepts that invite and `bootstrap_whoami` shows the bet board. A verified session with zero bet boards is HTTP **200** `reason: no_membership` and `setupSteps` for the private starter bet board. A missing or rejected token is HTTP **401** `error: invalid_token` with the specific `reason`. A membership tool with no bet board is HTTP **200** with those same `setupSteps` and does not send `WWW-Authenticate`. Repeating Allow reuses one user and one OAuth subject. A revoked access token is a clean 401; another live token for that user still works. A membership written in the database is visible on the next call.
 
 ## How to run
 
@@ -19,8 +19,8 @@ That builds, then runs `node scripts/onboarding-probe.mjs`, which runs `test/onb
 | Call | Status | Body |
 |------|--------|------|
 | No bearer, or a rejected / revoked token | 401 | `error: invalid_token`, `reason` is the exact failure (`missing_or_short_token`, `invalid_or_revoked_token`, …) |
-| Verified session, no board | 200 | `reason: no_membership`, hint above. Not a rejected token. |
-| `invite_member` / `create_company` / super-admin tools with no board | 403 | `error: no_membership`. No `WWW-Authenticate`. |
+| Verified session, no bet board | 200 | `reason: no_membership`, `setupSteps` for the private starter bet board. Not a rejected token. |
+| `invite_member` / `create_company` with no bet board | 200 | Same `setupSteps`. No `WWW-Authenticate`. A super admin still reaches `create_company`. |
 
 SQL `bootstrap_mcp_my_labels` still says `not_invited`. The handler upgrades that. Clients must branch on `error` / `reason`, not on “the server rejected the access it just issued.”
 
