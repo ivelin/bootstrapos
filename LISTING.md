@@ -6,11 +6,7 @@ This plugin is not listed in the Cursor marketplace yet.
 
 ## What you need
 
-<<<<<<< HEAD
-- An invite. Boards are invite-only. Someone already on your bet board sends the invite to your email.
-=======
 - An invite. Bet boards are invite-only. Someone already on your bet board sends the invite to your email.
->>>>>>> 0df09cf (docs: make the hosted connector the setup source)
 - A pirin.ai sign-in that uses that same email. You can create the account when you first sign in.
 
 ## How to connect
