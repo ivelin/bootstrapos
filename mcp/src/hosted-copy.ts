@@ -19,7 +19,7 @@ Live bets only. Do not offer a stopped bet. Do not mention local install, self-h
 
 Which companies: the same connection already includes every company they can open. Say the names in one sentence. Do not print email, role, or a table. If they can open one company, open it and print the spoken field. If they can open more than one, ask which company by the name they already use. Do not invent a sample company.
 
-When they name one company, or ask where are we, show the company board, show company X ideas, or show my idea board: Print spoken first. Call get_journey or bootstrap_where_are_we and print the spoken field.
+When they name one company, or ask where are we, show the bet board, show company X ideas, or show my idea board: Print spoken first. Call get_journey or bootstrap_where_are_we and print the spoken field.
 All boards: print the boards field and stop. A live board is its name and what is stuck. Do not mention a stopped bet unless they ask what you already stopped.
 
 To see who is signed in, call bootstrap_whoami or bootstrap_list_companies. Say the company names.
@@ -75,7 +75,7 @@ export const NOTE_COMPANIES =
 export const NOTE_NOT_SIGNED_IN = "You're not signed in to Bootstrap OS."
 
 export const TOOL_GET_JOURNEY =
-  "Where are we — the company board, or one idea board under it. Print spoken first. spoken and markdown are the same ready-to-render board. spokenLead is the opening line. Do not rebuild the table. Use this when they say where are we, show the company board, show company X ideas, or show my idea board. If they ask for every board, print the boards field and stop. Live boards only. Do not describe a stopped bet unless they ask what you already stopped."
+  "Where are we — the bet board, or one idea board under it. Print spoken first. spoken and markdown are the same ready-to-render board. spokenLead is the opening line. Do not rebuild the table. Use this when they say where are we, show the bet board, show company X ideas, or show my idea board. If they ask for every board, print the boards field and stop. Live boards only. Do not describe a stopped bet unless they ask what you already stopped."
 
 export const TOOL_CREATE_IDEA =
   "Start another customer bet under a company this login can open. Needs a yes in this chat."

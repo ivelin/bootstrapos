@@ -441,7 +441,7 @@ describe("journey views + tools (memory store)", () => {
     const seen = await store.getJourney(founder, { companySlug: "corehaul" });
     assert.equal(seen.ideas[0].constraintThisWeek, "new landing page");
     assert.match(seen.ideas[0].snapshot, /The #1 bottleneck is new landing page/);
-    assert.match(seen.ideas[0].snapshot, /sells to nobody named yet/);
+    assert.match(seen.ideas[0].snapshot, /sells to buyer not named yet/);
     assert.doesNotMatch(seen.ideas[0].snapshot, /The goal is/);
     assert.match(seen.spoken, /new landing page/);
     assert.match(seen.ideas[0].constraintChallenge, /fun side quest/);

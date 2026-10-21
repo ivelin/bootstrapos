@@ -1,7 +1,7 @@
 {
   "name": "@pirin/bootstrap-os-mcp",
   "version": "0.3.5",
-  "description": "Bootstrap OS MCP — OSS self-host kit, and the hosted pin for Pirin-supported company boards. Markdown remains the constitution.",
+  "description": "Bootstrap OS MCP — OSS self-host kit, and the hosted pin for Pirin-supported bet boards. Markdown remains the constitution.",
   "type": "module",
   "license": "Apache-2.0",
   "bin": {

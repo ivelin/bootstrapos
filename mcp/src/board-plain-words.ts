@@ -70,6 +70,94 @@ export const BANNED_ON_CARD: RegExp[] = [
 
 const EMAIL = /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b/g;
 
+/** Lowercase dotted host only. https://SAFE, https://P0, and https://SAFE.NDA stay in the sentence. http is not exempt. */
+const HTTPS_URL = /https:\/\/[a-z0-9-]+(?:\.[a-z0-9-]+)+(?:[\/?#][^\s)]*)?/g;
+const FENCED_CODE = /```[\s\S]*?```/g;
+const INLINE_CODE = /`[^`\n]+`/g;
+
+function holdTokens(text: string, pattern: RegExp, mark: string, store: string[]): string {
+  pattern.lastIndex = 0;
+  return text.replace(pattern, (token) => {
+    const tokenMark = `${mark}${store.length}${mark}`;
+    store.push(token);
+    return tokenMark;
+  });
+}
+
+function restoreTokens(text: string, mark: string, store: string[]): string {
+  let out = text;
+  store.forEach((token, index) => {
+    out = out.replaceAll(`${mark}${index}${mark}`, token);
+  });
+  return out;
+}
+
+/**
+ * Hold fenced code, inline code, then real https URLs.
+ * www tokens and bare word.word/ paths stay in the sentence so a banned term there is still filtered.
+ */
+export function protectSpeech(text: string): { text: string; restore: (value: string) => string } {
+  const spans: string[] = [];
+  let masked = holdTokens(text, FENCED_CODE, "\u0002", spans);
+  masked = holdTokens(masked, INLINE_CODE, "\u0002", spans);
+  masked = holdTokens(masked, HTTPS_URL, "\u0002", spans);
+  return {
+    text: masked,
+    restore: (value: string) => restoreTokens(value, "\u0002", spans),
+  };
+}
+
+function globalRule(rule: RegExp): RegExp {
+  return new RegExp(rule.source, rule.flags);
+}
+
+function fillTemplate(template: string, match: RegExpMatchArray): string {
+  return template.replace(/\$(\d)/g, (_all, n: string) => match[Number(n)] ?? "");
+}
+
+/**
+ * One pass per rule on the text as it stands, so a rule does not rescan its own insertion.
+ * A later rule still sees that gloss. Gloss strings do not contain a later rule's term.
+ * "paid " + "the paid plan" stays "the paid plan". A slash or dot neighbor stays.
+ */
+function rewriteTerms(input: string): string {
+  let text = input;
+  for (const [rule, to] of PLAIN_WORD_REWRITES) {
+    const re = globalRule(rule);
+    const hits = [...text.matchAll(re)];
+    if (!hits.length) continue;
+    let out = "";
+    let last = 0;
+    for (const hit of hits) {
+      const index = hit.index ?? 0;
+      let consumed = text.slice(last, index);
+      const replacement = fillTemplate(to, hit);
+      const article = replacement.match(/^the\s+([A-Za-z]+)\b/i);
+      if (article && new RegExp(`\\b${article[1]}\\s+$`, "i").test(consumed)) {
+        consumed = consumed.replace(new RegExp(`\\b${article[1]}\\s+$`, "i"), "");
+      }
+      let end = index + hit[0].length;
+      if (!replacement && /^[.,;:!?](?=\w)/.test(text.slice(end))) end += 1;
+      if (!replacement && /https:\/\/$/.test(consumed) && !/^[A-Za-z0-9-]/.test(text.slice(end))) {
+        consumed = consumed.replace(/https:\/\/$/, "");
+      }
+      out += consumed + replacement;
+      last = end;
+    }
+    text = out + text.slice(last);
+  }
+  return text;
+}
+
+/** Exact label "default", or a trailing "on default". A founder sentence that uses the word stays. */
+function hideStorageSlug(text: string): string {
+  if (text.trim().toLowerCase() === "default") return "";
+  return text
+    .replace(/(?:^|\s+)on\s+default(?=[.!?]?$)/i, "")
+    .replace(/[ \t]{2,}/g, " ")
+    .replace(/[ \t]+([.,;:!?])/g, "$1");
+}
+
 /** Replace addresses and live or test secret tokens. Call after plain-word rewrite. */
 export function maskSecrets(value: string): string {
   return value
@@ -78,23 +166,21 @@ export function maskSecrets(value: string): string {
 }
 
 export function applyPlainWords(text: string): string {
+  const held = protectSpeech(text);
   const emails: string[] = [];
-  let masked = text.replace(EMAIL, (token) => {
-    const mark = `\u0000${emails.length}\u0000`;
-    emails.push(token);
-    return mark;
-  });
-  for (const [rule, to] of PLAIN_WORD_REWRITES) masked = masked.replace(rule, to);
+  let masked = holdTokens(held.text, EMAIL, "\u0000", emails);
+  masked = rewriteTerms(masked);
   masked = masked.replace(/\b(?:the|an?)\s+(?=(?:the|an?)\b)/gi, "");
-  emails.forEach((email, index) => {
-    masked = masked.replace(`\u0000${index}\u0000`, email);
-  });
-  return masked;
+  masked = hideStorageSlug(masked);
+  masked = restoreTokens(masked, "\u0000", emails);
+  return held.restore(masked);
 }
 
+/** Same hold as the card. A code span or a real https host is not a hit. */
 export function bannedCardHit(text: string): string | null {
+  const held = protectSpeech(String(text ?? ""));
   for (const rule of BANNED_ON_CARD) {
-    const hit = String(text ?? "").match(rule);
+    const hit = held.text.match(rule);
     if (hit) return hit[0];
   }
   return null;
@@ -257,6 +343,7 @@ export const REDACT_ALLOW_KEYS = new Set([
   "before",
   "body",
   "bottleneck",
+  "buyer",
   "boards",
   "card",
   "challenges",
@@ -285,6 +372,7 @@ export const REDACT_ALLOW_KEYS = new Set([
   "duplicate",
   "emailOptIn",
   "emailQueued",
+  "end",
   "engagements",
   "error",
   "errorCode",
@@ -292,6 +380,7 @@ export const REDACT_ALLOW_KEYS = new Set([
   "evidenceLinks",
   "expiresAt",
   "footer",
+  "founder",
   "from",
   "founderWrittenDecision",
   "gate",
@@ -362,6 +451,7 @@ export const REDACT_ALLOW_KEYS = new Set([
   "spokenLead",
   "summary",
   "stage",
+  "start",
   "state",
   "subscriber",
   "subscribers",

@@ -39,6 +39,7 @@ import {
   formatInitiativeCard,
   formatSpokenCard,
   buyerText,
+  founderLineName,
   scoreboardHasInitiatives,
   stripLegacyCardKeysWhenInitiatives,
   initiativesOf,
@@ -126,6 +127,8 @@ export type Scoreboard = {
   engagements?: EngagementRow[];
   /** OS 2.8.19 report card rows. New writes prefer this. Dual-read dead for card lead when this is present. */
   initiatives?: Initiative[];
+  /** Who buys. Not the bet text. Empty stays off the card. */
+  buyer?: string;
   /** Money window for the board card. Never invented on read. */
   pnl?: {
     days?: number;
@@ -442,6 +445,11 @@ export type CompanyRow = {
   id: string;
   slug: string;
   label: string;
+  /**
+   * Display name for the card. Not the admin who created the board.
+   * No store writes this field. Memory and hosted SQL persist the ACL role.
+   */
+  founder?: string;
   /** Same company snapshot. No rungs. Cannot promote. */
   supporting?: SupportingRow[];
 };
@@ -1011,6 +1019,8 @@ export function ideaPayload(
       allowPaperBottleneck: allowPaper,
       who: whoNamesFromOwners(owners),
       buyer: buyerText(idea, card),
+      founder: founderLineName({ company, owners, idea }),
+      pnl: idea.scoreboard.pnl ?? null,
     }),
     engagements,
     initiatives,

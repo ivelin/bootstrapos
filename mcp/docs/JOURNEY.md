@@ -22,7 +22,7 @@ Allowlist in SQL, fail closed. Token `email` (fallback `sub`) → ACL. No FAST c
 
 ## Hard rule — invite-only company boards
 
-Ivelin HARD (via Bootstrap Bill): company board/data access is invite-only. There is no room for cross-company leaks.
+Ivelin HARD (via Bootstrap Bill): bet board/data access is invite-only. There is no room for cross-company leaks.
 
 | Principal | `get_journey` / `put_journey` / `put_portfolio_score` / `post_comment` / `subscribe_*` / `list_*` / labels |
 |-----------|-----------------------------------------------------------------------------------|

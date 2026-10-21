@@ -78,7 +78,7 @@ describe("hosted access layer (one login, many companies)", () => {
     assert.match(instructions, /ideas/);
     assert.match(instructions, /get_journey|bootstrap_where_are_we/);
     assert.match(instructions, /where are we/i);
-    assert.match(instructions, /company board/i);
+    assert.match(instructions, /bet board/i);
     assert.match(instructions, /idea board/i);
     assert.match(instructions, /Print spoken first/);
     assert.doesNotMatch(instructions, /mermaid|visualFlow|decision log|spoken card|Clocks are storage|FAST\/SAFE|Bet \/ Filter/i);
@@ -120,7 +120,7 @@ describe("hosted access layer (one login, many companies)", () => {
     }
   });
 
-  it("get_journey description is the company board and the idea board", async () => {
+  it("get_journey description is the bet board and the idea board", async () => {
     setIdentityStoreForTests(ivelinMemoryFixture(IVELIN_TOKEN));
     setJourneyStoreForTests(
       new HostedMembershipJourneyStore((actor) =>
@@ -132,7 +132,7 @@ describe("hosted access layer (one login, many companies)", () => {
     assert.ok(journey);
     assert.equal(journey.description, TOOL_GET_JOURNEY);
     assert.match(journey.description, /where are we/i);
-    assert.match(journey.description, /company board/i);
+    assert.match(journey.description, /bet board/i);
     assert.match(journey.description, /idea board/i);
     assert.match(journey.description, /company/i);
     assert.match(journey.description, /idea/i);
