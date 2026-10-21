@@ -145,21 +145,25 @@ function maskAllowlistedBareLinks(text: string): { text: string; restore: (value
   };
 }
 
-function slashCompound(text: string, index: number, length: number): boolean {
-  const after = text[index + length];
-  if (after === "/" && /[A-Za-z0-9]/.test(text[index + length + 1] ?? "")) return true;
-  if (text[index - 1] !== "/") return false;
-  const head = text.slice(0, index);
-  if (/https?:\/\/$/i.test(head)) return false;
-  if (/(?:^|[^\w.])(?:[a-z0-9-]+\.)+[a-z0-9-]+\/$/i.test(head)) return false;
-  return true;
+/** The only slash compound that stays as stored text. Every other slash form glosses. */
+const COMPOUND_ALLOWLIST = ["conversion/tenancy"];
+
+function allowlistedCompound(text: string, index: number, length: number): boolean {
+  const end = index + length;
+  for (const compound of COMPOUND_ALLOWLIST) {
+    const re = new RegExp(compound.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "gi");
+    for (const hit of text.matchAll(re)) {
+      const start = hit.index ?? 0;
+      if (index >= start && end <= start + hit[0].length) return true;
+    }
+  }
+  return false;
 }
 
 /**
  * One pass per rule on the text as it stands, so a rule does not rescan its own insertion.
  * A later rule still sees that gloss. Gloss strings do not contain a later rule's term.
  * "paid " + "the paid plan" stays "the paid plan".
- * A slash compound stays readable (conversion/tenancy). The banned check still sees it.
  */
 function rewriteTerms(input: string): string {
   let text = input;
@@ -172,7 +176,7 @@ function rewriteTerms(input: string): string {
     for (const hit of hits) {
       const index = hit.index ?? 0;
       const matchEnd = index + hit[0].length;
-      if (slashCompound(text, index, hit[0].length)) {
+      if (allowlistedCompound(text, index, hit[0].length)) {
         out += text.slice(last, matchEnd);
         last = matchEnd;
         continue;
@@ -235,6 +239,8 @@ export function bannedCardHit(text: string): string | null {
   for (const rule of BANNED_ON_CARD) {
     const flags = rule.flags.includes("g") ? rule.flags : `${rule.flags}g`;
     for (const hit of scanned.matchAll(new RegExp(rule.source, flags))) {
+      const index = hit.index ?? 0;
+      if (allowlistedCompound(scanned, index, hit[0].length)) continue;
       return hit[0];
     }
   }
