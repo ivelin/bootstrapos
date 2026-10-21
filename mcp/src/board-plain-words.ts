@@ -115,16 +115,34 @@ function fillTemplate(template: string, match: RegExpMatchArray): string {
   return template.replace(/\$(\d)/g, (_all, n: string) => match[Number(n)] ?? "");
 }
 
-/** Real hosts only. */
-const BARE_LINK_HOSTS = new Set(["fi.co"]);
+/**
+ * fi.co and www.fi.co are the same host. Path, query, and fragment are removed
+ * before the gloss and the banned scan. Any other host, including evil.fi.co, stays.
+ * A host after :// is left for the https hold.
+ */
+const BARE_LINK_HOSTS = new Set(["fi.co", "www.fi.co"]);
 
-/** fi.co/fast has no scheme, so the https hold does not cover it. */
-function stripAllowlistedBarePaths(text: string): string {
-  return text.replace(
-    /(^|[^\w@.-])((?:[a-z0-9-]+\.)+[a-z]{2,})(\/[^\s).,;:!?]*)/gi,
-    (whole, lead: string, host: string) =>
-      BARE_LINK_HOSTS.has(host.toLowerCase()) ? `${lead}${host}` : whole,
+function maskAllowlistedBareLinks(text: string): { text: string; restore: (value: string) => string } {
+  const hosts: string[] = [];
+  const masked = text.replace(
+    /(^|(?<![/@\w.-]))((?:[a-z0-9-]+\.)+[a-z]{2,})((?:\/[^\s).,;:!?#]*)(?:\?[^\s).,;:!#]*)?(?:#[^\s).,;:!?]*)?)?/gi,
+    (whole, lead: string, host: string) => {
+      if (!BARE_LINK_HOSTS.has(host.toLowerCase())) return whole;
+      const mark = `\u0001${hosts.length}\u0001`;
+      hosts.push(host);
+      return `${lead ?? ""}${mark}`;
+    },
   );
+  return {
+    text: masked,
+    restore: (value: string) => {
+      let out = value;
+      hosts.forEach((host, index) => {
+        out = out.replaceAll(`\u0001${index}\u0001`, host);
+      });
+      return out;
+    },
+  };
 }
 
 function slashCompound(text: string, index: number, length: number): boolean {
@@ -141,7 +159,7 @@ function slashCompound(text: string, index: number, length: number): boolean {
  * One pass per rule on the text as it stands, so a rule does not rescan its own insertion.
  * A later rule still sees that gloss. Gloss strings do not contain a later rule's term.
  * "paid " + "the paid plan" stays "the paid plan".
- * A slash compound stays (conversion/tenancy, /tenancy). A URL path still rewrites.
+ * A slash compound stays readable (conversion/tenancy). The banned check still sees it.
  */
 function rewriteTerms(input: string): string {
   let text = input;
@@ -178,6 +196,9 @@ function rewriteTerms(input: string): string {
   return text;
 }
 
+/** The whole trimmed string only. A longer sentence that contains these words stays. */
+const SYSTEM_CARD_SENTENCE = /^a comment on default is not a row[.!]?$/i;
+
 /** Exact label "default", or a trailing "on default". A founder sentence that uses the word stays. */
 function hideStorageSlug(text: string): string {
   if (text.trim().toLowerCase() === "default") return "";
@@ -194,30 +215,26 @@ export function maskSecrets(value: string): string {
     .replace(/\bsk_(?:live|test)_[A-Za-z0-9_-]+/g, "[redacted]");
 }
 
-const SYSTEM_CARD_SENTENCE = /^a comment on default is not a row[.!]?$/i;
-
 export function applyPlainWords(text: string): string {
   if (SYSTEM_CARD_SENTENCE.test(String(text ?? "").trim())) return "";
   const held = protectSpeech(text);
+  const bare = maskAllowlistedBareLinks(held.text);
   const emails: string[] = [];
-  let masked = stripAllowlistedBarePaths(held.text);
-  masked = holdTokens(masked, EMAIL, "\u0000", emails);
+  let masked = holdTokens(bare.text, EMAIL, "\u0000", emails);
   masked = rewriteTerms(masked);
   masked = masked.replace(/\b(?:the|an?)\s+(?=(?:the|an?)\b)/gi, "");
   masked = hideStorageSlug(masked);
   masked = restoreTokens(masked, "\u0000", emails);
-  return held.restore(masked);
+  return held.restore(bare.restore(masked));
 }
 
 /** Same hold as the card. A code span or a real https host is not a hit. */
 export function bannedCardHit(text: string): string | null {
   const held = protectSpeech(String(text ?? ""));
-  const scanned = stripAllowlistedBarePaths(held.text);
+  const scanned = maskAllowlistedBareLinks(held.text).text;
   for (const rule of BANNED_ON_CARD) {
     const flags = rule.flags.includes("g") ? rule.flags : `${rule.flags}g`;
     for (const hit of scanned.matchAll(new RegExp(rule.source, flags))) {
-      const index = hit.index ?? 0;
-      if (slashCompound(scanned, index, hit[0].length)) continue;
       return hit[0];
     }
   }

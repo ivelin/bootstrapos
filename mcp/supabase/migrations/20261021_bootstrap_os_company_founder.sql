@@ -1,12 +1,17 @@
 -- Not an ACL role. Buyer stays scoreboard.buyer. Past-bet dates stay initiatives start/end.
 -- Do not migrate/seed/live-probe supabase-pirin-ai from a PR cloud agent.
 -- PR agents do not apply this file.
+-- Apply this file before, or in the same deploy as, the client that sends p_founder.
+-- One transaction so the 10-argument and 11-argument functions are not both visible.
+
+BEGIN;
 
 ALTER TABLE bootstrap_os.companies ADD COLUMN IF NOT EXISTS founder text;
 
 ALTER TABLE bootstrap_os.companies ENABLE ROW LEVEL SECURITY;
 ALTER TABLE bootstrap_os.companies FORCE ROW LEVEL SECURITY;
 REVOKE ALL ON TABLE bootstrap_os.companies FROM PUBLIC, anon, authenticated;
+GRANT SELECT ON TABLE bootstrap_os.companies TO authenticated;
 
 CREATE OR REPLACE FUNCTION public.bootstrap_os_get_journey(p_company text, p_idea text DEFAULT NULL)
 RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, bootstrap_os AS $$
@@ -216,3 +221,5 @@ GRANT EXECUTE ON FUNCTION public.bootstrap_os_put_journey(text, text, text, bool
 
 COMMENT ON FUNCTION public.bootstrap_os_put_journey(text, text, text, boolean, int, int, text, text, text, jsonb, text) IS
   'Optional p_founder writes bootstrap_os.companies.founder (empty clears, null leaves it). Not an ACL role.';
+
+COMMIT;

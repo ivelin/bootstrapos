@@ -428,7 +428,7 @@ export class SupabaseJourneyStore implements JourneyStore {
       ...(input.engagements ? { engagements: input.engagements } : {}),
       ...(input.initiatives ? { initiatives: input.initiatives } : {}),
     };
-    const hit = await this.rpc("bootstrap_os_put_journey", {
+    const rpcBody: Record<string, unknown> = {
       p_company: input.companySlug,
       p_idea: idea,
       p_journey_phase: input.journeyPhase ?? null,
@@ -439,8 +439,9 @@ export class SupabaseJourneyStore implements JourneyStore {
       p_why: input.why,
       p_founder_yes: input.founderYes,
       p_founder_written_decision: input.founderWrittenDecision ?? null,
-      p_founder: input.founder ?? null,
-    });
+    };
+    if (input.founder !== undefined) rpcBody.p_founder = input.founder;
+    const hit = await this.rpc("bootstrap_os_put_journey", rpcBody);
     if ("error" in hit) return { ok: false, error: hit.error };
     await this.fireWebhooksAfterWrite(hit.raw, {
       company: input.companySlug,
