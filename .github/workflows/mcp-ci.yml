@@ -59,6 +59,9 @@ jobs:
       - name: Build
         run: npm run build
 
+      - name: PostgreSQL 16
+        run: sudo apt-get update && sudo apt-get install -y postgresql-16
+
       - name: Unit tests
         if: matrix.node != '22'
         run: npm run test:unit

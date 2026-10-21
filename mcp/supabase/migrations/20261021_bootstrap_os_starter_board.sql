@@ -16,10 +16,12 @@ ALTER TABLE bootstrap_os.starter_boards ENABLE ROW LEVEL SECURITY;
 ALTER TABLE bootstrap_os.starter_boards FORCE ROW LEVEL SECURITY;
 REVOKE ALL ON TABLE bootstrap_os.starter_boards FROM PUBLIC, anon, authenticated;
 
+ALTER TABLE bootstrap_os.companies
+  ADD COLUMN IF NOT EXISTS starter boolean NOT NULL DEFAULT false;
+
 CREATE OR REPLACE FUNCTION bootstrap_os.starter_boards_locked()
 RETURNS trigger
 LANGUAGE plpgsql
-SECURITY DEFINER
 SET search_path = bootstrap_os, public
 AS $$
 BEGIN
@@ -37,7 +39,6 @@ REVOKE ALL ON FUNCTION bootstrap_os.starter_boards_locked() FROM PUBLIC, anon, a
 CREATE OR REPLACE FUNCTION bootstrap_os.starter_acl_owner_only()
 RETURNS trigger
 LANGUAGE plpgsql
-SECURITY DEFINER
 SET search_path = bootstrap_os, public
 AS $$
 DECLARE
@@ -68,7 +69,6 @@ REVOKE ALL ON FUNCTION bootstrap_os.starter_acl_owner_only() FROM PUBLIC, anon, 
 CREATE OR REPLACE FUNCTION bootstrap_os.starter_block_webhook()
 RETURNS trigger
 LANGUAGE plpgsql
-SECURITY DEFINER
 SET search_path = bootstrap_os, public
 AS $$
 BEGIN
@@ -92,14 +92,30 @@ CREATE OR REPLACE FUNCTION bootstrap_os.starter_block_subscriber()
 RETURNS trigger
 LANGUAGE plpgsql
 SECURITY DEFINER
-SET search_path = bootstrap_os, public
+SET search_path = pg_catalog, public
 AS $$
+DECLARE
+  caller uuid := auth.uid();
+  own_email text;
 BEGIN
+  SELECT m.email INTO own_email
+  FROM public.bootstrap_mcp_mentees AS m
+  WHERE m.auth_user_id = caller;
+
   IF EXISTS (
-    SELECT 1 FROM bootstrap_os.starter_boards s WHERE s.company_id = NEW.company_id
+    SELECT 1
+    FROM bootstrap_os.starter_boards AS s
+    WHERE s.owner_email = own_email
+      AND s.company_id = NEW.company_id
+  ) OR EXISTS (
+    SELECT 1
+    FROM bootstrap_os.companies AS c
+    WHERE c.id = NEW.company_id
+      AND c.starter
   ) THEN
     RAISE EXCEPTION 'starter bet board cannot send webhooks';
   END IF;
+
   RETURN NEW;
 END;
 $$;
@@ -109,7 +125,8 @@ CREATE TRIGGER starter_block_subscriber
   BEFORE INSERT ON bootstrap_os.board_subscribers
   FOR EACH ROW EXECUTE FUNCTION bootstrap_os.starter_block_subscriber();
 
-REVOKE ALL ON FUNCTION bootstrap_os.starter_block_subscriber() FROM PUBLIC, anon, authenticated;
+REVOKE EXECUTE ON FUNCTION bootstrap_os.starter_block_subscriber() FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION bootstrap_os.starter_block_subscriber() TO authenticated;
 
 CREATE OR REPLACE FUNCTION public.bootstrap_os_starter_is_sandbox(p_slug text)
 RETURNS boolean
@@ -210,8 +227,8 @@ BEGIN
   FOR attempt IN 1..8 LOOP
     v_slug := 'sb' || substr(md5(gen_random_uuid()::text), 1, 8);
     BEGIN
-      INSERT INTO bootstrap_os.companies (slug, label)
-      VALUES (v_slug, 'Starter')
+      INSERT INTO bootstrap_os.companies (slug, label, starter)
+      VALUES (v_slug, 'Starter', true)
       RETURNING id INTO v_company;
     EXCEPTION
       WHEN unique_violation THEN
@@ -268,7 +285,6 @@ GRANT EXECUTE ON FUNCTION public.bootstrap_os_create_starter_board() TO authenti
 CREATE OR REPLACE FUNCTION public.bootstrap_mcp_invites_block_starter()
 RETURNS trigger
 LANGUAGE plpgsql
-SECURITY DEFINER
 SET search_path = public, bootstrap_os
 AS $$
 BEGIN
