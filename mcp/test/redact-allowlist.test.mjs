@@ -257,7 +257,10 @@ describe("spoken payload allowlist", () => {
     assert.equal(wrote.ok, true);
     assert.match(wrote.note, /\bengagements\b/);
     assert.ok(wrote.owners.some((row) => row.principal === "founder-core@example.test"));
-    assert.equal(wrote.spokenLead, "**CoreHaul**");
+    assert.match(wrote.spokenLead, /^\*\*The #1 bottleneck is .+\.\*\*$/);
+    assert.match(wrote.spoken, /^Founder: founder-core$/m);
+    assert.doesNotMatch(wrote.spoken, /@/);
+    assert.ok(wrote.owners.some((row) => row.principal === "founder-core@example.test"));
 
     const seen = await store.getJourney(actor, { companySlug: "corehaul", ideaSlug: "booth-bet" });
     assert.equal(seen.ok, true);

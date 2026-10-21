@@ -8,6 +8,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { MemoryJourneyStore, defaultScoreboard } from "../dist/journey.js";
+import { cardPersonName } from "../dist/board-plain-words.js";
 import {
   applySpokenPayloadLead,
   cardFromScoreboard,
@@ -84,6 +85,7 @@ function row(partial) {
 const ALPHA = {
   label: "alpha",
   sells: "dispatch help for plant operators",
+  buyer: "plant operators who already pay for dispatch help",
   constraint: "one operator at bravo plant pays for a weekly report",
   initiatives: [
     row({
@@ -146,6 +148,7 @@ const ALPHA = {
 const BRAVO = {
   label: "bravo",
   sells: "a weekly shop report for one cafe",
+  buyer: "one cafe owner",
   constraint: "Corner Cafe has not paid",
   initiatives: [
     row({
@@ -162,6 +165,7 @@ const BRAVO = {
 const CHARLIE = {
   label: "charlie",
   sells: "nothing is on sale yet",
+  buyer: "town fair visitors",
   constraint: "no buyer has been named",
   initiatives: [
     row({
@@ -210,6 +214,7 @@ function withOwner(spec) {
         scoreboard: {
           ...defaultScoreboard(),
           constraint_this_week: spec.constraint,
+          hypothesis: spec.buyer,
           initiatives: spec.initiatives,
           ...(spec.pnl ? { pnl: spec.pnl } : {}),
         },
@@ -283,6 +288,8 @@ describe("canonical board card", () => {
     };
     const rejected = normalizeInitiatives([first, second]);
     assert.equal(rejected.ok, false);
+    assert.equal(normalizeInitiatives(["nope"]).ok, false);
+    assert.equal(normalizeInitiatives([{ journeyPhase: 1 }]).ok, false);
     const card = cardFromScoreboard({
       slug: "alpha",
       label: "alpha",
@@ -374,8 +381,22 @@ describe("canonical board card", () => {
       assert.equal(seen.ok, true);
       assert.equal(seen.markdown, seen.spoken);
       assert.equal(seen.spokenLead, seen.markdown.split("\n")[0]);
-      assert.equal(seen.spokenLead, `**${spec.label}**`);
+      assert.match(seen.spokenLead, /^\*\*The #1 bottleneck is .+\.\*\*$/);
       assert.match(seen.markdown, /^Founder: Sam$/m);
+      assert.doesNotMatch(seen.markdown, /@/);
+      assert.doesNotMatch(seen.spoken, /@/);
+      assert.match(JSON.stringify(seen.owners), /sam@example\.test/);
+      assert.match(seen.markdown, new RegExp(`${spec.label} sells to ${spec.buyer}`));
+      const greens = seen.markdown.split("\n").filter((line) => line.startsWith("|") && line.includes("🟢"));
+      assert.equal(greens.length, 1);
+      assert.match(greens[0], /🎯/);
+      if (spec.pnl) {
+        const bg = seen.markdown.indexOf("| **Background** |");
+        const moneyAt = seen.markdown.indexOf("\n| Money |");
+        assert.ok(bg >= 0 && moneyAt > bg);
+      } else {
+        assert.doesNotMatch(seen.markdown, /\| Money \|/);
+      }
       assert.doesNotMatch(seen.markdown, /The goal is/);
       assert.doesNotMatch(seen.markdown, /The problem is/);
       assert.doesNotMatch(seen.markdown, /Ask why it ended/);
@@ -408,6 +429,7 @@ describe("canonical board card", () => {
           constraintThisWeek: "Corner Cafe has not paid",
           scoreboard: {
             schema_version: 1,
+            hypothesis: BRAVO.buyer,
             initiatives: [BRAVO.initiatives[0]],
           },
         },
@@ -433,7 +455,8 @@ describe("canonical board card", () => {
     assert.doesNotMatch(seen.markdown, /Nothing on the board yet/);
     assert.doesNotMatch(seen.markdown, /Do not invent a bet/);
     assert.doesNotMatch(seen.markdown, /Ask why it ended/);
-    assert.equal(seen.spokenLead, "**alpha**");
+    assert.match(seen.spokenLead, /^\*\*The #1 bottleneck is .+\.\*\*$/);
+    assert.match(seen.markdown, /2026-08-01 to 2026-08-03: the fair ended with no orders/);
   });
 
   it("puts a killed company's bet under past bets", () => {
@@ -469,9 +492,12 @@ describe("canonical board card", () => {
     });
     assert.match(seen.markdown, /\| \*\*Past bets\*\* \|/);
     assert.match(seen.markdown, /a booth at the town fair/);
-    assert.match(seen.markdown, /2026-08-01\/2026-08-03: the booth made no sales/);
-    assert.doesNotMatch(seen.markdown, /Nothing on the board yet/);
-    assert.doesNotMatch(seen.markdown, /Not started/);
+    assert.match(seen.markdown, /2026-08-01 to 2026-08-03: the booth made no sales/);
+    assert.match(seen.markdown, /🎯 🤝 \*\*Nothing is in play yet\*\*/);
+    assert.match(seen.markdown, /⚪ Name the next bet/);
+    assert.match(seen.markdown, /Leave this stopped/);
+    const killedGreens = seen.markdown.split("\n").filter((line) => line.startsWith("|") && line.includes("🟢"));
+    assert.equal(killedGreens.length, 0);
     assert.doesNotMatch(seen.markdown, /stop if nobody pays/);
     assert.doesNotMatch(seen.markdown, /The goal is/);
   });
@@ -588,7 +614,32 @@ describe("canonical board card", () => {
         },
       }),
     });
-    assert.match(spoken, /2026-09-01\/2026-09-10: Shipping cost too high/);
+    assert.match(spoken, /2026-09-01 to 2026-09-10: Shipping cost too high/);
+    const undated = formatSpokenCard({
+      label: "charlie",
+      who: ["Sam"],
+      card: cardFromScoreboard({
+        slug: "charlie",
+        label: "charlie",
+        journeyPhase: 1,
+        gate: "hold",
+        scoreboard: {
+          initiatives: [
+            ALPHA.initiatives[0],
+            row({
+              id: "charlie-undated",
+              kind: "customer_check",
+              premise: "a booth with no written dates",
+              status: "closed",
+              outcome: "killed",
+              last: "buyers walked past",
+              next: "—",
+            }),
+          ],
+        },
+      }),
+    });
+    assert.match(undated, /start not recorded to end not recorded: buyers walked past/);
     assert.doesNotMatch(spoken, /stop if nobody pays/);
     assert.doesNotMatch(spoken, /Ask why it ended/);
     assert.doesNotMatch(spoken, /Do not invent a bet/);
@@ -605,6 +656,60 @@ describe("canonical board card", () => {
       }),
     });
     assert.doesNotMatch(empty, /Past bets/);
+  });
+
+  it("prints a founder line from the email local part when no name is stored", () => {
+    const seen = applySpokenPayloadLead({
+      ok: true,
+      company: { slug: "bravo", label: "bravo" },
+      owners: [{ principal: "founder@example.test", role: "founder" }],
+      ideas: [
+        {
+          slug: "default",
+          name: "bravo",
+          scoreboard: { schema_version: 1, initiatives: [] },
+        },
+      ],
+    });
+    assert.match(seen.spoken, /^\*\*The #1 bottleneck is nothing is stuck yet\.\*\*$/m);
+    assert.match(seen.markdown, /^Founder: founder$/m);
+    assert.match(seen.markdown, /🎯 🤝 \*\*Nothing is in play yet\*\*/);
+    assert.equal(seen.markdown.split("\n").filter((line) => line.startsWith("|") && line.includes("🟢")).length, 1);
+    assert.match(seen.markdown, /\| founder \|/);
+    assert.doesNotMatch(seen.markdown, /@/);
+    assert.doesNotMatch(seen.spoken, /@/);
+    assert.equal(seen.owners[0].principal, "founder@example.test");
+  });
+
+  it("names a person from a plain string, a login, or an email local part", () => {
+    assert.equal(cardPersonName("Zoë Ångström"), "Zoë");
+    assert.equal(cardPersonName("sam"), "sam");
+    assert.equal(cardPersonName("tester1@example.test"), null);
+    assert.equal(cardPersonName("a@b.test"), "a");
+    assert.equal(cardPersonName({ display_name: "Ada Lovelace" }), "Ada");
+    assert.equal(cardPersonName({ email: "ada@example.test" }), "ada");
+    assert.equal(cardPersonName({ principal: "Ada Lovelace" }), "Ada");
+    assert.equal(cardPersonName({ principal: "tester1" }), null);
+    assert.equal(cardPersonName(1), null);
+  });
+
+  it("prints Founder: not named yet when who is empty, and keeps a short name", () => {
+    const card = cardFromScoreboard({
+      slug: "bravo",
+      label: "bravo",
+      journeyPhase: 1,
+      gate: "hold",
+      scoreboard: { initiatives: BRAVO.initiatives },
+    });
+    const empty = formatSpokenCard({ label: "bravo", who: [], card });
+    assert.match(empty, /^Founder: not named yet$/m);
+    assert.doesNotMatch(empty, /\| \*\*Background\*\* \|/);
+    const login = formatSpokenCard({ label: "bravo", who: ["sam"], card });
+    assert.match(login, /^Founder: sam$/m);
+    assert.match(login, /\| sam \|/);
+    const named = formatSpokenCard({ label: "bravo", who: ["Zoë Ångström"], card });
+    assert.match(named, /^Founder: Zoë$/m);
+    assert.match(named, /\| Zoë \|/);
   });
 
   it("prints display names, founder first, and never a login or the next-step placeholder", () => {
@@ -633,8 +738,10 @@ describe("canonical board card", () => {
       ],
     });
     assert.match(seen.markdown, /^Founder: Sam$/m);
-    assert.match(seen.markdown, /\| Sam, Ada Lovelace, Sam Rivera \|/);
-    assert.doesNotMatch(seen.markdown, /tester2|lee@example|\\blee\\b|Name who does the next step/);
+    assert.match(seen.markdown, /\| Sam, Ada, lee \|/);
+    assert.doesNotMatch(seen.markdown, /@|tester2|Ada Lovelace|Sam Rivera|Name who does the next step/);
+    assert.equal(seen.owners[1].principal, "ada@example.test");
+    assert.equal(seen.acl[0].principal, "lee@example.test");
     assert.match(seen.markdown, /\*\*Next:\*\* Sam — No step is written down yet\./);
   });
 
@@ -727,7 +834,7 @@ describe("canonical board card", () => {
     assert.equal(seen.owners[0].principal, "investment holder sam@example.test");
     assert.equal(seen.owners[0].email, "sam@example.test");
     assert.match(seen.audit[0].who, /confidentiality promise/);
-    assert.equal(seen.spokenLead, "**alpha**");
+    assert.match(seen.spokenLead, /^\*\*The #1 bottleneck is nothing is stuck yet\.\*\*$/);
   });
 
   it("files a killed lead and a second check with a nested conversation under past bets", () => {
@@ -773,7 +880,10 @@ describe("canonical board card", () => {
         footer: [],
       },
     });
-    assert.doesNotMatch(spoken, /\| \*\*Bet\*\* \|/);
+    assert.match(spoken, /\| \*\*Bet\*\* \|/);
+    assert.match(spoken, /🎯 🤝 \*\*Nothing is in play yet\*\*/);
+    assert.match(spoken, /⚪ Name the next bet/);
+    assert.equal(spoken.split("\n").filter((line) => line.startsWith("|") && line.includes("🟢")).length, 0);
     assert.doesNotMatch(spoken, /\| \*\*Other paths/);
     const past = spoken.split("**Past bets**")[1].split("**Background**")[0];
     assert.match(past, /a booth at the town fair/);

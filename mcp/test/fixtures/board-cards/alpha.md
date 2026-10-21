@@ -1,6 +1,7 @@
+**The #1 bottleneck is dispatch help for plant operators.**
 **alpha**
 Founder: Sam
-alpha sells dispatch help for plant operators.
+alpha sells to plant operators who already pay for dispatch help.
 
 | Work | State | When | Who |
 |---|---|---|---|
@@ -10,9 +11,9 @@ alpha sells dispatch help for plant operators.
 | **Other paths (not the main bet)** | | | |
 | 🤝 sell bottles in grocery stores | 🟡 Parked until one shop pays | Revisit in December | Sam |
 | **Past bets** | | | |
-| 🔎 sell online direct to home buyers | 🔴 2026-09-01/2026-09-10: Shipping cost too high | — | Sam |
+| 🔎 sell online direct to home buyers | 🔴 2026-09-01 to 2026-09-10: Shipping cost too high | — | Sam |
 | **Background** | | | |
-| 💵 Money (last 30 days) | 🟡 $0 revenue; about $4 measured costs, some unknown (Oct 2) | Updated weekly | Sam |
+| Money | last 30 days: $0 revenue; about $4 measured costs, some unknown (Oct 2) | Updated weekly | Sam |
 | 💵 investment from an angel | 🟡 Not signed yet | — | Sam |
 
 *🎯 the one thing that matters most · 🟢 working on it · 🟡 waiting · 🔴 dropped · ⚪ closed*

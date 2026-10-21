@@ -185,6 +185,7 @@ function registerReadTools(server: McpServer, surface: McpSurface, hosted?: Host
           version: "0.1.1",
           note: "Preview Agent Plugin 0.1.1. Skills hyperlink the published OS. See mcp/docs/MARKETPLACE.md. Not mentee-ready hosted boards. Path 1 stays the front door.",
         },
+        commit: process.env.VERCEL_GIT_COMMIT_SHA?.trim() || null,
       };
 
       if (surface === "hosted-read") {
@@ -206,6 +207,7 @@ function registerReadTools(server: McpServer, surface: McpSurface, hosted?: Host
           companyState: NOTE_OS_INFO_HOSTED,
           identityStore: hosted?.whoami.identityStore ?? "unset",
           resource: hosted?.resource ?? hostedMcpResource(),
+          commit: process.env.VERCEL_GIT_COMMIT_SHA?.trim() || null,
         });
       }
 

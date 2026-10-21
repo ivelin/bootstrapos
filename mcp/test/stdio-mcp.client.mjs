@@ -101,6 +101,7 @@ async function main() {
     assert.equal(support.email, "bootstrap@pirin.ai");
     assert.match(String(support.routed), /human-routed/i);
     assert.equal(info.osVersion, "2.8.19");
+    assert.ok(info.commit === null || typeof info.commit === "string");
     assert.equal(path.resolve(info.paths.dataRoot), path.resolve(dataRoot));
     assert.match(JSON.stringify(info.adoptionOrder), /not mentee-ready boards/);
     assert.match(JSON.stringify(info.adoptionOrder), /Not pirin\.ai/);

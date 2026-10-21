@@ -1,9 +1,9 @@
 ---
 name: Bootstrap board status visualization
 description: >-
-  Use for every where-are-we / company board card: a bold company name, a
-  founder line, one sentence on what it sells and to whom, then one table.
-  Live get_journey first; never invent.
+  Use for every where-are-we / company board card: a bold #1 bottleneck
+  sentence, a bold company name, a founder line, one sentence on who buys,
+  then one table. Live get_journey first; never invent.
 ---
 Use for every “where are we with COMPANY” and every “company board card” request, for every founder. Locked 2026-10-02 at 4:55 PM CT. If a reader has to ask what a word means, rewrite it. Do not invent a second format.
 
@@ -13,48 +13,55 @@ Use for every “where are we with COMPANY” and every “company board card”
 2. Write in the company's own words. Unless the reader asks (“show clocks” / “show schema”), hide the OS version, journey integers, loop labels, autonomy, Ready-for-human-eyes, kind slugs, idea slugs, and the storage slug `default`.
 3. Describe each try as the plain thing being tried ("Get one plant to hire alpha"). The stored kind stays `customer_check`.
 4. Plain words for any average person. Do not write P0, FAST, SOPA, SAFE, engagement, or customer bet. Say advisor agreement, stock option paperwork, and investment. Short names the founder wrote stay as written.
-5. The first line is the bold company name. Then a founder line when a display name is on the board. Then one plain sentence on what it sells and to whom.
-6. Column headers are exactly `Work | State | When | Who`.
-7. The first time a person or company name appears, say who they are ("bravo, a plant we're talking with").
+5. Open with one bold sentence that names the #1 bottleneck.
+6. Then the bold company name, a founder line, and one plain sentence on who buys. The sells sentence names the buyer. It is not the bet title.
+7. Column headers are exactly `Work | State | When | Who`.
+8. The first time a person or company name appears, say who they are ("bravo, a plant we're talking with").
 
 ## Card shape
 
-1. **Title (always first).** `**<Company>**`, then `Founder: <name>` when a display name is on the board, then one plain sentence on what it sells and to whom.
-2. **One table** with bold section rows, in this order. Other cells on a section row stay empty. Omit Other paths and Past bets when they have no rows. Print Background on every card. Print Bet when a live bet is on the board. A killed company has no Bet. Its stopped bet is under Past bets.
-   - **Bet**. The top row starts with 🎯 plus a fitting icon and a **bold** title. Nested rows indent with `· ·` and start with their own icon.
+1. **Opener (always first).** `**The #1 bottleneck is <what is stuck>.**`
+2. **Title.** `**<Company>**`, then `Founder: <first name>`. When no name is stored, the founder line uses the email local part. When nobody is stored, the line is `Founder: not named yet`. Then `<Company> sells to <buyer>.`
+3. **One table** with bold section rows, in this order. Other cells on a section row stay empty. Omit Other paths, Past bets, and Background when they have no rows. Print Bet on every card, including a board with no live target bet. That row is still the 🎯 bet.
+   - **Bet**. On a live board, exactly one 🟢 row, and it is this 🎯 row. On a stopped board the same row is ⚪ and the next step is to leave it stopped. Nested rows indent with `· ·` and start with their own icon. They are not green.
    - **Other paths (not the main bet)** when another live try exists.
-   - **Past bets**.
-   - **Background** (money 💵, advisor agreement 📄, legal ⚖️).
-3. The status dot sits at the start of the State cell: 🟢 working on it, 🟡 waiting, 🔴 dropped, ⚪ closed.
-4. **Legend, then Next.** `*🎯 the one thing that matters most · 🟢 working on it · 🟡 waiting · 🔴 dropped · ⚪ closed*` then `**Next:**` one plain sentence on who does what next.
+   - **Past bets**. Every past bet shows its start date, its end date, and the reason it ended: `start to end: reason`.
+   - **Background**. When `scoreboard.pnl` exists, one plain `Money` row sits under Background. Other money paperwork keeps its own icon.
+4. The status dot sits at the start of the State cell: 🟢 working on it, 🟡 waiting, 🔴 dropped, ⚪ closed. Only the 🎯 bet is 🟢.
+5. **Legend, then Next.** `*🎯 the one thing that matters most · 🟢 working on it · 🟡 waiting · 🔴 dropped · ⚪ closed*` then `**Next:**` one plain sentence on who does what next.
+6. **Who.** First names. If no name is stored, the email local part. Rendered card text (spoken and markdown) never shows an email address. JSON `principal` and `who` stay the stored address.
 
 Fixture shape (alpha / bravo / charlie / founder@example.test only):
 
+**The #1 bottleneck is dispatch help for plant operators.**
+
 **alpha**
 Founder: Sam
-alpha sells dispatch help to plants that already pay for it.
+alpha sells to plant operators who already pay for dispatch help.
 
 | Work | State | When | Who |
 |---|---|---|---|
 | **Bet** | | | |
-| 🎯 🤝 **Get one plant to pay alpha for a weekly dispatch report** | 🟢 No plant has paid yet | Talk with bravo this week | Sam |
-| · · 🏢 bravo, a plant we're talking with | 🟡 Asked, time not set | Book the call | Sam |
+| 🎯 🤝 **dispatch help for plant operators** | 🟢 Two shops looked, none has paid (Oct 1) | Send the price list this week | Sam |
+| · · 🏢 the confidentiality promise for bravo plant was sent | 🟡 Asked Sep 30 | Wait for a paid week | Sam |
 | **Other paths (not the main bet)** | | | |
-| 🤝 charlie, a company we're talking with, might license the notes | 🟡 Parked | Reopen only if they come back | — |
+| 🤝 sell bottles in grocery stores | 🟡 Parked until one shop pays | Revisit in December | Sam |
 | **Past bets** | | | |
-| 🔎 A page where plants sign up themselves | ⚪ Plants would not fill in the form | — | — |
+| 🔎 sell online direct to home buyers | 🔴 2026-09-01 to 2026-09-10: Shipping cost too high | — | Sam |
 | **Background** | | | |
-| 💵 An investment, not yet signed | 🟡 Unsigned | — | — |
-| 📄 Advisor agreement | 🟡 Stock option paperwork not set up yet | — | — |
+| Money | last 30 days: $0 revenue; about $4 measured costs, some unknown (Oct 2) | Updated weekly | Sam |
+| 💵 investment from an angel | 🟡 Not signed yet | — | Sam |
 
 *🎯 the one thing that matters most · 🟢 working on it · 🟡 waiting · 🔴 dropped · ⚪ closed*
 
-**Next:** Sam talks with bravo this week.
+**Next:** Sam — Send the price list this week.
+
+A board with no stored name prints `Founder: founder` when the stored principal is `founder@example.test`. The card text has no `@`. The JSON principal stays `founder@example.test`.
 
 ## Dots
 
 - 🎯 the one thing that matters most
-- 🟢 working on it
+- 🟢 working on it. On a live board, exactly one row, and it is the 🎯 bet. A stopped board uses ⚪ on that row.
 - 🟡 waiting
 - 🔴 dropped
 - ⚪ closed
@@ -65,7 +72,7 @@ alpha sells dispatch help to plants that already pay for it.
 - No mermaid, Gantt, or schema diagrams unless asked.
 - This skill makes no board writes.
 - spoken, markdown, and spokenLead are display text. Never write them back. put_journey and create_idea take the stored fields.
-- A display read masks an email address and an sk_live_ or sk_test_ token only inside why, note, and premise. principal, who, and the email field stay the stored address. subscribe_board and unsubscribe_board need that principal.
+- A display read masks an email address and an sk_live_ or sk_test_ token inside why, note, and premise. principal, who, and the email field stay the stored address. subscribe_board and unsubscribe_board need that principal. The rendered card never prints the address.
 - If several companies are asked about, give one card each, in this shape.
 
 ## Internal (never print)
