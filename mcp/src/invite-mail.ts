@@ -47,6 +47,13 @@ export function inviterDisplayName(inviterName: string | undefined, inviterEmail
   return named ? named : inviterEmail;
 }
 
+export function inviterNameForKick(inviterName: string | undefined, inviterEmail: string): string | undefined {
+  const named = inviterName?.trim();
+  if (!named) return undefined;
+  if (named.toLowerCase() === inviterEmail.trim().toLowerCase()) return undefined;
+  return named;
+}
+
 let mailSink: ((mail: InviteMail) => void) | undefined;
 
 export function setInviteMailSinkForTests(sink?: (mail: InviteMail) => void): void {
@@ -98,6 +105,7 @@ export async function notifyPirinInviteMail(
   if (!secret) return { skipped: "secret_unset" };
   const url = pirinInviteMailUrl(env);
   if (!url) return { skipped: "url_not_pirin" };
+  const inviterName = inviterNameForKick(kick.inviterName, kick.invitedByEmail);
   const res = await fetchImpl(url, {
     method: "POST",
     headers: {
@@ -110,7 +118,7 @@ export async function notifyPirinInviteMail(
       companyLabel: kick.companyLabel,
       inviteToken: kick.inviteToken,
       signupUrl: inviteSignupUrl(kick.inviteToken),
-      inviterName: inviterDisplayName(kick.inviterName, kick.invitedByEmail),
+      ...(inviterName ? { inviterName } : {}),
     }),
     signal: AbortSignal.timeout(10_000),
   });
@@ -144,9 +152,9 @@ export function buildInviteMail(input: InviteMailInput): InviteMail {
   const text = [
     "Base camp is ready.",
     "",
-    `${inviterName} invited you to ${input.companyWorkspace}, a private company board on Bootstrap OS. Only people invited to it can join.`,
+    `${inviterName} invited you to ${input.companyWorkspace}, a private bet board on Bootstrap OS. Only people invited to it can join.`,
     "",
-    "Bring your own AI agent. Connect it to the board, and work on it together.",
+    "Bring your own AI agent. Connect it to the bet board, and work on it together.",
     "",
     "Enter base camp:",
     signupUrl,

@@ -163,6 +163,14 @@ export class HostedMembershipJourneyStore implements JourneyStore {
     if (result?.ok && Array.isArray(result.acl)) {
       result.owners = result.acl.map((row) => ({ principal: row.principal, role: row.role }));
     }
+    if (result?.ok && this.isSandbox(slug)) {
+      (result as { portfolio?: unknown }).portfolio = {
+        applies: false,
+        reason: "a starter bet board is not in the portfolio",
+        ranked: [],
+        unscored: [],
+      };
+    }
     return result;
   }
 
@@ -202,6 +210,9 @@ export class HostedMembershipJourneyStore implements JourneyStore {
   async changeAcl(actor: JourneyActor, input: Parameters<JourneyStore["changeAcl"]>[1]) {
     const denied = this.denyUnlessHeld(actor, input.companySlug);
     if (denied) return denied;
+    if (this.isSandbox(normalizeSlug(input.companySlug))) {
+      return { ok: false, error: "sandbox_cannot_share" };
+    }
     this.ensureHeld(input.companySlug, actor);
     return this.inner.changeAcl(actor, input);
   }
@@ -209,6 +220,9 @@ export class HostedMembershipJourneyStore implements JourneyStore {
   async subscribeBoard(actor: JourneyActor, input: Parameters<JourneyStore["subscribeBoard"]>[1]) {
     const denied = this.denyUnlessHeld(actor, input.companySlug);
     if (denied) return denied;
+    if (this.isSandbox(normalizeSlug(input.companySlug))) {
+      return { ok: false, error: "starter bet board cannot send webhooks" };
+    }
     this.ensureHeld(input.companySlug, actor);
     return this.inner.subscribeBoard(actor, input);
   }
@@ -238,6 +252,9 @@ export class HostedMembershipJourneyStore implements JourneyStore {
   ) {
     const denied = this.denyUnlessHeld(actor, input.companySlug);
     if (denied) return denied;
+    if (this.isSandbox(normalizeSlug(input.companySlug))) {
+      return { ok: false, error: "a starter bet board is not in the portfolio" };
+    }
     this.ensureHeld(input.companySlug, actor);
     return this.inner.putPortfolioScore(actor, {
       ...input,

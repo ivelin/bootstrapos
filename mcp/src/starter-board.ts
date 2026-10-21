@@ -2,7 +2,7 @@
  * One private starter bet board per confirmed signup.
  * It cannot take invites and it cannot become a real company.
  */
-import { createHash } from "node:crypto";
+import { randomBytes } from "node:crypto";
 import { hostedProdIdentityAllowed } from "./identity.js";
 
 export type StarterBoardRecord = {
@@ -22,24 +22,43 @@ export interface StarterBoardStore {
   promote(email: string): Promise<{ ok: false; error: "sandbox_cannot_promote" }>;
 }
 
-export function starterSlugForEmail(email: string): string {
-  const digest = createHash("md5").update(email.toLowerCase()).digest("hex").slice(0, 8);
-  return `sb${digest}`;
+function randomStarterSlug(): string {
+  return `sb${randomBytes(4).toString("hex")}`;
 }
 
 export class MemoryStarterStore implements StarterBoardStore {
   private readonly byEmail = new Map<string, StarterBoardRecord>();
+  private readonly inflight = new Map<string, Promise<StarterCreateResult>>();
 
   constructor(private readonly onCreated?: (email: string, slug: string) => void) {}
 
   async create(email: string): Promise<StarterCreateResult> {
     const owner = email.trim().toLowerCase();
     if (!owner || !owner.includes("@")) return { ok: false, error: "confirmed_signup_required" };
+    const pending = this.inflight.get(owner);
+    if (pending) return pending;
+    const run = this.createOnce(owner);
+    this.inflight.set(owner, run);
+    try {
+      return await run;
+    } finally {
+      this.inflight.delete(owner);
+    }
+  }
+
+  private async createOnce(owner: string): Promise<StarterCreateResult> {
+    await Promise.resolve();
     const existing = this.byEmail.get(owner);
     if (existing) return { ok: true, created: false, board: existing };
+    const used = new Set([...this.byEmail.values()].map((board) => board.slug));
+    let slug = randomStarterSlug();
+    for (let attempt = 0; attempt < 8 && used.has(slug); attempt += 1) {
+      slug = randomStarterSlug();
+    }
+    if (used.has(slug)) return { ok: false, error: "starter_cap" };
     const board: StarterBoardRecord = {
       email: owner,
-      slug: starterSlugForEmail(owner),
+      slug,
       invites: false,
       promotable: false,
     };
@@ -123,8 +142,10 @@ export class SupabaseStarterStore implements StarterBoardStore {
   }
 
   async isSandbox(slug: string): Promise<boolean> {
-    const raw = await this.rpc("bootstrap_os_starter_is_sandbox", { p_slug: slug });
-    return raw === true;
+    const raw = await this.rpc("bootstrap_os_my_starter_slug", {});
+    if (raw === null) return false;
+    if (typeof raw !== "string") return true;
+    return raw === slug.trim().toLowerCase();
   }
 
   async promote(_email: string): Promise<{ ok: false; error: "sandbox_cannot_promote" }> {

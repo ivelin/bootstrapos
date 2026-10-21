@@ -90,6 +90,7 @@ import {
   buildInviteMail,
   deliverInviteMailDryRun,
   inviteSignupUrl,
+  inviterNameForKick,
   notifyPirinInviteMail,
   resolveInviteMailMode,
 } from "./invite-mail.js";
@@ -165,6 +166,13 @@ function membershipPayload(
     note: empty ? NO_BOARDS_HINT : NOTE_COMPANIES,
     ...(empty ? setupForZeroCompany() : {}),
   };
+}
+
+async function starterRefusesLiveTools(slug: string | undefined, accessToken?: string): Promise<boolean> {
+  if (!slug) return false;
+  const starter = resolveStarterStore(accessToken);
+  if (!starter) return false;
+  return starter.isSandbox(slug);
 }
 
 function registerReadTools(server: McpServer, surface: McpSurface, hosted?: HostedRequestContext) {
@@ -345,7 +353,24 @@ function registerGatedIdentityTools(server: McpServer, ctx: HostedRequestContext
     if (!who.authenticated) {
       return err(NOTE_NOT_SIGNED_IN);
     }
-    return text(membershipPayload(who, ctx.sessionKey));
+    const payload = membershipPayload(who, ctx.sessionKey);
+    const starter = resolveStarterStore(ctx.accessToken);
+    if (!starter) return text(payload);
+    const companies: string[] = [];
+    for (const slug of payload.companies) {
+      if (await starter.isSandbox(slug)) continue;
+      companies.push(slug);
+    }
+    const empty = companies.length === 0;
+    return text({
+      ...payload,
+      companies,
+      labels: companies,
+      reason: empty ? "no_membership" : null,
+      hint: empty ? NO_BOARDS_HINT : null,
+      note: empty ? NO_BOARDS_HINT : NOTE_COMPANIES,
+      ...(empty ? setupForZeroCompany() : {}),
+    });
   };
 
   server.tool("bootstrap_whoami", TOOL_WHOAMI, {}, READ_ONLY, async () => {
@@ -572,11 +597,13 @@ function registerInviteTools(server: McpServer, ctx: HostedRequestContext) {
               return err(inviteFailMessage(result));
           }
         }
+        const inviterName = inviterNameForKick(ctx.inviteActor?.name, result.card.from.email);
         const mailMode = resolveInviteMailMode();
         if (mailMode === "dry-run") {
           deliverInviteMailDryRun(
             buildInviteMail({
               inviterEmail: result.card.from.email,
+              ...(inviterName ? { inviterName } : {}),
               inviteeEmail: result.card.to.email,
               companyWorkspace: result.card.companyWorkspace,
               inviteToken: result.card.inviteToken,
@@ -587,6 +614,7 @@ function registerInviteTools(server: McpServer, ctx: HostedRequestContext) {
         void notifyPirinInviteMail({
           inviteeEmail: result.card.to.email,
           invitedByEmail: result.card.from.email,
+          ...(inviterName ? { inviterName } : {}),
           companyLabel: result.card.companyWorkspace,
           inviteToken: result.card.inviteToken,
         }).catch(() => undefined);
@@ -1334,6 +1362,9 @@ function registerJourneyTools(server: McpServer, ctx: HostedRequestContext) {
       if (!store || !actor?.authenticated) {
         return err("Gated. Founder or founder-authorized token required.");
       }
+      if (await starterRefusesLiveTools(input.company, ctx.accessToken)) {
+        return err("This starter bet board cannot send webhooks.");
+      }
       try {
         return text(
           await store.subscribeBoard(actor, {
@@ -1441,6 +1472,9 @@ function registerJourneyTools(server: McpServer, ctx: HostedRequestContext) {
       if (!parsed.companySlug) {
         return err("Say which company, or call bootstrap_use_company first.");
       }
+      if (await starterRefusesLiveTools(parsed.companySlug, ctx.accessToken)) {
+        return err("A starter bet board is not in the portfolio.");
+      }
       try {
         return text(
           await store.putPortfolioScore(actor, {
@@ -1516,6 +1550,9 @@ function registerJourneyTools(server: McpServer, ctx: HostedRequestContext) {
       const actor = ctx.actor;
       if (!store || !actor?.authenticated) {
         return err("Gated. Founder or founder-authorized token required.");
+      }
+      if (await starterRefusesLiveTools(input.company, ctx.accessToken)) {
+        return err("This starter bet board cannot send webhooks.");
       }
       try {
         return text(
