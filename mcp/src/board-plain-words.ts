@@ -70,7 +70,8 @@ export const BANNED_ON_CARD: RegExp[] = [
 
 const EMAIL = /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b/g;
 
-const HTTPS_URL = /https?:\/\/[^\s)]+/gi;
+/** Lowercase dotted host only. https://SAFE, https://P0, and https://SAFE.NDA stay in the sentence. http is not exempt. */
+const HTTPS_URL = /https:\/\/[a-z0-9-]+(?:\.[a-z0-9-]+)+(?:[\/?#][^\s)]*)?/g;
 const FENCED_CODE = /```[\s\S]*?```/g;
 const INLINE_CODE = /`[^`\n]+`/g;
 
@@ -135,8 +136,10 @@ function rewriteTerms(input: string): string {
       if (article && new RegExp(`\\b${article[1]}\\s+$`, "i").test(consumed)) {
         consumed = consumed.replace(new RegExp(`\\b${article[1]}\\s+$`, "i"), "");
       }
+      let end = index + hit[0].length;
+      if (!replacement && /[.,;:!?]/.test(text[end] ?? "")) end += 1;
       out += consumed + replacement;
-      last = index + hit[0].length;
+      last = end;
     }
     text = out + text.slice(last);
   }
@@ -170,11 +173,11 @@ export function applyPlainWords(text: string): string {
   return held.restore(masked);
 }
 
+/** Same hold as the card. A code span or a real https host is not a hit. */
 export function bannedCardHit(text: string): string | null {
-  const urls: string[] = [];
-  const masked = holdTokens(String(text ?? ""), HTTPS_URL, "\u0001", urls);
+  const held = protectSpeech(String(text ?? ""));
   for (const rule of BANNED_ON_CARD) {
-    const hit = masked.match(rule);
+    const hit = held.text.match(rule);
     if (hit) return hit[0];
   }
   return null;
