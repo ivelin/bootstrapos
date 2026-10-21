@@ -1009,7 +1009,7 @@ describe("canonical board card", () => {
       "plants pay for conversion/tenancy on one product",
     );
     assert.equal(applyPlainWords("conversion/tenancy"), "conversion/tenancy");
-    assert.equal(founderCardBannedHit("conversion/tenancy"), null);
+    assert.equal(founderCardBannedHit("conversion/tenancy"), "tenancy");
     assert.equal(founderCardBannedHit("paid tenancy"), "tenancy");
     assert.equal(
       applyPlainWords("see `SAFE` at https://x.test/SAFE?q=NDA"),
@@ -1107,6 +1107,8 @@ describe("canonical board card", () => {
       }),
     });
     assert.doesNotMatch(asPremise, /is not a row/);
+    assert.doesNotMatch(asPremise, /Untitled/);
+    assert.doesNotMatch(asPremise, /\| Bet \|/);
   });
 
   it("glosses holdout in the opener and leaves Pixel frame only as stored text", () => {
@@ -1230,6 +1232,18 @@ describe("canonical board card", () => {
     assert.equal(founderCardBannedHit("advisor agreement offered 7 May (fi.co/FAST)"), null);
     assert.equal(applyPlainWords("(fi.co/fast)"), "(fi.co)");
     assert.equal(applyPlainWords("(fi.co/FAST)"), "(fi.co)");
+    assert.equal(applyPlainWords("(fi.co/fast?ref=x)"), "(fi.co)");
+    assert.equal(applyPlainWords("(fi.co/fast#part)"), "(fi.co)");
+    assert.equal(applyPlainWords("(FI.co/fast)"), "(FI.co)");
+    assert.equal(founderCardBannedHit("(FI.co/fast)"), null);
+    assert.equal(applyPlainWords("(www.fi.co/fast?ref=x#part)"), "(www.fi.co)");
+    assert.equal(founderCardBannedHit("(www.fi.co/SAFE)"), null);
+    assert.equal(founderCardBannedHit("evil.fi.co/SAFE"), "SAFE");
+    assert.equal(founderCardBannedHit("/MVP"), "MVP");
+    assert.equal(founderCardBannedHit("SAFE/FAST"), "FAST");
+    assert.equal(founderCardBannedHit("a/b/SKU"), "SKU");
+    assert.equal(founderCardBannedHit("e.g./SKU"), "SKU");
+    assert.match(applyPlainWords("A comment on default is not a row today."), /row today/);
     assert.equal(founderCardBannedHit("sign the SAFE.now/please"), "SAFE");
     assert.equal(founderCardBannedHit("[sign the SAFE](https://x.test/ok)"), "SAFE");
     assert.equal(founderCardBannedHit("send the FAST draft"), "FAST");
@@ -1477,7 +1491,7 @@ describe("canonical board card", () => {
     assert.equal(applyPlainWords("pre-tenancy"), "pre-the paid plan");
     assert.equal(applyPlainWords("file.SKU"), "file.product");
     assert.equal(applyPlainWords("/tenancy left"), "/tenancy left");
-    assert.equal(founderCardBannedHit("/tenancy left"), null);
+    assert.equal(founderCardBannedHit("/tenancy left"), "tenancy");
   });
 
   it("masks an email stored on the founder key", () => {

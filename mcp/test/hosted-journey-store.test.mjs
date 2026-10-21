@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { HostedMembershipJourneyStore, createJourneyStore } from "../dist/hosted-journey-store.js";
+import { HostedMembershipJourneyStore, SupabaseJourneyStore, createJourneyStore } from "../dist/hosted-journey-store.js";
 import { setJourneyStoreForTests } from "../dist/journey.js";
 import {
   parseWebhookDeliveries,
@@ -19,6 +19,42 @@ function actor(email) {
 }
 
 describe("hosted membership journey store", () => {
+  it("sends p_founder only when the caller set it", async () => {
+    const bodies = [];
+    const orig = globalThis.fetch;
+    globalThis.fetch = async (_url, init) => {
+      bodies.push(JSON.parse(String(init?.body || "{}")));
+      return Response.json({ ok: true, company: { slug: "alpha" }, ideas: [] });
+    };
+    try {
+      const store = new SupabaseJourneyStore("https://example.supabase.co", "anon-test-key", "token");
+      const who = actor("founder@example.test");
+      await store.putJourney(who, {
+        companySlug: "alpha",
+        why: "leave the founder name",
+        founderYes: true,
+      });
+      const puts = () => bodies.filter((body) => typeof body.p_why === "string");
+      assert.equal(Object.hasOwn(puts()[0], "p_founder"), false);
+      await store.putJourney(who, {
+        companySlug: "alpha",
+        why: "name the founder",
+        founderYes: true,
+        founder: "Sam",
+      });
+      assert.equal(puts()[1].p_founder, "Sam");
+      await store.putJourney(who, {
+        companySlug: "alpha",
+        why: "clear the founder name",
+        founderYes: true,
+        founder: "",
+      });
+      assert.equal(puts()[2].p_founder, "");
+    } finally {
+      globalThis.fetch = orig;
+    }
+  });
+
   it("supabase store no longer stubs subscriber/ACL writes", () => {
     const src = fs.readFileSync(path.join(here, "..", "src", "hosted-journey-store.ts"), "utf8");
     assert.doesNotMatch(src, /not in this slice/);

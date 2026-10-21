@@ -539,3 +539,178 @@ describe("PGlite journey RLS (isolated, never prod)", { concurrency: false }, ()
     assert.equal(outboxInsertFailed, true);
   });
 });
+
+const FOUNDER_SQL = path.join(
+  __dirname,
+  "..",
+  "supabase",
+  "migrations",
+  "20261021_bootstrap_os_company_founder.sql",
+);
+
+const FOUNDER_HARNESS = `
+DO $$ BEGIN
+  CREATE ROLE anon;
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+DO $$ BEGIN
+  CREATE ROLE authenticated;
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+CREATE SCHEMA IF NOT EXISTS auth;
+CREATE OR REPLACE FUNCTION auth.jwt()
+RETURNS jsonb LANGUAGE sql STABLE AS $$
+  SELECT jsonb_build_object(
+    'email', NULLIF(current_setting('app.actor_email', true), ''),
+    'sub', NULLIF(current_setting('app.actor_sub', true), '')
+  );
+$$;
+`;
+
+const FOUNDER_STUBS = `
+CREATE OR REPLACE FUNCTION public.bootstrap_os_held_label(p_company text)
+RETURNS boolean LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public, bootstrap_os AS $$
+  SELECT EXISTS (
+    SELECT 1
+    FROM bootstrap_os.companies c
+    JOIN bootstrap_os.company_acl a ON a.company_id = c.id
+    WHERE c.slug = lower(p_company)
+      AND (
+        (a.principal_kind = 'email' AND a.principal = NULLIF(lower(auth.jwt() ->> 'email'), ''))
+        OR (a.principal_kind = 'sub' AND a.principal = NULLIF(auth.jwt() ->> 'sub', ''))
+      )
+  );
+$$;
+
+CREATE OR REPLACE FUNCTION public.bootstrap_os_ensure_company(p_company text)
+RETURNS uuid LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, bootstrap_os AS $$
+DECLARE
+  cid uuid;
+BEGIN
+  IF NOT public.bootstrap_os_held_label(p_company) THEN
+    RAISE EXCEPTION 'company not visible';
+  END IF;
+  SELECT id INTO cid FROM bootstrap_os.companies WHERE slug = lower(p_company);
+  IF cid IS NULL THEN
+    RAISE EXCEPTION 'company not visible';
+  END IF;
+  RETURN cid;
+END;
+$$;
+`;
+
+const FOUNDER_SEED = `
+INSERT INTO bootstrap_os.companies (slug, label) VALUES ('alpha', 'alpha');
+INSERT INTO bootstrap_os.company_acl (company_id, principal, principal_kind, role)
+SELECT id, 'founder@example.test', 'email', 'founder' FROM bootstrap_os.companies WHERE slug = 'alpha';
+INSERT INTO bootstrap_os.ideas (company_id, slug, name, journey_phase, loop_stage, current_gate, scoreboard)
+SELECT id, 'default', 'alpha', 1, 1, 'hold', '{"schema_version": 1}'::jsonb
+FROM bootstrap_os.companies WHERE slug = 'alpha';
+`;
+
+describe("PGlite company founder migration (isolated, never prod)", { concurrency: false }, () => {
+  let founderDb;
+
+  before(async () => {
+    founderDb = new PGlite();
+    await founderDb.exec(FOUNDER_HARNESS);
+    const journeySql = fs
+      .readFileSync(MIGRATION, "utf8")
+      .replace(/CREATE EXTENSION IF NOT EXISTS pgcrypto;/, "-- PGlite: gen_random_uuid is built-in");
+    await founderDb.exec(journeySql);
+    await founderDb.exec(FOUNDER_STUBS);
+    for (const name of [
+      "20260920_bootstrap_os_board_subscribers.sql",
+      "20260921_bootstrap_os_list_provenance.sql",
+      "20260922_bootstrap_os_portfolio_score.sql",
+      "20260923_bootstrap_os_implicit_loop.sql",
+    ]) {
+      await founderDb.exec(
+        fs.readFileSync(path.join(__dirname, "..", "supabase", "migrations", name), "utf8"),
+      );
+    }
+    await founderDb.exec(fs.readFileSync(FOUNDER_SQL, "utf8"));
+    await founderDb.exec(FOUNDER_SEED);
+  });
+
+  after(async () => {
+    await founderDb?.close();
+  });
+
+  async function asFounder(sql, params = []) {
+    await founderDb.query("SELECT set_config('app.actor_email', $1, false)", ["founder@example.test"]);
+    const rows = await founderDb.query(sql, params);
+    return rows.rows;
+  }
+
+  it("stores the founder, clears it, and get_journey returns company.founder", async () => {
+    const sql = fs.readFileSync(FOUNDER_SQL, "utf8");
+    assert.match(sql, /\bBEGIN;/);
+    assert.match(sql, /\bCOMMIT;/);
+    const wrote = (
+      await asFounder(
+        `SELECT public.bootstrap_os_put_journey(
+          p_company => $1,
+          p_idea => 'default',
+          p_why => 'name the founder',
+          p_founder_yes => true,
+          p_scoreboard => $2::jsonb,
+          p_founder => 'Sam'
+        ) AS body`,
+        [
+          "alpha",
+          JSON.stringify({
+            schema_version: 1,
+            initiatives: [
+              {
+                id: "alpha-past",
+                kind: "customer_check",
+                premise: "an old booth",
+                status: "closed",
+                outcome: "killed",
+                start: "2026-01-04",
+                end: "2026-02-11",
+              },
+            ],
+          }),
+        ],
+      )
+    )[0].body;
+    assert.equal(wrote.ok, true, JSON.stringify(wrote));
+    assert.equal(wrote.company.founder, "Sam");
+    const kept = (
+      await asFounder(
+        `SELECT public.bootstrap_os_put_journey(
+          p_company => 'alpha',
+          p_idea => 'default',
+          p_why => 'leave the founder name',
+          p_founder_yes => true
+        ) AS body`,
+      )
+    )[0].body;
+    assert.equal(kept.company.founder, "Sam");
+    const board = (
+      await asFounder("SELECT public.bootstrap_os_get_journey($1, $2) AS body", ["alpha", "default"])
+    )[0].body;
+    assert.equal(board.company.founder, "Sam");
+    assert.equal(board.ideas[0].scoreboard.initiatives[0].start, "2026-01-04");
+    assert.equal(board.ideas[0].scoreboard.initiatives[0].end, "2026-02-11");
+    const cleared = (
+      await asFounder(
+        `SELECT public.bootstrap_os_put_journey(
+          p_company => 'alpha',
+          p_idea => 'default',
+          p_why => 'clear the founder name',
+          p_founder_yes => true,
+          p_founder => ''
+        ) AS body`,
+      )
+    )[0].body;
+    assert.equal(cleared.ok, true, JSON.stringify(cleared));
+    assert.equal(cleared.company.founder, undefined);
+    const after = (
+      await asFounder("SELECT public.bootstrap_os_get_journey($1, $2) AS body", ["alpha", null])
+    )[0].body;
+    assert.equal(after.company.founder, undefined);
+  });
+});

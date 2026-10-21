@@ -360,6 +360,9 @@ describe("new migration tables state RLS and grants", () => {
       /DROP FUNCTION IF EXISTS public\.bootstrap_os_put_journey\(text, text, text, boolean, int, int, text, text, text, jsonb\)/,
     );
     assert.match(sql, /REVOKE ALL ON TABLE bootstrap_os\.companies FROM PUBLIC, anon, authenticated/);
+    assert.match(sql, /GRANT SELECT ON TABLE bootstrap_os\.companies TO authenticated/);
+    assert.match(sql, /\bBEGIN;/);
+    assert.match(sql, /\bCOMMIT;/);
     assert.match(sql, /ENABLE ROW LEVEL SECURITY/);
     assert.match(sql, /FORCE ROW LEVEL SECURITY/);
     assert.match(sql, /Do not migrate/);
