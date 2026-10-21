@@ -23,10 +23,6 @@ export function parseBearerToken(header: string | null | undefined): string | un
   return token.length >= 16 ? token : undefined;
 }
 
-/**
- * Decode email then sub. Ignore FAST / role / group claims.
- * This PR does not live-probe JWKS or supabase-pirin-ai.
- */
 function claimDisplayName(
   payload: { name?: unknown; user_metadata?: unknown },
   email?: string,
@@ -55,9 +51,7 @@ export function actorClaimsFromAccessToken(
       sub?: unknown;
       name?: unknown;
       user_metadata?: unknown;
-      fast?: unknown;
     };
-    void payload.fast;
     const email =
       typeof payload.email === "string" && payload.email.trim()
         ? payload.email.trim().toLowerCase()
