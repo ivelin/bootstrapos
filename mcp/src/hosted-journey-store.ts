@@ -381,6 +381,7 @@ export class SupabaseJourneyStore implements JourneyStore {
       why: string;
       founderYes: boolean;
       founderWrittenDecision?: string;
+      founder?: string;
       client?: string;
       gateEnrichment?: GateEnrichment;
       killPostmortem?: Omit<KillPostmortem, "why"> & { why?: string };
@@ -438,6 +439,7 @@ export class SupabaseJourneyStore implements JourneyStore {
       p_why: input.why,
       p_founder_yes: input.founderYes,
       p_founder_written_decision: input.founderWrittenDecision ?? null,
+      p_founder: input.founder ?? null,
     });
     if ("error" in hit) return { ok: false, error: hit.error };
     await this.fireWebhooksAfterWrite(hit.raw, {

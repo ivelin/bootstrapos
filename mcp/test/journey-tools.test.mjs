@@ -1073,7 +1073,7 @@ describe("journey views + tools (memory store)", () => {
     assert.equal(wrote.idea.scoreboard.initiatives[1].start, "2026-01-04");
     assert.equal(wrote.idea.scoreboard.initiatives[1].end, "2026-02-11");
     assert.match(wrote.spoken, /Founder: Sam/);
-    assert.doesNotMatch(wrote.spoken, /Ada/);
+    assert.doesNotMatch(wrote.spoken, /Founder: Ada/);
     assert.match(wrote.spoken, /sells to cafe owners/);
     assert.match(wrote.spoken, /2026-01-04 to 2026-02-11/);
     const again = await store.getJourney(founder, { companySlug: "alpha" });

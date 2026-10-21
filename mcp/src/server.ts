@@ -212,7 +212,7 @@ function registerReadTools(server: McpServer, surface: McpSurface, hosted?: Host
       if (surface === "hosted-read") {
         return text({
           founderVoice: FOUNDER_INTRO,
-          doNotRecite: "Say founderVoice, then the board.",
+          doNotRecite: "Client format: the founderVoice paragraph, then the live board.",
           surface,
           marketplace: false,
           support: SUPPORT_HOWTO,
@@ -1171,7 +1171,12 @@ function registerJourneyTools(server: McpServer, ctx: HostedRequestContext) {
       spokenLoop: z.string().optional(),
       weekVerb: z.string().optional(),
       currentGate: z.enum(["advance", "iterate", "hold", "kill"]).optional(),
-      scoreboard: z.record(z.unknown()).optional(),
+      scoreboard: z
+        .record(z.unknown())
+        .optional()
+        .describe(
+          "Board jsonb. buyer is scoreboard.buyer. Past-bet dates are also accepted on scoreboard.initiatives[].start and scoreboard.initiatives[].end.",
+        ),
       constraintThisWeek: z
         .string()
         .max(280)
@@ -1189,6 +1194,11 @@ function registerJourneyTools(server: McpServer, ctx: HostedRequestContext) {
         .describe(
           "Written founder override after a challenge. Required to name “new landing page” as the constraint when no one has talked to customers. founderYes alone is not a rubber-stamp.",
         ),
+      founder: z
+        .string()
+        .max(80)
+        .optional()
+        .describe("Company founder name. Stored on the company. Not an admin role."),
       client: z.string().optional().describe("Which client wrote. Stored on the audit row."),
       gateEnrichment: z
         .object({
@@ -1257,6 +1267,8 @@ function registerJourneyTools(server: McpServer, ctx: HostedRequestContext) {
             evidence: z.enum(["stated", "synthetic", "observed"]),
             clock: z.string().max(32).optional(),
             parentId: z.string().max(48).optional(),
+            start: z.string().max(64).optional().describe("Past-bet start. ISO day when known."),
+            end: z.string().max(64).optional().describe("Past-bet end. ISO day when known."),
           }),
         )
         .optional()
@@ -1287,6 +1299,7 @@ function registerJourneyTools(server: McpServer, ctx: HostedRequestContext) {
             why: input.why,
             founderYes: input.founderYes,
             founderWrittenDecision: input.founderWrittenDecision,
+            founder: input.founder,
             client: input.client,
             gateEnrichment: input.gateEnrichment,
             killPostmortem: input.killPostmortem,

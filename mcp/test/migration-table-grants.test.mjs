@@ -123,7 +123,15 @@ function relationProblems(sql) {
   const statements = cleaned.split(";");
   const problems = [];
 
-  for (const table of parsed.tables) {
+  const tables = [...parsed.tables];
+  for (const match of cleaned.matchAll(
+    /alter\s+table\s+(?:only\s+)?(?:if\s+exists\s+)?([a-z_][a-z0-9_]*\.[a-z_][a-z0-9_]*)\s+add\s+column\b/gi,
+  )) {
+    const table = match[1];
+    if (!tables.some((name) => name.toLowerCase() === table.toLowerCase())) tables.push(table);
+  }
+
+  for (const table of tables) {
     let enabled = false;
     let forced = false;
     let revokedAnon = false;
