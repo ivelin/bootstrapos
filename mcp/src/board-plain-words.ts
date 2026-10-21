@@ -151,7 +151,7 @@ const COMPOUND_ALLOWLIST = ["conversion/tenancy"];
 function allowlistedCompound(text: string, index: number, length: number): boolean {
   const end = index + length;
   for (const compound of COMPOUND_ALLOWLIST) {
-    const re = new RegExp(compound.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "gi");
+    const re = new RegExp(`(?<![\\w/.-])${compound.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(?![\\w/])`, "gi");
     for (const hit of text.matchAll(re)) {
       const start = hit.index ?? 0;
       if (index >= start && end <= start + hit[0].length) return true;
