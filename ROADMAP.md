@@ -35,11 +35,11 @@
 
 ### pirin.ai headline and one-liner
 
-**Headline:** PENDING
+<!-- Provisional. Pending Ivelin's approval. Do not publish this headline until then. -->
+
+**Headline:** The invite-only connector is the way onto your bet board. The free GitHub docs are the other way.
 
 **One-liner:** PENDING
-
-Pending Ivelin's approval of Web Builder text. Do not publish a headline until then.
 
 ### Hosted invite-only connector (the product)
 
@@ -191,12 +191,12 @@ These are the **only** benefits we actively invest in. Each row must keep a live
 
 | Mode | Status | Rule |
 |------|--------|------|
-| **1. Point an AI** | **Default forever** | https://github.com/ivelin/bootstrap — no install, no MCP |
+| **1. Point an AI** | **The other way** | https://github.com/ivelin/bootstrap. No install. No MCP. Free GitHub docs. |
 | **2. Optional instance / CLI + workflows** | **Shipped on main** | `./scripts/install-instance.sh` + optional `.grok/workflows` |
 | **3. Self-host kit** | **Optional OSS `mcp/`** | Your disk (`initCompany()` / `~/.bootstrap-os`) or your own Vercel + Supabase. Not the Pirin mentee source of record. Same `company-state.json` + `where-are-we.py` on disk. |
 | **4. Hosted MCP** | **The product** | Pin `https://mcp.bootstrap.pirin.ai/mcp` (handshake 401). The hosted invite-only connector is the product. Free GitHub docs are an alternative. A confirmed signup can open one private starter bet board (`create_starter_board`). It cannot send invites and it cannot become a real company. A later founder seed invite is the only path to a real company. Super admin calls `create_company`, then `create_idea`, for that real company. `plugin/` is preview. The hosted connector uses sign-in. Git-branch previews on `*.vercel.app` (same 401 as collab, not a silent 200 alias, not a pin, not mentee-ready boards). Contract: [`mcp/docs/HOSTED_IDENTITY.md`](mcp/docs/HOSTED_IDENTITY.md). Gated tools: HTTP 401 + `WWW-Authenticate` to this MCP origin RFC 9728 (`authorization_servers` = pirin.ai login). This repo is the resource server only. Login / OAuth stay on pirin.ai `/bootstrap-os/login` (Web Builder). No login UI and no copy-paste `bos_` mint as the mentee path. See [mcp/docs/MARKETPLACE.md](mcp/docs/MARKETPLACE.md). Not pirin.ai. This row is not an Advance of Phase D. |
 
-Cos Advance (hosted board): invited companies write on the pin after roles SQL and a sole super_admin. Self-host `~/.bootstrap-os` is not the Pirin source of record. Path 1 stays the no-login front door. See [mcp/docs/MARKETPLACE.md](mcp/docs/MARKETPLACE.md).
+Cos Advance (hosted board): invited companies write on the pin after roles SQL and a sole super_admin. Self-host `~/.bootstrap-os` is not the Pirin source of record. See [mcp/docs/MARKETPLACE.md](mcp/docs/MARKETPLACE.md).
 
 MCP is **compass + logbook**, not a third harness.
 
@@ -256,14 +256,14 @@ Agents should start sessions with focus → do work → record when ready (`log_
 | **Status** | **Next** after Phase B human-eyes green or explicit iterate |
 | **From field** | Thesis change → pilot evidence (MicDots class); multi-company dogfood claim needs per-company boards |
 
-### Phase D — Hosted read path (optional)
+### Phase D — Hosted read path
 
 | | |
 |--|--|
-| **Ship only if** | Phase C dogfood green **and** real demand for shareable read-only export |
-| **Done means** | Same tools/names; founder owns revoke; no public ranking |
-| **Kill if** | Local export + Drive/git share is enough for dogfood cohort |
-| **Status** | **Hold** — this phase is not Advanced. |
+| **Ship** | Invite-only pin `https://mcp.bootstrap.pirin.ai/mcp` |
+| **Done means** | Same tools and names. The founder owns revoke. No public ranking. |
+| **Kill if** | Local export plus a Drive or git share is enough for the dogfood cohort |
+| **Status** | **Shipped path.** The invite-only connector is the way onto the bet board. |
 
 ---
 
