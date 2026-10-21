@@ -8,7 +8,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { MemoryJourneyStore, defaultScoreboard } from "../dist/journey.js";
-import { cardPersonName } from "../dist/board-plain-words.js";
+import { applyPlainWords, cardPersonName } from "../dist/board-plain-words.js";
 import {
   applySpokenPayloadLead,
   cardFromScoreboard,
@@ -889,6 +889,241 @@ describe("canonical board card", () => {
     assert.match(past, /a booth at the town fair/);
     assert.match(past, /a second stall on the side street/);
     assert.match(past, /· · .*a conversation with the cafe owner/);
+  });
+
+  it("reads stored start and end on a past bet", () => {
+    const spoken = formatSpokenCard({
+      label: "alpha",
+      who: ["Sam"],
+      card: cardFromScoreboard({
+        slug: "alpha",
+        label: "alpha",
+        journeyPhase: 1,
+        gate: "hold",
+        scoreboard: {
+          initiatives: [
+            ALPHA.initiatives[0],
+            row({
+              id: "alpha-stored-dates",
+              kind: "customer_check",
+              premise: "a booth with stored dates",
+              status: "closed",
+              outcome: "killed",
+              last: "buyers walked past",
+              next: "—",
+              start: "2026-04-01T15:00:00Z",
+              end: "2026-06-15",
+            }),
+          ],
+        },
+      }),
+    });
+    assert.match(spoken, /2026-04-01 to 2026-06-15: buyers walked past/);
+    assert.doesNotMatch(spoken, /a booth with stored dates[\s\S]*start not recorded to end not recorded/);
+  });
+
+  it("prints the company founder and otherwise says not named yet", () => {
+    const named = applySpokenPayloadLead({
+      ok: true,
+      company: { slug: "alpha", label: "alpha", founder: "Nina Alvarez" },
+      owners: [{ principal: "admin@example.test", role: "founder_authorized", displayName: "Ada Admin" }],
+      ideas: [
+        {
+          slug: "default",
+          name: "alpha",
+          scoreboard: { schema_version: 1, initiatives: BRAVO.initiatives },
+        },
+      ],
+    });
+    assert.match(named.markdown, /^Founder: Nina$/m);
+    assert.match(named.markdown, /\| Ada \|/);
+    assert.doesNotMatch(named.markdown, /^Founder: Ada$/m);
+    const adminOnly = applySpokenPayloadLead({
+      ok: true,
+      company: { slug: "bravo", label: "bravo" },
+      owners: [{ principal: "admin@example.test", role: "founder_authorized", displayName: "Ada Admin" }],
+      ideas: [
+        {
+          slug: "default",
+          name: "bravo",
+          scoreboard: { schema_version: 1, initiatives: BRAVO.initiatives },
+        },
+      ],
+    });
+    assert.match(adminOnly.markdown, /^Founder: not named yet$/m);
+    assert.doesNotMatch(adminOnly.markdown, /^Founder: Ada$/m);
+  });
+
+  it("says buyer not named yet when the only stored text is the bet", () => {
+    const betText = "Predictive notes copy a loop onto alpha without a login";
+    const seen = applySpokenPayloadLead({
+      ok: true,
+      company: { slug: "alpha", label: "alpha" },
+      owners: [{ principal: "sam@example.test", role: "founder", displayName: "Sam" }],
+      ideas: [
+        {
+          slug: "default",
+          name: "alpha",
+          scoreboard: {
+            schema_version: 1,
+            hypothesis: betText,
+            initiatives: [BRAVO.initiatives[0]],
+          },
+        },
+      ],
+    });
+    assert.match(seen.markdown, /alpha sells to buyer not named yet\./);
+    assert.doesNotMatch(seen.markdown, /Predictive notes/);
+    const named = applySpokenPayloadLead({
+      ok: true,
+      company: { slug: "charlie", label: "charlie" },
+      owners: [{ principal: "sam@example.test", role: "founder", displayName: "Sam" }],
+      ideas: [
+        {
+          slug: "default",
+          name: "charlie",
+          scoreboard: {
+            schema_version: 1,
+            hypothesis: betText,
+            buyer: "cafe owners",
+            initiatives: [BRAVO.initiatives[0]],
+          },
+        },
+      ],
+    });
+    assert.match(named.markdown, /charlie sells to cafe owners\./);
+    assert.doesNotMatch(named.markdown, /Predictive notes/);
+  });
+
+  it("substitutes a whole term once and does not nest the replacement", () => {
+    const once = applyPlainWords("paid tenancy on one product");
+    assert.equal(once, "the paid plan on one product");
+    assert.equal(applyPlainWords(once), once);
+    assert.equal(
+      applyPlainWords("plants pay for conversion/tenancy on one SKU"),
+      "plants pay for conversion on one product",
+    );
+    assert.doesNotMatch(applyPlainWords("paid tenancy"), /paid the paid plan/);
+  });
+
+  it("does not print the internal label default", () => {
+    const spoken = formatSpokenCard({
+      label: "alpha",
+      who: ["Sam"],
+      card: cardFromScoreboard({
+        slug: "alpha",
+        label: "alpha",
+        journeyPhase: 1,
+        gate: "hold",
+        scoreboard: {
+          initiatives: [
+            ALPHA.initiatives[0],
+            row({
+              id: "alpha-internal",
+              kind: "customer_check",
+              premise: "a parked try",
+              status: "closed",
+              outcome: "killed",
+              last: "A comment on default is not a row.",
+              next: "—",
+            }),
+          ],
+        },
+      }),
+    });
+    assert.match(spoken, /A comment is not a row\./);
+    assert.doesNotMatch(spoken, /\bdefault\b/);
+  });
+
+  it("renders a money row for a non-numeric pnl and prefixes the next line", () => {
+    const card = cardFromScoreboard({
+      slug: "alpha",
+      label: "alpha",
+      journeyPhase: 1,
+      gate: "hold",
+      scoreboard: {
+        initiatives: [
+          row({
+            id: "alpha-check",
+            kind: "customer_check",
+            premise: "a weekly shop report for one cafe",
+            last: "Menu tasted",
+            next: "Sam sends the price list",
+          }),
+        ],
+      },
+    });
+    const spoken = formatSpokenCard({
+      label: "alpha",
+      who: ["Sam"],
+      pnl: { asOf: "2026-10-19T07:11:45-05:00", revenue: {}, costs: [{ line: "hosting" }] },
+      card,
+    });
+    assert.match(spoken, /\| \*\*Background\*\* \|/);
+    assert.match(spoken, /\| Money \|/);
+    assert.match(spoken, /last 30 days: revenue not recorded; measured costs unknown \(Oct 19\)/);
+    assert.match(spoken, /\*\*Next:\*\* Sam — Sam sends the price list\./);
+  });
+
+  it("renders money stored on another idea when the lead bet has none", () => {
+    const seen = applySpokenPayloadLead({
+      ok: true,
+      company: { slug: "alpha", label: "alpha", founder: "Sam" },
+      owners: [{ principal: "sam@example.test", role: "founder", displayName: "Sam" }],
+      ideas: [
+        {
+          slug: "default",
+          name: "alpha",
+          scoreboard: {
+            schema_version: 1,
+            initiatives: [],
+            pnl: { asOf: "2026-10-02", revenue: {}, costs: [{ line: "hosting" }] },
+          },
+        },
+        {
+          slug: "shop",
+          name: "shop report",
+          scoreboard: {
+            schema_version: 1,
+            buyer: "one cafe owner",
+            initiatives: [BRAVO.initiatives[0]],
+          },
+        },
+      ],
+    });
+    assert.match(seen.markdown, /\| Money \|/);
+    assert.match(seen.markdown, /revenue not recorded/);
+    assert.match(seen.markdown, /shop report|a weekly shop report/);
+  });
+
+  it("does not treat a banned term inside a link as a hit", () => {
+    assert.equal(founderCardBannedHit("advisor agreement offered 7 May (fi.co/FAST)"), null);
+    assert.equal(founderCardBannedHit("advisor agreement offered 7 May (https://fi.co/fast)"), null);
+    assert.equal(founderCardBannedHit("send the FAST draft"), "FAST");
+    const spoken = formatSpokenCard({
+      label: "alpha",
+      who: ["Sam"],
+      card: cardFromScoreboard({
+        slug: "alpha",
+        label: "alpha",
+        journeyPhase: 1,
+        gate: "hold",
+        scoreboard: {
+          initiatives: [
+            row({
+              id: "alpha-link",
+              kind: "customer_check",
+              premise: "a weekly shop report",
+              last: "agreement offered 7 May (fi.co/FAST)",
+              next: "Send the note",
+            }),
+          ],
+        },
+      }),
+    });
+    assert.match(spoken, /fi\.co\/FAST/);
+    assert.doesNotMatch(spoken, /fi\.co\/advisor/);
+    assert.equal(founderCardBannedHit(spoken), null);
   });
 
   it("documents a signed-in user with no invite as 200 no_membership", () => {
