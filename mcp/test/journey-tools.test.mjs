@@ -1208,4 +1208,60 @@ describe("journey views + tools (memory store)", () => {
     assert.equal(kept.idea.scoreboard.portfolioScore.impact, 2);
     assert.equal(kept.idea.scoreboard.initiatives[0].id, "alpha-live");
   });
+
+  it("writes past-bet dates and reads them back", async () => {
+    const store = new MemoryJourneyStore(
+      [{ id: "co-alpha", slug: "alpha", label: "alpha" }],
+      [
+        {
+          companyId: "co-alpha",
+          principal: "founder@example.test",
+          principalKind: "email",
+          role: "founder",
+          displayName: "Ada Admin",
+        },
+      ],
+      [
+        {
+          id: "idea-alpha",
+          companyId: "co-alpha",
+          slug: "default",
+          name: "alpha",
+          journeyPhase: 1,
+          loopStage: 1,
+          currentGate: "hold",
+          scoreboard: defaultScoreboard(),
+        },
+      ],
+      [],
+      [],
+    );
+    const founder = bearer("founder@example.test");
+    const wrote = await store.putJourney(founder, {
+      companySlug: "alpha",
+      why: "record when the past bet ran",
+      founderYes: true,
+      initiatives: [
+        {
+          id: "alpha-past",
+          kind: "customer_check",
+          premise: "an old booth",
+          measure: "someone pays",
+          killLine: "stop if nobody pays",
+          status: "closed",
+          last: "the booth made no sales",
+          next: "—",
+          outcome: "killed",
+          impact: "learning",
+          evidence: "observed",
+          start: "2026-01-04",
+          end: "2026-02-11",
+        },
+      ],
+    });
+    assert.equal(wrote.ok, true, wrote.error);
+    const again = await store.getJourney(founder, { companySlug: "alpha" });
+    assert.equal(again.ideas[0].scoreboard.initiatives[0].start, "2026-01-04");
+    assert.equal(again.ideas[0].scoreboard.initiatives[0].end, "2026-02-11");
+  });
 });
