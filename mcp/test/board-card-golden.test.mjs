@@ -8,7 +8,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { MemoryJourneyStore, defaultScoreboard } from "../dist/journey.js";
-import { applyPlainWords, cardPersonName } from "../dist/board-plain-words.js";
+import { applyPlainWords, cardPersonName, PLAIN_WORD_REWRITES } from "../dist/board-plain-words.js";
 import {
   applySpokenPayloadLead,
   buyerText,
@@ -1006,9 +1006,28 @@ describe("canonical board card", () => {
     assert.equal(applyPlainWords(once), once);
     assert.equal(
       applyPlainWords("plants pay for conversion/tenancy on one SKU"),
-      "plants pay for conversion on one product",
+      "plants pay for conversion/the paid plan on one product",
+    );
+    assert.equal(applyPlainWords("conversion/tenancy"), "conversion/the paid plan");
+    assert.notEqual(applyPlainWords("conversion/tenancy"), "conversion");
+    assert.equal(
+      applyPlainWords("see `SAFE` at https://x.test/SAFE?q=NDA"),
+      "see `SAFE` at https://x.test/SAFE?q=NDA",
     );
     assert.doesNotMatch(applyPlainWords("paid tenancy"), /paid the paid plan/);
+    assert.equal(applyPlainWords("payment default risk"), "payment default risk");
+    assert.equal(applyPlainWords("on default plan"), "on default plan");
+    assert.equal(
+      applyPlainWords("A comment on default is not a row."),
+      "A comment on default is not a row.",
+    );
+    assert.equal(applyPlainWords("default"), "");
+    assert.equal(applyPlainWords("Filed on default!"), "Filed!");
+    for (const [, gloss] of PLAIN_WORD_REWRITES) {
+      if (gloss.includes("$")) continue;
+      assert.equal(applyPlainWords(gloss), gloss);
+      assert.equal(applyPlainWords(applyPlainWords(gloss)), gloss);
+    }
   });
 
   it("does not print the internal label default", () => {
@@ -1029,14 +1048,14 @@ describe("canonical board card", () => {
               premise: "a parked try",
               status: "closed",
               outcome: "killed",
-              last: "A comment on default is not a row.",
+              last: "A comment on default.",
               next: "—",
             }),
           ],
         },
       }),
     });
-    assert.match(spoken, /A comment is not a row\./);
+    assert.match(spoken, /A comment\./);
     assert.doesNotMatch(spoken, /\bdefault\b/);
   });
 
@@ -1101,10 +1120,17 @@ describe("canonical board card", () => {
     assert.match(seen.markdown, /shop report|a weekly shop report/);
   });
 
-  it("does not treat a banned term inside a link as a hit", () => {
-    assert.equal(founderCardBannedHit("advisor agreement offered 7 May (fi.co/FAST)"), null);
-    assert.equal(founderCardBannedHit("advisor agreement offered 7 May (https://fi.co/fast)"), null);
+  it("filters a banned term unless it sits inside an https url", () => {
+    assert.equal(founderCardBannedHit("sign the SAFE.now/please"), "SAFE");
+    assert.equal(founderCardBannedHit("www.SAFE"), "SAFE");
+    assert.equal(founderCardBannedHit("FAST.track/now"), "FAST");
+    assert.equal(founderCardBannedHit("the P0.fix/it now"), "P0");
+    assert.equal(founderCardBannedHit("engagement.team/now"), "engagement");
+    assert.equal(founderCardBannedHit("advisor agreement offered 7 May (fi.co/FAST)"), "FAST");
+    assert.equal(founderCardBannedHit("[sign the SAFE](https://x.test/ok)"), "SAFE");
     assert.equal(founderCardBannedHit("send the FAST draft"), "FAST");
+    assert.equal(founderCardBannedHit("advisor agreement offered 7 May (https://fi.co/fast)"), null);
+    assert.equal(founderCardBannedHit("see https://x.test/SAFE?q=NDA"), null);
     const spoken = formatSpokenCard({
       label: "alpha",
       who: ["Sam"],
@@ -1119,16 +1145,47 @@ describe("canonical board card", () => {
               id: "alpha-link",
               kind: "customer_check",
               premise: "a weekly shop report",
-              last: "agreement offered 7 May (fi.co/FAST)",
+              last: "agreement offered 7 May (fi.co/FAST) and see `SAFE` at https://x.test/SAFE?q=NDA",
               next: "Send the note",
             }),
           ],
         },
       }),
     });
-    assert.match(spoken, /fi\.co\/FAST/);
-    assert.doesNotMatch(spoken, /fi\.co\/advisor/);
-    assert.equal(founderCardBannedHit(spoken), null);
+    assert.match(spoken, /fi\.co\/advisor agreement/);
+    assert.doesNotMatch(spoken, /fi\.co\/FAST/);
+    assert.match(spoken, /`SAFE`/);
+    assert.match(spoken, /https:\/\/x\.test\/SAFE\?q=NDA/);
+    assert.doesNotMatch(spoken, /confidentiality/);
+    assert.doesNotMatch(spoken, /investment/);
+    const seen = applySpokenPayloadLead({
+      ok: true,
+      company: { slug: "alpha", label: "alpha", founder: "Sam" },
+      owners: [{ principal: "sam@example.test", role: "founder", displayName: "Sam" }],
+      ideas: [
+        {
+          slug: "shop",
+          name: "shop report",
+          scoreboard: {
+            schema_version: 1,
+            buyer: "one cafe owner",
+            initiatives: [
+              row({
+                id: "alpha-link",
+                kind: "customer_check",
+                premise: "a weekly shop report",
+                last: "see `SAFE` at https://x.test/SAFE?q=NDA",
+                next: "Send the note",
+              }),
+            ],
+          },
+        },
+      ],
+    });
+    assert.match(seen.ideas[0].scoreboard.initiatives[0].last, /`SAFE`/);
+    assert.match(seen.ideas[0].scoreboard.initiatives[0].last, /https:\/\/x\.test\/SAFE\?q=NDA/);
+    assert.doesNotMatch(seen.ideas[0].scoreboard.initiatives[0].last, /confidentiality/);
+    assert.doesNotMatch(seen.markdown, /confidentiality/);
   });
 
   it("keeps a stored span, a named buyer, and a money row on the odd paths", () => {
@@ -1295,9 +1352,35 @@ describe("canonical board card", () => {
     assert.doesNotMatch(ownMoney.markdown, /revenue not recorded/);
 
     assert.equal(applyPlainWords("P0"), "");
-    assert.equal(applyPlainWords("pre-tenancy"), "pre");
-    assert.equal(applyPlainWords("file.SKU"), "file");
-    assert.equal(applyPlainWords("/tenancy left"), " left");
+    assert.equal(applyPlainWords("pre-tenancy"), "pre-the paid plan");
+    assert.equal(applyPlainWords("file.SKU"), "file.product");
+    assert.equal(applyPlainWords("/tenancy left"), "/the paid plan left");
+  });
+
+  it("masks an email stored on the founder key", () => {
+    const seen = applySpokenPayloadLead({
+      ok: true,
+      company: { slug: "alpha", label: "alpha", founder: "nina@example.test" },
+      owners: [{ principal: "ada@example.test", role: "founder_authorized", displayName: "Ada Admin" }],
+      ideas: [
+        {
+          slug: "shop",
+          name: "shop report",
+          founder: "lee@example.test",
+          scoreboard: {
+            schema_version: 1,
+            buyer: "one cafe owner",
+            initiatives: [BRAVO.initiatives[0]],
+          },
+        },
+      ],
+    });
+    assert.equal(seen.company.founder, "nina");
+    assert.equal(seen.ideas[0].founder, "lee");
+    assert.doesNotMatch(String(seen.company.founder), /@/);
+    assert.doesNotMatch(String(seen.ideas[0].founder), /@/);
+    assert.match(seen.markdown, /^Founder: nina$/m);
+    assert.doesNotMatch(seen.markdown, /@example\.test/);
   });
 
   it("documents a signed-in user with no invite as 200 no_membership", () => {

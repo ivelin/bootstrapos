@@ -255,8 +255,8 @@ describe("PR1.1 dyeconverter Heavy-locked initiatives map", () => {
     assert.equal(seen.card.bottleneck.id, "dye-check-plant");
     assert.equal(seen.ideas[0].clocks.journeyPhase, 1);
     assert.equal(seen.ideas[0].clocks.currentGate, "hold");
-    assert.match(seen.spoken, /plants already buying pigment pay for conversion on one product/);
-    assert.match(seen.ideas[0].snapshot, /plants already buying pigment pay for conversion on one product/);
+    assert.match(seen.spoken, /plants already buying pigment pay for conversion\/the paid plan on one product/);
+    assert.match(seen.ideas[0].snapshot, /plants already buying pigment pay for conversion\/the paid plan on one product/);
     assert.doesNotMatch(seen.spoken, /use on their product/);
     assert.match(seen.ideas[0].snapshot, /Oterra/);
     assert.doesNotMatch(seen.ideas[0].snapshot, /\bNDA\b/i);
@@ -264,7 +264,7 @@ describe("PR1.1 dyeconverter Heavy-locked initiatives map", () => {
     assert.doesNotMatch(seen.ideas[0].snapshot, /journey phase \d/);
     assert.doesNotMatch(seen.ideas[0].snapshot, /gate hold/i);
     const spokenLead = seen.spoken.split("| · ·")[0];
-    assert.match(spokenLead, /plants already buying pigment pay for conversion on one product/);
+    assert.match(spokenLead, /plants already buying pigment pay for conversion\/the paid plan on one product/);
     assert.doesNotMatch(spokenLead, /\bSAFE\b|\bFAST\b/);
   });
 });
