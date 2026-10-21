@@ -1078,6 +1078,49 @@ describe("canonical board card", () => {
     assert.equal(founderCardBannedHit(compound), null);
   });
 
+  it("glosses a stuck conversion/tenancy and keeps the plain compound", () => {
+    function cardText(label, premise) {
+      return formatSpokenCard({
+        label,
+        who: ["Sam"],
+        card: cardFromScoreboard({
+          slug: label,
+          label,
+          journeyPhase: 1,
+          gate: "hold",
+          scoreboard: {
+            initiatives: [
+              row({
+                id: `${label}-compound`,
+                kind: "customer_check",
+                premise,
+                last: "Noted",
+                next: "Ask again",
+              }),
+            ],
+          },
+        }),
+      });
+    }
+
+    const stuck = cardText("alpha", "xconversion/tenancy");
+    assert.match(stuck, /xconversion\/the paid plan/);
+    assert.equal(founderCardBannedHit(stuck), null);
+
+    const path = cardText("bravo", "http://x.test/conversion/tenancy");
+    assert.match(path, /http:\/\/x\.test\/conversion\/the paid plan/);
+    assert.equal(founderCardBannedHit(path), null);
+
+    const host = cardText("charlie", "example.com/conversion/tenancy");
+    assert.match(host, /example\.com\/conversion\/the paid plan/);
+    assert.equal(founderCardBannedHit(host), null);
+
+    const plain = cardText("alpha", "conversion/tenancy");
+    assert.match(plain, /conversion\/tenancy/);
+    assert.doesNotMatch(plain, /the paid plan/);
+    assert.equal(founderCardBannedHit(plain), null);
+  });
+
   it("does not print the internal label default", () => {
     const spoken = formatSpokenCard({
       label: "alpha",
