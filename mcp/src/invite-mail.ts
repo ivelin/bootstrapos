@@ -169,7 +169,7 @@ export function buildInviteMail(input: InviteMailInput): InviteMail {
     "Not expecting this? You can ignore this email. Nothing happens unless you accept.",
     "",
     "Bootstrap OS, by pirin.ai",
-  ].join("\n") + "\n";
+  ].join("\n");
   return {
     from: INVITE_MAIL_FROM,
     to: input.inviteeEmail,
