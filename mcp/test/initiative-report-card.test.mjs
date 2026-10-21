@@ -306,7 +306,8 @@ describe("OS 2.8.19 initiative report card", () => {
     assert.doesNotMatch(HOSTED_MCP_INSTRUCTIONS, /spoken card|Also moving|Clocks are storage|show clocks/);
 
     const infoDesc = fs.readFileSync(path.join(REPO_ROOT, "mcp/src/server.ts"), "utf8");
-    assert.match(infoDesc, /Say the founder sentence, then the live board/);
+    assert.match(infoDesc, /Opening paragraph for the client, then the live board/);
+    assert.doesNotMatch(infoDesc, /Say the founder sentence/);
     assert.doesNotMatch(infoDesc, /spoken-card default/);
     assert.doesNotMatch(infoDesc, /five journey rungs \(Bet/);
 

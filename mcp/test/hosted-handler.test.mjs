@@ -778,3 +778,62 @@ describe("journey token must be usable before the tool runs", () => {
     }
   });
 });
+
+describe("put_journey founder and past-bet dates round-trip through the tool", () => {
+  afterEach(() => {
+    setJourneyStoreForTests(undefined);
+  });
+
+  it("get_journey returns the company founder and the initiative dates", async () => {
+    setJourneyStoreForTests(alphaMembershipStore());
+    const token = syntheticAccessToken({
+      email: ALPHA_EMAIL,
+      sub: "auth-alpha",
+      extra: { exp: futureExp() },
+    });
+    const wrote = await handleHostedReadFetch(
+      toolRequest(
+        "put_journey",
+        {
+          company: "alpha",
+          why: "name the founder and the past bet",
+          founderYes: true,
+          founder: "Sam",
+          scoreboard: {
+            schema_version: 1,
+            initiatives: [
+              {
+                id: "alpha-past",
+                kind: "customer_check",
+                premise: "an old booth",
+                measure: "someone pays",
+                killLine: "stop if nobody pays",
+                status: "closed",
+                last: "the booth made no sales",
+                next: "—",
+                outcome: "killed",
+                impact: "learning",
+                evidence: "observed",
+                start: "2026-01-04",
+                end: "2026-02-11",
+              },
+            ],
+          },
+        },
+        token,
+      ),
+    );
+    const wroteRaw = await wrote.text();
+    assert.equal(wrote.status, 200, wroteRaw);
+    const read = await handleHostedReadFetch(
+      toolRequest("get_journey", { company: "alpha" }, token),
+    );
+    const raw = await read.text();
+    assert.equal(read.status, 200, raw);
+    const parsed = JSON.parse(toolText(JSON.parse(raw)));
+    assert.equal(parsed.company.founder, "Sam");
+    const past = parsed.ideas[0].scoreboard.initiatives.find((row) => row.id === "alpha-past");
+    assert.equal(past.start, "2026-01-04");
+    assert.equal(past.end, "2026-02-11");
+  });
+});

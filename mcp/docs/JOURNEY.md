@@ -16,6 +16,29 @@ Research/traces stay local to the founder. Do not lift `~/.bootstrap-os`.
 
 See [`../supabase/migrations/20260902_bootstrap_os_journey.sql`](../supabase/migrations/20260902_bootstrap_os_journey.sql). PGlite fixture: [`../test/pglite/journey-schema.sql`](../test/pglite/journey-schema.sql).
 
+Apply journey SQL in filename order. Apply `20261021_bootstrap_os_company_founder.sql` before, or in the same deploy as, the client that sends `p_founder`. Production still has the 10-argument `bootstrap_os_put_journey`. A client that sends `p_founder` before that migration gets PGRST202. The file is one transaction, so the 10-argument and 11-argument functions are not both visible. That avoids PGRST203. PR agents do not apply it.
+
+Apply order:
+
+- `20260902_bootstrap_os_journey.sql`
+- `20260915_bootstrap_os_journey_rpcs.sql`
+- `20260916_bootstrap_os_get_journey_log.sql`
+- `20260916_bootstrap_os_import_local_boards.sql`
+- `20260917_bootstrap_os_get_journey_owners.sql`
+- `20260918_bootstrap_os_create_idea.sql`
+- `20260919_bootstrap_os_create_idea_disambiguate_slug.sql`
+- `20260920_bootstrap_os_board_subscribers.sql`
+- `20260921_bootstrap_os_list_provenance.sql`
+- `20260922_bootstrap_os_portfolio_score.sql`
+- `20260923_bootstrap_os_implicit_loop.sql`
+- `20260925_bootstrap_os_one_control_plane.sql`
+- `20260926_bootstrap_os_initiative_report_card.sql`
+- `20260927_bootstrap_os_dual_read_dead.sql`
+- `20260928_bootstrap_os_roles.sql`
+- `20260930_bootstrap_os_submit_feedback.sql`
+- `20261019_bootstrap_rate_limit.sql`
+- `20261021_bootstrap_os_company_founder.sql`
+
 Seed slugs exist **only** in the PGlite fixture: `dyeconverter`, `corehaul`. One default idea each. Fixture emails are synthetic `@example.test`. Real FAST emails are not in git.
 
 Allowlist in SQL, fail closed. Token `email` (fallback `sub`) → ACL. No FAST claim on the JWT.
@@ -76,7 +99,7 @@ Cos sets Vercel secrets **once** on `bootstrap-os-mcp` production: `BOOTSTRAP_BO
 | `get_journey` | founder / advisor on the allowlist | Company query → every idea. Company/idea → one idea. Print spoken first. When they ask where you are, print the board in the company’s words. Leave week labels off the page until they ask. Surfaces top-level `card` from `initiatives[]`. When `initiatives[]` is present, dual-read of `progress[]` / `supporting[]` / `engagements[]` is dead for the card lead (empty `initiatives[]` still dual-reads old fields). Default payload is compact (no full audit — use `list_provenance`). ACL `owners`, stored `portfolioScore` on live ideas, and `portfolio` ranked by impact+evidence+leverage when ≥2 live ideas. Never invents missing scores. `progress[]` is not card body. |
 | `create_company` | live `super_admin` | New company slug + membership label for the caller. Founder yes and a why. Does not create an idea — caller then `create_idea`. Global duplicate slug → 409. Anyone else → 403 with an empty body (no other company rows). Audit who / slug / why. |
 | `create_idea` | founder + founder-authorized | New 0-1 primary board under a held company. Empty clocks (Write the bet / hold; stored 1 / 1). A person or instrument as the primary object is rejected — write supporting[]. Founder yes in chat. Does not invent stage. Ask / Do / Write back is a quality bar, not a card. |
-| `put_journey` | founder + founder-authorized | Overwrite journey/gate/jsonb including `initiatives[]` on an **existing** idea. New writes prefer `initiatives[]` and clear `progress` / `supporting` / `engagements` (jsonb `-`; shallow `||` cannot delete). Dual-read is dead for the card lead when `initiatives[]` is present. Missing slug → `idea not found; call create_idea first`. Primary phase needs founder yes and a product bet-class why. Recon may patch initiatives + constraint; recon may not Advance primary. Mapping cannot Advance. `loopStage` mutations and spoken Ask/Do/Write back writes are rejected. |
+| `put_journey` | founder + founder-authorized | Overwrite journey/gate/jsonb including `initiatives[]` on an **existing** idea. New writes prefer `initiatives[]` and clear `progress` / `supporting` / `engagements` (jsonb `-`; shallow `||` cannot delete). Dual-read is dead for the card lead when `initiatives[]` is present. Missing slug → `idea not found; call create_idea first`. Primary phase needs founder yes and a product bet-class why. Recon may patch initiatives + constraint; recon may not Advance primary. Mapping cannot Advance. `loopStage` mutations and spoken Ask/Do/Write back writes are rejected. `founder` is the company founder (`bootstrap_os.companies.founder`), optional, at most 80 characters. Omit it to leave the stored name. An empty string clears it. It is not an ACL role. The hosted client sends `p_founder` only when this field is present. Apply `20261021_bootstrap_os_company_founder.sql` first. `scoreboard.buyer` is the buyer. `initiatives[].start` and `initiatives[].end` are the past-bet start and end. The same dates are accepted on `scoreboard.initiatives`. When the day is known, store an ISO day. |
 | `post_comment` | advisors | Side table. Never a gate. |
 | `subscribe_board` | founder + founder-authorized | Grant webhook (+ email opt-in enqueue) to an ACL member. Cos / adapter furniture — not the founder path. |
 | `unsubscribe_board` | founder + founder-authorized | Remove a subscriber. |

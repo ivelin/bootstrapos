@@ -122,7 +122,15 @@ function relationProblems(sql) {
   const statements = cleaned.split(";");
   const problems = [];
 
-  for (const table of parsed.tables) {
+  const tables = [...parsed.tables];
+  for (const match of cleaned.matchAll(
+    /alter\s+table\s+(?:only\s+)?(?:if\s+exists\s+)?([a-z_][a-z0-9_]*\.[a-z_][a-z0-9_]*)\s+add\s+column\b/gi,
+  )) {
+    const table = match[1];
+    if (!tables.some((name) => name.toLowerCase() === table.toLowerCase())) tables.push(table);
+  }
+
+  for (const table of tables) {
     let enabled = false;
     let forced = false;
     let revokedAnon = false;
@@ -183,6 +191,32 @@ const LOCKED_TABLE = `
 `;
 
 describe("new migration tables state RLS and grants", () => {
+  it("fails ADD COLUMN without row level security and revokes", () => {
+    const bare = relationProblems(`
+      ALTER TABLE bootstrap_os.companies ADD COLUMN IF NOT EXISTS founder text;
+    `);
+    assert.ok(bare.some((line) => line.includes("bootstrap_os.companies lacks ENABLE ROW LEVEL SECURITY")));
+    assert.ok(bare.some((line) => line.includes("bootstrap_os.companies lacks FORCE ROW LEVEL SECURITY")));
+    assert.ok(bare.some((line) => line.includes("lacks an explicit GRANT or REVOKE")));
+    assert.deepEqual(
+      relationProblems(`
+        ALTER TABLE bootstrap_os.companies ADD COLUMN IF NOT EXISTS founder text;
+        ALTER TABLE bootstrap_os.companies ENABLE ROW LEVEL SECURITY;
+        ALTER TABLE bootstrap_os.companies FORCE ROW LEVEL SECURITY;
+        REVOKE ALL ON TABLE bootstrap_os.companies FROM PUBLIC, anon, authenticated;
+      `),
+      [],
+    );
+    const granted = relationProblems(`
+      ALTER TABLE bootstrap_os.companies ADD COLUMN IF NOT EXISTS founder text;
+      ALTER TABLE bootstrap_os.companies ENABLE ROW LEVEL SECURITY;
+      ALTER TABLE bootstrap_os.companies FORCE ROW LEVEL SECURITY;
+      REVOKE ALL ON TABLE bootstrap_os.companies FROM PUBLIC, anon, authenticated;
+      GRANT ALL ON TABLE bootstrap_os.companies TO authenticated;
+    `);
+    assert.ok(granted.some((line) => line.includes("grants anon or GRANT ALL")));
+  });
+
   it("fails a table that skips RLS or skips anon and authenticated", () => {
     assert.deepEqual(
       relationProblems(`
@@ -312,5 +346,26 @@ describe("new migration tables state RLS and grants", () => {
       "public.bootstrap_rate_cap",
       "public.bootstrap_request_cap",
     ]);
+  });
+
+  it("stores the company founder on companies and drops the old put_journey signature", () => {
+    const sql = fs.readFileSync(
+      path.join(MIGRATIONS, "20261021_bootstrap_os_company_founder.sql"),
+      "utf8",
+    );
+    assert.match(sql, /ADD COLUMN IF NOT EXISTS founder text/i);
+    assert.match(sql, /p_founder text/);
+    assert.match(
+      sql,
+      /DROP FUNCTION IF EXISTS public\.bootstrap_os_put_journey\(text, text, text, boolean, int, int, text, text, text, jsonb\)/,
+    );
+    assert.match(sql, /REVOKE ALL ON TABLE bootstrap_os\.companies FROM PUBLIC, anon, authenticated/);
+    assert.match(sql, /GRANT SELECT ON TABLE bootstrap_os\.companies TO authenticated/);
+    assert.match(sql, /\bBEGIN;/);
+    assert.match(sql, /\bCOMMIT;/);
+    assert.match(sql, /ENABLE ROW LEVEL SECURITY/);
+    assert.match(sql, /FORCE ROW LEVEL SECURITY/);
+    assert.match(sql, /Do not migrate/);
+    assert.deepEqual(relationProblems(sql), []);
   });
 });

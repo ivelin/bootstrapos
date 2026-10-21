@@ -447,12 +447,20 @@ export type CompanyRow = {
   label: string;
   /**
    * Display name for the card. Not the admin who created the board.
-   * No store writes this field. Memory and hosted SQL persist the ACL role.
    */
   founder?: string;
   /** Same company snapshot. No rungs. Cannot promote. */
   supporting?: SupportingRow[];
 };
+
+function companyView(company: CompanyRow, supporting?: SupportingRow[]) {
+  return {
+    slug: company.slug,
+    label: company.label,
+    ...(company.founder ? { founder: company.founder } : {}),
+    ...(supporting ? { supporting } : {}),
+  };
+}
 
 export type AclRow = {
   companyId: string;
@@ -1085,6 +1093,7 @@ export type JourneyStore = {
       why: string;
       founderYes: boolean;
       founderWrittenDecision?: string;
+      founder?: string;
       client?: string;
       gateEnrichment?: GateEnrichment;
       killPostmortem?: Omit<KillPostmortem, "why"> & { why?: string };
@@ -1313,7 +1322,7 @@ export class MemoryJourneyStore implements JourneyStore {
       : undefined;
     const payload = {
       ok: true,
-      company: { slug: company.slug, label: company.label, supporting },
+      company: companyView(company, supporting),
       owners,
       acl: companyAclView(this.acl, company.id),
       digest: JOURNEY_DIGEST_CONTRACT,
@@ -1432,6 +1441,7 @@ export class MemoryJourneyStore implements JourneyStore {
       why: string;
       founderYes: boolean;
       founderWrittenDecision?: string;
+      founder?: string;
       client?: string;
       gateEnrichment?: GateEnrichment;
       killPostmortem?: Omit<KillPostmortem, "why"> & { why?: string };
@@ -1619,6 +1629,11 @@ export class MemoryJourneyStore implements JourneyStore {
     ) {
       idea.scoreboard = nextScoreboard;
     }
+    if (input.founder !== undefined) {
+      const name = input.founder.trim().slice(0, 80);
+      if (name) company.founder = name;
+      else delete company.founder;
+    }
     if (clocksChanged) {
       this.events.push({
         id: this.nextId("ge"),
@@ -1670,7 +1685,7 @@ export class MemoryJourneyStore implements JourneyStore {
     });
     return applySpokenPayloadLead({
       ok: true,
-      company: { slug: company.slug, label: company.label, supporting },
+      company: companyView(company, supporting),
       owners: ownersFromAcl(this.acl, company.id),
       controlPlaneOrder: CONTROL_PLANE_ORDER,
       supporting,
@@ -1740,7 +1755,7 @@ export class MemoryJourneyStore implements JourneyStore {
         ok: true,
         skipped: true,
         reason: PORTFOLIO_SKIP_NEED_TWO_LIVE,
-        company: { slug: company.slug, label: company.label },
+        company: companyView(company),
         portfolio: portfolioViewOf(this.ideasFor(company.id)),
       };
     }
@@ -1773,7 +1788,7 @@ export class MemoryJourneyStore implements JourneyStore {
     return {
       ok: true,
       skipped: false,
-      company: { slug: company.slug, label: company.label },
+      company: companyView(company),
       owners: ownersFromAcl(this.acl, company.id),
       idea: ideaPayload(
         company,
@@ -2201,7 +2216,7 @@ export class MemoryJourneyStore implements JourneyStore {
     );
     return {
       ok: true,
-      company: { slug: company.slug, label: company.label },
+      company: companyView(company),
       idea: query.ideaSlug ? normalizeSlug(query.ideaSlug) : null,
       events: capped,
       audit,
@@ -2254,7 +2269,7 @@ export class MemoryJourneyStore implements JourneyStore {
     }
     return {
       ok: true,
-      company: { slug: company.slug, label: company.label },
+      company: companyView(company),
       subscribers: this.subscribers
         .filter((row) => row.companyId === company.id)
         .map((row) => ({

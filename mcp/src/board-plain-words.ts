@@ -116,9 +116,54 @@ function fillTemplate(template: string, match: RegExpMatchArray): string {
 }
 
 /**
+ * fi.co and www.fi.co are the same host. Path, query, and fragment are removed
+ * before the gloss and the banned scan. Any other host, including evil.fi.co, stays.
+ * A host after :// is left for the https hold.
+ */
+const BARE_LINK_HOSTS = new Set(["fi.co", "www.fi.co"]);
+
+function maskAllowlistedBareLinks(text: string): { text: string; restore: (value: string) => string } {
+  const hosts: string[] = [];
+  const masked = text.replace(
+    /(^|(?<![/@\w.-]))((?:[a-z0-9-]+\.)+[a-z]{2,})((?:\/[^\s).,;:!?#]*)(?:\?[^\s).,;:!#]*)?(?:#[^\s).,;:!?]*)?)?/gi,
+    (whole, lead: string, host: string) => {
+      if (!BARE_LINK_HOSTS.has(host.toLowerCase())) return whole;
+      const mark = `\u0001${hosts.length}\u0001`;
+      hosts.push(host);
+      return `${lead ?? ""}${mark}`;
+    },
+  );
+  return {
+    text: masked,
+    restore: (value: string) => {
+      let out = value;
+      hosts.forEach((host, index) => {
+        out = out.replaceAll(`\u0001${index}\u0001`, host);
+      });
+      return out;
+    },
+  };
+}
+
+/** The only slash compound that stays as stored text. Every other slash form glosses. */
+const COMPOUND_ALLOWLIST = ["conversion/tenancy"];
+
+function allowlistedCompound(text: string, index: number, length: number): boolean {
+  const end = index + length;
+  for (const compound of COMPOUND_ALLOWLIST) {
+    const re = new RegExp(`(?<![\\w/.-])${compound.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(?![\\w/])`, "gi");
+    for (const hit of text.matchAll(re)) {
+      const start = hit.index ?? 0;
+      if (index >= start && end <= start + hit[0].length) return true;
+    }
+  }
+  return false;
+}
+
+/**
  * One pass per rule on the text as it stands, so a rule does not rescan its own insertion.
  * A later rule still sees that gloss. Gloss strings do not contain a later rule's term.
- * "paid " + "the paid plan" stays "the paid plan". A slash or dot neighbor stays.
+ * "paid " + "the paid plan" stays "the paid plan".
  */
 function rewriteTerms(input: string): string {
   let text = input;
@@ -130,6 +175,12 @@ function rewriteTerms(input: string): string {
     let last = 0;
     for (const hit of hits) {
       const index = hit.index ?? 0;
+      const matchEnd = index + hit[0].length;
+      if (allowlistedCompound(text, index, hit[0].length)) {
+        out += text.slice(last, matchEnd);
+        last = matchEnd;
+        continue;
+      }
       let consumed = text.slice(last, index);
       const replacement = fillTemplate(to, hit);
       const article = replacement.match(/^the\s+([A-Za-z]+)\b/i);
@@ -149,6 +200,9 @@ function rewriteTerms(input: string): string {
   return text;
 }
 
+/** The whole trimmed string only. A longer sentence that contains these words stays. */
+const SYSTEM_CARD_SENTENCE = /^a comment on default is not a row[.!]?$/i;
+
 /** Exact label "default", or a trailing "on default". A founder sentence that uses the word stays. */
 function hideStorageSlug(text: string): string {
   if (text.trim().toLowerCase() === "default") return "";
@@ -166,22 +220,29 @@ export function maskSecrets(value: string): string {
 }
 
 export function applyPlainWords(text: string): string {
+  if (SYSTEM_CARD_SENTENCE.test(String(text ?? "").trim())) return "";
   const held = protectSpeech(text);
+  const bare = maskAllowlistedBareLinks(held.text);
   const emails: string[] = [];
-  let masked = holdTokens(held.text, EMAIL, "\u0000", emails);
+  let masked = holdTokens(bare.text, EMAIL, "\u0000", emails);
   masked = rewriteTerms(masked);
   masked = masked.replace(/\b(?:the|an?)\s+(?=(?:the|an?)\b)/gi, "");
   masked = hideStorageSlug(masked);
   masked = restoreTokens(masked, "\u0000", emails);
-  return held.restore(masked);
+  return held.restore(bare.restore(masked));
 }
 
 /** Same hold as the card. A code span or a real https host is not a hit. */
 export function bannedCardHit(text: string): string | null {
   const held = protectSpeech(String(text ?? ""));
+  const scanned = maskAllowlistedBareLinks(held.text).text;
   for (const rule of BANNED_ON_CARD) {
-    const hit = held.text.match(rule);
-    if (hit) return hit[0];
+    const flags = rule.flags.includes("g") ? rule.flags : `${rule.flags}g`;
+    for (const hit of scanned.matchAll(new RegExp(rule.source, flags))) {
+      const index = hit.index ?? 0;
+      if (allowlistedCompound(scanned, index, hit[0].length)) continue;
+      return hit[0];
+    }
   }
   return null;
 }
@@ -263,7 +324,8 @@ export function hideCardEmails(value: string): string {
 }
 
 export function isInternalNote(text: string): boolean {
-  return /do not invent(?: a bet)?/i.test(text);
+  const trimmed = text.trim();
+  return /do not invent(?: a bet)?/i.test(trimmed) || SYSTEM_CARD_SENTENCE.test(trimmed);
 }
 
 export function isKillCondition(text: string): boolean {

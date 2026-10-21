@@ -1006,10 +1006,11 @@ describe("canonical board card", () => {
     assert.equal(applyPlainWords(once), once);
     assert.equal(
       applyPlainWords("plants pay for conversion/tenancy on one SKU"),
-      "plants pay for conversion/the paid plan on one product",
+      "plants pay for conversion/tenancy on one product",
     );
-    assert.equal(applyPlainWords("conversion/tenancy"), "conversion/the paid plan");
-    assert.notEqual(applyPlainWords("conversion/tenancy"), "conversion");
+    assert.equal(applyPlainWords("conversion/tenancy"), "conversion/tenancy");
+    assert.equal(founderCardBannedHit("conversion/tenancy"), null);
+    assert.equal(founderCardBannedHit("paid tenancy"), "tenancy");
     assert.equal(
       applyPlainWords("see `SAFE` at https://x.test/SAFE?q=NDA"),
       "see `SAFE` at https://x.test/SAFE?q=NDA",
@@ -1021,10 +1022,7 @@ describe("canonical board card", () => {
     assert.doesNotMatch(applyPlainWords("paid tenancy"), /paid the paid plan/);
     assert.equal(applyPlainWords("payment default risk"), "payment default risk");
     assert.equal(applyPlainWords("on default plan"), "on default plan");
-    assert.equal(
-      applyPlainWords("A comment on default is not a row."),
-      "A comment on default is not a row.",
-    );
+    assert.equal(applyPlainWords("A comment on default is not a row."), "");
     assert.equal(applyPlainWords("default"), "");
     assert.equal(applyPlainWords("Filed on default!"), "Filed!");
     for (const [, gloss] of PLAIN_WORD_REWRITES) {
@@ -1032,6 +1030,95 @@ describe("canonical board card", () => {
       assert.equal(applyPlainWords(gloss), gloss);
       assert.equal(applyPlainWords(applyPlainWords(gloss)), gloss);
     }
+  });
+
+  it("glosses slash forms on the card and keeps conversion/tenancy", () => {
+    function cardText(label, last, premise = "a weekly shop report") {
+      return formatSpokenCard({
+        label,
+        who: ["Sam"],
+        card: cardFromScoreboard({
+          slug: label,
+          label,
+          journeyPhase: 1,
+          gate: "hold",
+          scoreboard: {
+            initiatives: [
+              row({
+                id: `${label}-slash`,
+                kind: "customer_check",
+                premise,
+                last,
+                next: "Ask again",
+              }),
+            ],
+          },
+        }),
+      });
+    }
+
+    const safeFast = cardText("alpha", "SAFE/FAST");
+    assert.match(safeFast, /investment\/advisor agreement/);
+    assert.equal(founderCardBannedHit(safeFast), null);
+
+    const mvp = cardText("bravo", "/MVP");
+    assert.match(mvp, /\/a first version/);
+    assert.equal(founderCardBannedHit(mvp), null);
+
+    const sku = cardText("charlie", "a/b/SKU");
+    assert.match(sku, /a\/b\/product/);
+    assert.equal(founderCardBannedHit(sku), null);
+
+    const example = cardText("alpha", "e.g./SKU");
+    assert.match(example, /e\.g\.\/product/);
+    assert.equal(founderCardBannedHit(example), null);
+
+    const compound = cardText("bravo", "Noted", "plants pay for conversion/tenancy");
+    assert.match(compound, /conversion\/tenancy/);
+    assert.equal(founderCardBannedHit(compound), null);
+  });
+
+  it("glosses a stuck conversion/tenancy and keeps the plain compound", () => {
+    function cardText(label, premise) {
+      return formatSpokenCard({
+        label,
+        who: ["Sam"],
+        card: cardFromScoreboard({
+          slug: label,
+          label,
+          journeyPhase: 1,
+          gate: "hold",
+          scoreboard: {
+            initiatives: [
+              row({
+                id: `${label}-compound`,
+                kind: "customer_check",
+                premise,
+                last: "Noted",
+                next: "Ask again",
+              }),
+            ],
+          },
+        }),
+      });
+    }
+
+    const stuck = cardText("alpha", "xconversion/tenancy");
+    assert.match(stuck, /xconversion\/the paid plan/);
+    assert.equal(founderCardBannedHit(stuck), null);
+
+    const path = cardText("bravo", "http://x.test/conversion/tenancy");
+    assert.match(path, /http:\/\/x\.test\/conversion\/the paid plan/);
+    assert.equal(founderCardBannedHit(path), null);
+
+    const host = cardText("charlie", "example.com/conversion/tenancy");
+    assert.match(host, /example\.com\/conversion\/the paid plan/);
+    assert.equal(founderCardBannedHit(host), null);
+
+    const plain = cardText("alpha", "conversion/tenancy");
+    assert.match(plain, /conversion\/tenancy/);
+    assert.doesNotMatch(plain, /the paid plan/);
+    assert.equal(founderCardBannedHit(plain), null);
   });
 
   it("does not print the internal label default", () => {
@@ -1061,6 +1148,106 @@ describe("canonical board card", () => {
     });
     assert.match(spoken, /A comment\./);
     assert.doesNotMatch(spoken, /\bdefault\b/);
+  });
+
+  it("does not render the system sentence that a comment on default is not a row", () => {
+    const spoken = formatSpokenCard({
+      label: "alpha",
+      who: ["Sam"],
+      card: cardFromScoreboard({
+        slug: "alpha",
+        label: "alpha",
+        journeyPhase: 1,
+        gate: "hold",
+        scoreboard: {
+          initiatives: [
+            row({
+              id: "alpha-check",
+              kind: "customer_check",
+              premise: "a weekly shop report",
+              last: "A comment on default is not a row.",
+              next: "Ask again",
+            }),
+          ],
+        },
+      }),
+    });
+    assert.doesNotMatch(spoken, /is not a row/);
+    assert.doesNotMatch(spoken, /on default/);
+    const asPremise = formatSpokenCard({
+      label: "alpha",
+      who: ["Sam"],
+      card: cardFromScoreboard({
+        slug: "alpha",
+        label: "alpha",
+        journeyPhase: 1,
+        gate: "hold",
+        scoreboard: {
+          initiatives: [
+            row({
+              id: "alpha-note",
+              kind: "customer_check",
+              premise: "A comment on default is not a row.",
+              last: "Noted",
+              next: "Ask again",
+            }),
+          ],
+        },
+      }),
+    });
+    assert.doesNotMatch(asPremise, /is not a row/);
+    assert.doesNotMatch(asPremise, /Untitled/);
+    assert.doesNotMatch(asPremise, /\| Bet \|/);
+  });
+
+  it("glosses holdout in the opener and leaves Pixel frame only as stored text", () => {
+    assert.equal(applyPlainWords("15-20% holdout"), "15-20% a group left out");
+    assert.equal(applyPlainWords("Pixel frame only"), "Pixel frame only");
+    const holdout = formatSpokenCard({
+      label: "alpha",
+      who: ["Sam"],
+      card: cardFromScoreboard({
+        slug: "alpha",
+        label: "alpha",
+        journeyPhase: 1,
+        gate: "hold",
+        scoreboard: {
+          initiatives: [
+            row({
+              id: "alpha-hold",
+              kind: "customer_check",
+              premise: "15-20% holdout",
+              last: "Noted",
+              next: "Ask again",
+            }),
+          ],
+        },
+      }),
+    });
+    assert.match(holdout, /\*\*The #1 bottleneck is 15-20% a group left out\.\*\*/);
+    const pixel = formatSpokenCard({
+      label: "bravo",
+      who: ["Sam"],
+      card: cardFromScoreboard({
+        slug: "bravo",
+        label: "bravo",
+        journeyPhase: 1,
+        gate: "hold",
+        scoreboard: {
+          initiatives: [
+            row({
+              id: "bravo-pixel",
+              kind: "customer_check",
+              premise: "Pixel frame only",
+              last: "Noted",
+              next: "Ask again",
+            }),
+          ],
+        },
+      }),
+    });
+    assert.match(pixel, /\*\*The #1 bottleneck is Pixel frame only\.\*\*/);
+    assert.equal(applyPlainWords(pixel.split("\n")[0]), pixel.split("\n")[0]);
   });
 
   it("renders a money row for a non-numeric pnl and prefixes the next line", () => {
@@ -1130,7 +1317,23 @@ describe("canonical board card", () => {
     assert.equal(founderCardBannedHit("FAST.track/now"), "FAST");
     assert.equal(founderCardBannedHit("the P0.fix/it now"), "P0");
     assert.equal(founderCardBannedHit("engagement.team/now"), "engagement");
-    assert.equal(founderCardBannedHit("advisor agreement offered 7 May (fi.co/FAST)"), "FAST");
+    assert.equal(founderCardBannedHit("advisor agreement offered 7 May (fi.co/fast)"), null);
+    assert.equal(founderCardBannedHit("advisor agreement offered 7 May (fi.co/FAST)"), null);
+    assert.equal(applyPlainWords("(fi.co/fast)"), "(fi.co)");
+    assert.equal(applyPlainWords("(fi.co/FAST)"), "(fi.co)");
+    assert.equal(applyPlainWords("(fi.co/fast?ref=x)"), "(fi.co)");
+    assert.equal(applyPlainWords("(fi.co/fast#part)"), "(fi.co)");
+    assert.equal(applyPlainWords("(FI.co/fast)"), "(FI.co)");
+    assert.equal(founderCardBannedHit("(FI.co/fast)"), null);
+    assert.equal(applyPlainWords("(www.fi.co/fast?ref=x#part)"), "(www.fi.co)");
+    assert.equal(founderCardBannedHit("(www.fi.co/SAFE)"), null);
+    assert.equal(founderCardBannedHit("evil.fi.co/SAFE"), "SAFE");
+    assert.equal(founderCardBannedHit("/MVP"), "MVP");
+    assert.equal(founderCardBannedHit("SAFE/FAST"), "FAST");
+    assert.equal(founderCardBannedHit("a/b/SKU"), "SKU");
+    assert.equal(founderCardBannedHit("e.g./SKU"), "SKU");
+    assert.match(applyPlainWords("A comment on default is not a row today."), /row today/);
+    assert.equal(founderCardBannedHit("sign the SAFE.now/please"), "SAFE");
     assert.equal(founderCardBannedHit("[sign the SAFE](https://x.test/ok)"), "SAFE");
     assert.equal(founderCardBannedHit("send the FAST draft"), "FAST");
     assert.equal(founderCardBannedHit("https://SAFE"), "SAFE");
@@ -1171,8 +1374,10 @@ describe("canonical board card", () => {
         },
       }),
     });
-    assert.match(spoken, /fi\.co\/advisor agreement/);
+    assert.match(spoken, /\(fi\.co\)/);
     assert.doesNotMatch(spoken, /fi\.co\/FAST/);
+    assert.doesNotMatch(spoken, /fi\.co\/advisor agreement/);
+    assert.doesNotMatch(spoken, /\bFAST\b/);
     assert.match(spoken, /`SAFE`/);
     assert.match(spoken, /https:\/\/x\.test\/SAFE\?q=NDA/);
     assert.doesNotMatch(spoken, /confidentiality/);
@@ -1375,6 +1580,7 @@ describe("canonical board card", () => {
     assert.equal(applyPlainWords("pre-tenancy"), "pre-the paid plan");
     assert.equal(applyPlainWords("file.SKU"), "file.product");
     assert.equal(applyPlainWords("/tenancy left"), "/the paid plan left");
+    assert.equal(founderCardBannedHit("/tenancy left"), "tenancy");
   });
 
   it("masks an email stored on the founder key", () => {
