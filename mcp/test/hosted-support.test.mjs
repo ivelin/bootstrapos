@@ -154,7 +154,8 @@ describe("hosted MCP support escape hatch", () => {
     assert.equal(info.commit, "abc123def");
     assert.equal(info.surface, "hosted-read");
     assert.equal(info.founderVoice, FOUNDER_INTRO);
-    assert.match(String(info.doNotRecite), /Say founderVoice, then the board/);
+    assert.match(String(info.doNotRecite), /Client format: the founderVoice paragraph, then the live board/);
+    assert.doesNotMatch(String(info.doNotRecite), /Say founderVoice/);
     assert.equal(info.hardRules, undefined);
     assert.equal(info.houseRules, undefined);
     assert.equal(info.osVersion, undefined);
