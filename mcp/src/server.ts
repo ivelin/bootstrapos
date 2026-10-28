@@ -450,18 +450,20 @@ function registerGatedIdentityTools(server: McpServer, ctx: HostedRequestContext
     },
     async (input) => {
       if (!ctx.whoami.authenticated || !adminEmail()) return err(NOTE_NOT_SIGNED_IN);
-      if (ctx.whoami.labels.length === 0 && ctx.whoami.role !== "super_admin") {
-        return text(noBoardsPayload(ctx.whoami.email));
-      }
       const store = adminStoreOf();
       if (!store) return text(askAdminResult());
       try {
-        const raw = await store.createCompany(adminEmail()!, {
-          slug: input.slug,
-          displayName: input.displayName,
-          founderYes: input.founderYes,
-          why: input.why,
-        });
+        const raw =
+          ctx.whoami.role === "super_admin"
+            ? await store.createCompany(adminEmail()!, {
+                slug: input.slug,
+                displayName: input.displayName,
+                founderYes: input.founderYes,
+                why: input.why,
+              })
+            : input.founderYes === true
+              ? await store.createCompanySelfServe(adminEmail()!, input.slug)
+              : { ok: false as const, status: 403, error: "founder_yes_required" };
         const blocked = refusalMessage(raw);
         if (blocked) return err(blocked);
         return text(publicAdminResult(raw));

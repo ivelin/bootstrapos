@@ -75,7 +75,7 @@ export function isHostedPreAllowlistToolName(name: string | undefined): boolean 
 }
 
 export const PATH4_HONESTY =
-  "The hosted connector at https://mcp.bootstrap.pirin.ai/mcp uses sign-in. It is the Pirin product write plane (a super admin calls create_company, then create_idea): handshake + gated tools 401 + WWW-Authenticate (authorization_servers = pirin.ai login; not a login UI here). Free docs are GitHub + install-os + local. plugin/ is preview. bootstrap-os-mcp.vercel.app is the same 401, not a silent 200 alias, not a pin, not mentee-ready boards. See mcp/docs/MARKETPLACE.md. Not pirin.ai. OSS mcp/ on your own host is the self-host kit, not the Pirin mentee path. Free GitHub docs are the alternative.";
+  "The hosted connector at https://mcp.bootstrap.pirin.ai/mcp uses sign-in. It is the Pirin product write plane (a confirmed account can open up to 3 bet boards with create_company; a super admin can still create one, then create_idea): handshake + gated tools 401 + WWW-Authenticate (authorization_servers = pirin.ai login; not a login UI here). Free docs are GitHub + install-os + local. plugin/ is preview. bootstrap-os-mcp.vercel.app is the same 401, not a silent 200 alias, not a pin, not mentee-ready boards. See mcp/docs/MARKETPLACE.md. Not pirin.ai. OSS mcp/ on your own host is the self-host kit, not the Pirin mentee path. Free GitHub docs are the alternative.";
 
 export {
   CLOCK_REMAP_NOTE,

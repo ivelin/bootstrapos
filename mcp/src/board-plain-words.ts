@@ -394,6 +394,7 @@ export const REDACT_ALLOW_KEYS = new Set([
   "account",
   "acl",
   "actionableInsights",
+  "actor_id",
   "argumentKeys",
   "after",
   "allowPaperBottleneck",

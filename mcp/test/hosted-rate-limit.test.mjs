@@ -6,7 +6,7 @@ import {
   SupabaseCompanyAdminStore,
   setCompanyAdminStoreForTests,
 } from "../dist/company-admin.js";
-import { ivelinMemoryFixture, setIdentityStoreForTests } from "../dist/identity.js";
+import { MemoryIdentityStore, hashMcpToken, ivelinMemoryFixture, setIdentityStoreForTests } from "../dist/identity.js";
 import { MemoryInviteStore, setInviteStoreForTests } from "../dist/invite.js";
 import { MemoryJourneyStore, defaultScoreboard, setJourneyStoreForTests } from "../dist/journey.js";
 import { actorFromAuthorizationHeader, syntheticAccessToken } from "../dist/journey-auth.js";
@@ -59,6 +59,19 @@ async function postTool(name, args, token) {
 
 function adminStore() {
   return new MemoryCompanyAdminStore([{ email: EMAIL, role: "super_admin", labels: [] }]);
+}
+
+function superAdminIdentity() {
+  return new MemoryIdentityStore([
+    {
+      id: "mentee-ivelin",
+      email: EMAIL,
+      authUserId: "auth-founder",
+      labels: ["alpha", "bravo", "charlie"],
+      role: "super_admin",
+      tokenHashes: [hashMcpToken(TOKEN)],
+    },
+  ]);
 }
 
 function inviteStore() {
@@ -116,7 +129,7 @@ function journeyStore(role) {
 describe("hosted write limits", () => {
   it("the 6th create_company is HTTP 200 isError and does not store the slug", async () => {
     const admin = adminStore();
-    setIdentityStoreForTests(ivelinMemoryFixture(TOKEN));
+    setIdentityStoreForTests(superAdminIdentity());
     setCompanyAdminStoreForTests(admin);
     const slugs = ["alpha", "bravo", "charlie", "alpha-2", "bravo-2", "charlie-2"];
     const dup = await postTool("create_company", { slug: "alpha", founderYes: true, why: "first" }, TOKEN);
@@ -359,7 +372,7 @@ describe("hosted write limits", () => {
         throw new Error("db down");
       }),
     });
-    setIdentityStoreForTests(ivelinMemoryFixture(TOKEN));
+    setIdentityStoreForTests(superAdminIdentity());
     setCompanyAdminStoreForTests(admin);
     const direct = await admin.createCompany(EMAIL, { slug: "alpha", founderYes: true, why: "blocked" });
     assert.equal(direct.ok, false);

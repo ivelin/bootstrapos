@@ -3,6 +3,7 @@
  * Authority is the SECURITY DEFINER RPCs. This module does not mint tenants.
  * Preview never attaches. Tests inject a store. No email-domain admin heuristic.
  */
+import { randomUUID } from "node:crypto";
 import { hostedProdIdentityAllowed } from "./identity.js";
 import { HOSTED_DAILY_CAPS, hostedActorKey, refusalMessage } from "./hosted-caps.js";
 import { memoryRateLimiter, type RateLimiter } from "./rate-limit.js";
@@ -19,19 +20,33 @@ export type AdminResult = {
   displayName?: string | null;
   email?: string;
   role?: HostedAdminRole;
+  companyId?: string;
 };
 
 const FORBIDDEN_ERRORS = new Set([
   "self_grant",
   "founder_yes_required",
   "invalid_slug",
+  "invalid_name",
   "ask_admin",
 ]);
+
+export const BET_BOARD_LIMIT_MESSAGE = "You can open up to 3 bet boards.";
+export const BET_BOARD_CONFIRM_MESSAGE = "Confirm your email before you open a bet board.";
+export const BET_BOARD_READY_MESSAGE = "Your bet board is ready.";
+
+const BET_BOARD_ERRORS: Record<string, string> = {
+  company_limit_reached: BET_BOARD_LIMIT_MESSAGE,
+  email_unconfirmed: BET_BOARD_CONFIRM_MESSAGE,
+};
 
 const CONFLICT_ERRORS = new Set(["slug_taken", "last_super_admin"]);
 
 /** Fail-closed shape. 403 and 409 drop anything that is not an allow-listed error code. */
 export function publicAdminResult(raw: AdminResult): AdminResult {
+  if (!raw.ok && typeof raw.error === "string" && BET_BOARD_ERRORS[raw.error]) {
+    return { ok: false, status: 403, error: raw.error, message: BET_BOARD_ERRORS[raw.error] };
+  }
   if (
     raw.status === 409 ||
     (raw.ok === false && typeof raw.error === "string" && CONFLICT_ERRORS.has(raw.error))
@@ -53,6 +68,10 @@ export function publicAdminResult(raw: AdminResult): AdminResult {
   if (raw.role === "member" || raw.role === "super_admin" || raw.role === "unset") {
     out.role = raw.role;
   }
+  if (typeof raw.companyId === "string" && /^[0-9a-f-]{36}$/i.test(raw.companyId)) {
+    out.companyId = raw.companyId;
+  }
+  if (raw.message === BET_BOARD_READY_MESSAGE) out.message = raw.message;
   return out;
 }
 
@@ -65,6 +84,7 @@ export interface CompanyAdminStore {
     actorEmail: string,
     input: { slug: string; displayName?: string; founderYes: boolean; why?: string },
   ): Promise<AdminResult>;
+  createCompanySelfServe(actorEmail: string, name: string): Promise<AdminResult>;
   grantSuperAdmin(actorEmail: string, email: string): Promise<AdminResult>;
   revokeSuperAdmin(actorEmail: string, email: string): Promise<AdminResult>;
 }
@@ -92,6 +112,7 @@ function closed(): AdminResult {
 export class MemoryCompanyAdminStore implements CompanyAdminStore {
   readonly labels = new Map<string, Set<string>>();
   readonly companies = new Map<string, { displayName: string | null; createdBy: string }>();
+  readonly selfServe: Array<{ actor: string; slug: string; companyId: string }> = [];
   readonly roles: RoleRow[] = [];
   readonly audit: AuditRow[] = [];
   private readonly limiter: RateLimiter;
@@ -163,6 +184,25 @@ export class MemoryCompanyAdminStore implements CompanyAdminStore {
     return { ok: true, slug, displayName, role: "super_admin" };
   }
 
+  async createCompanySelfServe(actorEmail: string, name: string): Promise<AdminResult> {
+    const actor = actorEmail.toLowerCase();
+    const slug = name.trim().toLowerCase();
+    if (!SLUG_RE.test(slug)) return { ok: false, status: 403, error: "invalid_name" };
+    if (this.selfServe.filter((row) => row.actor === actor).length >= 3) {
+      return { ok: false, status: 403, error: "company_limit_reached" };
+    }
+    if (this.companies.has(slug) || this.selfServe.some((row) => row.slug === slug)) {
+      return { ok: false, status: 409, error: "slug_taken" };
+    }
+    const companyId = randomUUID();
+    this.selfServe.push({ actor, slug, companyId });
+    this.companies.set(slug, { displayName: slug, createdBy: actor });
+    const held = this.labels.get(actor) ?? new Set<string>();
+    held.add(slug);
+    this.labels.set(actor, held);
+    return { ok: true, slug, companyId, message: BET_BOARD_READY_MESSAGE };
+  }
+
   async grantSuperAdmin(actorEmail: string, email: string): Promise<AdminResult> {
     const actor = actorEmail.toLowerCase();
     if (this.liveRole(actor) !== "super_admin") return closed();
@@ -220,6 +260,17 @@ function supabaseAnonKey(): string | undefined {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
     undefined
   );
+}
+
+function rpcErrorCode(text: string): string | undefined {
+  try {
+    const body = JSON.parse(text) as { message?: unknown; error?: unknown };
+    if (typeof body.message === "string" && body.message) return body.message;
+    if (typeof body.error === "string" && body.error) return body.error;
+  } catch {
+    return undefined;
+  }
+  return undefined;
 }
 
 function asResult(raw: unknown): AdminResult {
@@ -292,6 +343,43 @@ export class SupabaseCompanyAdminStore implements CompanyAdminStore {
       p_founder_yes: input.founderYes,
       p_why: input.why ?? null,
     });
+  }
+
+  async createCompanySelfServe(_actorEmail: string, name: string): Promise<AdminResult> {
+    const base = this.url.replace(/\/+$/, "");
+    const res = await fetch(`${base}/rest/v1/rpc/create_company_self_serve`, {
+      method: "POST",
+      headers: {
+        apikey: this.anonKey,
+        Authorization: `Bearer ${this.accessToken}`,
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      body: JSON.stringify({ name }),
+      signal: AbortSignal.timeout(10_000),
+    });
+    const text = await res.text();
+    if (!res.ok) {
+      const code = rpcErrorCode(text);
+      if (code === "slug_taken") return { ok: false, status: 409, error: "slug_taken" };
+      if (code === "company_limit_reached" || code === "email_unconfirmed" || code === "invalid_name") {
+        return { ok: false, status: 403, error: code };
+      }
+      return closed();
+    }
+    let parsed: unknown = null;
+    try {
+      parsed = text ? JSON.parse(text) : null;
+    } catch {
+      return closed();
+    }
+    if (typeof parsed !== "string") return closed();
+    return {
+      ok: true,
+      companyId: parsed,
+      slug: name.trim().toLowerCase(),
+      message: BET_BOARD_READY_MESSAGE,
+    };
   }
 
   grantSuperAdmin(_actorEmail: string, email: string): Promise<AdminResult> {

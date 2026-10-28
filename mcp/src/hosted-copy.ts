@@ -52,7 +52,7 @@ export const TOOL_WHOAMI =
   "Who is signed in, and which companies they can open. When they ask which companies, say the names in one sentence. Do not print email, role, or a table."
 
 export const TOOL_CREATE_COMPANY =
-  "Create a company on this hosted board. Super admin only. Needs founder yes in this chat and a short why. Does not create an idea — call create_idea next. A duplicate name is refused. If this is refused, ask an admin or email bootstrap@pirin.ai."
+  "Open a bet board. A confirmed account can open up to 3. A super admin still uses the admin path. Needs founder yes in this chat. A short why is stored only on the admin path. Does not create an idea — call create_idea next. A duplicate name is refused. If this is refused, ask an admin or email bootstrap@pirin.ai."
 
 export const TOOL_LIST_COMPANIES =
   "Companies this login can open. Say the names in one sentence. Do not print email, role, or a table."

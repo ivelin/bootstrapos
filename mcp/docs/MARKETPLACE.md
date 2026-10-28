@@ -2,7 +2,7 @@
 
 A Cursor plugin marketplace submission is planned. The plugin is not listed yet.
 
-`create_company` is shown to every signed-in account. Only a super admin can run it. A call that reaches the tool and is not from a super admin is HTTP 200. The tool result has `status` 403. When no admin store is attached, that result includes `ask_admin`. The database path returns `status` 403 and does not include `ask_admin`.
+`create_company` is shown to every signed-in account. A confirmed account can open up to 3 bet boards. A super admin still uses the admin path. A call that reaches the tool with no admin store is HTTP 200 and includes `ask_admin`. The database path returns `status` 403 and does not include `ask_admin`.
 
 Catalog reviewers use a plain member account.
 
