@@ -1,11 +1,14 @@
 /**
  * Self-serve create_company on real Postgres connections.
- * Never supabase-pirin-ai. Skips when local Postgres is absent.
+ * Never supabase-pirin-ai. Starts a throwaway PostgreSQL 16 cluster.
+ * Skips only when those binaries are absent and CI is not set.
  */
 import { describe, it, before, after } from "node:test";
 import assert from "node:assert/strict";
 import { spawn, spawnSync } from "node:child_process";
 import fs from "node:fs";
+import net from "node:net";
+import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -27,27 +30,46 @@ const DOWN = path.join(
 );
 const DB = "self_serve_proof";
 const LOG = "/opt/cursor/artifacts/self-serve-migration.log";
+const BIN = "/usr/lib/postgresql/16/bin";
+const hasPg = fs.existsSync(path.join(BIN, "initdb"));
+if (process.env.CI === "true" && !hasPg) {
+  throw new Error("PostgreSQL 16 initdb is required when CI=true");
+}
+
+let dataDir;
+let port;
+let psqlBin;
 
 const ALICE = "11111111-1111-4111-8111-111111111111";
 const ALICE_EMAIL = "alice@example.test";
 const BOB = "22222222-2222-4222-8222-222222222222";
 const BOB_EMAIL = "bob@example.test";
 
-function psql(args, input) {
-  return spawnSync("sudo", ["-u", "postgres", "psql", "-d", DB, "-v", "ON_ERROR_STOP=1", ...args], {
+function freePort() {
+  return new Promise((resolve, reject) => {
+    const server = net.createServer();
+    server.once("error", reject);
+    server.listen(0, "127.0.0.1", () => {
+      const assigned = server.address().port;
+      server.close(() => resolve(String(assigned)));
+    });
+  });
+}
+
+function psql(args, input, database = DB) {
+  return spawnSync(psqlBin, ["-h", dataDir, "-p", port, "-d", database, "-v", "ON_ERROR_STOP=1", ...args], {
     encoding: "utf8",
     input,
   });
 }
 
-function postgresUp() {
-  const ping = spawnSync("sudo", ["-u", "postgres", "psql", "-d", "postgres", "-c", "SELECT 1"], {
-    encoding: "utf8",
-  });
-  return ping.status === 0;
+function note(line) {
+  try {
+    fs.appendFileSync(LOG, line);
+  } catch {
+    /* proof log is optional */
+  }
 }
-
-const available = postgresUp();
 
 function sql(statement) {
   const result = psql(["-c", statement]);
@@ -69,17 +91,32 @@ COMMIT;
   return psql(["-v", "ON_ERROR_STOP=1", "-c", statement]);
 }
 
-describe("create_company_self_serve real Postgres", { skip: available ? false : "local Postgres is not running", concurrency: false }, () => {
-  before(() => {
-    fs.mkdirSync("/opt/cursor/artifacts", { recursive: true });
-    spawnSync("sudo", ["-u", "postgres", "psql", "-d", "postgres", "-c", `DROP DATABASE IF EXISTS ${DB}`], {
-      encoding: "utf8",
-    });
-    const created = spawnSync(
-      "sudo",
-      ["-u", "postgres", "psql", "-d", "postgres", "-c", `CREATE DATABASE ${DB}`],
+describe("create_company_self_serve real Postgres", { skip: hasPg ? false : "PostgreSQL 16 is not installed", concurrency: false }, () => {
+  before(async () => {
+    if (process.env.CI === "true" && !hasPg) {
+      throw new Error("PostgreSQL 16 initdb is required when CI=true");
+    }
+    port = await freePort();
+    dataDir = fs.mkdtempSync(path.join(os.tmpdir(), "bos-self-serve-"));
+    spawnSync(
+      path.join(BIN, "initdb"),
+      ["-D", dataDir, "--auth=trust", "--username", process.env.USER || "postgres", "--no-instructions"],
+      { stdio: "ignore" },
+    );
+    const pgCtl = path.join(BIN, "pg_ctl");
+    psqlBin = path.join(BIN, "psql");
+    const started = spawnSync(
+      pgCtl,
+      ["-D", dataDir, "-w", "-t", "30", "-l", path.join(dataDir, "server.log"), "-o", `-p ${port} -k ${dataDir} -c listen_addresses=`, "start"],
       { encoding: "utf8" },
     );
+    if (started.status !== 0) throw new Error(started.stderr || "pg_ctl start failed");
+    try {
+      fs.mkdirSync("/opt/cursor/artifacts", { recursive: true });
+    } catch {
+      /* the proof log is local evidence; the assertions do not need it */
+    }
+    const created = psql(["-c", `CREATE DATABASE ${DB}`], undefined, "postgres");
     if (created.status !== 0) throw new Error(created.stderr);
     const prelude = psql(["-f", PRELUDE]);
     if (prelude.status !== 0) throw new Error(prelude.stderr);
@@ -90,13 +127,20 @@ describe("create_company_self_serve real Postgres", { skip: available ? false : 
         ('${ALICE}', '${ALICE_EMAIL}', '2026-01-01T00:00:00Z'),
         ('${BOB}', '${BOB_EMAIL}', '2026-01-01T00:00:00Z')`,
     );
-    fs.writeFileSync(LOG, `applied ${MIGRATION}\n`);
+    try {
+      fs.writeFileSync(LOG, `applied ${MIGRATION}\n`);
+    } catch {
+      /* proof log is optional */
+    }
   });
 
   after(() => {
-    spawnSync("sudo", ["-u", "postgres", "psql", "-d", "postgres", "-c", `DROP DATABASE IF EXISTS ${DB}`], {
-      encoding: "utf8",
-    });
+    if (dataDir) {
+      spawnSync(path.join(BIN, "pg_ctl"), ["-D", dataDir, "-w", "-t", "30", "-m", "immediate", "stop"], {
+        stdio: "ignore",
+      });
+      fs.rmSync(dataDir, { recursive: true, force: true });
+    }
   });
 
   it("an unconfirmed account is denied", () => {
@@ -226,10 +270,7 @@ describe("create_company_self_serve real Postgres", { skip: available ? false : 
       `SELECT count(*) FROM bootstrap_os.companies WHERE created_by = '${ALICE}' AND starter IS NOT TRUE`,
     );
     assert.match(aliceCount, /\n\s*3\n/);
-    fs.appendFileSync(
-      LOG,
-      `concurrent_fourth_create_race passed\nfrom-2 ${won.length} won\nfrom-3 both denied\n`,
-    );
+    note(`concurrent_fourth_create_race passed\nfrom-2 ${won.length} won\nfrom-3 both denied\n`);
   });
 
   it("the down migration drops the function and keeps the company", () => {
@@ -240,7 +281,7 @@ describe("create_company_self_serve real Postgres", { skip: available ? false : 
     assert.match(gone.stderr, /create_company_self_serve/);
     const kept = sql("SELECT count(*) FROM bootstrap_os.companies WHERE slug = 'alpha'");
     assert.match(kept, /\n\s*1\n/);
-    fs.appendFileSync(LOG, `applied down ${DOWN}\ncompany rows kept\n`);
+    note(`applied down ${DOWN}\ncompany rows kept\n`);
   });
 });
 
@@ -259,8 +300,8 @@ COMMIT;
 function psqlAsync(statement) {
   return new Promise((resolve) => {
     const child = spawn(
-      "sudo",
-      ["-u", "postgres", "psql", "-d", DB, "-v", "ON_ERROR_STOP=1", "-c", statement],
+      psqlBin,
+      ["-h", dataDir, "-p", port, "-d", DB, "-v", "ON_ERROR_STOP=1", "-c", statement],
       { stdio: ["ignore", "pipe", "pipe"] },
     );
     let stdout = "";

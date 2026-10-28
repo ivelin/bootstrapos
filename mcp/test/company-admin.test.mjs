@@ -285,6 +285,20 @@ describe("company admin result shape", () => {
     assert.deepEqual(publicAdminResult(taken), { ok: false, status: 409, error: "slug_taken" });
   });
 
+  it("self-serve 200 with a non-JSON body is closed", async () => {
+    const orig = globalThis.fetch;
+    const admin = new SupabaseCompanyAdminStore("https://db.example", "anon-key", "user-token-user-token");
+    globalThis.fetch = async () => new Response("not-json", { status: 200 });
+    try {
+      assert.deepEqual(await admin.createCompanySelfServe("other@example.test", "alpha"), {
+        ok: false,
+        status: 403,
+      });
+    } finally {
+      globalThis.fetch = orig;
+    }
+  });
+
   it("self-serve rpc uses the caller jwt and maps bet board errors", async () => {
     const orig = globalThis.fetch;
     const seen = [];
