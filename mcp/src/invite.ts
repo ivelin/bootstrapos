@@ -496,14 +496,21 @@ export class MemoryInviteStore implements InviteStore {
   }
 
   private heldBoards(mentee: { labels: string[]; boardRoles?: Record<string, string> } | undefined): HeldBoard[] {
-    if (!mentee) return [];
-    if (!mentee.boardRoles) {
-      return mentee.labels.map((slug) => ({ slug, rank: "owner" as const }));
-    }
+    if (!mentee?.boardRoles) return [];
     return mentee.labels.flatMap((slug) => {
       const rank = legacyRank(mentee.boardRoles?.[slug]);
       return rank ? [{ slug, rank }] : [];
     });
+  }
+
+  private grantLegacyBoard(
+    mentee: { labels: string[]; boardRoles?: Record<string, string> },
+    slug: string,
+  ) {
+    if (!slug) return;
+    mentee.boardRoles = mentee.boardRoles ?? {};
+    if (!mentee.boardRoles[slug]) mentee.boardRoles[slug] = "viewer";
+    if (!mentee.labels.includes(slug)) mentee.labels.push(slug);
   }
 
   private applyGrants(
@@ -693,7 +700,7 @@ export class MemoryInviteStore implements InviteStore {
       mentee.authUserId = actor.sub;
     }
     if (row.companies) this.applyGrants(mentee, row.companies);
-    else if (row.companyLabel && !mentee.labels.includes(row.companyLabel)) mentee.labels.push(row.companyLabel);
+    else this.grantLegacyBoard(mentee, row.companyLabel);
     mentee.labels.sort();
     return {
       ok: true,
@@ -742,7 +749,7 @@ export class MemoryInviteStore implements InviteStore {
       } else if (!mentee.authUserId && actor.sub && !this.mentees.some((m) => m.authUserId === actor.sub)) {
         mentee.authUserId = actor.sub;
       }
-      if (!mentee.labels.includes(row.companyLabel)) mentee.labels.push(row.companyLabel);
+      this.grantLegacyBoard(mentee, row.companyLabel);
       mentee.labels.sort();
       accepted.push(row.companyLabel);
     }

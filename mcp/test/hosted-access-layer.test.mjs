@@ -299,6 +299,81 @@ describe("hosted access layer (one login, many companies)", () => {
     assert.doesNotMatch(blob, /webhook|cron|mail mode|queuedMail|never talks to Resend/i);
   });
 
+  it("invite_member with companies returns the grant, a partial refusal, or a limit", async () => {
+    setIdentityStoreForTests(ivelinMemoryFixture(IVELIN_TOKEN));
+    const founder = {
+      id: "ivelin",
+      email: IVELIN_SEED_EMAIL,
+      authUserId: "ivelin-auth",
+      labels: ["alpha", "bravo"],
+      boardRoles: { alpha: "founder", bravo: "founder" },
+    };
+    setInviteStoreForTests(new MemoryInviteStore([founder]));
+    const partial = parseTool(
+      await rpc(
+        "tools/call",
+        {
+          name: "invite_member",
+          arguments: {
+            email: "member@example.test",
+            companies: [
+              { slug: "alpha", role: "editor" },
+              { slug: "missing", role: "viewer" },
+            ],
+          },
+        },
+        21,
+      ),
+    );
+    assert.equal(partial.ok, false);
+    assert.equal(partial.reason, "invite_partial_authority");
+
+    const granted = parseTool(
+      await rpc(
+        "tools/call",
+        {
+          name: "invite_member",
+          arguments: {
+            email: "member@example.test",
+            companies: [{ slug: "alpha", role: "editor" }],
+          },
+        },
+        22,
+      ),
+    );
+    assert.equal(granted.ok, true);
+    assert.equal(granted.invited, "member@example.test");
+    assert.deepEqual(granted.companies, [{ slug: "alpha", role: "editor" }]);
+
+    setInviteStoreForTests(
+      new MemoryInviteStore([founder], {
+        limiter: {
+          async take() {
+            return {
+              ok: false,
+              reason: "rate_limited",
+              retryAt: "2030-01-01T00:00:00.000Z",
+              message: "Limit reached for invite_member.",
+            };
+          },
+        },
+      }),
+    );
+    const limited = await rpc(
+      "tools/call",
+      {
+        name: "invite_member",
+        arguments: {
+          email: "other@example.test",
+          companies: [{ slug: "bravo", role: "viewer" }],
+        },
+      },
+      23,
+    );
+    assert.equal(limited.result.isError, true);
+    assert.match(limited.result.content.map((part) => part.text).join("\n"), /Limit reached/);
+  });
+
   it("lists journey tools only when a store is attached", async () => {
     setIdentityStoreForTests(ivelinMemoryFixture(IVELIN_TOKEN));
     setJourneyStoreForTests(fixtureJourneyStore());

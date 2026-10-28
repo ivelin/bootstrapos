@@ -1,7 +1,7 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { MemoryInviteStore } from "../dist/invite.js";
-import { planScopedInvite } from "../dist/invite-scope.js";
+import { MemoryInviteStore, SupabaseInviteStore } from "../dist/invite.js";
+import { aclRoleForTier, legacyRank, planScopedInvite, tierLine } from "../dist/invite-scope.js";
 import { buildScopedInviteMail, INVITE_MAIL_FROM } from "../dist/invite-mail.js";
 
 const owner = {
@@ -36,6 +36,78 @@ describe("company-scoped invites", () => {
     assert.equal(plan.ok, false);
     assert.equal(plan.reason, "invite_partial_authority");
     assert.equal(plan.denied[0].reason, "tier_forbidden");
+  });
+
+  it("maps each tier to an acl role and a spoken line", () => {
+    assert.equal(aclRoleForTier("editor"), "founder_authorized");
+    assert.equal(aclRoleForTier("commenter"), "advisor");
+    assert.equal(aclRoleForTier("viewer"), "viewer");
+    assert.equal(tierLine("editor"), "can edit bet cards");
+    assert.equal(tierLine("commenter"), "can read and comment on bet cards");
+    assert.equal(tierLine("viewer"), "can read bet cards");
+    assert.equal(legacyRank("founder"), "owner");
+    assert.equal(legacyRank("owner"), "owner");
+    assert.equal(legacyRank("founder_authorized"), "editor");
+    assert.equal(legacyRank("editor"), "editor");
+    assert.equal(legacyRank("advisor"), "commenter");
+    assert.equal(legacyRank("mentor"), "commenter");
+    assert.equal(legacyRank("commenter"), "commenter");
+    assert.equal(legacyRank("viewer"), "viewer");
+    assert.equal(legacyRank("nope"), null);
+    assert.equal(legacyRank(undefined), null);
+  });
+
+  it("rejects an invalid label, an owner grant, and records a dropped higher tier", () => {
+    const ownerGrant = planScopedInvite({
+      held: [{ slug: "alpha", rank: "owner" }],
+      inviteeHeld: [],
+      requested: [{ slug: "alpha", role: "owner" }],
+    });
+    assert.equal(ownerGrant.ok, false);
+    assert.equal(ownerGrant.reason, "invite_partial_authority");
+    assert.equal(ownerGrant.denied[0].reason, "owner_forbidden");
+
+    const unknown = planScopedInvite({
+      held: [{ slug: "alpha", rank: "owner" }],
+      inviteeHeld: [],
+      requested: [{ slug: "alpha", role: "founder" }],
+    });
+    assert.equal(unknown.ok, false);
+    assert.equal(unknown.denied[0].reason, "owner_forbidden");
+
+    const invalid = planScopedInvite({
+      held: [{ slug: "alpha", rank: "owner" }],
+      inviteeHeld: [],
+      requested: [{ slug: "Alpha!", role: "viewer" }],
+    });
+    assert.equal(invalid.ok, false);
+    assert.equal(invalid.denied[0].reason, "invalid_label");
+    assert.equal(invalid.denied[0].slug, "alpha!");
+
+    const dropped = planScopedInvite({
+      held: [
+        { slug: "alpha", rank: "owner" },
+        { slug: "bravo", rank: "owner" },
+      ],
+      inviteeHeld: [{ slug: "alpha", rank: "editor" }],
+      requested: [
+        { slug: "  ", role: "viewer" },
+        { slug: "alpha", role: "" },
+        { slug: "alpha", role: "viewer" },
+        { slug: "bravo", role: "commenter" },
+      ],
+    });
+    assert.equal(dropped.ok, true);
+    assert.deepEqual(dropped.dropped, [{ slug: "alpha", role: "viewer" }]);
+    assert.deepEqual(dropped.grants, [{ slug: "bravo", role: "commenter" }]);
+
+    const already = planScopedInvite({
+      held: [{ slug: "alpha", rank: "owner" }],
+      inviteeHeld: [{ slug: "alpha", rank: "commenter" }],
+      requested: [{ slug: "alpha", role: "viewer" }],
+    });
+    assert.equal(already.ok, false);
+    assert.equal(already.reason, "already_member");
   });
 
   it("a commenter cannot invite", () => {
@@ -133,6 +205,57 @@ describe("company-scoped invites", () => {
     assert.equal(sameInvitee.reason, "rate_limited");
     assert.ok([...counts.keys()].some((key) => key.startsWith("invite_invitee:")));
     assert.ok([...counts.keys()].some((key) => key.startsWith("invite_member:")));
+  });
+
+  it("a legacy invitee cannot mint an editor invite", async () => {
+    const invites = store();
+    const created = await invites.inviteMember(
+      { email: "founder@example.test" },
+      { email: "member@example.test", companyLabel: "alpha" },
+    );
+    assert.equal(created.ok, true);
+    const accepted = await invites.acceptInvite(
+      { email: "member@example.test" },
+      created.card.inviteToken,
+    );
+    assert.equal(accepted.ok, true);
+    assert.deepEqual(accepted.labels, ["alpha"]);
+    const minted = await invites.inviteMember(
+      { email: "member@example.test" },
+      { email: "other@example.test", companies: [{ slug: "alpha", role: "editor" }] },
+    );
+    assert.equal(minted.ok, false);
+    assert.equal(minted.reason, "invite_partial_authority");
+    assert.equal(invites.invites.length, 1);
+  });
+
+  it("the hosted invite RPC sends the company list", async () => {
+    const origFetch = globalThis.fetch;
+    const store = new SupabaseInviteStore(
+      "https://rpc-fixture.example",
+      "anon-key-fixture-xx",
+      "access-token-fixture",
+    );
+    try {
+      globalThis.fetch = async (url, init) => {
+        assert.match(String(url), /\/rpc\/bootstrap_os_invite_create$/);
+        const body = JSON.parse(init.body);
+        assert.equal(body.p_email, "member@example.test");
+        assert.deepEqual(body.p_companies, [{ slug: "alpha", role: "viewer" }]);
+        return new Response(
+          JSON.stringify({ ok: true, slug: "alpha", role: "viewer" }),
+          { status: 200 },
+        );
+      };
+      const created = await store.inviteMember(
+        { email: "founder@example.test" },
+        { email: "member@example.test", companies: [{ slug: "alpha", role: "viewer" }] },
+      );
+      assert.equal(created.ok, true);
+      assert.equal(created.slug, "alpha");
+    } finally {
+      globalThis.fetch = origFetch;
+    }
   });
 
   it("mail names every bet board and does not say workspace", () => {

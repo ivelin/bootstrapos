@@ -42,15 +42,66 @@ REVOKE ALL ON TABLE bootstrap_os.invites FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON TABLE bootstrap_os.invite_companies FROM PUBLIC, anon, authenticated;
 
 -- No SELECT/INSERT policy for authenticated. RPCs are SECURITY DEFINER.
+-- The actor is the JWT email or sub (bootstrap_os.actor_email / actor_sub,
+-- the same auth.jwt() source as 20260902). app.actor_email / app.actor_sub
+-- are read only for service_role. That role passes them with
+-- set_config(name, value, true). require_actor does not re-set them.
 
-CREATE OR REPLACE FUNCTION bootstrap_os.actor_is_set()
+CREATE OR REPLACE FUNCTION bootstrap_os.caller_is_service_role()
 RETURNS boolean
 LANGUAGE sql
 STABLE
 AS $$
+  SELECT current_user = 'service_role'
+    OR session_user = 'service_role'
+    OR current_setting('role', true) = 'service_role';
+$$;
+
+-- service_role fallback. Callers must use set_config(name, value, true)
+-- in the same transaction. require_actor does not re-set the setting.
+-- Non-service roles cannot use app.actor_email / app.actor_sub.
+CREATE OR REPLACE FUNCTION bootstrap_os.service_local_setting(p_name text)
+RETURNS text
+LANGUAGE sql
+VOLATILE
+AS $local_setting$
+  SELECT CASE
+    WHEN bootstrap_os.caller_is_service_role()
+      THEN nullif(current_setting(p_name, true), '')
+    ELSE NULL
+  END;
+$local_setting$;
+
+CREATE OR REPLACE FUNCTION bootstrap_os.resolved_actor_email()
+RETURNS text
+LANGUAGE sql
+VOLATILE
+AS $$
   SELECT coalesce(
-    nullif(current_setting('app.actor_email', true), ''),
-    nullif(current_setting('app.actor_sub', true), '')
+    nullif(lower(bootstrap_os.service_local_setting('app.actor_email')), ''),
+    bootstrap_os.actor_email()
+  );
+$$;
+
+CREATE OR REPLACE FUNCTION bootstrap_os.resolved_actor_sub()
+RETURNS text
+LANGUAGE sql
+VOLATILE
+AS $$
+  SELECT coalesce(
+    nullif(bootstrap_os.service_local_setting('app.actor_sub'), ''),
+    bootstrap_os.actor_sub()
+  );
+$$;
+
+CREATE OR REPLACE FUNCTION bootstrap_os.actor_is_set()
+RETURNS boolean
+LANGUAGE sql
+VOLATILE
+AS $$
+  SELECT coalesce(
+    bootstrap_os.resolved_actor_email(),
+    bootstrap_os.resolved_actor_sub()
   ) IS NOT NULL;
 $$;
 
@@ -62,8 +113,6 @@ BEGIN
   IF NOT bootstrap_os.actor_is_set() THEN
     RAISE EXCEPTION 'actor_required' USING ERRCODE = '42501';
   END IF;
-  PERFORM set_config('app.actor_email', coalesce(nullif(current_setting('app.actor_email', true), ''), ''), true);
-  PERFORM set_config('app.actor_sub', coalesce(nullif(current_setting('app.actor_sub', true), ''), ''), true);
 END;
 $$;
 
@@ -97,8 +146,8 @@ BEGIN
   VALUES (
     NEW.company_id,
     coalesce(
-      nullif(current_setting('app.actor_email', true), ''),
-      nullif(current_setting('app.actor_sub', true), '')
+      bootstrap_os.resolved_actor_email(),
+      bootstrap_os.resolved_actor_sub()
     ),
     coalesce(nullif(current_setting('app.client', true), ''), 'invite'),
     jsonb_build_object(
@@ -160,7 +209,7 @@ DECLARE
   seen text[] := ARRAY[]::text[];
 BEGIN
   PERFORM bootstrap_os.require_actor();
-  actor_email := nullif(lower(current_setting('app.actor_email', true)), '');
+  actor_email := bootstrap_os.resolved_actor_email();
   invitee := nullif(lower(trim(coalesce(p_email, ''))), '');
   IF actor_email IS NULL OR invitee IS NULL OR invitee !~ '^[^[:space:]@]+@[^[:space:]@]+\.[^[:space:]@]+$' THEN
     RETURN jsonb_build_object('ok', false, 'reason', 'invalid_email');
@@ -180,7 +229,7 @@ BEGIN
     IF requested NOT IN ('viewer', 'commenter', 'editor') THEN
       RETURN jsonb_build_object(
         'ok', false,
-        'reason', 'invite_partial_authority',
+        'reason', 'owner_forbidden',
         'slug', v_slug,
         'role', 'owner'
       );
@@ -214,7 +263,7 @@ BEGIN
     md5(raw_token),
     invitee,
     actor_email,
-    nullif(current_setting('app.actor_sub', true), ''),
+    bootstrap_os.resolved_actor_sub(),
     now() + interval '7 days'
   )
   RETURNING id INTO invite_id;
@@ -234,6 +283,10 @@ $$;
 REVOKE ALL ON FUNCTION public.bootstrap_os_invite_create(text, jsonb) FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.bootstrap_os_invite_create(text, jsonb) TO authenticated;
 
+REVOKE ALL ON FUNCTION bootstrap_os.caller_is_service_role() FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION bootstrap_os.service_local_setting(text) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION bootstrap_os.resolved_actor_email() FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION bootstrap_os.resolved_actor_sub() FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION bootstrap_os.actor_is_set() FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION bootstrap_os.require_actor() FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION bootstrap_os.rank_of(text) FROM PUBLIC, anon, authenticated;
@@ -246,28 +299,6 @@ BEGIN
   IF to_regclass('bootstrap_os.ideas') IS NULL THEN
     RETURN;
   END IF;
-
-  CREATE OR REPLACE FUNCTION bootstrap_os.actor_is_set()
-  RETURNS boolean
-  LANGUAGE sql
-  STABLE
-  AS $actor_set$
-    SELECT coalesce(
-      nullif(current_setting('app.actor_email', true), ''),
-      nullif(current_setting('app.actor_sub', true), '')
-    ) IS NOT NULL;
-  $actor_set$;
-
-  CREATE OR REPLACE FUNCTION bootstrap_os.require_actor()
-  RETURNS void
-  LANGUAGE plpgsql
-  AS $actor_req$
-  BEGIN
-    IF NOT bootstrap_os.actor_is_set() THEN
-      RAISE EXCEPTION 'actor_required' USING ERRCODE = '42501';
-    END IF;
-  END;
-  $actor_req$;
 
   EXECUTE $fn$
     CREATE OR REPLACE FUNCTION bootstrap_os.audit_idea_write()
@@ -282,8 +313,8 @@ BEGIN
         NEW.company_id,
         NEW.id,
         coalesce(
-          nullif(current_setting('app.actor_email', true), ''),
-          nullif(current_setting('app.actor_sub', true), ''),
+          bootstrap_os.resolved_actor_email(),
+          bootstrap_os.resolved_actor_sub(),
           NEW.name
         ),
         coalesce(nullif(current_setting('app.client', true), ''), 'put_journey'),
@@ -300,8 +331,8 @@ BEGIN
         NEW.id,
         'put_journey',
         coalesce(
-          nullif(current_setting('app.actor_email', true), ''),
-          nullif(current_setting('app.actor_sub', true), '')
+          bootstrap_os.resolved_actor_email(),
+          bootstrap_os.resolved_actor_sub()
         ),
         'board write'
       );
