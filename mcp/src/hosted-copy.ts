@@ -64,7 +64,7 @@ export const TOOL_USE_COMPANY =
   "Use this company for the rest of the chat (invite and later status). The user must already belong to it. Say the company name they already use."
 
 export const TOOL_INVITE_MEMBER =
-  "Invite someone to a bet board you can open. Same email can join more than one company. A starter bet board cannot send invites. Pass company unless you already called bootstrap_use_company."
+  "Invite someone to one or more bet boards you can open. Pass companies with a tier of viewer, commenter, or editor. An omitted tier is viewer. An owner may grant editor. An editor may grant viewer or commenter. A list of zero bet boards still lets them create an account. A starter bet board cannot send invites. Pass company unless you already called bootstrap_use_company."
 
 export const TOOL_ACCEPT_INVITE =
   "Join a bet board with the one-time invite token. Accept only with the invited email. Same person, additional company — not a second login."
@@ -90,10 +90,13 @@ export const TOOL_POST_COMMENT =
   "Comment on an idea. A comment does not change the bet."
 
 export const TOOL_ENABLE_BOARD_WATCH =
-  "Turn on board updates for Bill. Founder or founder-authorized. Gated."
+  "Turn on board updates for Bill. This watches the bet board and its bet cards. The founder hears when a bet card changes."
+
+export const TOOL_SUBSCRIBE_BOARD =
+  "Send updates about this bet board to someone who already belongs to it. Super admin only."
 
 export const TOOL_LIST_PROVENANCE =
-  "What already changed, when they ask. Same access as get_journey."
+  "What already changed on the bet board, when they ask. An owner reads this history."
 
 export const TOOL_PUT_PORTFOLIO_SCORE =
   "Weekly labels on one live bet when the company has two or more. Needs a yes in this chat and a short why. Labels do not decide the bet."

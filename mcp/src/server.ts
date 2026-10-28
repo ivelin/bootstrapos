@@ -74,6 +74,7 @@ import {
   TOOL_CREATE_IDEA,
   TOOL_POST_COMMENT,
   TOOL_ENABLE_BOARD_WATCH,
+  TOOL_SUBSCRIBE_BOARD,
   TOOL_LIST_PROVENANCE,
   TOOL_PUT_PORTFOLIO_SCORE,
   TOOL_PUT_JOURNEY,
@@ -557,12 +558,59 @@ function registerInviteTools(server: McpServer, ctx: HostedRequestContext) {
     {
       email: z.string().describe("Invitee email. Must match their sign-in email when they accept."),
       company: z.string().optional().describe("Company to invite them to, by the name they already use"),
-      companyLabel: z.string().optional().describe("Same as company"),
+      companyLabel: z.string().optional().describe("Same as company. One bet board."),
+      companies: z
+        .array(
+          z.object({
+            slug: z.string().describe("Bet board slug"),
+            role: z
+              .enum(["viewer", "commenter", "editor"])
+              .optional()
+              .describe("Omitted means viewer. An owner may pass editor. An editor may pass viewer or commenter."),
+          }),
+        )
+        .max(20)
+        .optional()
+        .describe("Bet boards to share. Zero boards creates an account and no bet card access."),
     },
-    async ({ email, company, companyLabel }) => {
+    async ({ email, company, companyLabel, companies }) => {
       const who = ctx.whoami;
       if (!who.authenticated || !who.email) {
         return err(NOTE_NOT_SIGNED_IN);
+      }
+      if (companies) {
+        const store = resolveInviteStore(ctx.accessToken);
+        if (!store) return err(inviteFailMessage("invite_store_unset"));
+        try {
+          const result = await store.inviteMember(
+            { email: who.email, sub: ctx.inviteActor?.sub, labels: who.labels },
+            { email, companies },
+          );
+          if (!result.ok) {
+            if (result.reason === "invite_partial_authority" && "denied" in result) {
+              return text(result);
+            }
+            switch (result.reason) {
+              case "rate_limited":
+              case "rate_limiter_unavailable":
+                return err(refusalMessage(result) ?? result.message);
+              default:
+                return err(inviteFailMessage(result));
+            }
+          }
+          if ("companies" in result) {
+            return text({
+              ok: true,
+              invited: result.inviteeEmail,
+              companies: result.companies,
+              dropped: result.dropped,
+              signInUrl: inviteSignupUrl(result.token),
+              note: NOTE_INVITE_SENT,
+            });
+          }
+        } catch (e) {
+          return err(e instanceof Error ? e.message : String(e));
+        }
       }
       if (who.labels.length === 0) return text(noBoardsPayload(who.email));
       const sessionKey = ctx.sessionKey ?? "anon";
@@ -597,6 +645,9 @@ function registerInviteTools(server: McpServer, ctx: HostedRequestContext) {
             default:
               return err(inviteFailMessage(result));
           }
+        }
+        if (!("card" in result)) {
+          return err(inviteFailMessage("invite_rpc_failed"));
         }
         const inviterName = inviterNameForKick(ctx.inviteActor?.name, result.card.from.email);
         const mailMode = resolveInviteMailMode();
@@ -1356,9 +1407,10 @@ function registerJourneyTools(server: McpServer, ctx: HostedRequestContext) {
     },
   );
 
+  if (ctx.whoami.role === "super_admin") {
   server.tool(
     "subscribe_board",
-    "Grant a webhook (and optional email enqueue) to an ACL member on a bet board. Founder or founder-authorized. Gated. Production pin after Cos applies subscriber SQL. Email is not sent from this host.",
+    TOOL_SUBSCRIBE_BOARD,
     {
       company: z.string().describe("Company slug"),
       idea: z.string().optional().describe("Optional idea scope. Omit for the whole company."),
@@ -1395,6 +1447,7 @@ function registerJourneyTools(server: McpServer, ctx: HostedRequestContext) {
       }
     },
   );
+  }
 
   server.tool(
     "unsubscribe_board",

@@ -145,6 +145,54 @@ export function resolveInviteMailMode(
   return "off";
 }
 
+export function buildScopedInviteMail(input: {
+  inviterEmail: string;
+  inviteeEmail: string;
+  companies: Array<{ slug: string; role: "viewer" | "commenter" | "editor" }>;
+  inviteToken: string;
+  expiresAt: string;
+}): InviteMail {
+  assertInviteMailFrom(INVITE_MAIL_FROM);
+  const signupUrl = inviteSignupUrl(input.inviteToken);
+  const names = input.companies.map((row) => row.slug);
+  const subject =
+    names.length === 0
+      ? `${input.inviterEmail} invited you to Bootstrap OS`
+      : names.length === 1
+        ? `${input.inviterEmail} invited you to the ${names[0]} bet board`
+        : `${input.inviterEmail} invited you to ${names.length} bet boards: ${names.join(", ")}`;
+  const lines = input.companies.map((row) => {
+    const can =
+      row.role === "editor"
+        ? "can edit bet cards"
+        : row.role === "commenter"
+          ? "can read and comment on bet cards"
+          : "can read bet cards";
+    return `${row.slug}: ${can}`;
+  });
+  const text = [
+    `${input.inviterEmail} invited ${input.inviteeEmail} to Bootstrap OS.`,
+    names.length ? `Bet boards: ${names.join(", ")}` : "No bet board was shared. You can create your own.",
+    ...lines,
+    "",
+    signupUrl,
+    "",
+    `Expires: ${input.expiresAt}`,
+  ].join("\n");
+  return {
+    from: INVITE_MAIL_FROM,
+    to: input.inviteeEmail,
+    subject,
+    text,
+    signupUrl,
+    qrPayload: signupUrl,
+    inviteToken: input.inviteToken,
+    inviterEmail: input.inviterEmail,
+    inviteeEmail: input.inviteeEmail,
+    companyWorkspace: names.join(", "),
+  };
+}
+
 export function buildInviteMail(input: InviteMailInput): InviteMail {
   assertInviteMailFrom(INVITE_MAIL_FROM);
   const signupUrl = inviteSignupUrl(input.inviteToken);

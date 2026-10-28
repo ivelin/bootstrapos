@@ -305,7 +305,14 @@ describe("hosted access layer (one login, many companies)", () => {
     const listed = await rpc("tools/list", {}, 10);
     const names = listed.result.tools.map((t) => t.name);
     for (const n of HOSTED_GATED_JOURNEY_TOOL_NAMES) {
-      assert.ok(names.includes(n), `missing journey ${n} with store`);
+      if (n === "subscribe_board") {
+        assert.ok(!names.includes(n), "subscribe_board stays hidden for a member");
+      } else {
+        assert.ok(names.includes(n), `missing journey ${n} with store`);
+      }
     }
+    const watch = listed.result.tools.find((t) => t.name === "enable_board_watch");
+    assert.match(watch.description, /bet board/);
+    assert.match(watch.description, /bet card/);
   });
 });

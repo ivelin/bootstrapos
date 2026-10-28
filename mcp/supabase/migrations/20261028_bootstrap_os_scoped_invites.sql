@@ -1,0 +1,369 @@
+-- Company-scoped invites and actor-required card writes.
+-- Cos applies on supabase-pirin-ai. PR agents: PGlite only.
+-- Do not migrate, seed, or live-probe supabase-pirin-ai from a PR cloud agent.
+-- Fictional fixtures only (alpha, bravo, charlie, founder@example.test).
+
+CREATE SCHEMA IF NOT EXISTS bootstrap_os;
+
+CREATE TABLE IF NOT EXISTS bootstrap_os.invites (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  token_hash text NOT NULL,
+  invitee_email text NOT NULL,
+  inviter_email text NOT NULL,
+  inviter_sub text,
+  status text NOT NULL DEFAULT 'pending',
+  expires_at timestamptz NOT NULL,
+  accepted_at timestamptz,
+  accepted_by text,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  CONSTRAINT invites_email_lower CHECK (invitee_email = lower(invitee_email)),
+  CONSTRAINT invites_inviter_email_lower CHECK (inviter_email = lower(inviter_email)),
+  CONSTRAINT invites_status CHECK (status IN ('pending', 'accepted', 'revoked', 'expired')),
+  CONSTRAINT invites_token_hash_unique UNIQUE (token_hash)
+);
+
+CREATE TABLE IF NOT EXISTS bootstrap_os.invite_companies (
+  invite_id uuid NOT NULL REFERENCES bootstrap_os.invites (id) ON DELETE CASCADE,
+  company_id uuid NOT NULL REFERENCES bootstrap_os.companies (id) ON DELETE CASCADE,
+  role text NOT NULL,
+  PRIMARY KEY (invite_id, company_id),
+  CONSTRAINT invite_companies_role CHECK (role IN ('viewer', 'commenter', 'editor'))
+);
+
+CREATE INDEX IF NOT EXISTS invites_invitee_idx
+  ON bootstrap_os.invites (invitee_email);
+
+ALTER TABLE bootstrap_os.invites ENABLE ROW LEVEL SECURITY;
+ALTER TABLE bootstrap_os.invite_companies ENABLE ROW LEVEL SECURITY;
+ALTER TABLE bootstrap_os.invites FORCE ROW LEVEL SECURITY;
+ALTER TABLE bootstrap_os.invite_companies FORCE ROW LEVEL SECURITY;
+
+REVOKE ALL ON TABLE bootstrap_os.invites FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON TABLE bootstrap_os.invite_companies FROM PUBLIC, anon, authenticated;
+
+-- No SELECT/INSERT policy for authenticated. RPCs are SECURITY DEFINER.
+
+CREATE OR REPLACE FUNCTION bootstrap_os.actor_is_set()
+RETURNS boolean
+LANGUAGE sql
+STABLE
+AS $$
+  SELECT coalesce(
+    nullif(current_setting('app.actor_email', true), ''),
+    nullif(current_setting('app.actor_sub', true), '')
+  ) IS NOT NULL;
+$$;
+
+CREATE OR REPLACE FUNCTION bootstrap_os.require_actor()
+RETURNS void
+LANGUAGE plpgsql
+AS $$
+BEGIN
+  IF NOT bootstrap_os.actor_is_set() THEN
+    RAISE EXCEPTION 'actor_required' USING ERRCODE = '42501';
+  END IF;
+  PERFORM set_config('app.actor_email', coalesce(nullif(current_setting('app.actor_email', true), ''), ''), true);
+  PERFORM set_config('app.actor_sub', coalesce(nullif(current_setting('app.actor_sub', true), ''), ''), true);
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION bootstrap_os.rank_of(p_role text)
+RETURNS int
+LANGUAGE sql
+IMMUTABLE
+AS $$
+  SELECT CASE p_role
+    WHEN 'founder' THEN 4
+    WHEN 'owner' THEN 4
+    WHEN 'founder_authorized' THEN 3
+    WHEN 'editor' THEN 3
+    WHEN 'advisor' THEN 2
+    WHEN 'mentor' THEN 2
+    WHEN 'commenter' THEN 2
+    WHEN 'viewer' THEN 1
+    ELSE 0
+  END;
+$$;
+
+CREATE OR REPLACE FUNCTION bootstrap_os.audit_invite_company()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = bootstrap_os, public
+AS $$
+BEGIN
+  PERFORM bootstrap_os.require_actor();
+  INSERT INTO bootstrap_os.audit_events (company_id, who, client, what_changed)
+  VALUES (
+    NEW.company_id,
+    coalesce(
+      nullif(current_setting('app.actor_email', true), ''),
+      nullif(current_setting('app.actor_sub', true), '')
+    ),
+    coalesce(nullif(current_setting('app.client', true), ''), 'invite'),
+    jsonb_build_object(
+      'action', 'invite.create',
+      'invite_id', NEW.invite_id,
+      'role', NEW.role,
+      'actor_sub', nullif(current_setting('app.actor_sub', true), ''),
+      'actor_email', nullif(current_setting('app.actor_email', true), '')
+    )
+  );
+  RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS invite_companies_audit_write ON bootstrap_os.invite_companies;
+CREATE TRIGGER invite_companies_audit_write
+  AFTER INSERT ON bootstrap_os.invite_companies
+  FOR EACH ROW
+  EXECUTE FUNCTION bootstrap_os.audit_invite_company();
+
+CREATE OR REPLACE FUNCTION bootstrap_os.audit_events_append_only()
+RETURNS trigger
+LANGUAGE plpgsql
+AS $$
+BEGIN
+  RAISE EXCEPTION 'audit_events is append-only' USING ERRCODE = '42501';
+END;
+$$;
+
+DO $$
+BEGIN
+  IF to_regclass('bootstrap_os.audit_events') IS NOT NULL THEN
+    DROP TRIGGER IF EXISTS audit_events_no_update ON bootstrap_os.audit_events;
+    CREATE TRIGGER audit_events_no_update
+      BEFORE UPDATE OR DELETE ON bootstrap_os.audit_events
+      FOR EACH ROW
+      EXECUTE FUNCTION bootstrap_os.audit_events_append_only();
+  END IF;
+END
+$$;
+
+CREATE OR REPLACE FUNCTION public.bootstrap_os_invite_create(
+  p_email text,
+  p_companies jsonb
+) RETURNS jsonb
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = bootstrap_os, public
+AS $$
+DECLARE
+  actor_email text;
+  invitee text;
+  elem jsonb;
+  v_slug text;
+  requested text;
+  rank int;
+  company_uuid uuid;
+  invite_id uuid;
+  raw_token text;
+  grants jsonb := '[]'::jsonb;
+  seen text[] := ARRAY[]::text[];
+BEGIN
+  PERFORM bootstrap_os.require_actor();
+  actor_email := nullif(lower(current_setting('app.actor_email', true)), '');
+  invitee := nullif(lower(trim(coalesce(p_email, ''))), '');
+  IF actor_email IS NULL OR invitee IS NULL OR invitee !~ '^[^[:space:]@]+@[^[:space:]@]+\.[^[:space:]@]+$' THEN
+    RETURN jsonb_build_object('ok', false, 'reason', 'invalid_email');
+  END IF;
+  IF p_companies IS NULL OR jsonb_typeof(p_companies) <> 'array' OR jsonb_array_length(p_companies) > 20 THEN
+    RETURN jsonb_build_object('ok', false, 'reason', 'invalid_label');
+  END IF;
+
+  FOR elem IN SELECT value FROM jsonb_array_elements(p_companies)
+  LOOP
+    v_slug := lower(trim(coalesce(elem->>'slug', '')));
+    requested := coalesce(nullif(elem->>'role', ''), 'viewer');
+    IF v_slug = '' OR v_slug !~ '^[a-z0-9][a-z0-9_-]{0,31}$' OR v_slug = ANY (seen) THEN
+      CONTINUE;
+    END IF;
+    seen := array_append(seen, v_slug);
+    IF requested NOT IN ('viewer', 'commenter', 'editor') THEN
+      RETURN jsonb_build_object(
+        'ok', false,
+        'reason', 'invite_partial_authority',
+        'allowed', '[]'::jsonb,
+        'denied', jsonb_build_array(jsonb_build_object('slug', v_slug, 'reason', 'owner_forbidden'))
+      );
+    END IF;
+    SELECT c.id INTO company_uuid FROM bootstrap_os.companies c WHERE c.slug = v_slug;
+    SELECT bootstrap_os.rank_of(a.role) INTO rank
+    FROM bootstrap_os.company_acl a
+    WHERE a.company_id = company_uuid
+      AND a.principal_kind = 'email'
+      AND a.principal = actor_email
+    ORDER BY bootstrap_os.rank_of(a.role) DESC
+    LIMIT 1;
+    IF company_uuid IS NULL OR rank IS NULL OR rank < 3 OR (rank < 4 AND requested = 'editor') THEN
+      RETURN jsonb_build_object(
+        'ok', false,
+        'reason', 'invite_partial_authority',
+        'allowed', '[]'::jsonb,
+        'denied', jsonb_build_array(jsonb_build_object(
+          'slug', v_slug,
+          'reason', CASE WHEN rank IS NULL OR company_uuid IS NULL THEN 'not_held' ELSE 'tier_forbidden' END
+        ))
+      );
+    END IF;
+    grants := grants || jsonb_build_array(jsonb_build_object(
+      'slug', v_slug,
+      'role', requested,
+      'company_id', company_uuid
+    ));
+  END LOOP;
+
+  raw_token := replace(gen_random_uuid()::text, '-', '') || replace(gen_random_uuid()::text, '-', '');
+  INSERT INTO bootstrap_os.invites (token_hash, invitee_email, inviter_email, inviter_sub, expires_at)
+  VALUES (
+    md5(raw_token),
+    invitee,
+    actor_email,
+    nullif(current_setting('app.actor_sub', true), ''),
+    now() + interval '7 days'
+  )
+  RETURNING id INTO invite_id;
+
+  INSERT INTO bootstrap_os.invite_companies (invite_id, company_id, role)
+  SELECT invite_id, (g->>'company_id')::uuid, g->>'role'
+  FROM jsonb_array_elements(grants) g;
+
+  RETURN jsonb_build_object(
+    'ok', true,
+    'invite_id', invite_id,
+    'token', raw_token,
+    'companies', grants
+  );
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.bootstrap_os_invite_create(text, jsonb) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.bootstrap_os_invite_create(text, jsonb) TO authenticated;
+
+REVOKE ALL ON FUNCTION bootstrap_os.actor_is_set() FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION bootstrap_os.require_actor() FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION bootstrap_os.rank_of(text) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION bootstrap_os.audit_invite_company() FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION bootstrap_os.audit_events_append_only() FROM PUBLIC, anon, authenticated;
+
+-- BEGIN CARD ACTOR
+DO $card_actor$
+BEGIN
+  IF to_regclass('bootstrap_os.ideas') IS NULL THEN
+    RETURN;
+  END IF;
+
+  CREATE OR REPLACE FUNCTION bootstrap_os.actor_is_set()
+  RETURNS boolean
+  LANGUAGE sql
+  STABLE
+  AS $actor_set$
+    SELECT coalesce(
+      nullif(current_setting('app.actor_email', true), ''),
+      nullif(current_setting('app.actor_sub', true), '')
+    ) IS NOT NULL;
+  $actor_set$;
+
+  CREATE OR REPLACE FUNCTION bootstrap_os.require_actor()
+  RETURNS void
+  LANGUAGE plpgsql
+  AS $actor_req$
+  BEGIN
+    IF NOT bootstrap_os.actor_is_set() THEN
+      RAISE EXCEPTION 'actor_required' USING ERRCODE = '42501';
+    END IF;
+  END;
+  $actor_req$;
+
+  EXECUTE $fn$
+    CREATE OR REPLACE FUNCTION bootstrap_os.audit_idea_write()
+    RETURNS trigger
+    LANGUAGE plpgsql
+    SECURITY DEFINER
+    SET search_path = bootstrap_os, public
+    AS $body$
+    BEGIN
+      PERFORM bootstrap_os.require_actor();
+      PERFORM bootstrap_os.emit_audit(
+        NEW.company_id,
+        NEW.id,
+        coalesce(
+          nullif(current_setting('app.actor_email', true), ''),
+          nullif(current_setting('app.actor_sub', true), ''),
+          NEW.name
+        ),
+        coalesce(nullif(current_setting('app.client', true), ''), 'put_journey'),
+        jsonb_build_object(
+          'via', 'put_journey',
+          'action', 'card.update',
+          'journey_phase', NEW.journey_phase,
+          'loop_stage', NEW.loop_stage,
+          'current_gate', NEW.current_gate,
+          'constraint_this_week', coalesce(NEW.scoreboard->>'constraint_this_week', ''),
+          'actor_sub', nullif(current_setting('app.actor_sub', true), ''),
+          'actor_email', nullif(current_setting('app.actor_email', true), '')
+        )
+      );
+      PERFORM bootstrap_os.enqueue_board_notify(
+        NEW.company_id,
+        NEW.id,
+        'put_journey',
+        coalesce(
+          nullif(current_setting('app.actor_email', true), ''),
+          nullif(current_setting('app.actor_sub', true), '')
+        ),
+        'board write'
+      );
+      RETURN NEW;
+    END;
+    $body$;
+  $fn$;
+
+  DROP TRIGGER IF EXISTS ideas_audit_write ON bootstrap_os.ideas;
+  CREATE TRIGGER ideas_audit_write
+    AFTER UPDATE ON bootstrap_os.ideas
+    FOR EACH ROW
+    EXECUTE FUNCTION bootstrap_os.audit_idea_write();
+END
+$card_actor$;
+-- END CARD ACTOR
+
+DO $acl_tiers$
+BEGIN
+  IF to_regclass('bootstrap_os.company_acl') IS NULL THEN
+    RETURN;
+  END IF;
+  IF EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conname = 'company_acl_role'
+      AND conrelid = 'bootstrap_os.company_acl'::regclass
+  ) THEN
+    ALTER TABLE bootstrap_os.company_acl DROP CONSTRAINT company_acl_role;
+  END IF;
+  ALTER TABLE bootstrap_os.company_acl DROP CONSTRAINT IF EXISTS company_acl_role_tiers;
+  ALTER TABLE bootstrap_os.company_acl
+    ADD CONSTRAINT company_acl_role_tiers
+    CHECK (role IN (
+      'founder', 'owner', 'founder_authorized', 'editor',
+      'advisor', 'mentor', 'commenter', 'viewer'
+    ));
+END
+$acl_tiers$;
+
+DO $owner_audit$
+BEGIN
+  IF to_regclass('bootstrap_os.audit_events') IS NULL THEN
+    RETURN;
+  END IF;
+  EXECUTE 'DROP POLICY IF EXISTS audit_events_select_member ON bootstrap_os.audit_events';
+  EXECUTE 'DROP POLICY IF EXISTS audit_events_select_owner ON bootstrap_os.audit_events';
+  EXECUTE $pol$
+    CREATE POLICY audit_events_select_owner
+      ON bootstrap_os.audit_events
+      FOR SELECT
+      TO authenticated
+      USING (bootstrap_os.has_role(company_id, 'founder', 'owner'))
+  $pol$;
+  EXECUTE 'REVOKE UPDATE, DELETE, TRUNCATE ON TABLE bootstrap_os.audit_events FROM PUBLIC, anon, authenticated';
+END
+$owner_audit$;
