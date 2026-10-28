@@ -31,7 +31,7 @@ concurrency:
 jobs:
   mcp:
     name: typecheck · test · smokes (Node ${{ matrix.node }})
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
       matrix:
