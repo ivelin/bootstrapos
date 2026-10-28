@@ -66,7 +66,7 @@ describe("scoped invite RLS and card actor (PGlite, never prod)", () => {
     await db.query("SELECT set_config('app.actor_sub', $1, false)", ["22222222-2222-2222-2222-222222222222"]);
     await db.exec("UPDATE bootstrap_os.ideas SET name = 'alpha bet card' WHERE slug = 'default'");
     const rows = await db.query(
-      "SELECT what_changed->>'action' AS action FROM bootstrap_os.audit_events WHERE what_changed->>'action' = 'card.update'",
+      "SELECT what_changed->>'via' AS via FROM bootstrap_os.audit_events WHERE what_changed->>'via' = 'card.update'",
     );
     assert.equal(rows.rows.length, 1);
   });
@@ -112,7 +112,7 @@ describe("scoped invite RLS and card actor (PGlite, never prod)", () => {
     );
     assert.equal(created.rows[0].body.ok, true);
     const audit = await db.query(
-      "SELECT count(*)::int AS n FROM bootstrap_os.audit_events WHERE what_changed->>'action' = 'invite.create'",
+      "SELECT count(*)::int AS n FROM bootstrap_os.audit_events WHERE what_changed->>'via' = 'invite.create'",
     );
     assert.equal(audit.rows[0].n, 1);
   });

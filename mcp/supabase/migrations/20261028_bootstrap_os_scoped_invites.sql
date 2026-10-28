@@ -102,11 +102,9 @@ BEGIN
     ),
     coalesce(nullif(current_setting('app.client', true), ''), 'invite'),
     jsonb_build_object(
-      'action', 'invite.create',
-      'invite_id', NEW.invite_id,
-      'role', NEW.role,
-      'actor_sub', nullif(current_setting('app.actor_sub', true), ''),
-      'actor_email', nullif(current_setting('app.actor_email', true), '')
+      'via', 'invite.create',
+      'op', 'insert',
+      'role', NEW.role
     )
   );
   RETURN NEW;
@@ -183,8 +181,8 @@ BEGIN
       RETURN jsonb_build_object(
         'ok', false,
         'reason', 'invite_partial_authority',
-        'allowed', '[]'::jsonb,
-        'denied', jsonb_build_array(jsonb_build_object('slug', v_slug, 'reason', 'owner_forbidden'))
+        'slug', v_slug,
+        'role', 'owner'
       );
     END IF;
     SELECT c.id INTO company_uuid FROM bootstrap_os.companies c WHERE c.slug = v_slug;
@@ -199,11 +197,8 @@ BEGIN
       RETURN jsonb_build_object(
         'ok', false,
         'reason', 'invite_partial_authority',
-        'allowed', '[]'::jsonb,
-        'denied', jsonb_build_array(jsonb_build_object(
-          'slug', v_slug,
-          'reason', CASE WHEN rank IS NULL OR company_uuid IS NULL THEN 'not_held' ELSE 'tier_forbidden' END
-        ))
+        'slug', v_slug,
+        'role', requested
       );
     END IF;
     grants := grants || jsonb_build_array(jsonb_build_object(
@@ -230,9 +225,8 @@ BEGIN
 
   RETURN jsonb_build_object(
     'ok', true,
-    'invite_id', invite_id,
-    'token', raw_token,
-    'companies', grants
+    'slug', coalesce(grants->0->>'slug', ''),
+    'role', coalesce(grants->0->>'role', 'viewer')
   );
 END;
 $$;
@@ -294,14 +288,11 @@ BEGIN
         ),
         coalesce(nullif(current_setting('app.client', true), ''), 'put_journey'),
         jsonb_build_object(
-          'via', 'put_journey',
-          'action', 'card.update',
+          'via', 'card.update',
           'journey_phase', NEW.journey_phase,
           'loop_stage', NEW.loop_stage,
           'current_gate', NEW.current_gate,
-          'constraint_this_week', coalesce(NEW.scoreboard->>'constraint_this_week', ''),
-          'actor_sub', nullif(current_setting('app.actor_sub', true), ''),
-          'actor_email', nullif(current_setting('app.actor_email', true), '')
+          'constraint_this_week', coalesce(NEW.scoreboard->>'constraint_this_week', '')
         )
       );
       PERFORM bootstrap_os.enqueue_board_notify(
