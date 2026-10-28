@@ -6,19 +6,34 @@ on:
     branches:
       - main
 
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   test:
-    runs-on: ubuntu-24.04
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    # fallback: ubuntu-24.04
+    runs-on: [self-hosted, spark]
     steps:
       - uses: actions/checkout@v4
+        with:
+          clean: true
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: "22"
           cache: npm
           cache-dependency-path: mcp/package-lock.json
-      - name: PostgreSQL 16
-        run: sudo apt-get update && sudo apt-get install -y postgresql-16
+      - name: PostgreSQL 16 throwaway cluster
+        run: sh scripts/pg16-job.sh start
 
       - name: Day-0 + spoken-card eval
         run: sh scripts/ci.sh
+
+      - name: Stop PostgreSQL and wipe temp cluster
+        if: always()
+        run: sh scripts/pg16-job.sh stop

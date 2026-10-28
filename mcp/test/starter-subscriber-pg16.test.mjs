@@ -105,15 +105,20 @@ function psql(sql, { stop = true } = {}) {
 describe("PostgreSQL 16 starter subscribe", { concurrency: false }, () => {
   before(async () => {
     assert.ok(fs.existsSync(path.join(BIN, "initdb")), "PostgreSQL 16 initdb is required");
+    pgCtl = path.join(BIN, "pg_ctl");
+    psqlBin = path.join(BIN, "psql");
+    if (process.env.BOS_PG_DIR && process.env.BOS_PG_PORT) {
+      dataDir = process.env.BOS_PG_DIR;
+      port = process.env.BOS_PG_PORT;
+      return;
+    }
     port = await freePort();
-    dataDir = fs.mkdtempSync(path.join(os.tmpdir(), "bos-pg16-"));
+    dataDir = fs.mkdtempSync(path.join(process.env.RUNNER_TEMP || os.tmpdir(), "bos-pg16-"));
     execFileSync(
       path.join(BIN, "initdb"),
       ["-D", dataDir, "--auth=trust", "--username", process.env.USER || "postgres", "--no-instructions"],
       { stdio: "ignore" },
     );
-    pgCtl = path.join(BIN, "pg_ctl");
-    psqlBin = path.join(BIN, "psql");
     execFileSync(
       pgCtl,
       ["-D", dataDir, "-w", "-t", "30", "-l", path.join(dataDir, "server.log"), "-o", `-p ${port} -k ${dataDir} -c listen_addresses=`, "start"],
@@ -122,6 +127,7 @@ describe("PostgreSQL 16 starter subscribe", { concurrency: false }, () => {
   });
 
   after(() => {
+    if (process.env.BOS_PG_DIR) return;
     if (pgCtl && dataDir) {
       try {
         execFileSync(pgCtl, ["-D", dataDir, "-w", "-t", "30", "-m", "immediate", "stop"], { stdio: "ignore" });

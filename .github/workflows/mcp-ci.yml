@@ -11,6 +11,7 @@ on:
       - "docs/runbooks/onboarding.md"
       - ".github/workflows/mcp-ci.yml"
       - "scripts/ci.sh"
+      - "scripts/pg16-job.sh"
   pull_request:
     paths:
       - "mcp/**"
@@ -20,18 +21,24 @@ on:
       - "docs/runbooks/onboarding.md"
       - ".github/workflows/mcp-ci.yml"
       - "scripts/ci.sh"
+      - "scripts/pg16-job.sh"
   schedule:
     # Daily fixture probe. Does not touch production. prod-smoke stays push-to-main only.
     - cron: "17 13 * * *"
 
+permissions:
+  contents: read
+
 concurrency:
-  group: mcp-ci-${{ github.workflow }}-${{ github.ref }}
+  group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
   mcp:
     name: typecheck · test · smokes (Node ${{ matrix.node }})
-    runs-on: ubuntu-24.04
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    # fallback: ubuntu-24.04
+    runs-on: [self-hosted, spark]
     strategy:
       fail-fast: false
       matrix:
@@ -42,6 +49,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          clean: true
 
       - name: Setup Node
         uses: actions/setup-node@v4
@@ -79,8 +88,8 @@ jobs:
       - name: HTTP hosted-read smoke (no local clone)
         run: node test/http-mcp.client.mjs
 
-      - name: PostgreSQL 16
-        run: sudo apt-get update && sudo apt-get install -y postgresql-16
+      - name: PostgreSQL 16 throwaway cluster
+        run: sh ../scripts/pg16-job.sh start
 
       - name: PostgreSQL 16 starter subscribe
         run: npm run test:pg16
@@ -93,15 +102,23 @@ jobs:
           test -f dist/initiative-card.js
           ! test -d node_modules/.cache || true
 
+      - name: Stop PostgreSQL and wipe temp cluster
+        if: always()
+        run: sh ../scripts/pg16-job.sh stop
+
   user-path:
     name: user-path (stdio · http · role-play · spoken-card eval)
-    runs-on: ubuntu-latest
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    # fallback: ubuntu-latest
+    runs-on: [self-hosted, spark]
     defaults:
       run:
         working-directory: mcp
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          clean: true
 
       - name: Setup Node
         uses: actions/setup-node@v4
@@ -118,11 +135,19 @@ jobs:
           echo "CI green on this job is necessary and is not an independent pstack verdict."
           npm run verify:user-path
 
+      - name: Stop PostgreSQL and wipe temp cluster
+        if: always()
+        run: sh ../scripts/pg16-job.sh stop
+
   markdown-path:
     name: markdown path integrity (no Node MCP required)
-    runs-on: ubuntu-latest
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    # fallback: ubuntu-latest
+    runs-on: [self-hosted, spark]
     steps:
       - uses: actions/checkout@v4
+        with:
+          clean: true
       - name: Required portable files
         run: |
           set -euo pipefail
@@ -157,15 +182,23 @@ jobs:
           print("state template + initiatives schema ok")
           PY
 
+      - name: Stop PostgreSQL and wipe temp cluster
+        if: always()
+        run: sh scripts/pg16-job.sh stop
+
   onboarding-probe:
     name: onboarding probe (fixtures, never prod)
-    runs-on: ubuntu-latest
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    # fallback: ubuntu-latest
+    runs-on: [self-hosted, spark]
     defaults:
       run:
         working-directory: mcp
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          clean: true
 
       - name: Setup Node
         uses: actions/setup-node@v4
@@ -180,12 +213,17 @@ jobs:
       - name: Probe (invite, session grant, whoami — PGlite only)
         run: npm run probe:onboarding
 
+      - name: Stop PostgreSQL and wipe temp cluster
+        if: always()
+        run: sh ../scripts/pg16-job.sh stop
+
   # Hosted MCP only after merge. PRs stay on local stdio/http. Bounded GET /health + handshake.
   prod-smoke:
     name: production pin (main only)
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
     needs: [mcp, user-path]
-    runs-on: ubuntu-latest
+    # fallback: ubuntu-latest
+    runs-on: [self-hosted, spark]
     timeout-minutes: 8
     defaults:
       run:
@@ -193,6 +231,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          clean: true
 
       - name: Setup Node
         uses: actions/setup-node@v4
@@ -224,3 +264,7 @@ jobs:
 
       - name: Production handshake pin
         run: npm run test:preview
+
+      - name: Stop PostgreSQL and wipe temp cluster
+        if: always()
+        run: sh ../scripts/pg16-job.sh stop

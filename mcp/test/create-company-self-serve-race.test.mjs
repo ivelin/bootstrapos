@@ -96,21 +96,26 @@ describe("create_company_self_serve real Postgres", { skip: hasPg ? false : "Pos
     if (process.env.CI === "true" && !hasPg) {
       throw new Error("PostgreSQL 16 initdb is required when CI=true");
     }
-    port = await freePort();
-    dataDir = fs.mkdtempSync(path.join(os.tmpdir(), "bos-self-serve-"));
-    spawnSync(
-      path.join(BIN, "initdb"),
-      ["-D", dataDir, "--auth=trust", "--username", process.env.USER || "postgres", "--no-instructions"],
-      { stdio: "ignore" },
-    );
-    const pgCtl = path.join(BIN, "pg_ctl");
     psqlBin = path.join(BIN, "psql");
-    const started = spawnSync(
-      pgCtl,
-      ["-D", dataDir, "-w", "-t", "30", "-l", path.join(dataDir, "server.log"), "-o", `-p ${port} -k ${dataDir} -c listen_addresses=`, "start"],
-      { encoding: "utf8" },
-    );
-    if (started.status !== 0) throw new Error(started.stderr || "pg_ctl start failed");
+    if (process.env.BOS_PG_DIR && process.env.BOS_PG_PORT) {
+      dataDir = process.env.BOS_PG_DIR;
+      port = process.env.BOS_PG_PORT;
+    } else {
+      port = await freePort();
+      dataDir = fs.mkdtempSync(path.join(process.env.RUNNER_TEMP || os.tmpdir(), "bos-self-serve-"));
+      spawnSync(
+        path.join(BIN, "initdb"),
+        ["-D", dataDir, "--auth=trust", "--username", process.env.USER || "postgres", "--no-instructions"],
+        { stdio: "ignore" },
+      );
+      const pgCtl = path.join(BIN, "pg_ctl");
+      const started = spawnSync(
+        pgCtl,
+        ["-D", dataDir, "-w", "-t", "30", "-l", path.join(dataDir, "server.log"), "-o", `-p ${port} -k ${dataDir} -c listen_addresses=`, "start"],
+        { encoding: "utf8" },
+      );
+      if (started.status !== 0) throw new Error(started.stderr || "pg_ctl start failed");
+    }
     try {
       fs.mkdirSync("/opt/cursor/artifacts", { recursive: true });
     } catch {
@@ -135,6 +140,7 @@ describe("create_company_self_serve real Postgres", { skip: hasPg ? false : "Pos
   });
 
   after(() => {
+    if (process.env.BOS_PG_DIR) return;
     if (dataDir) {
       spawnSync(path.join(BIN, "pg_ctl"), ["-D", dataDir, "-w", "-t", "30", "-m", "immediate", "stop"], {
         stdio: "ignore",
