@@ -1059,7 +1059,6 @@ function founderRoleName(rows: unknown): string {
   return "";
 }
 
-/** company.founder when set, else idea, scoreboard, then ACL role founder. No store writes company.founder. */
 export function founderLineName(input: {
   company?: unknown;
   owners?: unknown;
@@ -1152,7 +1151,8 @@ function pushSpokenRow(
   row: Initiative,
   opts: { bottleneck: boolean; depth: number; seen: Set<string>; who: string; past?: boolean },
 ): void {
-  if (isInternalNote(plainCardText(row.premise))) return;
+  const rawPremise = typeof row.premise === "string" ? row.premise : "";
+  if (isInternalNote(rawPremise) || isInternalNote(plainCardText(row.premise))) return;
   const allowGreen = Boolean(opts.bottleneck && opts.depth === 0 && !opts.past);
   const state = opts.past ? pastState(row) : whereItStands(row, allowGreen);
   out.push({

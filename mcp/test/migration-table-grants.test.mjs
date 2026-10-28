@@ -116,37 +116,114 @@ function grantsTo(statement, role) {
   return /^\s*grant\b/i.test(statement) && new RegExp(`\\bto\\b[\\s\\S]*\\b${role}\\b`, "i").test(statement);
 }
 
-function relationProblems(sql) {
+function emptyTableSecurity() {
+  return {
+    enabled: false,
+    forced: false,
+    revokedAnon: false,
+    revokedAuth: false,
+    opensAnon: false,
+    grantAllAuth: false,
+  };
+}
+
+function evalTableSecurity(table, statements, initial) {
+  const sec = { ...initial };
+  for (const statement of statements) {
+    if (!mentions(statement, table)) continue;
+    if (/\bdisable\s+row\s+level\s+security/i.test(statement)) sec.enabled = false;
+    else if (/\benable\s+row\s+level\s+security/i.test(statement)) sec.enabled = true;
+    if (/\bno\s+force\s+row\s+level\s+security/i.test(statement)) sec.forced = false;
+    else if (/\bforce\s+row\s+level\s+security/i.test(statement)) sec.forced = true;
+    if (/^\s*revoke\b/i.test(statement) && namesRole(statement, "anon")) sec.revokedAnon = true;
+    if (/^\s*revoke\b/i.test(statement) && namesRole(statement, "authenticated")) sec.revokedAuth = true;
+    if (grantsTo(statement, "anon")) sec.opensAnon = true;
+    if (/^\s*grant\s+all\b/i.test(statement) && grantsTo(statement, "authenticated")) sec.grantAllAuth = true;
+  }
+  return sec;
+}
+
+function securityProblems(table, sec) {
+  const problems = [];
+  if (!sec.enabled) problems.push(`${table} lacks ENABLE ROW LEVEL SECURITY`);
+  if (!sec.forced) problems.push(`${table} lacks FORCE ROW LEVEL SECURITY`);
+  if (!sec.revokedAnon || !sec.revokedAuth) {
+    problems.push(`${table} lacks an explicit GRANT or REVOKE for anon and authenticated`);
+  }
+  if (sec.opensAnon || sec.grantAllAuth) problems.push(`${table} grants anon or GRANT ALL to authenticated`);
+  return problems;
+}
+
+function alterAddColumnTables(cleaned) {
+  const tables = [];
+  for (const match of cleaned.matchAll(
+    /alter\s+table\s+(?:only\s+)?(?:if\s+exists\s+)?([a-z_][a-z0-9_]*\.[a-z_][a-z0-9_]*)\s+add\s+column\b/gi,
+  )) {
+    tables.push(match[1]);
+  }
+  return tables;
+}
+
+function mergeMigrationIntoBaseline(baseline, sql) {
+  const cleaned = stripSqlNoise(sql);
+  const parsed = createdTables(cleaned);
+  if (parsed.error) return;
+  const statements = cleaned.split(";");
+  const createdInFile = parsed.tables;
+  const createdKeys = new Set(createdInFile.map((name) => name.toLowerCase()));
+
+  const checkTables = [...createdInFile];
+  for (const table of alterAddColumnTables(cleaned)) {
+    if (!checkTables.some((name) => name.toLowerCase() === table.toLowerCase())) checkTables.push(table);
+  }
+  for (const match of cleaned.matchAll(
+    /alter\s+table\s+(?:only\s+)?(?:if\s+exists\s+)?([a-z_][a-z0-9_]*\.[a-z_][a-z0-9_]*)/gi,
+  )) {
+    const table = match[1];
+    if (!checkTables.some((name) => name.toLowerCase() === table.toLowerCase())) checkTables.push(table);
+  }
+
+  for (const table of checkTables) {
+    const key = table.toLowerCase();
+    const initial = createdKeys.has(key) ? emptyTableSecurity() : (baseline.get(key) ?? emptyTableSecurity());
+    baseline.set(key, evalTableSecurity(table, statements, initial));
+  }
+}
+
+function buildBaselineBeforeScan() {
+  const baseline = new Map();
+  const older = fs
+    .readdirSync(MIGRATIONS)
+    .filter((name) => name.endsWith(".sql") && name.slice(0, 8) < FIRST_NEW_MIGRATION)
+    .sort();
+  for (const name of older) {
+    mergeMigrationIntoBaseline(baseline, fs.readFileSync(path.join(MIGRATIONS, name), "utf8"));
+  }
+  return baseline;
+}
+
+function relationProblems(sql, priorSecurity = null) {
   const cleaned = stripSqlNoise(sql);
   const parsed = createdTables(cleaned);
   if (parsed.error) return [parsed.error];
   const statements = cleaned.split(";");
   const problems = [];
+  const prior = priorSecurity ?? new Map();
 
-  for (const table of parsed.tables) {
-    let enabled = false;
-    let forced = false;
-    let revokedAnon = false;
-    let revokedAuth = false;
-    let opensAnon = false;
-    let grantAllAuth = false;
-    for (const statement of statements) {
-      if (!mentions(statement, table)) continue;
-      if (/\bdisable\s+row\s+level\s+security/i.test(statement)) enabled = false;
-      else if (/\benable\s+row\s+level\s+security/i.test(statement)) enabled = true;
-      if (/\bno\s+force\s+row\s+level\s+security/i.test(statement)) forced = false;
-      else if (/\bforce\s+row\s+level\s+security/i.test(statement)) forced = true;
-      if (/^\s*revoke\b/i.test(statement) && namesRole(statement, "anon")) revokedAnon = true;
-      if (/^\s*revoke\b/i.test(statement) && namesRole(statement, "authenticated")) revokedAuth = true;
-      if (grantsTo(statement, "anon")) opensAnon = true;
-      if (/^\s*grant\s+all\b/i.test(statement) && grantsTo(statement, "authenticated")) grantAllAuth = true;
-    }
-    if (!enabled) problems.push(`${table} lacks ENABLE ROW LEVEL SECURITY`);
-    if (!forced) problems.push(`${table} lacks FORCE ROW LEVEL SECURITY`);
-    if (!revokedAnon || !revokedAuth) {
-      problems.push(`${table} lacks an explicit GRANT or REVOKE for anon and authenticated`);
-    }
-    if (opensAnon || grantAllAuth) problems.push(`${table} grants anon or GRANT ALL to authenticated`);
+  const createdInFile = parsed.tables;
+  const createdKeys = new Set(createdInFile.map((name) => name.toLowerCase()));
+
+  const tables = [...createdInFile];
+  for (const table of alterAddColumnTables(cleaned)) {
+    if (!tables.some((name) => name.toLowerCase() === table.toLowerCase())) tables.push(table);
+  }
+
+  for (const table of tables) {
+    const key = table.toLowerCase();
+    const isNewInFile = createdKeys.has(key);
+    const initial = isNewInFile ? emptyTableSecurity() : (prior.get(key) ?? emptyTableSecurity());
+    const sec = evalTableSecurity(table, statements, initial);
+    problems.push(...securityProblems(table, sec));
   }
 
   for (const view of createdViews(cleaned)) {
@@ -184,6 +261,50 @@ const LOCKED_TABLE = `
 `;
 
 describe("new migration tables state RLS and grants", () => {
+  it("fails ADD COLUMN without row level security and revokes", () => {
+    const bare = relationProblems(`
+      ALTER TABLE bootstrap_os.companies ADD COLUMN IF NOT EXISTS founder text;
+    `);
+    assert.ok(bare.some((line) => line.includes("bootstrap_os.companies lacks ENABLE ROW LEVEL SECURITY")));
+    assert.ok(bare.some((line) => line.includes("bootstrap_os.companies lacks FORCE ROW LEVEL SECURITY")));
+    assert.ok(bare.some((line) => line.includes("lacks an explicit GRANT or REVOKE")));
+    assert.deepEqual(
+      relationProblems(`
+        ALTER TABLE bootstrap_os.companies ADD COLUMN IF NOT EXISTS founder text;
+        ALTER TABLE bootstrap_os.companies ENABLE ROW LEVEL SECURITY;
+        ALTER TABLE bootstrap_os.companies FORCE ROW LEVEL SECURITY;
+        REVOKE ALL ON TABLE bootstrap_os.companies FROM PUBLIC, anon, authenticated;
+      `),
+      [],
+    );
+    const granted = relationProblems(`
+      ALTER TABLE bootstrap_os.companies ADD COLUMN IF NOT EXISTS founder text;
+      ALTER TABLE bootstrap_os.companies ENABLE ROW LEVEL SECURITY;
+      ALTER TABLE bootstrap_os.companies FORCE ROW LEVEL SECURITY;
+      REVOKE ALL ON TABLE bootstrap_os.companies FROM PUBLIC, anon, authenticated;
+      GRANT ALL ON TABLE bootstrap_os.companies TO authenticated;
+    `);
+    assert.ok(granted.some((line) => line.includes("grants anon or GRANT ALL")));
+    const prior = buildBaselineBeforeScan();
+    assert.equal(prior.get("bootstrap_os.companies")?.enabled, true);
+    assert.equal(prior.get("bootstrap_os.companies")?.forced, true);
+    assert.deepEqual(
+      relationProblems(
+        `
+        ALTER TABLE bootstrap_os.companies ADD COLUMN IF NOT EXISTS starter boolean NOT NULL DEFAULT false;
+      `,
+        prior,
+      ),
+      [],
+    );
+    const newTableBare = relationProblems(`
+      CREATE TABLE public.fresh_widget (id int);
+      ALTER TABLE public.fresh_widget ADD COLUMN IF NOT EXISTS note text;
+    `);
+    assert.ok(newTableBare.some((line) => line.includes("public.fresh_widget lacks ENABLE ROW LEVEL SECURITY")));
+    assert.ok(newTableBare.some((line) => line.includes("public.fresh_widget lacks FORCE ROW LEVEL SECURITY")));
+  });
+
   it("fails a table that skips RLS or skips anon and authenticated", () => {
     assert.deepEqual(
       relationProblems(`
@@ -300,9 +421,11 @@ describe("new migration tables state RLS and grants", () => {
     const files = newMigrationFiles();
     assert.ok(files.includes("20261019_bootstrap_rate_limit.sql"));
     const failures = [];
+    let baseline = buildBaselineBeforeScan();
     for (const name of files) {
       const sql = fs.readFileSync(path.join(MIGRATIONS, name), "utf8");
-      for (const problem of relationProblems(sql)) failures.push(`${name}: ${problem}`);
+      for (const problem of relationProblems(sql, baseline)) failures.push(`${name}: ${problem}`);
+      mergeMigrationIntoBaseline(baseline, sql);
     }
     assert.deepEqual(failures, []);
     const rate = stripSqlNoise(
@@ -407,5 +530,26 @@ describe("new migration tables state RLS and grants", () => {
     } finally {
       await db.close();
     }
+  });
+
+  it("stores the company founder on companies and drops the old put_journey signature", () => {
+    const sql = fs.readFileSync(
+      path.join(MIGRATIONS, "20261021_bootstrap_os_company_founder.sql"),
+      "utf8",
+    );
+    assert.match(sql, /ADD COLUMN IF NOT EXISTS founder text/i);
+    assert.match(sql, /p_founder text/);
+    assert.match(
+      sql,
+      /DROP FUNCTION IF EXISTS public\.bootstrap_os_put_journey\(text, text, text, boolean, int, int, text, text, text, jsonb\)/,
+    );
+    assert.match(sql, /REVOKE ALL ON TABLE bootstrap_os\.companies FROM PUBLIC, anon, authenticated/);
+    assert.match(sql, /GRANT SELECT ON TABLE bootstrap_os\.companies TO authenticated/);
+    assert.match(sql, /\bBEGIN;/);
+    assert.match(sql, /\bCOMMIT;/);
+    assert.match(sql, /ENABLE ROW LEVEL SECURITY/);
+    assert.match(sql, /FORCE ROW LEVEL SECURITY/);
+    assert.match(sql, /Do not migrate/);
+    assert.deepEqual(relationProblems(sql), []);
   });
 });
