@@ -39,8 +39,10 @@ jobs:
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     # fallback: ubuntu-24.04
     runs-on: [self-hosted, spark]
+    needs: user-path
     strategy:
       fail-fast: false
+      max-parallel: 1
       matrix:
         node: ["20", "22"]
     defaults:
@@ -49,8 +51,6 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-        with:
-          clean: true
 
       - name: Setup Node
         uses: actions/setup-node@v4
@@ -109,6 +109,7 @@ jobs:
   user-path:
     name: user-path (stdio · http · role-play · spoken-card eval)
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    needs: onboarding-probe
     # fallback: ubuntu-latest
     runs-on: [self-hosted, spark]
     defaults:
@@ -117,8 +118,6 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-        with:
-          clean: true
 
       - name: Setup Node
         uses: actions/setup-node@v4
@@ -146,8 +145,6 @@ jobs:
     runs-on: [self-hosted, spark]
     steps:
       - uses: actions/checkout@v4
-        with:
-          clean: true
       - name: Required portable files
         run: |
           set -euo pipefail
@@ -189,6 +186,7 @@ jobs:
   onboarding-probe:
     name: onboarding probe (fixtures, never prod)
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    needs: markdown-path
     # fallback: ubuntu-latest
     runs-on: [self-hosted, spark]
     defaults:
@@ -197,8 +195,6 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-        with:
-          clean: true
 
       - name: Setup Node
         uses: actions/setup-node@v4
@@ -231,8 +227,6 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-        with:
-          clean: true
 
       - name: Setup Node
         uses: actions/setup-node@v4
