@@ -79,7 +79,7 @@ This bet board has no bet yet. Name the first bet, who it is for, and what you s
 
 Open your private starter bet board with `create_starter_board`. Name the first bet on this bet board with `create_idea`.
 
-Call `invite_member` to invite an email onto a bet board you can open. They `accept_invite` only with that invited email. Each bet board stays isolated. A login sees only the bet boards that email was invited to. A private starter bet board cannot send invites and cannot become a real company. A later founder seed invite is the only path to a real company.
+Call `invite_member` to invite an email onto a bet board you can open. They `accept_invite` only with that invited email. Each bet board stays isolated. A login sees only the bet boards that email was invited to. A private starter bet board cannot send invites and cannot become a real company. A confirmed account can open up to 3 bet boards.
 
 ## Done when
 

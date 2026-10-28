@@ -15,4 +15,4 @@ Open your private starter bet board. Next tool is create_starter_board.
 
 Name the first bet on this bet board. Next tool is create_idea.
 
-The server catalog is the only format source. A later founder seed invite is the only path to a real company.
+The server catalog is the only format source. A confirmed account can open up to 3 bet boards.

@@ -17,6 +17,7 @@ import {
   resolveStarterStore,
   setStarterStoreForTests,
 } from "../dist/starter-board.js";
+import { BET_BOARD_READY_MESSAGE, MemoryCompanyAdminStore, setCompanyAdminStoreForTests } from "../dist/company-admin.js";
 import { FIRST_BET_STEP, STARTER_BET_BOARD_STEP } from "../dist/setup-steps.js";
 
 const EMAIL = "founder@example.test";
@@ -25,6 +26,7 @@ afterEach(() => {
   setIdentityStoreForTests(undefined);
   setJourneyStoreForTests(undefined);
   setStarterStoreForTests(undefined);
+  setCompanyAdminStoreForTests(undefined);
   delete process.env.VERCEL_ENV;
   delete process.env.BOOTSTRAP_SUPABASE_URL;
   delete process.env.SUPABASE_URL;
@@ -251,6 +253,9 @@ describe("starter bet board (memory, never prod)", { concurrency: false }, () =>
         };
       },
     });
+    setCompanyAdminStoreForTests(
+      new MemoryCompanyAdminStore([{ email: "admin@example.test", role: "super_admin" }]),
+    );
     const exp = Math.floor(Date.now() / 1000) + 3600;
     const guest = syntheticAccessToken({ email: "guest@example.test", sub: "auth-guest", extra: { exp } });
     const admin = syntheticAccessToken({ email: "admin@example.test", sub: "auth-admin", extra: { exp } });
@@ -263,18 +268,21 @@ describe("starter bet board (memory, never prod)", { concurrency: false }, () =>
         )
       ).body,
     );
-    assert.equal(guestCompany.setupSteps[0].id, "starter-bet-board");
+    assert.equal(guestCompany.ok, true);
+    assert.equal(guestCompany.slug, "alpha");
+    assert.equal(guestCompany.message, BET_BOARD_READY_MESSAGE);
     const adminCompany = toolJson(
       (
         await rpc(
           "tools/call",
-          { name: "create_company", arguments: { slug: "alpha", founderYes: true, why: "a real company" } },
+          { name: "create_company", arguments: { slug: "bravo", founderYes: true, why: "a real company" } },
           admin,
         )
       ).body,
     );
     assert.equal(adminCompany.setupSteps, undefined);
-    assert.equal(adminCompany.error, "ask_admin");
+    assert.equal(adminCompany.ok, true);
+    assert.equal(adminCompany.slug, "bravo");
   });
 
   it("retries a colliding slug and stops when every try collides", async () => {

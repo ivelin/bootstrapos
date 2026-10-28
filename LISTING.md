@@ -27,7 +27,7 @@ Open your private starter bet board. Next tool is create_starter_board. Name the
 
 - "Where are we?" Shows your bet board, the bet card for each idea, and this week's biggest bottleneck.
 - "Invite bill@example.test to alpha." Sends a teammate an invite to a bet board you already belong to. A starter bet board cannot send invites.
-- "Create a company called charlie." `create_company` is shown to every signed-in account. Only a super admin can run it.
+- "Create a company called charlie." `create_company` is shown to every signed-in account. A confirmed account can open up to 3 bet boards. A super admin still uses the admin path.
 
 Moving an idea to a new stage needs your approval.
 

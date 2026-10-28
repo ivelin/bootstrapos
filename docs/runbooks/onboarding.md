@@ -20,7 +20,8 @@ That builds, then runs `node scripts/onboarding-probe.mjs`, which runs `test/onb
 |------|--------|------|
 | No bearer, or a rejected / revoked token | 401 | `error: invalid_token`, `reason` is the exact failure (`missing_or_short_token`, `invalid_or_revoked_token`, …) |
 | Verified session, no bet board | 200 | `reason: no_membership`, `setupSteps` for the private starter bet board. Not a rejected token. |
-| `invite_member` / `create_company` with no bet board | 200 | Same `setupSteps`. No `WWW-Authenticate`. A super admin still reaches `create_company`. |
+| `invite_member` with no bet board | 200 | Same `setupSteps`. No `WWW-Authenticate`. |
+| `create_company` with no bet board | 200 | A confirmed account opens a bet board. A super admin still uses the admin path. No `WWW-Authenticate`. |
 
 SQL `bootstrap_mcp_my_labels` still says `not_invited`. The handler upgrades that. Clients must branch on `error` / `reason`, not on “the server rejected the access it just issued.”
 

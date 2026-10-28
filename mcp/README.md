@@ -11,7 +11,7 @@
 | **1. Point an AI** | Free GitHub docs. Constitution. | None |
 | **2. Optional instance / CLI** | Notes in your repo. Not the source of record. | `./scripts/install-instance.sh` |
 | **Self-host kit (this package)** | Your own disk or your own Vercel + Supabase | Node 20+, this package |
-| **Hosted MCP** | Pirin-supported mentees | Pin `https://mcp.bootstrap.pirin.ai/mcp` (handshake 401). Super admin calls `create_company`, then `create_idea`. Free docs = GitHub + install-os + local. The hosted connector uses sign-in. Git-branch previews on `*.vercel.app` (same 401 as collab, not a silent 200, not mentee-ready boards). Contract: [`docs/HOSTED_IDENTITY.md`](docs/HOSTED_IDENTITY.md). See [mcp/docs/MARKETPLACE.md](docs/MARKETPLACE.md). Not pirin.ai. |
+| **Hosted MCP** | Pirin-supported mentees | Pin `https://mcp.bootstrap.pirin.ai/mcp` (handshake 401). A confirmed account can open up to 3 bet boards with `create_company`. A super admin can still create one, then `create_idea`. Free docs = GitHub + install-os + local. The hosted connector uses sign-in. Git-branch previews on `*.vercel.app` (same 401 as collab, not a silent 200, not mentee-ready boards). Contract: [`docs/HOSTED_IDENTITY.md`](docs/HOSTED_IDENTITY.md). See [mcp/docs/MARKETPLACE.md](docs/MARKETPLACE.md). Not pirin.ai. |
 
 Same state as markdown: `company-state.json` + `where-are-we.py`. Isolation is hard: no shared phase/evidence across `companyId`. MCP never writes `company-os/` template files.
 
