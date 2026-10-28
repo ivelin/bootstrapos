@@ -4,9 +4,13 @@
  * The invite URL email is never the authority — only the verified session email.
  */
 import type { HostedWhoami } from "./identity.js";
+import {
+  setupForZeroCompany,
+  ZERO_COMPANY_GUIDANCE,
+  type SetupPayload,
+} from "./setup-steps.js";
 
-export const NO_BOARDS_HINT =
-  "No boards yet. Ask your inviter to resend the invite to this email.";
+export const NO_BOARDS_HINT = ZERO_COMPANY_GUIDANCE;
 
 export const SESSION_GRANT_PATH = "/bootstrap-os/session";
 
@@ -47,7 +51,7 @@ export function noBoardsPayload(email?: string | null): {
   reason: "no_membership";
   hint: string;
   note: string;
-} {
+} & SetupPayload {
   return {
     ok: true,
     authenticated: true,
@@ -57,6 +61,7 @@ export function noBoardsPayload(email?: string | null): {
     reason: "no_membership",
     hint: NO_BOARDS_HINT,
     note: NO_BOARDS_HINT,
+    ...setupForZeroCompany(),
   };
 }
 
@@ -68,7 +73,7 @@ export type SessionGrantBody = {
   companies: string[];
   reason: "no_membership" | null;
   hint: string | null;
-};
+} & Partial<SetupPayload>;
 
 /** What the pirin.ai login page renders after Allow. Grant succeeds either way. */
 export function sessionGrantBody(who: HostedWhoami): SessionGrantBody {
@@ -82,6 +87,7 @@ export function sessionGrantBody(who: HostedWhoami): SessionGrantBody {
     companies,
     reason: empty ? "no_membership" : null,
     hint: empty ? NO_BOARDS_HINT : null,
+    ...(empty ? setupForZeroCompany() : {}),
   };
 }
 

@@ -10,7 +10,7 @@ export type HostedRequestContext = {
   /** Journey ACL actor. Separate from whoami labels. Owner comes from ACL, not free text. */
   actor?: JourneyActor;
   /** JWT email/sub for invite/accept. Present even when whoami is not_invited. */
-  inviteActor?: { email?: string; sub?: string };
+  inviteActor?: { email?: string; sub?: string; name?: string };
   /** Raw pirin.ai access token. Invite RPCs use it. Never log. */
   accessToken?: string;
   /** In-memory active-company key for this HTTP request. */

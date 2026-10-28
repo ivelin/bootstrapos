@@ -22,7 +22,7 @@ export const COMPANY_LABEL_RE = /^[a-z0-9][a-z0-9_-]{0,31}$/;
 export const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export const INVITE_ACCEPT_NOTE =
-  "Optional Accept card for MCP clients that render tool results. Login URL is the universal path. Mail (bootstrap@) carries the same token. JWT email must match.";
+  "Accept only with the invited email. You join that bet board. Login URL is the universal path. Mail (bootstrap@) carries the same token.";
 
 export const INVITE_IN_CHAT_OUTBOX_NOTE =
   "In-chat Accept. Raw invite token is not stored on this channel.";
@@ -589,7 +589,7 @@ export class MemoryInviteStore implements InviteStore {
       email: mentee.email,
       labels: [...mentee.labels],
       companyWorkspace: row.companyLabel,
-      note: "Allowlist bound. Companies this login can open.",
+      note: "You joined this bet board. Accept only with the invited email.",
     };
   }
 

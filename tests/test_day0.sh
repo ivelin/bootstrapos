@@ -174,7 +174,7 @@ fi
 
 if grep -qi 'not mentee-ready' README.md \
   && grep -q 'plugin/' README.md \
-  && grep -q 'Path 1 stays' README.md \
+  && grep -q 'Free GitHub docs are the alternative' README.md \
   && grep -q 'vercel.app' README.md \
   && ! grep -q 'https://mcp.pirin.ai' README.md; then
   ok "README hosted MCP honesty (preview vercel.app, not mentee-ready, not pirin.ai)"
@@ -711,7 +711,7 @@ assert "is not GTM" in standing
 assert "verbal maybe" in standing
 assert "Do not speak as Ivelin" in standing
 assert "Do not host mentee" in standing
-assert "Path 1 stays the front door" in standing
+assert "Free GitHub docs are the alternative" in standing
 assert "plugin/README.md#feedback" in standing
 assert "ivelin@pirin.ai" not in standing
 assert "is this price optimal" in standing

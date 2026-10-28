@@ -23,21 +23,35 @@ export function parseBearerToken(header: string | null | undefined): string | un
   return token.length >= 16 ? token : undefined;
 }
 
-/**
- * Decode email then sub. Ignore FAST / role / group claims.
- * This PR does not live-probe JWKS or supabase-pirin-ai.
- */
+function claimDisplayName(
+  payload: { name?: unknown; user_metadata?: unknown },
+  email?: string,
+): string | undefined {
+  const direct = typeof payload.name === "string" ? payload.name.trim() : "";
+  const meta = payload.user_metadata;
+  let fromMeta = "";
+  if (meta && typeof meta === "object") {
+    const record = meta as { full_name?: unknown; name?: unknown };
+    if (typeof record.full_name === "string" && record.full_name.trim()) fromMeta = record.full_name.trim();
+    else if (typeof record.name === "string") fromMeta = record.name.trim();
+  }
+  const named = direct || fromMeta;
+  if (!named) return undefined;
+  if (email && named.toLowerCase() === email) return undefined;
+  return named;
+}
+
 export function actorClaimsFromAccessToken(
   token: string,
-): { email?: string; sub?: string } | null {
+): { email?: string; sub?: string; name?: string } | null {
   if (!isJwtAccessToken(token)) return null;
   try {
     const payload = JSON.parse(Buffer.from(token.split(".")[1], "base64url").toString("utf8")) as {
       email?: unknown;
       sub?: unknown;
-      fast?: unknown;
+      name?: unknown;
+      user_metadata?: unknown;
     };
-    void payload.fast;
     const email =
       typeof payload.email === "string" && payload.email.trim()
         ? payload.email.trim().toLowerCase()
@@ -45,7 +59,8 @@ export function actorClaimsFromAccessToken(
     const sub =
       typeof payload.sub === "string" && payload.sub.trim() ? payload.sub.trim() : undefined;
     if (!email && !sub) return null;
-    return { email, sub };
+    const name = claimDisplayName(payload, email);
+    return name ? { email, sub, name } : { email, sub };
   } catch {
     return null;
   }

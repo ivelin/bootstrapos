@@ -105,7 +105,7 @@ async function main() {
     assert.equal(path.resolve(info.paths.dataRoot), path.resolve(dataRoot));
     assert.match(JSON.stringify(info.adoptionOrder), /not mentee-ready boards/);
     assert.match(JSON.stringify(info.adoptionOrder), /Not pirin\.ai/);
-    assert.match(JSON.stringify(info.adoptionOrder), /Path 1 stays the front door/);
+    assert.match(JSON.stringify(info.adoptionOrder), /Free GitHub docs are the alternative/);
     assert.equal(info.marketplace, false);
     assert.match(JSON.stringify(info.houseRules), /observed wins/i);
     assert.match(JSON.stringify(info.houseRules), /spoken yes cannot promote/i);

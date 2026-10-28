@@ -41,7 +41,6 @@ import { resolveInviteStore } from "./invite.js";
 import {
   ignoredSessionEmail,
   isSessionGrantPath,
-  NO_BOARDS_HINT,
   presentVerifiedWhoami,
   sessionGrantBody,
 } from "./onboarding.js";
@@ -121,35 +120,6 @@ export function unauthorizedGatedToolResponse(
       reason: reason ?? null,
     }),
     { status: 401, headers },
-  );
-}
-
-const MEMBERSHIP_REQUIRED = new Set(["invite_member", "create_company"]);
-
-const JOURNEY_READ = new Set([
-  "get_journey",
-  "bootstrap_where_are_we",
-  "list_provenance",
-  "list_subscribers",
-]);
-
-export function noMembershipResponse(whoami: HostedWhoami | undefined, req?: Request): Response {
-  const resource = hostedMcpResource(req);
-  return new Response(
-    JSON.stringify({
-      error: "no_membership",
-      reason: "no_membership",
-      error_description: NO_BOARDS_HINT,
-      identityStore: whoami?.identityStore ?? "unset",
-      resource,
-    }),
-    {
-      status: 403,
-      headers: {
-        ...corsHeaders(),
-        "Content-Type": "application/json; charset=utf-8",
-      },
-    },
   );
 }
 
@@ -393,7 +363,7 @@ export async function handleHostedReadFetch(req: Request): Promise<Response> {
         }
         actor = resolveGatedActor(authorization);
         if (!actor.authenticated) {
-          if (whoami.reason === "no_membership" && JOURNEY_READ.has(gatedName)) {
+          if (whoami.reason === "no_membership") {
             actor = {
               authenticated: true,
               email: whoami.email,
@@ -401,14 +371,10 @@ export async function handleHostedReadFetch(req: Request): Promise<Response> {
               identityStore: actor.identityStore,
               reason: "no_membership",
             };
-          } else if (whoami.reason === "no_membership") {
-            return noMembershipResponse(whoami, req);
           } else {
             return unauthorizedGatedToolResponse(whoami, req, actor);
           }
         }
-      } else if (whoami.reason === "no_membership" && MEMBERSHIP_REQUIRED.has(gatedName)) {
-        return noMembershipResponse(whoami, req);
       } else if (!whoami.authenticated) {
         return unauthorizedGatedToolResponse(whoami, req);
       }

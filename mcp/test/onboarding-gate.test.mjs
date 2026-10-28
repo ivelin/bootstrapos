@@ -144,8 +144,10 @@ describe("onboarding gate (PGlite, same commit, never prod)", { concurrency: fal
       inviteToken: "inv_fixture_token_xxxxxxxx",
       expiresAt: "2030-01-01T00:00:00.000Z",
     });
-    assert.match(mail.text, /Open this to sign in or create your account/);
-    assert.equal((mail.text.match(/https:\/\//g) || []).length, 1);
+    assert.match(mail.text, /Base camp is ready\./);
+    assert.equal((mail.text.match(/\?invite=/g) || []).length, 1);
+    assert.equal((mail.text.match(/https:\/\//g) || []).length, 2);
+    assert.match(mail.text, /https:\/\/mcp\.bootstrap\.pirin\.ai\/mcp/);
     assert.match(mail.signupUrl, /\?invite=inv_fixture_token_xxxxxxxx/);
     assert.doesNotMatch(mail.text, /Sign in first/i);
     assert.doesNotMatch(mail.text, /already has an account/i);
@@ -268,7 +270,7 @@ describe("onboarding gate (PGlite, same commit, never prod)", { concurrency: fal
     assert.equal(after.companies.includes("zzz"), false);
   });
 
-  it("bug 9: 401 says invalid_token and 403 says no_membership", async () => {
+  it("bug 9: 401 says invalid_token and a zero-company invite returns setupSteps", async () => {
     useStores();
     const missing = await callTool("bootstrap_whoami", {});
     assert.equal(missing.res.status, 401);
@@ -276,13 +278,23 @@ describe("onboarding gate (PGlite, same commit, never prod)", { concurrency: fal
     assert.equal(missingBody.error, "invalid_token");
     assert.equal(missingBody.reason, "missing_or_short_token");
     const access = tokenFor("plain-guest@example.test", "15151515-1515-4515-8515-151515151515");
+    const before = (
+      await db.query("SELECT count(*)::int AS n FROM bootstrap_mcp_invites WHERE invitee_email = 'other@example.test'")
+    ).rows[0].n;
     const denied = await callTool("invite_member", { email: "other@example.test", company: "alpha" }, access);
-    assert.equal(denied.res.status, 403);
+    assert.equal(denied.res.status, 200);
     const deniedBody = JSON.parse(denied.text);
-    assert.equal(deniedBody.error, "no_membership");
-    assert.equal(deniedBody.reason, "no_membership");
+    assert.notEqual(deniedBody.result.isError, true);
+    const payload = JSON.parse(deniedBody.result.content.map((part) => part.text).join("\n"));
+    assert.equal(payload.reason, "no_membership");
+    assert.equal(payload.setupSteps[0].id, "starter-bet-board");
+    assert.equal(payload.setupSteps[0].nextTool, "create_starter_board");
     assert.equal(denied.res.headers.get("WWW-Authenticate"), null);
     assert.doesNotMatch(denied.text, /invalid_token/);
+    const after = (
+      await db.query("SELECT count(*)::int AS n FROM bootstrap_mcp_invites WHERE invitee_email = 'other@example.test'")
+    ).rows[0].n;
+    assert.equal(after, before);
   });
 
   it("existing user plus a new invite, case-insensitive email, wrong email, expired, double accept", async () => {

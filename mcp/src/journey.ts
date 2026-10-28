@@ -1204,22 +1204,29 @@ export class MemoryJourneyStore implements JourneyStore {
     return rlsVisibleAcl(this.acl, actor).length > 0;
   }
 
-  ensureCompanyForMember(slug: string, actor: JourneyActor): CompanyRow {
+  ensureCompanyForMember(
+    slug: string,
+    actor: JourneyActor,
+    options?: { seedIdea?: boolean },
+  ): CompanyRow {
     const want = normalizeSlug(slug);
+    const seedIdea = options?.seedIdea !== false;
     let company = this.companyBySlug(want);
     if (!company) {
       company = { id: this.nextId("co"), slug: want, label: want };
       this.companies.push(company);
-      this.ideas.push({
-        id: this.nextId("id"),
-        companyId: company.id,
-        slug: "default",
-        name: want,
-        journeyPhase: 1,
-        loopStage: 1,
-        currentGate: "hold",
-        scoreboard: defaultScoreboard(),
-      });
+      if (seedIdea) {
+        this.ideas.push({
+          id: this.nextId("id"),
+          companyId: company.id,
+          slug: "default",
+          name: want,
+          journeyPhase: 1,
+          loopStage: 1,
+          currentGate: "hold",
+          scoreboard: defaultScoreboard(),
+        });
+      }
     }
     if (actor.email) {
       const exists = this.acl.some(

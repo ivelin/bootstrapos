@@ -79,6 +79,12 @@ jobs:
       - name: HTTP hosted-read smoke (no local clone)
         run: node test/http-mcp.client.mjs
 
+      - name: PostgreSQL 16
+        run: sudo apt-get update && sudo apt-get install -y postgresql-16
+
+      - name: PostgreSQL 16 starter subscribe
+        run: npm run test:pg16
+
       - name: Dist hygiene (no source maps required; entry exists)
         run: |
           test -f dist/index.js

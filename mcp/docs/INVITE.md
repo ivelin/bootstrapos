@@ -50,7 +50,7 @@ The raw token is shown **once** on the Accept card (and on the sign-in Auth card
 
 Auth card `action` is **Sign in or create account** (valid for first-time and returning users). Do not enumerate to the inviter whether the email is already a Bootstrap OS user.
 
-Invite mail is one link. The line is “Open this to sign in or create your account”, then `https://pirin.ai/bootstrap-os/login?invite=<token>`. The signed-in email is matched to the invite. The token alone does not grant access. This host does not take a password in a tool argument.
+Invite mail follows the pirin-ai template. The dry-run mirror is for tests only. The signup link is `https://pirin.ai/bootstrap-os/login?invite=<token>`. The signed-in email is matched to the invite. Accept only with the invited email. The token alone does not grant access. This host does not take a password in a tool argument. The MCP connect lines stay `Install the Bootstrap OS connector.`, `https://mcp.bootstrap.pirin.ai/mcp`, and `Sign in on pirin.ai with the invited email. Then ask where you are.`
 
 ## Token
 
@@ -101,7 +101,7 @@ Content-Type: application/json
 | `invite` | Optional. A token without a matching session grants nothing. |
 | Success | HTTP **200** `{ ok, authenticated, grant: "allow", email, companies, reason, hint }`. |
 | Boards | `companies` is the membership list. `reason` and `hint` are null. |
-| No boards | Still `grant: "allow"`. `reason: "no_membership"`. `hint` is exactly `No boards yet. Ask your inviter to resend the invite to this email.` |
+| No bet board | Still `grant: "allow"`. `reason: "no_membership"`. `hint` and `guidance` tell the person to open a private starter bet board. `setupSteps` names `create_starter_board`. |
 | Revoked access token | HTTP **401** `error: invalid_token`, `reason: invalid_or_revoked_token`. Another live token for the same GoTrue user still works. |
 
 Repeated Allow for the same GoTrue user reuses one user row and one OAuth subject. It rotates `rotated_at`. It does not insert a second user. Each distinct access-token hash is one row. The same hash twice does not duplicate.

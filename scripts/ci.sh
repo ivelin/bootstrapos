@@ -33,4 +33,11 @@ fi
 test -f "$ROOT/mcp/dist/initiative-card.js"
 (cd "$ROOT/mcp" && node --test test/spoken-card-eval.test.mjs test/board-card-golden.test.mjs)
 
+# After the suite. Synchronous psql must not share the test runner with the E2E files.
+if ! test -x /usr/lib/postgresql/16/bin/initdb; then
+  echo "PostgreSQL 16 initdb is required for npm run test:pg16" >&2
+  exit 1
+fi
+(cd "$ROOT/mcp" && npm run test:pg16)
+
 echo "CI OK"

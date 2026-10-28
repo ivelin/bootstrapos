@@ -1,0 +1,19 @@
+Base camp is ready.
+
+founder@example.test invited you to alpha, a private bet board on Bootstrap OS. Only people invited to it can join.
+
+Bring your own AI agent. Connect it to the bet board, and work on it together.
+
+Enter base camp:
+https://pirin.ai/bootstrap-os/login?invite=inv_fixture_token_xxxxxxxx
+
+Sign in or create your account as member@example.test, then press Accept invite. Invited by founder@example.test.
+
+Connect your agent:
+Install the Bootstrap OS connector.
+https://mcp.bootstrap.pirin.ai/mcp
+Sign in on pirin.ai with the invited email. Then ask where you are.
+
+Not expecting this? You can ignore this email. Nothing happens unless you accept.
+
+Bootstrap OS, by pirin.ai

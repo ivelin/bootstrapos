@@ -11,7 +11,7 @@ Critical paths run in CI on **PGlite** before any prod synthetic. Evidence: `mcp
 | ID | Role-play | Path | CI now |
 |----|-----------|------|--------|
 | R1 | PM empty / uninvited context | No Bearer → handshake + gated `bootstrap_whoami` HTTP **401** (`missing_or_short_token`) | Yes |
-| R2 | PM valid JWT, no mentee row | Gated whoami HTTP **200**, `reason: no_membership`, hint “No boards yet…”. SQL still returns `not_invited`. Not open login. Not a 401. | Yes |
+| R2 | PM valid JWT, no mentee row | Gated whoami HTTP **200**, `reason: no_membership`, `setupSteps` for the private starter bet board. SQL still returns `not_invited`. Not open login. Not a 401. | Yes |
 | R3 | CTO first-user rebuild | SQL insert (email lowercased) + optional label → invited whoami **PASS**. Prefer `alpha` as the outsider-identical fixture label. | Yes (fixture) |
 | R4 | Wrong token | Non-JWT / unusable Bearer → gated **401** (`not_a_pirin_access_token` or `invalid_or_revoked_token`). No label leak. | Yes |
 | R5 | Expired token | JWT `exp` in the past → gated **401** `invalid_or_revoked_token`. Fixture-allowed only — this host does not verify JWKS. | Yes |
@@ -39,7 +39,7 @@ Do **not** run these from a PR cloud agent. Optional maintainer probe of **read-
 | Whoami invited | Bearer Cos already has (seed founder fixture) | `authenticated: true`, companies include `alpha`. |
 | Whoami empty | No `Authorization` | HTTP **401** (same challenge) |
 | Deploy Host | `https://bootstrap-os-mcp.vercel.app` | Same handshake **401**. Not a Path 1 pin. Not a silent 200. |
-| Rollback | Vercel project `bootstrap-os-mcp` → Deployments → Redeploy / previous production | Path 1 (GitHub) stays the front door |
+| Rollback | Vercel project `bootstrap-os-mcp` → Deployments → Redeploy / previous production | Free GitHub docs stay the alternative |
 
 `mcp/test/preview-live.mjs` is the optional handshake/`/health` probe. It is **not** in `npm run ci`. It must **not** call invited whoami, mutate prod, or apply migrations.
 
