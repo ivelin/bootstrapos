@@ -4,7 +4,7 @@
     "name": "Ivelin Ivanov"
   },
   "metadata": {
-    "description": "Preview Bootstrap OS plugin. See mcp/docs/MARKETPLACE.md. Not mentee-ready hosted boards.",
+    "description": "Bootstrap OS by pirin.ai. Hosted bet board connector. See mcp/docs/MARKETPLACE.md.",
     "version": "0.1.1"
   },
   "plugins": [
@@ -12,7 +12,7 @@
       "name": "bootstrap-os",
       "source": "plugin",
       "version": "0.1.1",
-      "description": "Preview pointer to published Bootstrap OS. Skills hyperlink the constitution. Free GitHub docs are the alternative. Not mentee-ready hosted boards."
+      "description": "Hosted bet board connector for solo founders. See mcp/docs/MARKETPLACE.md."
     }
   ]
 }

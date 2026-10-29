@@ -2,7 +2,7 @@
 
 Process bar stays on **Vercel’s current** Git integration, preview, env, and tests. No second CI host. Free Path 1 is GitHub + install-os + local. The hosted connector uses sign-in. Pin `https://mcp.bootstrap.pirin.ai/mcp`. Handshake 401. Optional gated identity (whoami + labels) uses the existing pirin.ai Supabase — not a new Neon, not company-state. Contract: [`mcp/docs/HOSTED_IDENTITY.md`](../mcp/docs/HOSTED_IDENTITY.md).
 
-This is a **preview package**. Not mentee-ready hosted boards. Free GitHub docs are the alternative.
+This is a **preview package**. Free GitHub docs are the alternative.
 
 ## Locked (CI / file)
 
@@ -19,7 +19,7 @@ This is a **preview package**. Not mentee-ready hosted boards. Free GitHub docs 
 | OS 2.8.9 house rule (once) | `company-os/operating-system.md` | Full text of *do not automate a step that should not exist*. One bottleneck this week. Pointers only elsewhere. |
 | Day 0 question (once) | `company-os/operating-system.md` | Full text of *lifestyle or swinging for the fences*. First-hour / Path 1 keep a short pin + link. |
 | After First Hour standing rules (once) | `company-os/first-hour.md` | Full line: Free Path 1 does not use a hosted MCP connector. The hosted connector uses sign-in. See [mcp/docs/MARKETPLACE.md](../mcp/docs/MARKETPLACE.md). The pin `https://mcp.bootstrap.pirin.ai/mcp` is the Pirin write plane (`create_company` then `create_idea`). Do not upload mentee work to Ivelin's GitHub. Path 1 stays `https://github.com/ivelin/bootstrap`. Skills / plugin README pin + link only. |
-| Hosted-read surface (local) | `mcp` unit + HTTP smoke | `/health` → `ok`. Public read tools. Gated whoami/labels 401 + WWW-Authenticate. No company-state. `marketplace: false`. |
+| Hosted-read surface (local) | `mcp` unit + HTTP smoke | `/health` → `ok`. Public read tools. Gated whoami/labels 401 + WWW-Authenticate. No company-state. `marketplace: true`. |
 | Optional identity + RLS | `identity.test.mjs` + `identity-rls.test.mjs` + `identity-pglite.test.mjs` | 401 + exact pirin.ai challenge. PGlite FORCE RLS (never the live project). Ivelin fixture labels. |
 | Skill OS links | plugin-hyperlinks unit | Skills only hyperlink the published OS. |
 | Day-0 + MCP CI | `./scripts/ci.sh`, `cd mcp && npm run ci` | Same workflows as today (GitHub Actions + Vercel). |
@@ -38,7 +38,7 @@ This is a **preview package**. Not mentee-ready hosted boards. Free GitHub docs 
 | A human actually signed in as Ivelin and called whoami on the live pin | File/fixture lock only. Do not claim a paste that is not in this PR. |
 | pirin.ai `/bootstrap-os/login` | Contract in `mcp/docs/HOSTED_IDENTITY.md`. Login + OAuth + protected-resource metadata live on pirin.ai (Web Builder). This host returns 401 + `WWW-Authenticate`. Not this repo. Do not add a login UI here. |
 | Extra connectors / mentee roster / usage analytics as proof | Out. |
-| Journey SQL on pirin.ai / mentee-ready boards | This branch ships SQL + PGlite tests only. Not the production pin. Do not merge. |
+| Journey SQL on the hosted pin | This branch ships SQL + PGlite tests only. Not the production pin. Do not merge. |
 | A founder actually answering lifestyle vs fences, or setting a first price | File pins are locked. The conversation is not. |
 | Production `bootstrap_os_info.osVersion` already `2.8.9` | Draft PR. Prod still serves the last production deploy until merge + Vercel production. |
 | CAC / LTV / day-31 / day-90 / NRR / magic-number numbers on Path 1 | Must stay absent. CI locks the absence. |
@@ -146,4 +146,4 @@ Full checklist (whoami invited/uninvited, handshake 401, `GET /health`, Vercel *
 
 ## Honesty
 
-Green CI on this PR is **packaging + preview-host honesty**, not demand, not PMF, not mentee-ready boards.
+Green CI on this PR is **packaging + preview-host honesty**, not demand, not PMF.

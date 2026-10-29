@@ -38,7 +38,7 @@ describe("Bootstrap Bill install docs", () => {
     assert.doesNotMatch(body, /vercel\.app/);
     assert.doesNotMatch(body, /mcp\.pirin\.ai/);
     assert.match(readme, /docs\/install-bill\.md/);
-    assert.match(readme, /That is not Path 1/);
+    assert.match(readme, /The hosted connector is how you open a bet board/);
     assert.doesNotMatch(readme, /Grok Bot template|Bootstrap OS Bot Client/i);
   });
 });

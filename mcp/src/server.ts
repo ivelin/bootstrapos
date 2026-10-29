@@ -199,12 +199,12 @@ function registerReadTools(server: McpServer, surface: McpSurface, hosted?: Host
         ],
         houseRules: HOUSE_RULE_LINES,
         houseRulePins: HOUSE_RULE_PINS,
-        marketplace: false,
+        marketplace: true,
         support: SUPPORT_HOWTO,
         pluginPreview: {
           path: "plugin/",
           version: "0.1.1",
-          note: "Preview Agent Plugin 0.1.1. Skills hyperlink the published OS. See mcp/docs/MARKETPLACE.md. Not mentee-ready hosted boards. Free GitHub docs are the alternative.",
+          note: "Preview Agent Plugin 0.1.1. Skills hyperlink the published OS. See mcp/docs/MARKETPLACE.md. Free GitHub docs are the alternative.",
         },
         commit: process.env.VERCEL_GIT_COMMIT_SHA?.trim() || null,
       };
@@ -214,7 +214,7 @@ function registerReadTools(server: McpServer, surface: McpSurface, hosted?: Host
           founderVoice: FOUNDER_INTRO,
           doNotRecite: "Client format: the founderVoice paragraph, then the live board.",
           surface,
-          marketplace: false,
+          marketplace: true,
           support: SUPPORT_HOWTO,
           adoptionOrder: adoptionOrder(surface),
           pluginPreview: {

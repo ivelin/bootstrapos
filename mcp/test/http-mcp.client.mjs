@@ -138,7 +138,7 @@ async function main() {
     assert.match(JSON.stringify(info.companyState), /board for each company|Not hosted/i);
     assert.match(String(info.founderVoice), /every team you belong to/);
     assert.match(String(info.founderVoice), /Ideas under that company are the customer bets/);
-    assert.equal(info.marketplace, false);
+    assert.equal(info.marketplace, true);
     assert.ok(!info.paths?.statePath, "hosted-read must not expose founder state paths");
 
     const gated = await fetch(hosted.url, {

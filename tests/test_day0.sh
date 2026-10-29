@@ -145,41 +145,41 @@ else
   ok "first-hour.md has no sibling-only constitution links"
 fi
 
-# --- f) README adoption order + hosted MCP honesty ---
-if grep -q 'How to use this (pick one)' README.md; then
-  ok "README has How to use this (pick one)"
+# --- f) README plugin page + hosted connector ---
+if grep -q 'Bootstrap OS by pirin.ai' README.md \
+  && grep -q '## How to connect' README.md \
+  && grep -q 'bootstrap@pirin.ai' README.md \
+  && grep -q 'https://pirin.ai/privacy' README.md \
+  && grep -q 'https://pirin.ai/terms' README.md \
+  && grep -q 'The hosted connector is how you open a bet board' README.md \
+  && ! grep -qi 'not mentee-ready' README.md \
+  && ! grep -qi 'not listed' README.md \
+  && ! grep -qi 'company board' README.md; then
+  ok "README is the Bootstrap OS by pirin.ai plugin page"
 else
-  not_ok "README missing How to use this (pick one)"
+  not_ok "README must be the plugin page: bet board, hosted connector, privacy, terms"
 fi
 
-if grep -q '### 1. Point an AI at this pack' README.md; then
-  ok "README has ### 1. Point an AI at this pack"
-else
-  not_ok "README missing ### 1. Point an AI at this pack"
-fi
-
-# "Point an AI" must appear before the install-script invocation.
 if awk '
-  /Point an AI/ { seen = 1 }
+  /The hosted connector is how you open a bet board/ { seen = 1 }
   /\.\/scripts\/install-instance\.sh/ {
     if (seen) exit 0
     exit 1
   }
   END { if (!seen) exit 1 }
 ' README.md; then
-  ok "README: Point an AI appears before ./scripts/install-instance.sh"
+  ok "README: hosted connector appears before ./scripts/install-instance.sh"
 else
-  not_ok "README: Point an AI must appear before ./scripts/install-instance.sh"
+  not_ok "README: hosted connector must appear before ./scripts/install-instance.sh"
 fi
 
-if grep -qi 'not mentee-ready' README.md \
+if grep -q 'https://mcp.bootstrap.pirin.ai/mcp' README.md \
   && grep -q 'plugin/' README.md \
   && grep -q 'Free GitHub docs are the alternative' README.md \
-  && grep -q 'vercel.app' README.md \
   && ! grep -q 'https://mcp.pirin.ai' README.md; then
-  ok "README hosted MCP honesty (preview vercel.app, not mentee-ready, not pirin.ai)"
+  ok "README names the hosted connector and does not name the dead host"
 else
-  not_ok "README must stay honest: preview vercel.app host, not mentee-ready boards, not pirin.ai"
+  not_ok "README must name the hosted connector and must not name https://mcp.pirin.ai"
 fi
 
 # --- g) evidence-label refinements (stated / synthetic / observed) ---
@@ -326,8 +326,7 @@ if grep -q '# --- h) evidence-method locks' tests/test_day0.sh; then
 else
   not_ok "test_day0.sh section h must be evidence-method locks"
 fi
-if grep -q '2.8.2' company-os/operating-system.md \
-  && grep -q '2.8.2' README.md; then
+if grep -q '2.8.2' company-os/operating-system.md; then
   ok "changelog still records 2.8.2"
 else
   not_ok "OS and README must still record 2.8.2"
@@ -356,7 +355,7 @@ if ! grep -qi 'Aaru\|Simile\|Verasight\|Electric Twin' company-os/operating-syst
 else
   not_ok "constitution must not name Aaru/Simile/Verasight/Electric Twin"
 fi
-if grep -q '2.8.3' company-os/operating-system.md && grep -q '2.8.3' README.md; then
+if grep -q '2.8.3' company-os/operating-system.md; then
   ok "changelog still records 2.8.3"
 else
   not_ok "OS and README must still record 2.8.3"
@@ -374,10 +373,10 @@ if grep -q 'Additive by default' company-os/operating-system.md \
 else
   not_ok "v2.8.4 must stay additive: stability contract, cards stay, packs optional"
 fi
-if grep -q 'Additive, rarely breaking' README.md; then
-  ok "README template policy is additive / rarely breaking"
+if grep -q 'rarely breaking' company-os/operating-system.md; then
+  ok "OS stability contract is rarely breaking"
 else
-  not_ok "README template policy must say additive, rarely breaking"
+  not_ok "OS stability contract must say rarely breaking"
 fi
 if grep -q 'Overnight drafts after proof' company-os/operating-system.md; then
   ok "growth pack overnight drafts stay after proof"
@@ -392,7 +391,7 @@ if grep -q 'Insight quality before posting cadence' company-os/operating-system.
 else
   not_ok "growth pack must have portable insight-quality rule, no X-account folklore"
 fi
-if grep -q '2.8.5' company-os/operating-system.md && grep -q '2.8.5' README.md; then
+if grep -q '2.8.5' company-os/operating-system.md; then
   ok "changelog still records 2.8.5"
 else
   not_ok "OS and README must still record 2.8.5"
@@ -411,7 +410,7 @@ fi
 # --- n) marketing volume cannot promote (OS 2.8.6) ---
 # Full rule lives once in the OS section. Other files pin + link; do not reprint the essay.
 if grep -q '2.8.6' company-os/operating-system.md \
-  && grep -q 'v2.8.6' README.md \
+  && grep -q '| 2.8.6 |' company-os/operating-system.md \
   && grep -q '### House rule: marketing volume cannot promote' company-os/operating-system.md \
   && grep -q 'does not mean get a crowd looking' company-os/operating-system.md \
   && grep -q 'Text eight people' company-os/operating-system.md \
@@ -432,7 +431,7 @@ if grep -q 'marketing volume cannot promote' company-os/ai-instructions.md \
   && grep -q 'house-rule-marketing-volume-cannot-promote' company-os/ai-instructions.md \
   && grep -q 'house-rule-marketing-volume-cannot-promote' company-os/live-runtime.md \
   && grep -q 'house-rule-marketing-volume-cannot-promote' company-os/ready-for-human-eyes.md \
-  && grep -q 'house-rule-marketing-volume-cannot-promote' README.md; then
+  && grep -q 'house-rule-marketing-volume-cannot-promote' company-os/operating-system.md; then
   ok "pointers link to the OS house-rule section"
 else
   not_ok "ai-instructions, live-runtime, ready-for-human-eyes, and README must link the OS section"
@@ -481,8 +480,7 @@ if grep -q '### Starter legal templates' company-os/operating-system.md \
 else
   not_ok "operating-system.md must have starter legal templates + both canonical URLs"
 fi
-if grep -q 'starter-legal-templates' README.md \
-  && grep -q 'starter-legal-templates' company-os/ai-instructions.md; then
+if grep -q 'starter-legal-templates' company-os/ai-instructions.md; then
   ok "README and ai-instructions point at the OS starter-legal-templates section"
 else
   not_ok "README and ai-instructions must hyperlink the OS starter-legal-templates section"
@@ -528,8 +526,7 @@ if ! grep -q 'startup-finance.1984.vc/mcp' "$os" README.md company-os/ai-instruc
 else
   not_ok "do not claim 1984 MCP is live or link startup-finance.1984.vc/mcp"
 fi
-if grep -q 'cap-table-modeler' README.md \
-  && grep -q 'cap-table-modeler' company-os/ai-instructions.md; then
+if grep -q 'cap-table-modeler' company-os/ai-instructions.md; then
   ok "README and ai-instructions point at the OS cap-table-modeler section"
 else
   not_ok "README and ai-instructions must hyperlink the OS cap-table-modeler section"
@@ -560,8 +557,8 @@ fi
 # Constitution + first-hour / ai-instructions pointers. Do not require the essay elsewhere.
 if grep -q '2.8.7' company-os/operating-system.md \
   && grep -q '### House rule: a security program cannot promote' company-os/operating-system.md \
-  && grep -q 'v2.8.7' README.md \
-  && grep -q 'house-rule-a-security-program-cannot-promote' README.md \
+  && grep -q '| 2.8.7 |' company-os/operating-system.md \
+  && grep -q 'house-rule-a-security-program-cannot-promote' company-os/operating-system.md \
   && grep -q "I don't need a security department before anyone uses this" company-os/first-hour.md \
   && grep -q 'house-rule-a-security-program-cannot-promote' company-os/first-hour.md \
   && grep -q 'a security or compliance program cannot promote' company-os/ai-instructions.md \
@@ -626,8 +623,7 @@ assert "listed for public install" not in readme.lower()
 assert "plain member account" not in readme
 assert "The hosted connector uses sign-in" in readme
 listing = pathlib.Path("mcp/docs/MARKETPLACE.md").read_text()
-assert "planned" in listing.lower()
-assert "not listed yet" in listing.lower()
+assert "not listed" not in listing.lower()
 assert "shown to every signed-in account" in listing
 assert "HTTP 200" in listing
 assert "`status` 403" in listing
@@ -636,8 +632,8 @@ assert "https://mcp.bootstrap.pirin.ai/mcp" in listing
 assert "super admin" in listing
 assert "ask_admin" in listing
 assert "plain member account" in listing
-assert "marketplace: false" in listing
-assert "listing time" in listing
+assert "marketplace: true" in listing
+assert "listing time" not in listing
 assert "we have not submitted" not in readme.lower()
 assert "query-os-first" in readme
 assert "0-1" in readme
@@ -827,8 +823,8 @@ if grep -q '### House rule: there is no optimal price until people have paid and
   && grep -q 'SaaS 1.0 playbooks may be outdated' company-os/operating-system.md \
   && grep -q 'Do not guide to where the puck has been' company-os/operating-system.md \
   && grep -q 'dated current-year AI sources' company-os/operating-system.md \
-  && grep -q 'v2.8.8' README.md \
-  && grep -q 'house-rule-there-is-no-optimal-price-until-people-have-paid-and-stayed' README.md; then
+  && grep -q '| 2.8.8 |' company-os/operating-system.md \
+  && grep -q 'house-rule-there-is-no-optimal-price-until-people-have-paid-and-stayed' company-os/operating-system.md; then
   ok "OS 2.8.8 house-rule section has full rule and vocabulary"
 else
   not_ok "operating-system.md must hold the full 2.8.8 no-optimal-price house rule"
@@ -847,8 +843,6 @@ if grep -q 'grind three years on a popcorn stand' company-os/first-hour.md \
   && grep -q 'day-0-lifestyle-or-swinging-for-the-fences' company-os/first-hour.md \
   && grep -q 'There is no optimal price until people have paid and stayed' company-os/first-hour.md \
   && grep -q 'house-rule-there-is-no-optimal-price-until-people-have-paid-and-stayed' company-os/first-hour.md \
-  && grep -q 'day-0-lifestyle-or-swinging-for-the-fences' README.md \
-  && grep -q 'Lifestyle / small good business, or swinging for the fences' README.md \
   && grep -q 'house-rule-there-is-no-optimal-price-until-people-have-paid-and-stayed' company-os/ai-instructions.md \
   && grep -q 'day-0-lifestyle-or-swinging-for-the-fences' company-os/ai-instructions.md; then
   ok "first-hour, Path 1, and ai-instructions pin Day 0 and the price rule"
@@ -932,7 +926,6 @@ else
 fi
 if grep -q '### After-proof efficiency (fences)' company-os/operating-system.md \
   && grep -q 'after-proof-efficiency.md' company-os/operating-system.md \
-  && grep -q 'after-proof-efficiency.md' README.md \
   && grep -q 'after-proof-efficiency.md' company-os/ai-instructions.md \
   && grep -q 'after-proof-efficiency.md' company-os/README.md \
   && grep -q 'after-proof-efficiency.md' company-os/live-runtime.md; then
@@ -967,7 +960,8 @@ if grep -q '### Standing rules' "$fh" \
   && grep -q 'The hosted connector uses sign-in' "$fh" \
   && ! grep -q 'listed for public install' "$fh" \
   && ! grep -q 'plain member account' "$fh" \
-  && grep -q 'mentee boards on our host' "$fh" \
+  && ! grep -qi 'not mentee-ready' "$fh" \
+  && ! grep -q 'mentee boards on our host' "$fh" \
   && grep -q 'Grok Bot marketplace bot' "$fh" \
   && grep -q 'Not another Day 0 checkbox' "$fh"; then
   ok "first-hour.md After this hour holds the standing rules once"
@@ -986,8 +980,6 @@ fi
 if grep -q '~60 minutes' company-os/first-hour.md \
   && grep -q 'takes to \*\*read\*\*' company-os/first-hour.md \
   && grep -q 'Path 1 is chat plus a weekly' company-os/first-hour.md \
-  && grep -q '~60 minutes' README.md \
-  && grep -q 'Mental model (blueprint vs weekly loop)' README.md \
   && ! grep -q 'Mental model (two minutes)' README.md \
   && ! grep -qi 'control plane' company-os/first-hour.md \
     plugin/skills/first-hour/SKILL.md \
@@ -1101,14 +1093,14 @@ if grep -q '| 2.8.9 |' company-os/operating-system.md \
   && grep -q 'busy-looking machinery' company-os/operating-system.md \
   && grep -q 'Factory speed is not 0→1' company-os/operating-system.md \
   && grep -q 'an accelerate or optimize law' company-os/operating-system.md \
-  && grep -q 'v2.8.9' README.md \
-  && grep -q 'house-rule-do-not-automate-a-step-that-should-not-exist' README.md \
+  && grep -q '| 2.8.9 |' company-os/operating-system.md \
+  && grep -q 'house-rule-do-not-automate-a-step-that-should-not-exist' company-os/operating-system.md \
   && grep -q '### House rule: legal paper cannot promote' company-os/operating-system.md \
   && grep -q '### House rule: advisor ride-along is assumed, not observed' company-os/operating-system.md \
   && grep -q 'Legal paperwork' company-os/operating-system.md \
   && grep -q 'Write down who said what' company-os/operating-system.md \
-  && grep -q 'v2.8.10' README.md \
-  && grep -q 'v2.8.11' README.md; then
+  && grep -q '| 2.8.10 |' company-os/operating-system.md \
+  && grep -q '| 2.8.11 |' company-os/operating-system.md; then
   ok "OS 2.8.9 house-rule section has full rule and vocabulary"
 else
   not_ok "operating-system.md must hold the full 2.8.9 do-not-automate house rule"
@@ -1186,7 +1178,7 @@ if grep -q '### Founder checkpoints (when human judgment is the work)' company-o
   && grep -q 'Alpha — five fields' company-os/operating-system.md \
   && grep -q 'Path-local Hold' company-os/operating-system.md \
   && grep -q '2.8.12' company-os/operating-system.md \
-  && grep -q 'v2.8.12' README.md \
+  && grep -q '| 2.8.12 |' company-os/operating-system.md \
   && grep -q 'QC Hold is path-local' company-os/live-runtime.md \
   && grep -q 'founder checkpoints: QC / Bind / Clock / Alpha' company-os/ai-instructions.md \
   && grep -q 'five Alpha fields' company-os/ai-instructions.md \
@@ -1416,7 +1408,7 @@ if [ -s company-os/clock-examples.md ] \
   && grep -q 'Do not copy those scenes onto my board' company-os/ai-instructions.md \
   && grep -q 'Do not Advance from an example' company-os/ai-instructions.md \
   && grep -q 'Honor OS 2.8.19' AGENTS.md \
-  && grep -q 'v2.8.18' README.md \
+  && grep -q '| 2.8.18 |' company-os/operating-system.md \
   && grep -q 'clock-examples.md' company-os/operating-system.md \
   && grep -q 'clock-examples' docs/install-bill.md; then
   ok "OS 2.8.16 clock-examples teaching page is pinned (household jobs only; Day 0 not bloated)"
@@ -1460,7 +1452,7 @@ if grep -q '| 2.8.17 |' company-os/operating-system.md \
   && grep -q '| 2.8.16 |' company-os/operating-system.md \
   && grep -q '| 2.8.15 |' company-os/operating-system.md \
   && grep -q 'Use IESER, in this order' company-os/operating-system.md \
-  && grep -q 'v2.8.18' README.md; then
+  && grep -q '| 2.8.18 |' company-os/operating-system.md; then
   ok "OS 2.8.17 implicit loop is pinned (quality bar, not card; no schema bump)"
 else
   not_ok "2.8.17 implicit-loop strings must exist; keep 2.8.14+2.8.15+2.8.16; reject loopStage writes"
@@ -1493,7 +1485,7 @@ if grep -q '| 2.8.18 |' company-os/operating-system.md \
   && grep -q 'ENGAGEMENTS (named accounts' templates/company/state/where-are-we.py \
   && grep -q 'Do not migrate/seed/live-probe supabase-pirin-ai' mcp/supabase/migrations/20260925_bootstrap_os_one_control_plane.sql \
   && grep -q '| 2.8.17 |' company-os/operating-system.md \
-  && grep -q 'v2.8.18' README.md \
+  && grep -q '| 2.8.18 |' company-os/operating-system.md \
   && ! grep -q 'instrument tracker / cap table / matching sheet' company-os/operating-system.md; then
   ok "OS 2.8.18 one founder control plane is pinned (exile rejected; no schema bump)"
 else
@@ -1524,7 +1516,7 @@ if grep -q '| 2.8.19 |' company-os/operating-system.md \
   && grep -q 'the one thing that matters most' templates/company/state/where-are-we.py \
   && grep -q 'Do not migrate/seed/live-probe supabase-pirin-ai' mcp/supabase/migrations/20260926_bootstrap_os_initiative_report_card.sql \
   && grep -q '| 2.8.18 |' company-os/operating-system.md \
-  && grep -q 'v2.8.19' README.md \
+  && grep -q '| 2.8.19 |' company-os/operating-system.md \
   && ! grep -q 'primaryConstraint' company-os/operating-system.md \
   && ! grep -q 'card-v1' company-os/operating-system.md; then
   ok "OS 2.8.19 initiative report card is pinned (no card-v1; no schema bump)"
@@ -1578,7 +1570,7 @@ if grep -q '| 2.8.20 |' company-os/operating-system.md \
   && grep -q 'Where are we (2.8.20)' plugin/skills/house-rule-pins/SKILL.md \
   && ! grep -q 'Spoken card' plugin/skills/house-rule-pins/SKILL.md \
   && grep -q 'Honor OS 2.8.19' AGENTS.md \
-  && grep -q 'v2.8.20' README.md \
+  && grep -q '| 2.8.20 |' company-os/operating-system.md \
   && ! grep -q 'card-v1' company-os/operating-system.md; then
   ok "OS 2.8.20 where-are-we speech stays additive (no schema bump; no term table)"
 else
@@ -1604,8 +1596,8 @@ if grep -q '| 2.8.21 |' company-os/operating-system.md \
   && grep -q 'customer_check' mcp/src/initiative-card.ts \
   && grep -q 'spoken-label-customer-bet-2.8.21' mcp/src/house-rules.ts \
   && grep -q 'Work | State | When | Who' plugin/skills/house-rule-pins/SKILL.md \
-  && grep -q 'v2.8.21' README.md \
-  && grep -q 'v2.8.22' README.md \
+  && grep -q '| 2.8.21 |' company-os/operating-system.md \
+  && grep -q '| 2.8.22 |' company-os/operating-system.md \
   && grep -q 'Work | State | When | Who' AGENTS.md \
   && ! grep -q 'CUSTOMER CHECKS' mcp/src/initiative-card.ts \
   && ! grep -q 'CUSTOMER CHECKS' templates/company/state/where-are-we.py \
@@ -1712,7 +1704,7 @@ if [ -s "$bill" ] \
   && ! grep -q 'vercel.app' "$bill" \
   && ! grep -q 'mcp.pirin.ai' "$bill" \
   && grep -q 'docs/install-bill.md' README.md \
-  && grep -q 'That is not Path 1' README.md; then
+  && grep -q 'The hosted connector is how you open a bet board' README.md; then
   ok "Bill install docs lock the live URL, invite MCP + login, Path 1 split, weekly board watch, and feedback"
 else
   not_ok "docs/install-bill.md must ship the live Bill URL, invite-only MCP + login (not Path 1), weekly board watch, and bootstrap@pirin.ai — no webhook / subscribe_board / vercel.app or mcp.pirin.ai"

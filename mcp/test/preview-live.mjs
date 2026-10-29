@@ -94,7 +94,7 @@ async function assertPublicPin(origin) {
   const root = await fetchRetry(`${origin}/`);
   assert.equal(root.status, 200, `GET / ${root.status}`);
   const rootText = await root.text();
-  assert.match(rootText, /Not mentee-ready boards/);
+  assert.doesNotMatch(rootText, /not mentee-ready/i);
   assert.match(rootText, /POST \/mcp/);
   assert.match(rootText, /GET \/health/);
   assert.doesNotMatch(rootText, /<html/i);
@@ -132,7 +132,7 @@ async function assertPublicPin(origin) {
   const infoRaw = await rpc(origin, "tools/call", { name: "bootstrap_os_info", arguments: {} }, 3);
   const info = parseTool(infoRaw);
   assert.equal(info.surface, "hosted-read");
-  assert.equal(info.marketplace, false);
+  assert.equal(info.marketplace, true);
   assert.match(String(info.companyState), /board for each company|Not hosted/i);
   assert.match(String(info.founderVoice), /every team you belong to/);
   assert.match(String(info.founderVoice), /Ideas under that company are the customer bets/);

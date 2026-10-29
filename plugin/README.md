@@ -1,6 +1,6 @@
 # Bootstrap OS plugin (preview 0.1.1)
 
-Preview package. Skills hyperlink the published OS. **Not** mentee-ready hosted boards. See [mcp/docs/MARKETPLACE.md](../mcp/docs/MARKETPLACE.md). **Not** the way onto the bet board.
+Preview package. Skills hyperlink the published OS. See [mcp/docs/MARKETPLACE.md](../mcp/docs/MARKETPLACE.md). **Not** the way onto the bet board.
 
 Free GitHub docs are the alternative. Point an AI at https://github.com/ivelin/bootstrap
 
@@ -139,7 +139,7 @@ Thin when-to-use + links to the published OS. They do not copy the constitution.
 
 ## Hosted MCP URL
 
-`mcp.json` pins the hosted Streamable HTTP connector `https://mcp.bootstrap.pirin.ai/mcp`. The hosted connector uses sign-in. Free Path 1 is GitHub + install-os + local. `${BOOTSTRAP_MCP_URL}` may override (default is that pin). Git-branch previews stay on `*.vercel.app` (undeclared deploy-only, not a pin). Not mentee-ready boards. See [mcp/docs/MARKETPLACE.md](../mcp/docs/MARKETPLACE.md). Do not use `mcp.pirin.ai`. Contract: [`mcp/docs/HOSTED_IDENTITY.md`](../mcp/docs/HOSTED_IDENTITY.md).
+`mcp.json` pins the hosted Streamable HTTP connector `https://mcp.bootstrap.pirin.ai/mcp`. The hosted connector uses sign-in. Free Path 1 is GitHub + install-os + local. `${BOOTSTRAP_MCP_URL}` may override (default is that pin). Git-branch previews stay on `*.vercel.app` (undeclared deploy-only, not a pin). See [mcp/docs/MARKETPLACE.md](../mcp/docs/MARKETPLACE.md). Do not use `mcp.pirin.ai`. Contract: [`mcp/docs/HOSTED_IDENTITY.md`](../mcp/docs/HOSTED_IDENTITY.md).
 
 Hosted pin: cookie-less handshake 401. Public OS tools stay listed after auth. Gated `bootstrap_whoami` / company labels return 401 + `WWW-Authenticate` to this MCP origin RFC 9728 (`authorization_servers` = pirin.ai login). Login is `/bootstrap-os/login` on pirin.ai (Web Builder; not this repo). The pin is the Pirin write plane (`create_company`, then `create_idea`). `~/.bootstrap-os` is a self-host kit, not the Pirin mentee path.
 

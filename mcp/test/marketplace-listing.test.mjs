@@ -65,16 +65,16 @@ async function localInfo() {
 }
 
 describe("cursor catalog listing", () => {
-  it("bootstrap_os_info returns marketplace false while the doc says not listed", async () => {
+  it("bootstrap_os_info returns marketplace true", async () => {
     const doc = fs.readFileSync(path.join(REPO_ROOT, "mcp", "docs", "MARKETPLACE.md"), "utf8");
-    assert.match(doc, /not listed yet/);
-    assert.match(doc, /marketplace: false/);
+    assert.doesNotMatch(doc, /not listed/i);
+    assert.match(doc, /marketplace: true/);
     const hosted = await hostedInfo();
     assert.equal(hosted.surface, "hosted-read");
-    assert.equal(hosted.marketplace, false);
+    assert.equal(hosted.marketplace, true);
     const local = await localInfo();
     assert.equal(local.surface, "full");
-    assert.equal(local.marketplace, false);
+    assert.equal(local.marketplace, true);
     assert.equal(typeof local.paths, "object");
   });
 
@@ -112,18 +112,25 @@ describe("cursor catalog listing", () => {
 
     const listing = fs.readFileSync(path.join(REPO_ROOT, "LISTING.md"), "utf8");
     assert.match(listing, /Pirin\.ai/);
-    assert.match(listing, /ivelin@pirin\.ai/);
+    assert.match(listing, /bootstrap@pirin\.ai/);
     assert.match(listing, /https:\/\/pirin\.ai\/bootstrap-os/);
+    assert.match(listing, /https:\/\/pirin\.ai\/privacy/);
+    assert.match(listing, /https:\/\/pirin\.ai\/terms/);
     assert.match(listing, /https:\/\/mcp\.bootstrap\.pirin\.ai\/mcp/);
-    assert.match(listing, /not listed/);
+    assert.doesNotMatch(listing, /not listed/i);
     assert.match(listing, /shown to every signed-in account/);
     assert.match(listing, /super admin/);
     assert.doesNotMatch(listing, BOT_ADDRESS);
-    assert.doesNotMatch(listing, /bootstrap@pirin\.ai/);
     assert.equal(fs.existsSync(path.join(REPO_ROOT, "README.md")), true);
     const readme = fs.readFileSync(path.join(REPO_ROOT, "README.md"), "utf8");
-    assert.match(readme, /How to use this \(pick one\)/);
+    assert.match(readme, /Bootstrap OS by pirin\.ai/);
+    assert.match(readme, /bootstrap@pirin\.ai/);
+    assert.match(readme, /https:\/\/pirin\.ai\/privacy/);
+    assert.match(readme, /https:\/\/pirin\.ai\/terms/);
     assert.doesNotMatch(readme, /ivelin@pirin\.ai/);
+    assert.doesNotMatch(readme, /company board/i);
+    assert.doesNotMatch(readme, /not listed/i);
+    assert.doesNotMatch(readme, /not mentee-ready/i);
   });
 
   it("listing copy names stage approval and invited companies", () => {

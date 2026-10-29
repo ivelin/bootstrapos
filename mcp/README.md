@@ -11,7 +11,7 @@
 | **1. Point an AI** | Free GitHub docs. Constitution. | None |
 | **2. Optional instance / CLI** | Notes in your repo. Not the source of record. | `./scripts/install-instance.sh` |
 | **Self-host kit (this package)** | Your own disk or your own Vercel + Supabase | Node 20+, this package |
-| **Hosted MCP** | Pirin-supported mentees | Pin `https://mcp.bootstrap.pirin.ai/mcp` (handshake 401). A confirmed account can open up to 3 bet boards with `create_company`. A super admin can still create one, then `create_idea`. Free docs = GitHub + install-os + local. The hosted connector uses sign-in. Git-branch previews on `*.vercel.app` (same 401 as collab, not a silent 200, not mentee-ready boards). Contract: [`docs/HOSTED_IDENTITY.md`](docs/HOSTED_IDENTITY.md). See [mcp/docs/MARKETPLACE.md](docs/MARKETPLACE.md). Not pirin.ai. |
+| **Hosted MCP** | Pirin-supported mentees | Pin `https://mcp.bootstrap.pirin.ai/mcp` (handshake 401). A confirmed account can open up to 3 bet boards with `create_company`. A super admin can still create one, then `create_idea`. Free docs = GitHub + install-os + local. The hosted connector uses sign-in. Git-branch previews on `*.vercel.app` (same 401 as collab, not a silent 200). Contract: [`docs/HOSTED_IDENTITY.md`](docs/HOSTED_IDENTITY.md). See [mcp/docs/MARKETPLACE.md](docs/MARKETPLACE.md). Not pirin.ai. |
 
 Same state as markdown: `company-state.json` + `where-are-we.py`. Isolation is hard: no shared phase/evidence across `companyId`. MCP never writes `company-os/` template files.
 
@@ -164,7 +164,7 @@ Same public read tool names as today (`bootstrap_os_info`, docs, house-rule pins
 
 Optional gated tools on this host only: `bootstrap_whoami` (includes `role`), `bootstrap_list_companies` (alias `bootstrap_list_company_labels`), `bootstrap_use_company`, `invite_member`, `accept_invite`, and `create_company`. Unauthenticated calls return HTTP 401 + `WWW-Authenticate` pointing at this MCP origin RFC 9728 (`authorization_servers` = pirin.ai login). Login UI is `/bootstrap-os/login` (Web Builder), not this repo. Accept path is in-chat; outsider signup is `?invite=` — [`docs/INVITE.md`](docs/INVITE.md). A super admin calls `create_company`, then `create_idea`. Contract: [`docs/HOSTED_IDENTITY.md`](docs/HOSTED_IDENTITY.md).
 
-The hosted connector uses sign-in. The pin is `https://mcp.bootstrap.pirin.ai/mcp`. Git-branch public preview is `*.vercel.app` (undeclared deploy-only, not a pin). Project `bootstrap-os-mcp` under `ivelins-projects-9f9b7132`. Not mentee-ready boards. See [mcp/docs/MARKETPLACE.md](docs/MARKETPLACE.md). Not pirin.ai. Free GitHub docs are the alternative.
+The hosted connector uses sign-in. The pin is `https://mcp.bootstrap.pirin.ai/mcp`. Git-branch public preview is `*.vercel.app` (undeclared deploy-only, not a pin). Project `bootstrap-os-mcp` under `ivelins-projects-9f9b7132`. See [mcp/docs/MARKETPLACE.md](docs/MARKETPLACE.md). Not pirin.ai. Free GitHub docs are the alternative.
 
 ```bash
 cd mcp
