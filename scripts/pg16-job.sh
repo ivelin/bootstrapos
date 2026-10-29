@@ -1,7 +1,7 @@
 #!/bin/sh
 # Throwaway PostgreSQL 16 for one Actions job. No sudo, no docker.
-# Binaries live at /usr/lib/postgresql/16/bin. The cluster is local-trust
-# on a free localhost port and a socket directory under RUNNER_TEMP.
+# Binaries live at /usr/lib/postgresql/16/bin. The cluster is local-trust,
+# socket only, under RUNNER_TEMP. listen_addresses is empty.
 set -eu
 
 BIN=/usr/lib/postgresql/16/bin
