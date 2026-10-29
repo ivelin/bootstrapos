@@ -43,66 +43,33 @@ REVOKE ALL ON TABLE bootstrap_os.invite_companies FROM PUBLIC, anon, authenticat
 
 -- No SELECT/INSERT policy for authenticated. RPCs are SECURITY DEFINER.
 -- The actor is the JWT email or sub (bootstrap_os.actor_email / actor_sub,
--- the same auth.jwt() source as 20260902). app.actor_email / app.actor_sub
--- are read only for service_role. That role passes them with
--- set_config(name, value, true). require_actor does not re-set them.
-
--- current_setting('role') is not proof. set_config('role', 'service_role', true)
--- switches the role when the session user is a member of service_role
--- (the authenticator pool). A signed-in caller can look like service_role
--- and then supply app.actor_email. Only current_user and session_user count.
--- Inside SECURITY DEFINER those are the function owner, so this fallback
--- stays closed on invite_create and card writes. The actor is the JWT.
-CREATE OR REPLACE FUNCTION bootstrap_os.caller_is_service_role()
-RETURNS boolean
-LANGUAGE sql
-STABLE
-AS $$
-  SELECT current_user = 'service_role'
-    OR session_user = 'service_role';
-$$;
-
--- service_role fallback. Callers must use set_config(name, value, true)
--- in the same transaction. require_actor does not re-set the setting.
--- Non-service roles cannot use app.actor_email / app.actor_sub.
-CREATE OR REPLACE FUNCTION bootstrap_os.service_local_setting(p_name text)
-RETURNS text
-LANGUAGE sql
-VOLATILE
-AS $local_setting$
-  SELECT CASE
-    WHEN bootstrap_os.caller_is_service_role()
-      THEN nullif(current_setting(p_name, true), '')
-    ELSE NULL
-  END;
-$local_setting$;
+-- the same auth.jwt() source as 20260902). There is no app.actor_email fallback.
+-- Inside SECURITY DEFINER, current_user is the function owner, so a session
+-- setting cannot name the actor. A missing JWT fails closed.
 
 CREATE OR REPLACE FUNCTION bootstrap_os.resolved_actor_email()
 RETURNS text
 LANGUAGE sql
-VOLATILE
+STABLE
+SET search_path = pg_catalog, bootstrap_os, public
 AS $$
-  SELECT coalesce(
-    nullif(lower(bootstrap_os.service_local_setting('app.actor_email')), ''),
-    bootstrap_os.actor_email()
-  );
+  SELECT bootstrap_os.actor_email();
 $$;
 
 CREATE OR REPLACE FUNCTION bootstrap_os.resolved_actor_sub()
 RETURNS text
 LANGUAGE sql
-VOLATILE
+STABLE
+SET search_path = pg_catalog, bootstrap_os, public
 AS $$
-  SELECT coalesce(
-    nullif(bootstrap_os.service_local_setting('app.actor_sub'), ''),
-    bootstrap_os.actor_sub()
-  );
+  SELECT bootstrap_os.actor_sub();
 $$;
 
 CREATE OR REPLACE FUNCTION bootstrap_os.actor_is_set()
 RETURNS boolean
 LANGUAGE sql
-VOLATILE
+STABLE
+SET search_path = pg_catalog, bootstrap_os, public
 AS $$
   SELECT coalesce(
     bootstrap_os.resolved_actor_email(),
@@ -113,6 +80,7 @@ $$;
 CREATE OR REPLACE FUNCTION bootstrap_os.require_actor()
 RETURNS void
 LANGUAGE plpgsql
+SET search_path = pg_catalog, bootstrap_os, public
 AS $$
 BEGIN
   IF NOT bootstrap_os.actor_is_set() THEN
@@ -125,6 +93,7 @@ CREATE OR REPLACE FUNCTION bootstrap_os.rank_of(p_role text)
 RETURNS int
 LANGUAGE sql
 IMMUTABLE
+SET search_path = pg_catalog, bootstrap_os, public
 AS $$
   SELECT CASE p_role
     WHEN 'founder' THEN 4
@@ -206,11 +175,17 @@ DECLARE
   elem jsonb;
   v_slug text;
   requested text;
+  tier_rank int;
   rank int;
+  invitee_rank int;
+  ceiling_ok boolean;
   company_uuid uuid;
   invite_id uuid;
   raw_token text;
   grants jsonb := '[]'::jsonb;
+  dropped jsonb := '[]'::jsonb;
+  denied jsonb := '[]'::jsonb;
+  allowed jsonb := '[]'::jsonb;
   seen text[] := ARRAY[]::text[];
 BEGIN
   PERFORM bootstrap_os.require_actor();
@@ -228,32 +203,50 @@ BEGIN
     v_slug := lower(trim(coalesce(elem->>'slug', '')));
     requested := coalesce(nullif(elem->>'role', ''), 'viewer');
     IF v_slug = '' OR v_slug !~ '^[a-z0-9][a-z0-9_-]{0,31}$' OR v_slug = ANY (seen) THEN
+      denied := denied || jsonb_build_array(jsonb_build_object('slug', v_slug, 'reason', 'invalid_label'));
       CONTINUE;
     END IF;
     seen := array_append(seen, v_slug);
     IF requested NOT IN ('viewer', 'commenter', 'editor') THEN
-      RETURN jsonb_build_object(
-        'ok', false,
-        'reason', 'owner_forbidden',
-        'slug', v_slug,
-        'role', 'owner'
-      );
+      denied := denied || jsonb_build_array(jsonb_build_object('slug', v_slug, 'reason', 'owner_forbidden'));
+      CONTINUE;
     END IF;
+    company_uuid := NULL;
+    rank := NULL;
     SELECT c.id INTO company_uuid FROM bootstrap_os.companies c WHERE c.slug = v_slug;
-    SELECT bootstrap_os.rank_of(a.role) INTO rank
+    IF company_uuid IS NOT NULL THEN
+      SELECT bootstrap_os.rank_of(a.role) INTO rank
+      FROM bootstrap_os.company_acl a
+      WHERE a.company_id = company_uuid
+        AND a.principal_kind = 'email'
+        AND a.principal = actor_email
+      ORDER BY bootstrap_os.rank_of(a.role) DESC
+      LIMIT 1;
+    END IF;
+    tier_rank := bootstrap_os.rank_of(requested);
+    ceiling_ok := rank IS NOT NULL AND rank >= 3 AND (requested <> 'editor' OR rank >= 4);
+    IF NOT ceiling_ok THEN
+      denied := denied || jsonb_build_array(jsonb_build_object(
+        'slug', v_slug,
+        'reason', CASE WHEN rank IS NULL THEN 'not_held' ELSE 'tier_forbidden' END
+      ));
+      IF rank IS NOT NULL AND rank >= 3 THEN
+        allowed := allowed || jsonb_build_array(to_jsonb(v_slug));
+      END IF;
+      CONTINUE;
+    END IF;
+    allowed := allowed || jsonb_build_array(to_jsonb(v_slug));
+    invitee_rank := NULL;
+    SELECT bootstrap_os.rank_of(a.role) INTO invitee_rank
     FROM bootstrap_os.company_acl a
     WHERE a.company_id = company_uuid
       AND a.principal_kind = 'email'
-      AND a.principal = actor_email
+      AND a.principal = invitee
     ORDER BY bootstrap_os.rank_of(a.role) DESC
     LIMIT 1;
-    IF company_uuid IS NULL OR rank IS NULL OR rank < 3 OR (rank < 4 AND requested = 'editor') THEN
-      RETURN jsonb_build_object(
-        'ok', false,
-        'reason', 'invite_partial_authority',
-        'slug', v_slug,
-        'role', requested
-      );
+    IF invitee_rank IS NOT NULL AND invitee_rank >= tier_rank THEN
+      dropped := dropped || jsonb_build_array(jsonb_build_object('slug', v_slug, 'role', requested));
+      CONTINUE;
     END IF;
     grants := grants || jsonb_build_array(jsonb_build_object(
       'slug', v_slug,
@@ -262,10 +255,22 @@ BEGIN
     ));
   END LOOP;
 
+  IF jsonb_array_length(denied) > 0 THEN
+    RETURN jsonb_build_object(
+      'ok', false,
+      'reason', 'invite_partial_authority',
+      'allowed', allowed,
+      'denied', denied
+    );
+  END IF;
+  IF jsonb_array_length(p_companies) > 0 AND jsonb_array_length(grants) = 0 THEN
+    RETURN jsonb_build_object('ok', false, 'reason', 'already_member');
+  END IF;
+
   raw_token := replace(gen_random_uuid()::text, '-', '') || replace(gen_random_uuid()::text, '-', '');
   INSERT INTO bootstrap_os.invites (token_hash, invitee_email, inviter_email, inviter_sub, expires_at)
   VALUES (
-    md5(raw_token),
+    encode(sha256(convert_to(raw_token, 'UTF8')), 'hex'),
     invitee,
     actor_email,
     bootstrap_os.resolved_actor_sub(),
@@ -279,17 +284,70 @@ BEGIN
 
   RETURN jsonb_build_object(
     'ok', true,
-    'slug', coalesce(grants->0->>'slug', ''),
-    'role', coalesce(grants->0->>'role', 'viewer')
+    'token', raw_token,
+    'inviteeEmail', invitee,
+    'companies', COALESCE((
+      SELECT jsonb_agg(jsonb_build_object('slug', g->>'slug', 'role', g->>'role'))
+      FROM jsonb_array_elements(grants) g
+    ), '[]'::jsonb),
+    'dropped', dropped
   );
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.bootstrap_os_invite_accept(p_token text)
+RETURNS jsonb
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = pg_catalog, bootstrap_os, public
+AS $$
+DECLARE
+  actor_email text;
+  digest text;
+  invite bootstrap_os.invites%ROWTYPE;
+  grant_row record;
+BEGIN
+  PERFORM bootstrap_os.require_actor();
+  actor_email := bootstrap_os.resolved_actor_email();
+  IF actor_email IS NULL OR p_token IS NULL OR length(p_token) < 16 THEN
+    RETURN jsonb_build_object('ok', false, 'reason', 'invalid_token');
+  END IF;
+  digest := encode(sha256(convert_to(p_token, 'UTF8')), 'hex');
+  SELECT * INTO invite
+  FROM bootstrap_os.invites
+  WHERE token_hash = digest
+    AND status = 'pending'
+    AND expires_at > now();
+  IF invite.id IS NULL OR invite.invitee_email <> actor_email THEN
+    RETURN jsonb_build_object('ok', false, 'reason', 'invalid_token');
+  END IF;
+  FOR grant_row IN
+    SELECT ic.company_id, ic.role, c.slug
+    FROM bootstrap_os.invite_companies ic
+    JOIN bootstrap_os.companies c ON c.id = ic.company_id
+    WHERE ic.invite_id = invite.id
+  LOOP
+    INSERT INTO bootstrap_os.company_acl (company_id, principal, principal_kind, role)
+    SELECT grant_row.company_id, actor_email, 'email', grant_row.role
+    WHERE NOT EXISTS (
+      SELECT 1 FROM bootstrap_os.company_acl a
+      WHERE a.company_id = grant_row.company_id
+        AND a.principal = actor_email
+        AND a.principal_kind = 'email'
+    );
+  END LOOP;
+  UPDATE bootstrap_os.invites
+  SET status = 'accepted', accepted_at = now(), accepted_by = actor_email
+  WHERE id = invite.id;
+  RETURN jsonb_build_object('ok', true, 'inviteeEmail', actor_email);
 END;
 $$;
 
 REVOKE ALL ON FUNCTION public.bootstrap_os_invite_create(text, jsonb) FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.bootstrap_os_invite_create(text, jsonb) TO authenticated;
+REVOKE ALL ON FUNCTION public.bootstrap_os_invite_accept(text) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.bootstrap_os_invite_accept(text) TO authenticated;
 
-REVOKE ALL ON FUNCTION bootstrap_os.caller_is_service_role() FROM PUBLIC, anon, authenticated;
-REVOKE ALL ON FUNCTION bootstrap_os.service_local_setting(text) FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION bootstrap_os.resolved_actor_email() FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION bootstrap_os.resolved_actor_sub() FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION bootstrap_os.actor_is_set() FROM PUBLIC, anon, authenticated;

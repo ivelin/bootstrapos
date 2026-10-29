@@ -26,6 +26,9 @@ $$;
 CREATE OR REPLACE FUNCTION auth.uid() RETURNS uuid LANGUAGE sql STABLE AS $$
   SELECT NULLIF(current_setting('app.auth_uid', true), '')::uuid;
 $$;
+GRANT USAGE ON SCHEMA auth TO anon, authenticated;
+GRANT EXECUTE ON FUNCTION auth.jwt() TO anon, authenticated;
+GRANT EXECUTE ON FUNCTION auth.uid() TO anon, authenticated;
 `;
 
 let db;
@@ -122,6 +125,30 @@ describe("scoped invite RLS and card actor (PGlite, never prod)", { concurrency:
       companies: [{ slug: "alpha", role: "editor" }],
     });
     assert.equal(created.ok, true);
+    assert.equal(created.inviteeEmail, "member@example.test");
+    assert.deepEqual(created.companies, [{ slug: "alpha", role: "editor" }]);
+    assert.deepEqual(created.dropped, []);
+    const hashed = await db.query(
+      "SELECT encode(sha256(convert_to($1, 'UTF8')), 'hex') AS digest",
+      [created.token],
+    );
+    const stored = await db.query(
+      "SELECT token_hash FROM bootstrap_os.invites WHERE invitee_email = 'member@example.test'",
+    );
+    assert.equal(stored.rows[0].token_hash, hashed.rows[0].digest);
+    const accepted = await db.query(
+      `
+      SELECT public.bootstrap_os_invite_accept($2) AS body
+      FROM (SELECT set_config('request.jwt.claims', $1, true)) cfg
+      `,
+      [claims("member@example.test", "55555555-5555-5555-5555-555555555555"), created.token],
+    );
+    assert.equal(accepted.rows[0].body.ok, true);
+    const acl = await db.query(
+      `SELECT role FROM bootstrap_os.company_acl
+       WHERE principal = 'member@example.test' AND principal_kind = 'email'`,
+    );
+    assert.deepEqual(acl.rows.map((row) => row.role), ["editor"]);
   });
 
   it("a viewer JWT plus the owner setting cannot mint an editor invite", async () => {
@@ -150,7 +177,8 @@ describe("scoped invite RLS and card actor (PGlite, never prod)", { concurrency:
       companies: [{ slug: "alpha", role: "owner" }],
     });
     assert.equal(denied.ok, false);
-    assert.equal(denied.reason, "owner_forbidden");
+    assert.equal(denied.reason, "invite_partial_authority");
+    assert.equal(denied.denied[0].reason, "owner_forbidden");
     const after = await db.query("SELECT count(*)::int AS n FROM bootstrap_os.invite_companies");
     assert.equal(after.rows[0].n, before.rows[0].n);
   });
@@ -196,6 +224,38 @@ describe("scoped invite RLS and card actor (PGlite, never prod)", { concurrency:
       "SELECT count(*)::int AS n FROM bootstrap_os.audit_events WHERE what_changed->>'via' = 'invite.create'",
     );
     assert.equal(audit.rows[0].n, 2);
+  });
+
+  it("invalid or duplicate slugs write no invite rows", async () => {
+    const before = await db.query("SELECT count(*)::int AS n FROM bootstrap_os.invites");
+    const invalid = await callInvite({
+      email: "founder@example.test",
+      sub: "22222222-2222-2222-2222-222222222222",
+      invitee: "bad-slug@example.test",
+      companies: [{ slug: "Not A Slug" }, { slug: "alpha" }, { slug: "alpha" }],
+    });
+    assert.equal(invalid.ok, false);
+    assert.equal(invalid.reason, "invite_partial_authority");
+    assert.ok(invalid.denied.some((row) => row.reason === "invalid_label"));
+    const after = await db.query("SELECT count(*)::int AS n FROM bootstrap_os.invites");
+    assert.equal(after.rows[0].n, before.rows[0].n);
+  });
+
+  it("a viewer or editor JWT sees no audit rows and an owner JWT does", async () => {
+    async function visible(email) {
+      await db.exec("RESET ROLE");
+      await db.query("SELECT set_config('request.jwt.claims', $1, false)", [claims(email, "22222222-2222-2222-2222-222222222222")]);
+      try {
+        await db.exec("SET ROLE authenticated");
+        const rows = await db.query("SELECT count(*)::int AS n FROM bootstrap_os.audit_events");
+        return rows.rows[0].n;
+      } finally {
+        await db.exec("RESET ROLE");
+      }
+    }
+    assert.equal(await visible("viewer@example.test"), 0);
+    assert.equal(await visible("editor@example.test"), 0);
+    assert.ok(await visible("founder@example.test") > 0);
   });
 
   it("a forged role setting plus the owner email cannot mint an invite", async () => {

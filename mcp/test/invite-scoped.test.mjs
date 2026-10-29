@@ -243,7 +243,13 @@ describe("company-scoped invites", () => {
         assert.equal(body.p_email, "member@example.test");
         assert.deepEqual(body.p_companies, [{ slug: "alpha", role: "viewer" }]);
         return new Response(
-          JSON.stringify({ ok: true, slug: "alpha", role: "viewer" }),
+          JSON.stringify({
+            ok: true,
+            token: "inv_fixture_token_xxxxxxxx",
+            inviteeEmail: "member@example.test",
+            companies: [{ slug: "alpha", role: "viewer" }],
+            dropped: [],
+          }),
           { status: 200 },
         );
       };
@@ -252,7 +258,10 @@ describe("company-scoped invites", () => {
         { email: "member@example.test", companies: [{ slug: "alpha", role: "viewer" }] },
       );
       assert.equal(created.ok, true);
-      assert.equal(created.slug, "alpha");
+      assert.equal(created.token, "inv_fixture_token_xxxxxxxx");
+      assert.equal(created.inviteeEmail, "member@example.test");
+      assert.deepEqual(created.companies, [{ slug: "alpha", role: "viewer" }]);
+      assert.deepEqual(created.dropped, []);
     } finally {
       globalThis.fetch = origFetch;
     }
