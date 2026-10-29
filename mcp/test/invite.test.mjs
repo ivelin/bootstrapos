@@ -510,6 +510,9 @@ describe("invite + accept (memory, never prod)", { concurrency: false }, () => {
             { status: 404 },
           );
         }
+        if (u.endsWith("/bootstrap_os_invite_accept")) {
+          return new Response(JSON.stringify({ ok: false, reason: "token_not_found" }), { status: 200 });
+        }
         if (u.endsWith("/bootstrap_mcp_accept_invite")) {
           return new Response(
             JSON.stringify({

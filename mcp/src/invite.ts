@@ -101,6 +101,10 @@ export type AcceptFailReason =
   | "invite_expired"
   | "invite_already_used"
   | "invite_email_mismatch"
+  | "token_not_found"
+  | "expired"
+  | "email_mismatch"
+  | "already_accepted"
   | "email_required"
   | "invite_store_unset"
   | "invite_rpc_failed";
@@ -897,6 +901,18 @@ export class SupabaseInviteStore implements InviteStore {
   }
 
   async acceptInvite(_actor: InviteActor, token: string): Promise<AcceptResult> {
+    const scoped = await this.rpc("bootstrap_os_invite_accept", { p_token: token });
+    if (!isInviteRpcFail(scoped)) {
+      const body = scoped.raw;
+      const absent =
+        body &&
+        typeof body === "object" &&
+        (body as { ok?: boolean; reason?: string }).ok === false &&
+        (body as { reason?: string }).reason === "token_not_found";
+      if (!absent) return coerceRpcResult<AcceptResult>(body, scoped.status);
+    }
+    // Owner: Bootstrap OS - Builder. Dated 2026-10-29.
+    // Remove this legacy fallback after the existing legacy invites expire.
     const hit = await this.rpc("bootstrap_mcp_accept_invite", { p_token: token });
     if (isInviteRpcFail(hit)) return hit;
     return coerceRpcResult<AcceptResult>(hit.raw, hit.status);
@@ -921,6 +937,23 @@ export class SupabaseInviteStore implements InviteStore {
   }
 
   async verifyInvite(token: string): Promise<VerifyInviteResult> {
+    const scoped = await this.rpc("bootstrap_os_invite_verify", { p_token: token });
+    if (!isInviteRpcFail(scoped)) {
+      const raw = scoped.raw;
+      const absent =
+        raw &&
+        typeof raw === "object" &&
+        (raw as { ok?: boolean; reason?: string }).ok === false &&
+        (raw as { reason?: string }).reason === "token_not_found";
+      if (!absent) {
+        if (raw && typeof raw === "object" && (raw as VerifyInviteResult).ok === true) {
+          return raw as VerifyInviteOk;
+        }
+        return { ok: false };
+      }
+    }
+    // Owner: Bootstrap OS - Builder. Dated 2026-10-29.
+    // Remove this legacy fallback after the existing legacy invites expire.
     const hit = await this.rpc("bootstrap_mcp_verify_invite", { p_token: token });
     if (isInviteRpcFail(hit)) return { ok: false };
     const raw = hit.raw;
@@ -974,6 +1007,10 @@ export function inviteFailMessage(input: InviteFailMessageInput): string {
     case "invite_not_found":
       return "Invite rejected.";
     case "invite_expired":
+    case "expired":
+    case "token_not_found":
+    case "email_mismatch":
+    case "already_accepted":
       return "Invite rejected.";
     case "invite_already_used":
       return "Invite rejected.";

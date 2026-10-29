@@ -63,6 +63,25 @@ async function callInvite({ email, sub, settingEmail = "", settingSub = "", sett
   return rows.rows[0].body;
 }
 
+async function callAccept(email, token) {
+  const rows = await db.query(
+    `
+    SELECT public.bootstrap_os_invite_accept($2) AS body
+    FROM (SELECT set_config('request.jwt.claims', $1, true)) cfg
+    `,
+    [claims(email, "55555555-5555-5555-5555-555555555555"), token],
+  );
+  return rows.rows[0].body;
+}
+
+async function aclCount(email) {
+  const rows = await db.query(
+    "SELECT count(*)::int AS n FROM bootstrap_os.company_acl WHERE principal = $1",
+    [email],
+  );
+  return rows.rows[0].n;
+}
+
 describe("scoped invite RLS and card actor (PGlite, never prod)", { concurrency: false }, () => {
   before(async () => {
     db = new PGlite();
@@ -256,6 +275,55 @@ describe("scoped invite RLS and card actor (PGlite, never prod)", { concurrency:
     assert.equal(await visible("viewer@example.test"), 0);
     assert.equal(await visible("editor@example.test"), 0);
     assert.ok(await visible("founder@example.test") > 0);
+  });
+
+  it("a wrong token, a mismatched email, a second accept, and an expired invite write no ACL rows", async () => {
+    const minted = await callInvite({
+      email: "founder@example.test",
+      sub: "22222222-2222-2222-2222-222222222222",
+      invitee: "gates@example.test",
+      companies: [{ slug: "alpha", role: "viewer" }],
+    });
+    assert.equal(minted.ok, true);
+    const before = await aclCount("gates@example.test");
+
+    const wrong = await callAccept("gates@example.test", "0123456789abcdef0123456789abcdef");
+    assert.equal(wrong.reason, "token_not_found");
+    assert.equal(await aclCount("gates@example.test"), before);
+    const stillPending = await db.query(
+      "SELECT status FROM bootstrap_os.invites WHERE invitee_email = 'gates@example.test'",
+    );
+    assert.equal(stillPending.rows[0].status, "pending");
+
+    const mismatch = await callAccept("founder@example.test", minted.token);
+    assert.equal(mismatch.reason, "email_mismatch");
+    assert.equal(await aclCount("founder@example.test"), 1);
+    assert.equal(await aclCount("gates@example.test"), before);
+
+    const expiredToken = (
+      await callInvite({
+        email: "founder@example.test",
+        sub: "22222222-2222-2222-2222-222222222222",
+        invitee: "late@example.test",
+        companies: [{ slug: "alpha", role: "viewer" }],
+      })
+    ).token;
+    await db.query(
+      "UPDATE bootstrap_os.invites SET expires_at = now() - interval '1 day' WHERE invitee_email = 'late@example.test'",
+    );
+    const expired = await callAccept("late@example.test", expiredToken);
+    assert.equal(expired.reason, "expired");
+    assert.equal(await aclCount("late@example.test"), 0);
+    const expiredStatus = await db.query(
+      "SELECT status FROM bootstrap_os.invites WHERE invitee_email = 'late@example.test'",
+    );
+    assert.equal(expiredStatus.rows[0].status, "pending");
+
+    const first = await callAccept("gates@example.test", minted.token);
+    assert.equal(first.ok, true);
+    const second = await callAccept("gates@example.test", minted.token);
+    assert.equal(second.reason, "already_accepted");
+    assert.equal(await aclCount("gates@example.test"), before + 1);
   });
 
   it("a forged role setting plus the owner email cannot mint an invite", async () => {

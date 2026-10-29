@@ -305,26 +305,44 @@ DECLARE
   actor_email text;
   digest text;
   invite bootstrap_os.invites%ROWTYPE;
+  claimed uuid;
   grant_row record;
 BEGIN
   PERFORM bootstrap_os.require_actor();
   actor_email := bootstrap_os.resolved_actor_email();
   IF actor_email IS NULL OR p_token IS NULL OR length(p_token) < 16 THEN
-    RETURN jsonb_build_object('ok', false, 'reason', 'invalid_token');
+    RETURN jsonb_build_object('ok', false, 'reason', 'token_not_found');
   END IF;
   digest := encode(sha256(convert_to(p_token, 'UTF8')), 'hex');
   SELECT * INTO invite
   FROM bootstrap_os.invites
   WHERE token_hash = digest
+  FOR UPDATE;
+  IF invite.id IS NULL THEN
+    RETURN jsonb_build_object('ok', false, 'reason', 'token_not_found');
+  END IF;
+  IF invite.invitee_email <> actor_email THEN
+    RETURN jsonb_build_object('ok', false, 'reason', 'email_mismatch');
+  END IF;
+  IF invite.status <> 'pending' THEN
+    RETURN jsonb_build_object('ok', false, 'reason', 'already_accepted');
+  END IF;
+  IF invite.expires_at <= now() THEN
+    RETURN jsonb_build_object('ok', false, 'reason', 'expired');
+  END IF;
+  UPDATE bootstrap_os.invites
+  SET status = 'accepted', accepted_at = now(), accepted_by = actor_email
+  WHERE id = invite.id
     AND status = 'pending'
-    AND expires_at > now();
-  IF invite.id IS NULL OR invite.invitee_email <> actor_email THEN
-    RETURN jsonb_build_object('ok', false, 'reason', 'invalid_token');
+    AND expires_at > now()
+    AND invitee_email = actor_email
+  RETURNING id INTO claimed;
+  IF claimed IS NULL THEN
+    RETURN jsonb_build_object('ok', false, 'reason', 'already_accepted');
   END IF;
   FOR grant_row IN
-    SELECT ic.company_id, ic.role, c.slug
+    SELECT ic.company_id, ic.role
     FROM bootstrap_os.invite_companies ic
-    JOIN bootstrap_os.companies c ON c.id = ic.company_id
     WHERE ic.invite_id = invite.id
   LOOP
     INSERT INTO bootstrap_os.company_acl (company_id, principal, principal_kind, role)
@@ -336,10 +354,47 @@ BEGIN
         AND a.principal_kind = 'email'
     );
   END LOOP;
-  UPDATE bootstrap_os.invites
-  SET status = 'accepted', accepted_at = now(), accepted_by = actor_email
-  WHERE id = invite.id;
   RETURN jsonb_build_object('ok', true, 'inviteeEmail', actor_email);
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.bootstrap_os_invite_verify(p_token text)
+RETURNS jsonb
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = pg_catalog, bootstrap_os, public
+AS $$
+DECLARE
+  digest text;
+  invite bootstrap_os.invites%ROWTYPE;
+  label text;
+BEGIN
+  IF p_token IS NULL OR length(p_token) < 16 THEN
+    RETURN jsonb_build_object('ok', false, 'reason', 'token_not_found');
+  END IF;
+  digest := encode(sha256(convert_to(p_token, 'UTF8')), 'hex');
+  SELECT * INTO invite FROM bootstrap_os.invites WHERE token_hash = digest;
+  IF invite.id IS NULL THEN
+    RETURN jsonb_build_object('ok', false, 'reason', 'token_not_found');
+  END IF;
+  IF invite.status <> 'pending' THEN
+    RETURN jsonb_build_object('ok', false, 'reason', 'already_accepted');
+  END IF;
+  IF invite.expires_at <= now() THEN
+    RETURN jsonb_build_object('ok', false, 'reason', 'expired');
+  END IF;
+  SELECT c.slug INTO label
+  FROM bootstrap_os.invite_companies ic
+  JOIN bootstrap_os.companies c ON c.id = ic.company_id
+  WHERE ic.invite_id = invite.id
+  ORDER BY c.slug
+  LIMIT 1;
+  RETURN jsonb_build_object(
+    'ok', true,
+    'invitee_email', invite.invitee_email,
+    'company_label', coalesce(label, ''),
+    'inviter_email', invite.inviter_email
+  );
 END;
 $$;
 
@@ -347,6 +402,8 @@ REVOKE ALL ON FUNCTION public.bootstrap_os_invite_create(text, jsonb) FROM PUBLI
 GRANT EXECUTE ON FUNCTION public.bootstrap_os_invite_create(text, jsonb) TO authenticated;
 REVOKE ALL ON FUNCTION public.bootstrap_os_invite_accept(text) FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.bootstrap_os_invite_accept(text) TO authenticated;
+REVOKE ALL ON FUNCTION public.bootstrap_os_invite_verify(text) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.bootstrap_os_invite_verify(text) TO authenticated;
 
 REVOKE ALL ON FUNCTION bootstrap_os.resolved_actor_email() FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION bootstrap_os.resolved_actor_sub() FROM PUBLIC, anon, authenticated;
