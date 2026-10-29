@@ -110,6 +110,10 @@ describe("cursor catalog listing", () => {
     assert.equal(mcp.mcpServers["bootstrap-os"].url, "https://mcp.bootstrap.pirin.ai/mcp");
     assert.doesNotMatch(JSON.stringify(mcp), BOT_ADDRESS);
 
+    const dotMcp = JSON.parse(fs.readFileSync(path.join(REPO_ROOT, ".mcp.json"), "utf8"));
+    assert.deepEqual(dotMcp.mcpServers, mcp.mcpServers);
+    assert.doesNotMatch(JSON.stringify(dotMcp), BOT_ADDRESS);
+
     const listing = fs.readFileSync(path.join(REPO_ROOT, "LISTING.md"), "utf8");
     assert.match(listing, /Pirin\.ai/);
     assert.match(listing, /bootstrap@pirin\.ai/);
