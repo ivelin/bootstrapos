@@ -582,6 +582,25 @@ if [ -f plugin/plugin.json ] && [ -f plugin/mcp.json ] \
 else
   not_ok "plugin/ must have plugin.json, mcp.json, query-os-first, COVERAGE.md, and repo-root marketplace.json"
 fi
+# cursor.directory reads git blobs at skills/*/SKILL.md. A symlink is not that blob.
+skill_sync_ok=1
+for dir in plugin/skills/*/; do
+  name=$(basename "$dir")
+  if [ ! -f "skills/$name/SKILL.md" ] || ! cmp -s "plugin/skills/$name/SKILL.md" "skills/$name/SKILL.md"; then
+    skill_sync_ok=0
+  fi
+done
+for dir in skills/*/; do
+  name=$(basename "$dir")
+  if [ ! -f "plugin/skills/$name/SKILL.md" ]; then
+    skill_sync_ok=0
+  fi
+done
+if [ "$skill_sync_ok" = 1 ]; then
+  ok "root skills/*/SKILL.md matches plugin/skills"
+else
+  not_ok "root skills/*/SKILL.md must match plugin/skills byte for byte"
+fi
 if python3 - <<'PY'
 import json, pathlib, sys
 root = pathlib.Path("plugin")
