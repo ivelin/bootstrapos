@@ -27,7 +27,7 @@ case "${1:-}" in
     if [ -n "${GITHUB_ENV:-}" ]; then
       printf 'BOS_PG_DIR=%s\nBOS_PG_PORT=%s\n' "$ROOT" "$port" >> "$GITHUB_ENV"
     fi
-    echo "PostgreSQL 16 listening on 127.0.0.1:$port socket $ROOT"
+    echo "PostgreSQL 16 socket only at $ROOT port $port"
     ;;
   stop)
     stop_dir "$ROOT"

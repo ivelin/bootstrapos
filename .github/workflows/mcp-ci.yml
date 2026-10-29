@@ -212,7 +212,7 @@ jobs:
   # Hosted MCP only after merge. PRs stay on local stdio/http. Bounded GET /health + handshake.
   prod-smoke:
     name: production pin (main only)
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     needs: [mcp, user-path]
     # fallback: ubuntu-latest
     runs-on: [self-hosted, spark]
