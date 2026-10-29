@@ -68,7 +68,7 @@ describe("scoped invite RLS and card actor (PGlite, never prod)", { concurrency:
       .readFileSync(path.join(migrations, "20260902_bootstrap_os_journey.sql"), "utf8")
       .replace(/CREATE EXTENSION IF NOT EXISTS pgcrypto;/, "-- PGlite: gen_random_uuid is built-in");
     await db.exec(journey);
-    await db.exec(fs.readFileSync(path.join(migrations, "20261028_bootstrap_os_scoped_invites.sql"), "utf8"));
+    await db.exec(fs.readFileSync(path.join(migrations, "20261029_bootstrap_os_scoped_invites.sql"), "utf8"));
     await db.exec(`
       INSERT INTO bootstrap_os.companies (id, slug, label)
       VALUES ('11111111-1111-1111-1111-111111111111', 'alpha', 'alpha');
@@ -198,15 +198,21 @@ describe("scoped invite RLS and card actor (PGlite, never prod)", { concurrency:
     assert.equal(audit.rows[0].n, 2);
   });
 
-  it("service_role can invite from a local actor setting when the JWT has no email", async () => {
-    const local = await callInvite({
-      asService: true,
-      settingEmail: "founder@example.test",
-      settingSub: "22222222-2222-2222-2222-222222222222",
-      settingLocal: true,
-      invitee: "local-fallback@example.test",
-      companies: [{ slug: "alpha", role: "viewer" }],
-    });
-    assert.equal(local.ok, true);
+  it("a forged role setting plus the owner email cannot mint an invite", async () => {
+    const before = await db.query("SELECT count(*)::int AS n FROM bootstrap_os.invite_companies");
+    await assert.rejects(
+      () =>
+        callInvite({
+          asService: true,
+          settingEmail: "founder@example.test",
+          settingSub: "22222222-2222-2222-2222-222222222222",
+          settingLocal: true,
+          invitee: "forged-role@example.test",
+          companies: [{ slug: "alpha", role: "viewer" }],
+        }),
+      /actor_required/,
+    );
+    const after = await db.query("SELECT count(*)::int AS n FROM bootstrap_os.invite_companies");
+    assert.equal(after.rows[0].n, before.rows[0].n);
   });
 });

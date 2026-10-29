@@ -18,6 +18,13 @@ const MIGRATION = path.join(
   "migrations",
   "20261028_create_company_self_serve.sql",
 );
+const SCOPED_INVITES = path.join(
+  __dirname,
+  "..",
+  "supabase",
+  "migrations",
+  "20261029_bootstrap_os_scoped_invites.sql",
+);
 
 const ALICE = "11111111-1111-4111-8111-111111111111";
 const ALICE_EMAIL = "alice@example.test";
@@ -159,5 +166,26 @@ describe("create_company_self_serve (PGlite, never prod)", () => {
       assert.match(String(err.message), /permission denied/i);
       return true;
     });
+  });
+
+  it("authenticated cannot execute the self-serve audit function", async () => {
+    await db.exec("RESET ROLE");
+    await db.exec(
+      "GRANT EXECUTE ON FUNCTION public.bootstrap_os_audit_self_serve_company() TO authenticated",
+    );
+    const before = await db.query(
+      "SELECT has_function_privilege('authenticated', 'public.bootstrap_os_audit_self_serve_company()', 'execute') AS allowed",
+    );
+    assert.equal(before.rows[0].allowed, true);
+    await db.exec(fs.readFileSync(SCOPED_INVITES, "utf8"));
+    const after = await db.query(
+      "SELECT has_function_privilege('authenticated', 'public.bootstrap_os_audit_self_serve_company()', 'execute') AS allowed",
+    );
+    assert.equal(after.rows[0].allowed, false);
+    await db.exec("SET ROLE authenticated");
+    await assert.rejects(
+      () => db.query("SELECT public.bootstrap_os_audit_self_serve_company()"),
+      /permission denied/i,
+    );
   });
 });

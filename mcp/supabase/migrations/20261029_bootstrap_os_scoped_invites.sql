@@ -47,14 +47,19 @@ REVOKE ALL ON TABLE bootstrap_os.invite_companies FROM PUBLIC, anon, authenticat
 -- are read only for service_role. That role passes them with
 -- set_config(name, value, true). require_actor does not re-set them.
 
+-- current_setting('role') is not proof. set_config('role', 'service_role', true)
+-- switches the role when the session user is a member of service_role
+-- (the authenticator pool). A signed-in caller can look like service_role
+-- and then supply app.actor_email. Only current_user and session_user count.
+-- Inside SECURITY DEFINER those are the function owner, so this fallback
+-- stays closed on invite_create and card writes. The actor is the JWT.
 CREATE OR REPLACE FUNCTION bootstrap_os.caller_is_service_role()
 RETURNS boolean
 LANGUAGE sql
 STABLE
 AS $$
   SELECT current_user = 'service_role'
-    OR session_user = 'service_role'
-    OR current_setting('role', true) = 'service_role';
+    OR session_user = 'service_role';
 $$;
 
 -- service_role fallback. Callers must use set_config(name, value, true)
@@ -389,3 +394,14 @@ BEGIN
   EXECUTE 'REVOKE UPDATE, DELETE, TRUNCATE ON TABLE bootstrap_os.audit_events FROM PUBLIC, anon, authenticated';
 END
 $owner_audit$;
+
+-- Self-serve creates this trigger function and revokes PUBLIC and anon only.
+-- Supabase default privileges still GRANT EXECUTE to authenticated. The trigger
+-- fires as the table owner. Direct EXECUTE must not be available.
+DO $revoke_self_serve_audit$
+BEGIN
+  IF to_regprocedure('public.bootstrap_os_audit_self_serve_company()') IS NOT NULL THEN
+    REVOKE ALL ON FUNCTION public.bootstrap_os_audit_self_serve_company() FROM PUBLIC, anon, authenticated;
+  END IF;
+END
+$revoke_self_serve_audit$;
