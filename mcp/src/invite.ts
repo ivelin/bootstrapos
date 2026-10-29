@@ -15,6 +15,7 @@ import {
   inviteSignupUrl,
 } from "./invite-mail.js";
 import { memoryRateLimiter, type RateDecision, type RateLimiter } from "./rate-limit.js";
+import { legacyRank, planScopedInvite, type BoardTier, type HeldBoard } from "./invite-scope.js";
 
 export const INVITE_TOKEN_PREFIX = "inv_";
 export const INVITE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
@@ -37,7 +38,8 @@ export type InviteActor = {
 
 export type InviteCreateInput = {
   email: string;
-  companyLabel: string;
+  companyLabel?: string;
+  companies?: Array<{ slug: string; role?: BoardTier | string }>;
 };
 
 export type AcceptInviteCard = {
@@ -82,6 +84,7 @@ export type InviteFailReason =
   | "invalid_label"
   | "label_not_held"
   | "already_member"
+  | "invite_partial_authority"
   | "invite_store_unset"
   | "invite_rpc_failed";
 
@@ -98,6 +101,10 @@ export type AcceptFailReason =
   | "invite_expired"
   | "invite_already_used"
   | "invite_email_mismatch"
+  | "token_not_found"
+  | "expired"
+  | "email_mismatch"
+  | "already_accepted"
   | "email_required"
   | "invite_store_unset"
   | "invite_rpc_failed";
@@ -185,6 +192,24 @@ function coerceRpcResult<T extends { ok: boolean }>(raw: unknown, status: number
   return inviteRpcFailed(status, body);
 }
 
+export type ScopedInviteResult =
+  | {
+      ok: true;
+      companies: Array<{ slug: string; role: BoardTier }>;
+      dropped: Array<{ slug: string; role: BoardTier }>;
+      inviteeEmail: string;
+      token: string;
+    }
+  | {
+      ok: false;
+      reason: "invite_partial_authority";
+      allowed: string[];
+      denied: Array<{ slug: string; reason: string }>;
+    }
+  | InviteFail
+  | InviteRateLimited
+  | InviteLimiterUnavailable;
+
 export type InviteRow = {
   id: string;
   inviteeEmail: string;
@@ -195,6 +220,7 @@ export type InviteRow = {
   expiresAt: string;
   acceptedAt: string | null;
   createdAt: string;
+  companies?: Array<{ slug: string; role: BoardTier }>;
 };
 
 export type InviteOutboxChannel = "in_chat" | "email";
@@ -221,7 +247,7 @@ export type VerifyInviteResult = VerifyInviteOk | VerifyInviteFail;
 
 export interface InviteStore {
   readonly kind: "memory" | "pglite" | "supabase";
-  inviteMember(actor: InviteActor, input: InviteCreateInput): Promise<InviteResult>;
+  inviteMember(actor: InviteActor, input: InviteCreateInput): Promise<InviteResult | ScopedInviteResult>;
   acceptInvite(actor: InviteActor, token: string): Promise<AcceptResult>;
   /** Pending unexpired invites for the verified session email. Token email is ignored. */
   acceptPending(actor: InviteActor, accessToken?: string): Promise<AcceptPendingResult>;
@@ -450,6 +476,7 @@ export class MemoryInviteStore implements InviteStore {
     email: string;
     authUserId: string | null;
     labels: string[];
+    boardRoles?: Record<string, string>;
   }>;
 
   private readonly limiter: RateLimiter;
@@ -460,6 +487,7 @@ export class MemoryInviteStore implements InviteStore {
       email: string;
       authUserId: string | null;
       labels: string[];
+      boardRoles?: Record<string, string>;
     }>,
     options?: { limiter?: RateLimiter },
   ) {
@@ -471,10 +499,103 @@ export class MemoryInviteStore implements InviteStore {
     return this.mentees.find((row) => row.email === email);
   }
 
-  async inviteMember(actor: InviteActor, input: InviteCreateInput): Promise<InviteResult> {
+  private heldBoards(mentee: { labels: string[]; boardRoles?: Record<string, string> } | undefined): HeldBoard[] {
+    if (!mentee?.boardRoles) return [];
+    return mentee.labels.flatMap((slug) => {
+      const rank = legacyRank(mentee.boardRoles?.[slug]);
+      return rank ? [{ slug, rank }] : [];
+    });
+  }
+
+  private grantLegacyBoard(
+    mentee: { labels: string[]; boardRoles?: Record<string, string> },
+    slug: string,
+  ) {
+    if (!slug) return;
+    mentee.boardRoles = mentee.boardRoles ?? {};
+    if (!mentee.boardRoles[slug]) mentee.boardRoles[slug] = "viewer";
+    if (!mentee.labels.includes(slug)) mentee.labels.push(slug);
+  }
+
+  private applyGrants(
+    mentee: { labels: string[]; boardRoles?: Record<string, string> },
+    grants: Array<{ slug: string; role: BoardTier }>,
+  ) {
+    mentee.boardRoles = mentee.boardRoles ?? {};
+    for (const grant of grants) {
+      const current = legacyRank(mentee.boardRoles[grant.slug]);
+      const next = legacyRank(grant.role);
+      if (current && next && current >= next) continue;
+      mentee.boardRoles[grant.slug] = grant.role;
+      if (!mentee.labels.includes(grant.slug)) mentee.labels.push(grant.slug);
+    }
+    mentee.labels.sort();
+  }
+
+  private async inviteScoped(
+    actor: InviteActor,
+    email: string,
+    companies: Array<{ slug: string; role?: string }>,
+  ): Promise<InviteResult | ScopedInviteResult> {
+    const inviterEmail = normalizeInviteEmail(actor.email ?? "");
+    const inviteeEmail = normalizeInviteEmail(email);
+    if (!inviterEmail) return { ok: false, reason: "inviter_not_on_allowlist" };
+    if (!inviteeEmail) return { ok: false, reason: "invalid_email" };
+    const inviter = this.mentees.find((row) => row.email === inviterEmail);
+    if (!inviter) return { ok: false, reason: "inviter_not_on_allowlist" };
+    const invitee = this.mentees.find((row) => row.email === inviteeEmail);
+    const plan = planScopedInvite({
+      held: this.heldBoards(inviter),
+      inviteeHeld: this.heldBoards(invitee),
+      requested: companies,
+    });
+    if (!plan.ok) return plan;
+    const decision = await this.limiter.take({
+      actorId: hostedActorKey({ sub: actor.sub, email: actor.email }),
+      action: "invite_member",
+      limit: HOSTED_DAILY_CAPS.invite_member.limit,
+      windowMs: HOSTED_DAILY_CAPS.invite_member.windowMs,
+    });
+    if (!decision.ok) return inviteRateRefusal(decision);
+    const inviteeDecision = await this.limiter.take({
+      actorId: inviteeEmail,
+      action: "invite_invitee",
+      limit: HOSTED_DAILY_CAPS.invite_member.limit,
+      windowMs: HOSTED_DAILY_CAPS.invite_member.windowMs,
+    });
+    if (!inviteeDecision.ok) return inviteRateRefusal(inviteeDecision);
+    const token = mintInviteToken();
+    const now = inviteNow();
+    const expiresAt = new Date(now + INVITE_TTL_MS).toISOString();
+    const id = newId("inv");
+    this.invites.push({
+      id,
+      inviteeEmail,
+      companyLabel: plan.grants[0]?.slug ?? "",
+      invitedByMenteeId: inviter.id,
+      invitedByEmail: inviter.email,
+      tokenHash: hashMcpToken(token),
+      expiresAt,
+      acceptedAt: null,
+      createdAt: new Date(now).toISOString(),
+      companies: plan.grants,
+    });
+    return {
+      ok: true,
+      companies: plan.grants,
+      dropped: plan.dropped,
+      inviteeEmail,
+      token,
+    };
+  }
+
+  async inviteMember(actor: InviteActor, input: InviteCreateInput): Promise<InviteResult | ScopedInviteResult> {
+    if (input.companies) {
+      return this.inviteScoped(actor, input.email, input.companies);
+    }
     const inviterEmail = normalizeInviteEmail(actor.email ?? "");
     const inviteeEmail = normalizeInviteEmail(input.email);
-    const companyLabel = normalizeCompanyLabel(input.companyLabel);
+    const companyLabel = normalizeCompanyLabel(input.companyLabel ?? "");
     if (!inviterEmail) return { ok: false, reason: "inviter_not_on_allowlist" };
     if (!inviteeEmail) return { ok: false, reason: "invalid_email" };
     if (!companyLabel) return { ok: false, reason: "invalid_label" };
@@ -582,7 +703,8 @@ export class MemoryInviteStore implements InviteStore {
     } else if (!mentee.authUserId && actor.sub) {
       mentee.authUserId = actor.sub;
     }
-    if (!mentee.labels.includes(row.companyLabel)) mentee.labels.push(row.companyLabel);
+    if (row.companies) this.applyGrants(mentee, row.companies);
+    else this.grantLegacyBoard(mentee, row.companyLabel);
     mentee.labels.sort();
     return {
       ok: true,
@@ -631,7 +753,7 @@ export class MemoryInviteStore implements InviteStore {
       } else if (!mentee.authUserId && actor.sub && !this.mentees.some((m) => m.authUserId === actor.sub)) {
         mentee.authUserId = actor.sub;
       }
-      if (!mentee.labels.includes(row.companyLabel)) mentee.labels.push(row.companyLabel);
+      this.grantLegacyBoard(mentee, row.companyLabel);
       mentee.labels.sort();
       accepted.push(row.companyLabel);
     }
@@ -761,7 +883,15 @@ export class SupabaseInviteStore implements InviteStore {
     return { status: res.status, raw: parseInviteRpcJson(text) };
   }
 
-  async inviteMember(_actor: InviteActor, input: InviteCreateInput): Promise<InviteResult> {
+  async inviteMember(_actor: InviteActor, input: InviteCreateInput): Promise<InviteResult | ScopedInviteResult> {
+    if (input.companies) {
+      const hit = await this.rpc("bootstrap_os_invite_create", {
+        p_email: input.email,
+        p_companies: input.companies,
+      });
+      if (isInviteRpcFail(hit)) return hit;
+      return coerceRpcResult<ScopedInviteResult>(hit.raw, hit.status);
+    }
     const hit = await this.rpc("bootstrap_mcp_invite_member", {
       p_email: input.email,
       p_company_label: input.companyLabel,
@@ -771,6 +901,17 @@ export class SupabaseInviteStore implements InviteStore {
   }
 
   async acceptInvite(_actor: InviteActor, token: string): Promise<AcceptResult> {
+    const scoped = await this.rpc("bootstrap_os_invite_accept", { p_token: token });
+    if (isInviteRpcFail(scoped)) return scoped;
+    const body = scoped.raw;
+    const absent =
+      body &&
+      typeof body === "object" &&
+      (body as { ok?: boolean; reason?: string }).ok === false &&
+      (body as { reason?: string }).reason === "token_not_found";
+    if (!absent) return coerceRpcResult<AcceptResult>(body, scoped.status);
+    // Owner: Bootstrap OS - Builder. Dated 2026-10-29.
+    // Remove this legacy fallback after the existing legacy invites expire.
     const hit = await this.rpc("bootstrap_mcp_accept_invite", { p_token: token });
     if (isInviteRpcFail(hit)) return hit;
     return coerceRpcResult<AcceptResult>(hit.raw, hit.status);
@@ -795,11 +936,27 @@ export class SupabaseInviteStore implements InviteStore {
   }
 
   async verifyInvite(token: string): Promise<VerifyInviteResult> {
+    const scoped = await this.rpc("bootstrap_os_invite_verify", { p_token: token });
+    if (isInviteRpcFail(scoped)) return { ok: false };
+    const raw = scoped.raw;
+    const absent =
+      raw &&
+      typeof raw === "object" &&
+      (raw as { ok?: boolean; reason?: string }).ok === false &&
+      (raw as { reason?: string }).reason === "token_not_found";
+    if (!absent) {
+      if (raw && typeof raw === "object" && (raw as VerifyInviteResult).ok === true) {
+        return raw as VerifyInviteOk;
+      }
+      return { ok: false };
+    }
+    // Owner: Bootstrap OS - Builder. Dated 2026-10-29.
+    // Remove this legacy fallback after the existing legacy invites expire.
     const hit = await this.rpc("bootstrap_mcp_verify_invite", { p_token: token });
     if (isInviteRpcFail(hit)) return { ok: false };
-    const raw = hit.raw;
-    if (raw && typeof raw === "object" && (raw as VerifyInviteResult).ok === true) {
-      return raw as VerifyInviteOk;
+    const legacy = hit.raw;
+    if (legacy && typeof legacy === "object" && (legacy as VerifyInviteResult).ok === true) {
+      return legacy as VerifyInviteOk;
     }
     return { ok: false };
   }
@@ -836,6 +993,8 @@ export function inviteFailMessage(input: InviteFailMessageInput): string {
       return "Inviter does not hold that company workspace label.";
     case "already_member":
       return "That email is already on this company workspace.";
+    case "invite_partial_authority":
+      return "You can share only the bet boards you hold, and only up to your tier.";
     case "invite_store_unset":
       return "Invite store unset. Cos applies the invite migration on rebuild — never from a PR agent.";
     case "invite_rpc_failed": {
@@ -846,6 +1005,10 @@ export function inviteFailMessage(input: InviteFailMessageInput): string {
     case "invite_not_found":
       return "Invite rejected.";
     case "invite_expired":
+    case "expired":
+    case "token_not_found":
+    case "email_mismatch":
+    case "already_accepted":
       return "Invite rejected.";
     case "invite_already_used":
       return "Invite rejected.";

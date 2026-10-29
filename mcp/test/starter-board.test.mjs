@@ -207,7 +207,10 @@ describe("starter bet board (memory, never prod)", { concurrency: false }, () =>
       token,
     );
     assert.equal(subscribed.body.result.isError, true);
-    assert.match(subscribed.body.result.content.map((part) => part.text).join("\n"), /cannot send webhooks/);
+    assert.match(
+      subscribed.body.result.content.map((part) => part.text).join("\n"),
+      /subscribe_board not found/,
+    );
 
     const watched = await rpc(
       "tools/call",
