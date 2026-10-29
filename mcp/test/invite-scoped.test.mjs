@@ -298,6 +298,86 @@ describe("company-scoped invites", () => {
     }
   });
 
+  it("a scoped accept HTTP 500 does not call the legacy RPC", async () => {
+    const origFetch = globalThis.fetch;
+    const store = new SupabaseInviteStore(
+      "https://rpc-fixture.example",
+      "anon-key-fixture-xx",
+      "access-token-fixture",
+    );
+    const urls = [];
+    try {
+      globalThis.fetch = async (url) => {
+        urls.push(String(url));
+        return new Response("upstream", { status: 500 });
+      };
+      const accepted = await store.acceptInvite(
+        { email: "member@example.test" },
+        "inv_fixture_token_xxxxxxxx",
+      );
+      assert.equal(accepted.ok, false);
+      assert.equal(accepted.reason, "invite_rpc_failed");
+      assert.equal(accepted.status, 500);
+      assert.deepEqual(urls, ["https://rpc-fixture.example/rest/v1/rpc/bootstrap_os_invite_accept"]);
+    } finally {
+      globalThis.fetch = origFetch;
+    }
+  });
+
+  it("verifyInvite uses the scoped RPC and falls back only when the token is absent", async () => {
+    const origFetch = globalThis.fetch;
+    const store = new SupabaseInviteStore(
+      "https://rpc-fixture.example",
+      "anon-key-fixture-xx",
+      "access-token-fixture",
+    );
+    const urls = [];
+    const payload = {
+      ok: true,
+      invitee_email: "member@example.test",
+      company_label: "alpha",
+      inviter_email: "founder@example.test",
+    };
+    try {
+      globalThis.fetch = async (url) => {
+        urls.push(String(url));
+        if (String(url).endsWith("/bootstrap_os_invite_verify")) {
+          return new Response(JSON.stringify({ ok: false, reason: "expired" }), { status: 200 });
+        }
+        return new Response(JSON.stringify(payload), { status: 200 });
+      };
+      const expired = await store.verifyInvite("inv_fixture_token_xxxxxxxx");
+      assert.deepEqual(expired, { ok: false });
+      assert.deepEqual(urls, ["https://rpc-fixture.example/rest/v1/rpc/bootstrap_os_invite_verify"]);
+
+      urls.length = 0;
+      globalThis.fetch = async (url) => {
+        urls.push(String(url));
+        if (String(url).endsWith("/bootstrap_os_invite_verify")) {
+          return new Response(JSON.stringify({ ok: false, reason: "token_not_found" }), { status: 200 });
+        }
+        return new Response(JSON.stringify(payload), { status: 200 });
+      };
+      const legacy = await store.verifyInvite("inv_legacy_token_xxxxxxxx");
+      assert.deepEqual(legacy, payload);
+      assert.deepEqual(urls, [
+        "https://rpc-fixture.example/rest/v1/rpc/bootstrap_os_invite_verify",
+        "https://rpc-fixture.example/rest/v1/rpc/bootstrap_mcp_verify_invite",
+      ]);
+
+      urls.length = 0;
+      globalThis.fetch = async (url) => {
+        urls.push(String(url));
+        return new Response(JSON.stringify(payload), { status: 200 });
+      };
+      const verified = await store.verifyInvite("inv_fixture_token_xxxxxxxx");
+      assert.deepEqual(verified, payload);
+      assert.deepEqual(urls, ["https://rpc-fixture.example/rest/v1/rpc/bootstrap_os_invite_verify"]);
+    } finally {
+      globalThis.fetch = origFetch;
+    }
+  });
+
   it("the hosted invite RPC sends the company list", async () => {
     const origFetch = globalThis.fetch;
     const store = new SupabaseInviteStore(

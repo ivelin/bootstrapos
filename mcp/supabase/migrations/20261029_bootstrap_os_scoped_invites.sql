@@ -314,36 +314,30 @@ BEGIN
     RETURN jsonb_build_object('ok', false, 'reason', 'token_not_found');
   END IF;
   digest := encode(sha256(convert_to(p_token, 'UTF8')), 'hex');
-  SELECT * INTO invite
-  FROM bootstrap_os.invites
-  WHERE token_hash = digest
-  FOR UPDATE;
-  IF invite.id IS NULL THEN
-    RETURN jsonb_build_object('ok', false, 'reason', 'token_not_found');
-  END IF;
-  IF invite.invitee_email <> actor_email THEN
-    RETURN jsonb_build_object('ok', false, 'reason', 'email_mismatch');
-  END IF;
-  IF invite.status <> 'pending' THEN
-    RETURN jsonb_build_object('ok', false, 'reason', 'already_accepted');
-  END IF;
-  IF invite.expires_at <= now() THEN
-    RETURN jsonb_build_object('ok', false, 'reason', 'expired');
-  END IF;
   UPDATE bootstrap_os.invites
   SET status = 'accepted', accepted_at = now(), accepted_by = actor_email
-  WHERE id = invite.id
+  WHERE token_hash = digest
     AND status = 'pending'
     AND expires_at > now()
     AND invitee_email = actor_email
   RETURNING id INTO claimed;
   IF claimed IS NULL THEN
+    SELECT * INTO invite FROM bootstrap_os.invites WHERE token_hash = digest;
+    IF invite.id IS NULL THEN
+      RETURN jsonb_build_object('ok', false, 'reason', 'token_not_found');
+    END IF;
+    IF invite.invitee_email <> actor_email THEN
+      RETURN jsonb_build_object('ok', false, 'reason', 'email_mismatch');
+    END IF;
+    IF invite.expires_at <= now() THEN
+      RETURN jsonb_build_object('ok', false, 'reason', 'expired');
+    END IF;
     RETURN jsonb_build_object('ok', false, 'reason', 'already_accepted');
   END IF;
   FOR grant_row IN
     SELECT ic.company_id, ic.role
     FROM bootstrap_os.invite_companies ic
-    WHERE ic.invite_id = invite.id
+    WHERE ic.invite_id = claimed
   LOOP
     INSERT INTO bootstrap_os.company_acl (company_id, principal, principal_kind, role)
     SELECT grant_row.company_id, actor_email, 'email', grant_row.role
