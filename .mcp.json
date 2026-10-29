@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "bootstrap-os": {
+      "type": "streamable-http",
+      "url": "https://mcp.bootstrap.pirin.ai/mcp"
+    }
+  }
+}
