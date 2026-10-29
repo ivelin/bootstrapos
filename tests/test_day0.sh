@@ -960,7 +960,8 @@ if grep -q '### Standing rules' "$fh" \
   && grep -q 'The hosted connector uses sign-in' "$fh" \
   && ! grep -q 'listed for public install' "$fh" \
   && ! grep -q 'plain member account' "$fh" \
-  && grep -q 'mentee boards on our host' "$fh" \
+  && ! grep -qi 'not mentee-ready' "$fh" \
+  && ! grep -q 'mentee boards on our host' "$fh" \
   && grep -q 'Grok Bot marketplace bot' "$fh" \
   && grep -q 'Not another Day 0 checkbox' "$fh"; then
   ok "first-hour.md After this hour holds the standing rules once"

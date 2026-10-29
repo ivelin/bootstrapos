@@ -2,7 +2,7 @@
 
 Process bar stays on **Vercel’s current** Git integration, preview, env, and tests. No second CI host. Free Path 1 is GitHub + install-os + local. The hosted connector uses sign-in. Pin `https://mcp.bootstrap.pirin.ai/mcp`. Handshake 401. Optional gated identity (whoami + labels) uses the existing pirin.ai Supabase — not a new Neon, not company-state. Contract: [`mcp/docs/HOSTED_IDENTITY.md`](../mcp/docs/HOSTED_IDENTITY.md).
 
-This is a **preview package**. Not mentee-ready hosted boards. Free GitHub docs are the alternative.
+This is a **preview package**. Free GitHub docs are the alternative.
 
 ## Locked (CI / file)
 
@@ -38,7 +38,7 @@ This is a **preview package**. Not mentee-ready hosted boards. Free GitHub docs 
 | A human actually signed in as Ivelin and called whoami on the live pin | File/fixture lock only. Do not claim a paste that is not in this PR. |
 | pirin.ai `/bootstrap-os/login` | Contract in `mcp/docs/HOSTED_IDENTITY.md`. Login + OAuth + protected-resource metadata live on pirin.ai (Web Builder). This host returns 401 + `WWW-Authenticate`. Not this repo. Do not add a login UI here. |
 | Extra connectors / mentee roster / usage analytics as proof | Out. |
-| Journey SQL on pirin.ai / mentee-ready boards | This branch ships SQL + PGlite tests only. Not the production pin. Do not merge. |
+| Journey SQL on the hosted pin | This branch ships SQL + PGlite tests only. Not the production pin. Do not merge. |
 | A founder actually answering lifestyle vs fences, or setting a first price | File pins are locked. The conversation is not. |
 | Production `bootstrap_os_info.osVersion` already `2.8.9` | Draft PR. Prod still serves the last production deploy until merge + Vercel production. |
 | CAC / LTV / day-31 / day-90 / NRR / magic-number numbers on Path 1 | Must stay absent. CI locks the absence. |
@@ -146,4 +146,4 @@ Full checklist (whoami invited/uninvited, handshake 401, `GET /health`, Vercel *
 
 ## Honesty
 
-Green CI on this PR is **packaging + preview-host honesty**, not demand, not PMF, not mentee-ready boards.
+Green CI on this PR is **packaging + preview-host honesty**, not demand, not PMF.

@@ -120,7 +120,7 @@ describe("markdown install path (zero MCP required)", () => {
       assert.match(marketplace, /https:\/\/mcp\.bootstrap\.pirin\.ai\/mcp/);
       assert.match(marketplace, /marketplace: true/);
       assert.doesNotMatch(marketplace, /listing time/);
-      assert.match(firstHour, /\*\*Not\*\* mentee boards on our host/);
+      assert.doesNotMatch(firstHour, /not mentee-ready|mentee boards on our host/i);
       assert.match(firstHour, /\*\*Not\*\* a Grok Bot marketplace bot/);
       assert.match(firstHour, /Not another Day 0 checkbox/);
       const doneWhen = firstHour.match(/## Done when[\s\S]*?(?=\n## After this hour)/);

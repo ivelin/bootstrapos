@@ -2,7 +2,7 @@
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "bootstrap-os",
   "version": "0.1.1",
-  "description": "Preview 0.1.1 pointer to published Bootstrap OS. Skills hyperlink the constitution. See mcp/docs/MARKETPLACE.md. Not mentee-ready hosted boards. Free GitHub docs are the alternative.",
+  "description": "Preview 0.1.1 pointer to published Bootstrap OS. Skills hyperlink the constitution. See mcp/docs/MARKETPLACE.md. Free GitHub docs are the alternative.",
   "author": {
     "name": "Ivelin Ivanov",
     "url": "https://github.com/ivelin"

@@ -103,7 +103,7 @@ async function main() {
     assert.equal(info.osVersion, "2.8.19");
     assert.ok(info.commit === null || typeof info.commit === "string");
     assert.equal(path.resolve(info.paths.dataRoot), path.resolve(dataRoot));
-    assert.doesNotMatch(JSON.stringify(info.adoptionOrder), /not mentee-ready/i);
+    assert.doesNotMatch(JSON.stringify(info), /not mentee-ready/i);
     assert.match(JSON.stringify(info.adoptionOrder), /Not pirin\.ai/);
     assert.match(JSON.stringify(info.adoptionOrder), /Free GitHub docs are the alternative/);
     assert.equal(info.marketplace, true);

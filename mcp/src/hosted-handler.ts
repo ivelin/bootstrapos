@@ -305,7 +305,7 @@ export async function handleHostedReadFetch(req: Request): Promise<Response> {
   }
 
   if (!isMcpPath(pathname)) {
-    return new Response("Preview hosted-read MCP. POST /mcp. Not mentee-ready boards.", {
+    return new Response("Preview hosted-read MCP. POST /mcp.", {
       status: 404,
       headers: { "Content-Type": "text/plain; charset=utf-8", ...corsHeaders() },
     });

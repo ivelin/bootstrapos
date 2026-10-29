@@ -94,7 +94,7 @@ async function assertPublicPin(origin) {
   const root = await fetchRetry(`${origin}/`);
   assert.equal(root.status, 200, `GET / ${root.status}`);
   const rootText = await root.text();
-  assert.match(rootText, /Not mentee-ready boards/);
+  assert.doesNotMatch(rootText, /not mentee-ready/i);
   assert.match(rootText, /POST \/mcp/);
   assert.match(rootText, /GET \/health/);
   assert.doesNotMatch(rootText, /<html/i);

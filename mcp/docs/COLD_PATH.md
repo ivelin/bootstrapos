@@ -5,8 +5,7 @@
 **Goal:** On a clean machine, go from zero → working multi-company control plane in under 15 minutes.  
 **Pass criteria for gate M2:** someone who did **not** write this code completes the path and records evidence below.
 
-This is the **self-host kit** (stdio / `~/.bootstrap-os`, `initCompany()`). It is not the Pirin-supported mentee source of record. Path 1 is still point an AI at https://github.com/ivelin/bootstrapos (no install). Path 2 is optional notes in your repo. The Pirin write plane is [`HOSTED_IDENTITY.md`](HOSTED_IDENTITY.md) — `create_company` then `create_idea`. Git-branch previews are not mentee-ready boards.
-
+This is the **self-host kit** (stdio / `~/.bootstrap-os`, `initCompany()`). It is not the Pirin-supported mentee source of record. Path 1 is still point an AI at https://github.com/ivelin/bootstrapos (no install). Path 2 is optional notes in your repo. The Pirin write plane is [`HOSTED_IDENTITY.md`](HOSTED_IDENTITY.md) — `create_company` then `create_idea`.
 ---
 
 ## Prerequisites
