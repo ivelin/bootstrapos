@@ -2,7 +2,7 @@
 
 Bootstrap OS is a bet board for solo founders going from idea to first real customers. Pirin.ai publishes this connector. It reads and updates your bet board. You can ask where you are, what is stuck this week, and what you already decided.
 
-This plugin is not listed in the Cursor marketplace yet.
+Privacy is https://pirin.ai/privacy. Terms are https://pirin.ai/terms.
 
 ## What you need
 
@@ -39,4 +39,4 @@ Moving an idea to a new stage needs your approval.
 
 ## Help
 
-Email ivelin@pirin.ai. The homepage is https://pirin.ai/bootstrap-os. Source code (Apache-2.0) is https://github.com/ivelin/bootstrapos.
+Email bootstrap@pirin.ai. The homepage is https://pirin.ai/bootstrap-os. Privacy is https://pirin.ai/privacy. Terms are https://pirin.ai/terms. Source code (Apache-2.0) is https://github.com/ivelin/bootstrapos. Publisher is Pirin.ai.

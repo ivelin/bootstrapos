@@ -199,7 +199,7 @@ function registerReadTools(server: McpServer, surface: McpSurface, hosted?: Host
         ],
         houseRules: HOUSE_RULE_LINES,
         houseRulePins: HOUSE_RULE_PINS,
-        marketplace: false,
+        marketplace: true,
         support: SUPPORT_HOWTO,
         pluginPreview: {
           path: "plugin/",
@@ -214,7 +214,7 @@ function registerReadTools(server: McpServer, surface: McpSurface, hosted?: Host
           founderVoice: FOUNDER_INTRO,
           doNotRecite: "Client format: the founderVoice paragraph, then the live board.",
           surface,
-          marketplace: false,
+          marketplace: true,
           support: SUPPORT_HOWTO,
           adoptionOrder: adoptionOrder(surface),
           pluginPreview: {

@@ -1,101 +1,32 @@
-# Bootstrap OS
+# Bootstrap OS by pirin.ai
 
-**Portable company operating system for solo founders in the 0→1 journey.**
-
-This repo is the operating board for a company: who you are betting on, what is stuck this week, and what you already decided.
-
-Use this repo as the **source of truth** for process and control. Point your AI here and apply what fits *your* startup. Instantiate blank files in *your* product repo only when you want them — fill only *your* thesis, customer groups, scores, and open questions.
-
-> **Local deployment is deprecated as of October 2, 2026.** The laptop kit and `~/.bootstrap-os` get no more fixes, features, or evals. Local-only files for that path will be removed around October 16, 2026. The supported paths are the [hosted MCP](https://mcp.bootstrap.pirin.ai/mcp) and the [Bootstrap Bill template](docs/install-bill.md). [Move off a local install](docs/migrate-from-local.md).
+Bootstrap OS is a bet board for solo founders going from idea to first real customers. Pirin.ai publishes this connector. It reads and updates your bet board. You can ask where you are, what is stuck this week, and what you already decided.
 
 | | |
 |--|--|
-| **Version** | Blueprint + live runtime **v2.8.19** · hosted pin is the Pirin write plane · OSS `mcp/` is the self-host kit |
+| **Publisher** | Pirin.ai |
+| **Contact** | bootstrap@pirin.ai |
 | **License** | Apache-2.0 |
-| **Audience** | Independent solo founders; mentors (Founder Institute, SCORE, …); AI helpers |
-| **Maintainer** | [Ivelin Ivanov](https://github.com/ivelin) · [Pirin.ai](https://pirin.ai) |
-| **Install** | [pirin.ai/bootstrap-os](https://pirin.ai/bootstrap-os) |
-| **Canonical repo** | [github.com/ivelin/bootstrapos](https://github.com/ivelin/bootstrapos) |
+| **Version** | Blueprint **v2.8.19**. Plugin **0.1.1**. |
+| **Homepage** | [pirin.ai/bootstrap-os](https://pirin.ai/bootstrap-os) |
+| **Privacy** | [pirin.ai/privacy](https://pirin.ai/privacy) |
+| **Terms** | [pirin.ai/terms](https://pirin.ai/terms) |
+| **Source** | [github.com/ivelin/bootstrapos](https://github.com/ivelin/bootstrapos) |
 
----
+## What you need
 
-## Mental model (blueprint vs weekly loop)
+- An invite. Bet boards are invite-only. Someone already on your bet board sends the invite to your email.
+- A pirin.ai sign-in that uses that same email. You can create the account when you first sign in.
 
-```text
-BLUEPRINT (how to decide)              LIVE RUNTIME (how to learn every week)
-company-os/operating-system.md         company-os/live-runtime.md
-  five journey rungs                     persistent state (personas, traces, scores…)
-  founder gates + honest evidence        weekly quality bar → Write back → Ask again
-  reward/risk + virtual office           git remembers; day tools may feed it
-  (cards stay; jobs optional)            optional: founder-day + skill-capture
-```
+## How to connect
 
-**Golden rule:** Copy *process and control*. Do **not** copy another founder’s market, ICP list, feature roadmap, or “current hypothesis.”
+The hosted connector is how you open a bet board. The connector address is https://mcp.bootstrap.pirin.ai/mcp.
 
----
+The hosted connector uses sign-in. The handshake returns 401. Gated tools return 401 and `WWW-Authenticate`. The authorization server is the pirin.ai login. This repository does not host a login page.
 
-## What’s in this repo
-
-| Path | What it is |
-|------|------------|
-| [`company-os/operating-system.md`](company-os/operating-system.md) | **Blueprint** — principles, five journey rungs, gates, evidence labels, next pack, Ready for human eyes, growth pack |
-| [`company-os/after-proof-efficiency.md`](company-os/after-proof-efficiency.md) | **After proof** — five instruments (fences + they asked). Not Day 0. |
-| [`company-os/live-runtime.md`](company-os/live-runtime.md) | **Live OS shape** — durable state + three-week loop + eval harness ideas |
-| [`company-os/ready-for-human-eyes.md`](company-os/ready-for-human-eyes.md) | **Ship gate checklist** — cold URL + happy path before external product-test asks |
-| [`company-os/ai-instructions.md`](company-os/ai-instructions.md) | Thin enforcement layer — paste into `AGENTS.md` / Cursor / Claude / Grok |
-| [`company-os/first-hour.md`](company-os/first-hour.md) | **Day 0 (~60 minutes)** — thesis, ≥3 ICPs, first “Where are we?” (chat or instance files). The two-minute figure is the snapshot *read*, not this hour. |
-| [`company-os/clock-examples.md`](company-os/clock-examples.md) | **Teaching 5 × 3** — fictional household jobs only. Not a live board. |
-| [`templates/`](templates/) | Blank files to copy into *your* company repo when you instantiate |
-| [`examples/`](examples/) | Pointers to public live instances (illustration only) |
-| [`.grok/workflows/`](.grok/workflows/) | Optional Grok Build workflows (path 2) — company-operating-loop, user-research, ready-for-human-eyes |
-| [`mcp/`](mcp/) | **OSS self-host kit** (stdio on your disk, or your own Vercel + Supabase). Not the Pirin mentee source of record. The hosted pin is the Pirin write plane. |
-| [`plugin/`](plugin/) | **Preview** Cursor/Grok Agent Plugin — skills hyperlink this pack. See [mcp/docs/MARKETPLACE.md](mcp/docs/MARKETPLACE.md). |
-
-This repo is **template only**. Filled company state never lives here.
-
----
-
-## How to use this (pick one)
-
-The invite-only connector is the way onto your bet board. Free GitHub docs are the alternative. Several ideas are allowed. Each stays *your* company on its own board.
-
-### 1. Point an AI at this pack
-
-No copy, no script, no CLI, no MCP. Use what applies to *your* startup immediately.
-
-```text
-Take the Bootstrap OS from https://github.com/ivelin/bootstrapos
-(company-os/operating-system.md + live-runtime.md + ai-instructions.md).
-Bootstrap OS is a company operating system for solo 0-1 founders.
-Apply process and control to MY startup only.
-Do not import any other company's product thesis or market.
-```
-
-Then Day 0 (~60 minutes) — thesis, ≥3 customer groups, first “Where are we?”: [`company-os/first-hour.md`](company-os/first-hour.md). Chat plus a weekly ritual is enough. Lifestyle / small good business, or swinging for the fences? [Day 0](company-os/operating-system.md#day-0-lifestyle-or-swinging-for-the-fences).
-
-Hands-on page: [Install Bootstrap OS](https://pirin.ai/bootstrap-os).
-
-### 2. Instantiate files (when you want them in your repo)
-
-> **Deprecated (October 2, 2026).** The laptop kit and `~/.bootstrap-os` get no more fixes. [Move off a local install](docs/migrate-from-local.md).
-
-Optional. Use the script or copy by hand. [Install](#install-in-your-company). Optional Grok Build workflows live in [`.grok/workflows/`](.grok/workflows/) (`company-operating-loop`, `user-research`, `ready-for-human-eyes`) if present. One idea per repo is fine. Several ideas each get their own board.
-
-### 3. Self-host kit (optional)
-
-> **Deprecated (October 2, 2026).** The laptop kit and `~/.bootstrap-os` get no more fixes. [Move off a local install](docs/migrate-from-local.md).
-
-Fork and run [`mcp/`](mcp/) yourself: stdio on your disk (`initCompany()` / `~/.bootstrap-os`) or your own Vercel + Supabase. That kit is not the Pirin-supported mentee source of record. Path 1 and path 2 stay enough. Several ideas are allowed; rank and kill per board. Markdown remains the constitution. MCP never writes `company-os/` template files.
-
-```bash
-cd mcp && npm install && npm run build
-```
-
-Disk bootstrap: [`mcp/README.md`](mcp/README.md).
-
-### 4. Hosted MCP (Pirin product write plane)
-
-The hosted invite-only connector is the product. Free GitHub docs are an alternative.
+1. Install the Bootstrap OS connector.
+2. Open https://pirin.ai/bootstrap-os and sign in, or create your account, with the email your invite went to.
+3. Ask "Where are we?"
 
 You are signed in, and this account has no bet board yet. Open your private starter bet board. It stays yours alone. You cannot invite anyone, and it cannot become a real company.
 
@@ -103,180 +34,46 @@ This bet board has no bet yet. Name the first bet, who it is for, and what you s
 
 Open your private starter bet board. Next tool is `create_starter_board`. Name the first bet on this bet board. Next tool is `create_idea`.
 
-Pin `https://mcp.bootstrap.pirin.ai/mcp`. A super admin calls `create_company`, then `create_idea`. A first-time hosted install names a real super_admin email contact; the operator seeds that row by hand, outside git, after the roles migration, because `bootstrap_os_grant_super_admin` cannot run until one super_admin exists. That function is SQL, not a connector tool. The committed fixture is an illustrative member only, not a super_admin. Real contact addresses are never committed. Procedure: [`mcp/docs/HOSTED_IDENTITY.md`](mcp/docs/HOSTED_IDENTITY.md#first-super-admin-hosted-install). Login is `/bootstrap-os/login` on pirin.ai (Web Builder; not this repo). The pin 401s the handshake. Gated tools return 401 + `WWW-Authenticate` to this MCP origin RFC 9728 (`authorization_servers` = pirin.ai login). Free docs are GitHub + [install-os](https://pirin.ai/bootstrap-os) + local. The hosted connector uses sign-in. See [mcp/docs/MARKETPLACE.md](mcp/docs/MARKETPLACE.md). Free GitHub docs are the alternative. Path 1 markdown stays the constitution. Contract: [`mcp/docs/HOSTED_IDENTITY.md`](mcp/docs/HOSTED_IDENTITY.md).
+`create_company` is shown to every signed-in account. A confirmed account can open up to 3 bet boards. A super admin still uses the admin path.
 
-A **preview** plugin lives in [`plugin/`](plugin/): thin skills that hyperlink this repo. See [mcp/docs/MARKETPLACE.md](mcp/docs/MARKETPLACE.md). It is not the way onto the bet board. The Vercel production Host is the same 401, not a silent 200 alias. Git-branch previews are not mentee-ready boards.
+Moving an idea to a new stage needs your approval.
 
-There is a **preview** git-branch read adapter on `*.vercel.app` (not mentee-ready boards, not pirin.ai, not a Path 1 pin). See [mcp/docs/MARKETPLACE.md](mcp/docs/MARKETPLACE.md). `plugin/mcp.json` pins the hosted connector; `${BOOTSTRAP_MCP_URL}` can override. No day-one SaaS boards. Do not use `mcp.pirin.ai` (dead).
+## What you can ask
 
-Invited founders who want Bill: [Install Bootstrap Bill](docs/install-bill.md). That is not Path 1.
+- "Where are we?" Shows your bet board, the bet card for each idea, and this week's biggest bottleneck.
+- Invite a teammate to a bet board you already belong to. A starter bet board cannot send invites.
+- "Create a company called charlie." `create_company` is shown to every signed-in account. A confirmed account can open up to 3 bet boards. A super admin still uses the admin path.
 
----
+## Your data
 
-## Install in your company
+- You can only see companies you were invited to.
+- Sign-in happens on pirin.ai. The connector never sees your password.
+- Changes are written to an audit trail.
 
-> **Deprecated (October 2, 2026).** The laptop kit and `~/.bootstrap-os` get no more fixes. [Move off a local install](docs/migrate-from-local.md).
+## Repository facts
 
-Optional (path 2). From this repo:
+Cursor's publish page reads `plugin.json` and `mcp.json` at the repository root. `mcp.json` sets the connector type to `streamable-http` and the URL to `https://mcp.bootstrap.pirin.ai/mcp`. Do not use the retired `mcp.pirin.ai` host.
+
+Listing copy is [`LISTING.md`](LISTING.md). The marketplace notes are [`mcp/docs/MARKETPLACE.md`](mcp/docs/MARKETPLACE.md). Skills in [`plugin/`](plugin/) link to that note.
+
+Optional copy of blank templates into a company repo:
 
 ```text
 ./scripts/install-instance.sh /path/to/your-company
 ```
 
-That copies `templates/` into the target and merges [`company-os/ai-instructions.md`](company-os/ai-instructions.md) into the instance `AGENTS.md`. If present, optional Grok Build workflows also copy to `.grok/workflows/`. You can run them with `grok` by name. Install stays optional.
+The laptop kit and `~/.bootstrap-os` are deprecated as of October 2, 2026. [Move off that install](docs/migrate-from-local.md).
 
-Then do **Day 0 (~60 minutes)**: [`company-os/first-hour.md`](company-os/first-hour.md) (also copied to `docs/company-os/first-hour.md` in the target). Fill thesis, ≥3 ICP scorecards, first “Where are we?” — *your* company only. The two-minute figure is the snapshot *read*, not this hour.
+Build the kit in this repo with:
 
-**Manual copy:** if you cannot run the script, use the copy map in [`templates/README.md`](templates/README.md) and paste the fenced block from [`company-os/ai-instructions.md`](company-os/ai-instructions.md) into the instance `AGENTS.md`.
+```bash
+cd mcp && npm install && npm run build
+```
 
-Start with markdown + a weekly “Where are we?” ritual. Add agent frameworks only when they reduce pain.
+That build is not how you open a bet board. The hosted connector is.
 
-Local CI is `./scripts/ci.sh`.
+Invited founders who want Bill use [Install Bootstrap Bill](docs/install-bill.md).
 
----
+The blueprint is [`company-os/operating-system.md`](company-os/operating-system.md), version 2.8.19. Instance secrets in the template are forbidden. The check is `mcp/test/no-instance-secrets.test.mjs`.
 
-## Two clocks (the whole game)
-
-| Clock | Question | Changes when |
-|-------|----------|--------------|
-| **Bootstrap journey** (five rungs) | Where is this bet on the prove-it path? | Founder **Advance / Iterate / Hold / Kill** |
-| **Live loop** (quality bar: Ask / Do / Write) | What artifact does this week need? | Continuous; many cycles inside one journey rung. Not a card. |
-
-AI never advances a journey phase alone. Evidence beats narrative. Waitlists and synthetic research are filters, not product–market fit.
-
----
-
-## Template change policy
-
-Treat promotion into this template as rare, deliberate work — not a continuous sync from any product PR.
-
-| Layer | Default |
-|-------|---------|
-| **Instance** (your `applied-here.md`, product code, scores) | Update freely as *your* company learns (public-safe; no PII) |
-| **Template** (files under `company-os/`) | **Do not change** unless the maintainer **explicitly approves** a portable edit |
-
-### When a change may enter the template
-
-1. **Slow** — many product iterations before one template change  
-2. **Methodical** — name the pattern, why it is domain-agnostic, how mentees might misuse it  
-3. **Thoughtful** — principle + checklist over markets, stacks, or one-off workflows  
-4. **Approval-gated** — short delta (what / why / where); wait for explicit approval  
-5. **Instance-first** — keep company-specific application in that company’s repo  
-6. **Additive, rarely breaking** — founders adopt this for months. New packs sit beside existing ones. Do not rename clocks, restack the loop, or drop a gate without a named version note. Optional until useful.
-
-### Anti-patterns
-
-- Auto-promoting every product win into the OS  
-- Copying a beachhead market, MCP stack, or pricing into the blueprint “because we use them”  
-- Silent template edits inside product PRs without template approval  
-- Moving sand: a rewrite that makes last month’s snapshot unreadable  
-- **Instance secrets in the template** — specific company names, theses, scores, decision traces, local paths, or other confidential instance data in `company-os/`, `mcp/` fixtures/migrations, plugin, skills, or tests. Fixtures are fictional (`alpha` / `bravo` / `charlie`). CI smell test: `mcp/test/no-instance-secrets.test.mjs`.  
-
----
-
-## Versioning
-
-| Doc | Current |
-|-----|---------|
-| Operating system blueprint | **v2.8.19** |
-| Live runtime | **v2.8.19** |
-| OSS `mcp/` self-host kit | Disk bootstrap via `initCompany()`, or your own Vercel + Supabase. Not the Pirin mentee source of record. |
-| Preview plugin | **0.1.1** — [`plugin/`](plugin/). Skills hyperlink this pack. See [mcp/docs/MARKETPLACE.md](mcp/docs/MARKETPLACE.md). Not mentee-ready hosted boards. |
-
-### Recent portable additions
-
-**House-rule pins (no version bump)**  
-Four short pins. Version header stays 2.8.19. No schema bump. [Re-ground before advising](company-os/operating-system.md#house-rule-re-ground-before-advising). [Evidence bound to the exact artifact](company-os/operating-system.md#house-rule-evidence-bound-to-the-exact-artifact) — cross-reference Ready for human eyes; do not copy that gate. [Failure becomes a small runtime policy](company-os/operating-system.md#house-rule-failure-becomes-a-small-runtime-policy). [Synthetic-consumer pretests are not customer evidence](company-os/operating-system.md#house-rule-synthetic-consumer-pretests-are-not-customer-evidence).
-
-**v2.8.22 — board card**  
-Additive note on 2.8.19. Full text: [where are we](company-os/operating-system.md#spoken-card-founder-voice-default). Bold company name, what it sells and to whom, and the goal. One table (`Work | State | When | Who`). Sections: Bet, Other paths, Past bets, Background. Top bet starts with 🎯. Legend, then a Next line. Plain words. Stored kind stays `customer_check`. Version header stays 2.8.19. No schema bump.
-
-**v2.8.21 — spoken label: customer bet**  
-Additive note on 2.8.19. Full text: [initiative report card](company-os/operating-system.md#initiative-report-card) · [where are we](company-os/operating-system.md#spoken-card-founder-voice-default). Founder speech: customer bet / customer bets with nested engagements. Card heading: CUSTOMER BETS. Stored kind stays `customer_check`. Version header stays 2.8.19. No schema bump. No enum rename.
-
-**v2.8.20 — where are we**  
-Additive note on 2.8.19. Full text: [where are we](company-os/operating-system.md#spoken-card-founder-voice-default). When they ask where you are, print the board in the company’s words: who you are betting on, what is stuck, and what you already decided. Leave week labels off the page until they ask. Version header stays 2.8.19. No schema bump.
-
-**v2.8.19 — initiative report card**  
-Additive. Full text: [operating-system.md](company-os/operating-system.md#initiative-report-card). Company header → bottleneck #1 → customer bets with nested engagements → other initiatives footer. New writes → `initiatives[]`. When `initiatives[]` is present, dual-read of progress/supporting/engagements is dead for the card lead. Rank is computed, not stored. Mapping cannot Advance. Ask / Do is not a card. No third clock. No schema bump.
-
-**v2.8.18 — one founder control plane**  
-House rule. Full text: [operating-system.md](company-os/operating-system.md#house-rule-one-founder-control-plane). Primary is the customer bet. Advisors, investors, lawyers, contractors, and partners stay on the same snapshot. They do not get a separate journey and cannot promote. Engagements are named accounts under primary. Exile to a spreadsheet is rejected. A nondisclosure agreement is not proof someone used the product. No third clock. No schema bump. Implicit loop from 2.8.17 stays.
-
-**v2.8.17 — implicit loop (quality bar, not card)**  
-Ask / Do / Write back is a quality bar on the week’s artifact, not a stored week verb and not card position. Founder gates journey only. `loopStage` mutations are rejected. Missing Write back is said from artifacts. [clock-examples.md](company-os/clock-examples.md) stays teaching. No schema bump.
-
-**v2.8.16 — clock examples (teaching 5 × 3)**  
-Teaching page only. Fifteen cells for one fictional household-jobs company. Not a live board. Do not copy onto a real company. Do not Advance from an example. Locked 2.8.15 clocks and 2.8.14 Decision methods stay. Full text: [clock-examples.md](company-os/clock-examples.md).
-
-**v2.8.15 — clock shrink (five rungs + three weeks)**  
-Spoken journey: Write the bet / Filter cheaply / Ground it / Build tiny slice / Try with real people. Ask / Do / Write back is a quality bar, not a card. Stored integers 1–9 / 1–7 stay (no schema bump). Full text: [operating-system.md](company-os/operating-system.md#the-5-journey-rungs-simple-view--formal-aliases).
-
-**v2.8.14 — Decision methods (IESER + FIRAC Bind-class)**  
-Aliases, not a third clock. Full text: [operating-system.md](company-os/operating-system.md#decision-methods-aliases-not-a-third-clock).
-
-**v2.8.12 — founder checkpoints (QC / Bind / Clock / Alpha)**  
-Additive pack. Optional until useful. Absent checkpoints = 2.8.9 behavior. QC Hold is path-local; it does not freeze the journey. Alpha is a written five-field bet against the default recommendation. No tenth phase. No third clock. No schema bump. Full text: [founder checkpoints](company-os/operating-system.md#founder-checkpoints-when-human-judgment-is-the-work).
-
-**v2.8.11 — advisor ride-along is assumed, not observed**  
-House rule. Full text: [operating-system.md](company-os/operating-system.md#house-rule-advisor-ride-along-is-assumed-not-observed). Same family as 2.8.6–2.8.10; do not merge. An advisor's opinion is a tip, not proof. Write down who said it. Do not delay a paying customer.
-
-**v2.8.10 — legal paper cannot promote**  
-House rule. Full text: [operating-system.md](company-os/operating-system.md#house-rule-legal-paper-cannot-promote). Same family as 2.8.6–2.8.9; do not merge. Cap table, SAFE, and lawyer emails do not prove the product works.
-
-**After proof — efficiency (fences)**  
-Resource page, not a house rule, not a version bump. Open only if fences + proof + they asked: [after-proof-efficiency.md](company-os/after-proof-efficiency.md).
-
-**v2.8.9 — do not automate a step that should not exist**  
-House rule. Full text: [operating-system.md](company-os/operating-system.md#house-rule-do-not-automate-a-step-that-should-not-exist). Same family as 2.8.6 / 2.8.7 / 2.8.8; do not merge. Name the person. Delete first. Automate last. An agent team is automation. Name the one bottleneck this week and work that. Several ideas may attack that same bottleneck.
-
-**v2.8.8 — there is no optimal price until people have paid and stayed**  
-House rule. Full text: [operating-system.md](company-os/operating-system.md#house-rule-there-is-no-optimal-price-until-people-have-paid-and-stayed). Same family as 2.8.6 / 2.8.7; do not merge. Stay current; do not guide to where the puck has been. Day 0 / Path 1 question (not a house rule; not this essay): [lifestyle or swinging for the fences](company-os/operating-system.md#day-0-lifestyle-or-swinging-for-the-fences).
-
-**v2.8.7 — a security program cannot promote**  
-House rule. Full text: [operating-system.md](company-os/operating-system.md#house-rule-a-security-program-cannot-promote). Preview plugin pointer (not a house rule): [`plugin/`](plugin/) — hyperlinks only. See [mcp/docs/MARKETPLACE.md](mcp/docs/MARKETPLACE.md). Hosted read adapter is preview, not mentee-ready boards.
-
-**v2.8.6 — marketing volume cannot promote**  
-House rule. Full text: [operating-system.md](company-os/operating-system.md#house-rule-marketing-volume-cannot-promote). Writing: [Say it once. Link. No filler.](company-os/operating-system.md#how-this-os-may-change-stability-contract)
-
-**v2.8.5 — several ideas are allowed**  
-Each idea is its own thesis, instance, and scorecard. Do not hide a second idea to look focused. Rank and kill per board.
-
-**v2.8.4 — additive weekday packs + stability contract**  
-Nothing established was removed. Founder-day and skill-capture sit beside existing rituals and are skippable until real conversations exist. Virtual-office cards stay; the partner may call jobs for a card. Day tools may feed the snapshot; git remains memory. After proof: overnight drafts still unsent; if the channel is public writing, one lived insight beats a content calendar. [Additive diagram](docs/diagrams/os-v2.8.4-before-after.html).
-
-**v2.8.3 — demo-only role-play is the weak case**  
-Do not seed a persona from a demographic one-liner. Seed from traces. Sharpening of thesis-only-is-weaker.
-
-**v2.8.2 — honesty pass**  
-House rules labeled (observed wins; spoken yes cannot promote). Dollar/Likert qualified. Load-bearing cites: Bisbee 2024, Brand 2026 §3.3.
-
-**v2.8 — Ready for human eyes (ship gate)**  
-Fail-closed cold URL + happy path before mentor/user product-test asks. Not demand or PMF.
-
-**v2.7 — growth pack (after proof)**  
-Entry criteria, single-channel hypothesis, founder gate on channels.
-
-**v2.6 — control hygiene**  
-Autonomy postures (Strict / Auto / Dangerous), standing deny list, learning rituals.
-
-**v2.5 — next pack after synthetic ranking**  
-Light synthetic product sandbox + real interest tests before heavy build.
-
----
-
-## Related
-
-- Insights (plain-language guides): [pirin.ai/insights](https://pirin.ai/insights) — search “Bootstrap OS”  
-- Hands-on install: [Install Bootstrap OS](https://pirin.ai/bootstrap-os)
-- Invite-only: [Install Bootstrap Bill](docs/install-bill.md)  
-- Public live instances (illustration only): see [`examples/`](examples/)
-- OSS self-host kit: [`mcp/README.md`](mcp/README.md). Pirin write plane: `https://mcp.bootstrap.pirin.ai/mcp`.
-- Preview plugin ([`plugin/`](plugin/)). See [mcp/docs/MARKETPLACE.md](mcp/docs/MARKETPLACE.md).
-- Starter legal templates (hyperlink only): [operating-system.md](company-os/operating-system.md#starter-legal-templates)
-- Cap-table modeler (hyperlink only): [operating-system.md](company-os/operating-system.md#cap-table-modeler)
-- After-proof efficiency (hyperlink only; fences + proof + they asked): [after-proof-efficiency.md](company-os/after-proof-efficiency.md)
-
----
-
-*You supply the insight. AI supplies the speed.*
+Free GitHub docs are the alternative to the hosted connector.
