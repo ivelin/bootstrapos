@@ -77,23 +77,30 @@ describe("published SOPs", () => {
     assert.equal(compareSemver("1.0.0", "1.0.0"), 0);
   });
 
-  it("lists bet-loop at 1.0.0 and reads latest and pinned bodies", async () => {
+  it("latest is 1.0.1 and pinned 1.0.0 returns the old body", async () => {
     process.env.BOOTSTRAP_OS_DOCS_SOURCE = "local";
     process.env.BOOTSTRAP_OS_ROOT = REPO;
     const list = await listSops();
     const row = list.find((item) => item.name === "bet-loop");
     assert.ok(row);
-    assert.equal(row.version, "1.0.0");
-    assert.equal(row.published_at, "2026-10-30T13:04:00.000Z");
-    assert.equal(row.versions.length, 1);
-    assert.equal(row.versions[0].version, "1.0.0");
+    assert.equal(row.version, "1.0.1");
+    assert.equal(row.published_at, "2026-10-30T13:21:00.000Z");
+    assert.deepEqual(
+      row.versions.map((item) => item.version),
+      ["1.0.0", "1.0.1"],
+    );
     const latest = await getSop("bet-loop");
     const pinned = await getSop("bet-loop", "1.0.0");
-    assert.equal(latest.version, "1.0.0");
+    const oldBody = splitSopFile(
+      fs.readFileSync(path.join(REPO, "company-os/sops/bet-loop/v1.0.0.md"), "utf8"),
+    ).body;
+    assert.equal(latest.version, "1.0.1");
     assert.equal(pinned.version, "1.0.0");
-    assert.equal(latest.body, pinned.body);
+    assert.equal(pinned.body, oldBody);
+    assert.notEqual(latest.body, pinned.body);
+    assert.match(latest.body, /stops automatically/);
+    assert.match(pinned.body, /unless you choose to extend it/);
     assert.match(latest.body, /naming rule \*\*TBD\*\*/);
-    assert.match(latest.body, /Exact location: \*\*TBD\*\*/);
     assert.equal(latest.sha256, sha256Hex(latest.body));
     assert.equal(row.sha256, latest.sha256);
   });
@@ -104,7 +111,7 @@ describe("published SOPs", () => {
     await assert.rejects(() => getSop("missing-sop"), /Unknown SOP "missing-sop". Valid names: bet-loop\./);
     await assert.rejects(
       () => getSop("bet-loop", "9.9.9"),
-      /Unknown version "9.9.9" for SOP "bet-loop". Valid versions: 1\.0\.0\./,
+      /Unknown version "9.9.9" for SOP "bet-loop". Valid versions: 1\.0\.0, 1\.0\.1\./,
     );
   });
 
@@ -194,13 +201,22 @@ describe("published SOPs", () => {
   });
 
   it("published source fetches the SOP from the docs base", async () => {
-    const rel = "company-os/sops/bet-loop/v1.0.0.md";
-    const raw = fs.readFileSync(path.join(REPO, rel), "utf8");
+    const files = {
+      "company-os/sops/bet-loop/v1.0.0.md": fs.readFileSync(
+        path.join(REPO, "company-os/sops/bet-loop/v1.0.0.md"),
+        "utf8",
+      ),
+      "company-os/sops/bet-loop/v1.0.1.md": fs.readFileSync(
+        path.join(REPO, "company-os/sops/bet-loop/v1.0.1.md"),
+        "utf8",
+      ),
+    };
     const server = await new Promise((resolve, reject) => {
       const http = createServer((req, res) => {
-        if (req.url?.endsWith(rel)) {
+        const hit = Object.entries(files).find(([rel]) => req.url?.endsWith(rel));
+        if (hit) {
           res.writeHead(200, { "Content-Type": "text/markdown" });
-          res.end(raw);
+          res.end(hit[1]);
           return;
         }
         res.writeHead(404);
@@ -215,8 +231,10 @@ describe("published SOPs", () => {
     process.env.BOOTSTRAP_OS_ROOT = path.join(REPO, "missing-os-root");
     try {
       const sop = await getSop("bet-loop");
-      assert.equal(sop.version, "1.0.0");
-      assert.match(sop.body, /# Bet loop SOP v1.0.0/);
+      assert.equal(sop.version, "1.0.1");
+      assert.match(sop.body, /# Bet loop SOP v1.0.1/);
+      const pinned = await getSop("bet-loop", "1.0.0");
+      assert.match(pinned.body, /# Bet loop SOP v1.0.0/);
     } finally {
       await new Promise((resolve) => server.close(resolve));
     }
@@ -227,14 +245,15 @@ describe("published SOPs", () => {
     const row = listed.result.content[0];
     const list = JSON.parse(row.text);
     assert.equal(list[0].name, "bet-loop");
-    assert.equal(list[0].version, "1.0.0");
+    assert.equal(list[0].version, "1.0.1");
     const got = parseToolText((await callTool("bootstrap_get_sop", { name: "bet-loop" })).raw);
-    assert.equal(got.version, "1.0.0");
+    assert.equal(got.version, "1.0.1");
     assert.equal(got.sha256, sha256Hex(got.body));
     const pinned = parseToolText(
       (await callTool("bootstrap_get_sop", { name: "bet-loop", version: "1.0.0" })).raw,
     );
-    assert.equal(pinned.body, got.body);
+    assert.match(pinned.body, /unless you choose to extend it/);
+    assert.notEqual(pinned.body, got.body);
     const missing = JSON.parse((await callTool("bootstrap_get_sop", { name: "nope" })).raw);
     assert.equal(missing.result.isError, true);
     assert.match(missing.result.content[0].text, /Valid names: bet-loop/);
@@ -242,6 +261,6 @@ describe("published SOPs", () => {
       (await callTool("bootstrap_get_sop", { name: "bet-loop", version: "0.1.0" })).raw,
     );
     assert.equal(badVersion.result.isError, true);
-    assert.match(badVersion.result.content[0].text, /Valid versions: 1\.0\.0/);
+    assert.match(badVersion.result.content[0].text, /Valid versions: 1\.0\.0, 1\.0\.1/);
   });
 });

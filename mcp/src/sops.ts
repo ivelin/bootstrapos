@@ -9,7 +9,10 @@ import { resolveOsRoot } from "./paths.js";
  * bootstrap_get_doc (BOOTSTRAP_OS_DOCS_BASE, else raw GitHub main).
  * Append a path when you publish a version. Do not edit a published file.
  */
-export const SOP_FILES = ["company-os/sops/bet-loop/v1.0.0.md"] as const;
+export const SOP_FILES = [
+  "company-os/sops/bet-loop/v1.0.0.md",
+  "company-os/sops/bet-loop/v1.0.1.md",
+] as const;
 
 export type SopRecord = {
   name: string;
