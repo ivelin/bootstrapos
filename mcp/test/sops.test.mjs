@@ -98,7 +98,7 @@ describe("published SOPs", () => {
     assert.equal(pinned.version, "1.0.0");
     assert.equal(pinned.body, oldBody);
     assert.notEqual(latest.body, pinned.body);
-    assert.match(latest.body, /stops automatically/);
+    assert.match(latest.body, /it is flagged and you decide whether to stop or extend it/);
     assert.match(pinned.body, /unless you choose to extend it/);
     assert.match(latest.body, /naming rule \*\*TBD\*\*/);
     assert.equal(latest.sha256, sha256Hex(latest.body));
