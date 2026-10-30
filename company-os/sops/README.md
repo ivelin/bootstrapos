@@ -1,6 +1,6 @@
 # Publish an SOP version
 
-SOPs are append-only. A signed-in bot reads them with `bootstrap_list_sops` and `bootstrap_get_sop`. Those tools use the same sign-in as `bootstrap_get_doc`.
+SOPs are append-only. `bootstrap_list_sops` and `bootstrap_get_sop` have the same access as `bootstrap_get_doc`. tools/call needs no token.
 
 To publish a version:
 
@@ -17,6 +17,6 @@ sha256: <hex of the body>
 ```
 
 3. Append that relative path to `SOP_FILES` in `mcp/src/sops.ts`. The hosted connector fetches it from the same docs base as the process notes.
-4. Append the file's full-content SHA-256 to `mcp/test/fixtures/sop-immutability.json`. CI fails if a recorded file's bytes change.
+4. Append the file's full-content SHA-256 to `mcp/test/fixtures/sop-immutability.json`. CI fails if a recorded file's bytes change. CI also fails if a key that already exists on main has a different hash.
 
 `bootstrap_get_sop` returns the highest semver for that name unless the caller passes `version`.
