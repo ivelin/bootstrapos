@@ -315,7 +315,7 @@ function registerReadTools(server: McpServer, surface: McpSurface, hosted?: Host
     "bootstrap_get_sop",
     "Read one published SOP. Omit version to get the latest semver.",
     {
-      name: z.string().describe("SOP name, such as bet-loop."),
+      name: z.string().describe("SOP slug."),
       version: z.string().optional().describe("Exact version. Omit for the latest."),
     },
     READ_ONLY,
