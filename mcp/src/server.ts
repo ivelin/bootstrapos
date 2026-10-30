@@ -299,7 +299,7 @@ function registerReadTools(server: McpServer, surface: McpSurface, hosted?: Host
 
   server.tool(
     "bootstrap_list_sops",
-    "List published SOPs. Each name includes the latest version and every published version.",
+    "Internal. For Bill and audit use only.",
     {},
     READ_ONLY,
     async () => {
@@ -313,10 +313,10 @@ function registerReadTools(server: McpServer, surface: McpSurface, hosted?: Host
 
   server.tool(
     "bootstrap_get_sop",
-    "Read one published SOP. Omit version to get the latest semver.",
+    "Returns the current SOP.",
     {
       name: z.string().describe("SOP slug."),
-      version: z.string().optional().describe("Exact version. Omit for the latest."),
+      version: z.string().optional().describe("For Bill and audits only."),
     },
     READ_ONLY,
     async ({ name, version }) => {

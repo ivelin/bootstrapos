@@ -106,9 +106,15 @@ describe("SOP tools", () => {
     );
     const latest = await getSop("alpha-sop");
     const pinned = await getSop("alpha-sop", "1.9.0");
+    assert.equal(latest.version, "1.10.0");
     assert.equal(latest.body, "fixture body ten");
     assert.equal(pinned.body, "fixture body nine");
     assert.equal(latest.sha256, HIGH.sha256);
+    const tool = JSON.parse((await callTool("bootstrap_get_sop", { name: "alpha-sop" })).raw);
+    const got = JSON.parse(tool.result.content[0].text);
+    assert.equal(got.version, "1.10.0");
+    assert.equal(got.body, "fixture body ten");
+    assert.notEqual(got.body, pinned.body);
   });
 
   it("unknown name and version list the valid set", async () => {
