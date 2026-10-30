@@ -13,6 +13,10 @@
       "readOnlyHint": true
     },
     {
+      "name": "bootstrap_get_sop",
+      "readOnlyHint": true
+    },
+    {
       "name": "bootstrap_house_rule_pins",
       "readOnlyHint": true
     },
@@ -26,6 +30,10 @@
     },
     {
       "name": "bootstrap_list_docs",
+      "readOnlyHint": true
+    },
+    {
+      "name": "bootstrap_list_sops",
       "readOnlyHint": true
     },
     {

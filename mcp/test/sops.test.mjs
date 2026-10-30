@@ -1,0 +1,169 @@
+import { after, describe, it } from "node:test";
+import assert from "node:assert/strict";
+import crypto from "node:crypto";
+import fs from "node:fs";
+import { createServer } from "node:http";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+import { handleHostedReadFetch } from "../dist/hosted-handler.js";
+import { HostedMembershipJourneyStore } from "../dist/hosted-journey-store.js";
+import { ivelinMemoryFixture, setIdentityStoreForTests } from "../dist/identity.js";
+import { setJourneyStoreForTests } from "../dist/journey.js";
+import { compareSemver, getSop, listSops, sha256Hex, splitSopFile } from "../dist/sops.js";
+
+const REPO = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
+const LEDGER = path.join(path.dirname(fileURLToPath(import.meta.url)), "fixtures", "sop-immutability.json");
+const TOKEN = "bos_ivelin_fixture_token_ok";
+
+function parseToolText(raw) {
+  const body = JSON.parse(raw);
+  assert.notEqual(body.result?.isError, true);
+  return JSON.parse(body.result.content[0].text);
+}
+
+async function callSop(name, args) {
+  process.env.BOOTSTRAP_OS_DOCS_SOURCE = "local";
+  process.env.BOOTSTRAP_OS_ROOT = REPO;
+  setIdentityStoreForTests(ivelinMemoryFixture(TOKEN));
+  setJourneyStoreForTests(new HostedMembershipJourneyStore(() => ["alpha"]));
+  const res = await handleHostedReadFetch(
+    new Request("https://preview.example/mcp", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json, text/event-stream",
+        Authorization: `Bearer ${TOKEN}`,
+      },
+      body: JSON.stringify({
+        jsonrpc: "2.0",
+        id: 1,
+        method: "tools/call",
+        params: { name, arguments: args },
+      }),
+    }),
+  );
+  const raw = await res.text();
+  assert.equal(res.status, 200, raw);
+  return raw;
+}
+
+describe("published SOPs", () => {
+  after(() => {
+    setIdentityStoreForTests(undefined);
+    setJourneyStoreForTests(undefined);
+    delete process.env.BOOTSTRAP_OS_DOCS_SOURCE;
+    delete process.env.BOOTSTRAP_OS_DOCS_BASE;
+    delete process.env.BOOTSTRAP_OS_ROOT;
+  });
+
+  it("latest semver wins and a pinned version returns that file", () => {
+    assert.ok(compareSemver("1.10.0", "1.9.0") > 0);
+    assert.ok(compareSemver("1.0.0", "1.0.1") < 0);
+    assert.equal(compareSemver("1.0.0", "1.0.0"), 0);
+  });
+
+  it("lists bet-loop at 1.0.0 and reads latest and pinned bodies", async () => {
+    process.env.BOOTSTRAP_OS_DOCS_SOURCE = "local";
+    process.env.BOOTSTRAP_OS_ROOT = REPO;
+    const list = await listSops();
+    const row = list.find((item) => item.name === "bet-loop");
+    assert.ok(row);
+    assert.equal(row.version, "1.0.0");
+    assert.equal(row.published_at, "2026-10-30T13:04:00.000Z");
+    assert.equal(row.versions.length, 1);
+    assert.equal(row.versions[0].version, "1.0.0");
+    const latest = await getSop("bet-loop");
+    const pinned = await getSop("bet-loop", "1.0.0");
+    assert.equal(latest.version, "1.0.0");
+    assert.equal(pinned.version, "1.0.0");
+    assert.equal(latest.body, pinned.body);
+    assert.match(latest.body, /naming rule \*\*TBD\*\*/);
+    assert.match(latest.body, /Exact location: \*\*TBD\*\*/);
+    assert.equal(latest.sha256, sha256Hex(latest.body));
+    assert.equal(row.sha256, latest.sha256);
+  });
+
+  it("unknown name and unknown version name the valid set", async () => {
+    process.env.BOOTSTRAP_OS_DOCS_SOURCE = "local";
+    process.env.BOOTSTRAP_OS_ROOT = REPO;
+    await assert.rejects(() => getSop("missing-sop"), /Unknown SOP "missing-sop". Valid names: bet-loop\./);
+    await assert.rejects(
+      () => getSop("bet-loop", "9.9.9"),
+      /Unknown version "9.9.9" for SOP "bet-loop". Valid versions: 1\.0\.0\./,
+    );
+  });
+
+  it("recorded sha256 matches the file bytes", () => {
+    const ledger = JSON.parse(fs.readFileSync(LEDGER, "utf8"));
+    const root = path.join(REPO, "company-os", "sops");
+    const found = [];
+    for (const name of fs.readdirSync(root)) {
+      const dir = path.join(root, name);
+      if (!fs.statSync(dir).isDirectory()) continue;
+      for (const file of fs.readdirSync(dir)) {
+        if (!/^v\d+\.\d+\.\d+\.md$/.test(file)) continue;
+        const rel = `company-os/sops/${name}/${file}`;
+        found.push(rel);
+        const raw = fs.readFileSync(path.join(REPO, rel));
+        const digest = crypto.createHash("sha256").update(raw).digest("hex");
+        assert.equal(ledger[rel], digest, `${rel} changed after its sha was recorded`);
+        const text = raw.toString("utf8");
+        const { fields, body } = splitSopFile(text);
+        assert.equal(fields.sha256, sha256Hex(body));
+      }
+    }
+    assert.deepEqual(found.sort(), Object.keys(ledger).sort());
+  });
+
+  it("published source fetches the SOP from the docs base", async () => {
+    const rel = "company-os/sops/bet-loop/v1.0.0.md";
+    const raw = fs.readFileSync(path.join(REPO, rel), "utf8");
+    const server = await new Promise((resolve, reject) => {
+      const http = createServer((req, res) => {
+        if (req.url?.endsWith(rel)) {
+          res.writeHead(200, { "Content-Type": "text/markdown" });
+          res.end(raw);
+          return;
+        }
+        res.writeHead(404);
+        res.end();
+      });
+      http.listen(0, "127.0.0.1", () => resolve(http));
+      http.once("error", reject);
+    });
+    const addr = server.address();
+    process.env.BOOTSTRAP_OS_DOCS_SOURCE = "published";
+    process.env.BOOTSTRAP_OS_DOCS_BASE = `http://127.0.0.1:${addr.port}`;
+    process.env.BOOTSTRAP_OS_ROOT = path.join(REPO, "missing-os-root");
+    try {
+      const sop = await getSop("bet-loop");
+      assert.equal(sop.version, "1.0.0");
+      assert.match(sop.body, /# Bet loop SOP v1.0.0/);
+    } finally {
+      await new Promise((resolve) => server.close(resolve));
+    }
+  });
+
+  it("hosted tools return the SOP and the same errors", async () => {
+    const listed = JSON.parse(await callSop("bootstrap_list_sops", {}));
+    const row = listed.result.content[0];
+    const list = JSON.parse(row.text);
+    assert.equal(list[0].name, "bet-loop");
+    assert.equal(list[0].version, "1.0.0");
+    const got = parseToolText(await callSop("bootstrap_get_sop", { name: "bet-loop" }));
+    assert.equal(got.version, "1.0.0");
+    assert.equal(got.sha256, sha256Hex(got.body));
+    const pinned = parseToolText(
+      await callSop("bootstrap_get_sop", { name: "bet-loop", version: "1.0.0" }),
+    );
+    assert.equal(pinned.body, got.body);
+    const missing = JSON.parse(await callSop("bootstrap_get_sop", { name: "nope" }));
+    assert.equal(missing.result.isError, true);
+    assert.match(missing.result.content[0].text, /Valid names: bet-loop/);
+    const badVersion = JSON.parse(
+      await callSop("bootstrap_get_sop", { name: "bet-loop", version: "0.1.0" }),
+    );
+    assert.equal(badVersion.result.isError, true);
+    assert.match(badVersion.result.content[0].text, /Valid versions: 1\.0\.0/);
+  });
+});

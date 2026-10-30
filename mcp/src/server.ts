@@ -26,6 +26,7 @@ import {
 } from "./company-admin.js";
 import { parseJourneyQuery, resolveJourneyStore } from "./journey.js";
 import { loadOsDoc, loadOsDocList, resolveDocsBaseUrl, resolveDocsSource } from "./docs.js";
+import { getSop, listSops } from "./sops.js";
 import {
   initCompany,
   listCompanies,
@@ -290,6 +291,44 @@ function registerReadTools(server: McpServer, surface: McpSurface, hosted?: Host
     async ({ doc }) => {
       try {
         return text(await loadOsDoc(doc));
+      } catch (e) {
+        return err(e instanceof Error ? e.message : String(e));
+      }
+    },
+  );
+
+  server.tool(
+    "bootstrap_list_sops",
+    "List published SOPs. Each name includes the latest version and every published version.",
+    {},
+    READ_ONLY,
+    async () => {
+      try {
+        return text(await listSops());
+      } catch (e) {
+        return err(e instanceof Error ? e.message : String(e));
+      }
+    },
+  );
+
+  server.tool(
+    "bootstrap_get_sop",
+    "Read one published SOP. Omit version to get the latest semver.",
+    {
+      name: z.string().describe("SOP name, such as bet-loop."),
+      version: z.string().optional().describe("Exact version. Omit for the latest."),
+    },
+    READ_ONLY,
+    async ({ name, version }) => {
+      try {
+        const sop = await getSop(name, version);
+        return text({
+          name: sop.name,
+          version: sop.version,
+          published_at: sop.published_at,
+          sha256: sop.sha256,
+          body: sop.body,
+        });
       } catch (e) {
         return err(e instanceof Error ? e.message : String(e));
       }
