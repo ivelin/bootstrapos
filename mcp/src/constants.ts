@@ -11,7 +11,9 @@ export const PUBLISHED_RAW_BASE = "https://raw.githubusercontent.com/ivelin/boot
 export const HOSTED_READ_TOOL_NAMES = [
   "bootstrap_os_info",
   "bootstrap_list_docs",
+  "bootstrap_list_sops",
   "bootstrap_get_doc",
+  "bootstrap_get_sop",
   "bootstrap_get_ai_instructions",
   "bootstrap_reference_clocks",
   "bootstrap_house_rule_pins",

@@ -26,6 +26,7 @@ import {
 } from "./company-admin.js";
 import { parseJourneyQuery, resolveJourneyStore } from "./journey.js";
 import { loadOsDoc, loadOsDocList, resolveDocsBaseUrl, resolveDocsSource } from "./docs.js";
+import { getSop, listSops } from "./sops.js";
 import {
   initCompany,
   listCompanies,
@@ -290,6 +291,44 @@ function registerReadTools(server: McpServer, surface: McpSurface, hosted?: Host
     async ({ doc }) => {
       try {
         return text(await loadOsDoc(doc));
+      } catch (e) {
+        return err(e instanceof Error ? e.message : String(e));
+      }
+    },
+  );
+
+  server.tool(
+    "bootstrap_list_sops",
+    "Internal. For Bill and audit use only.",
+    {},
+    READ_ONLY,
+    async () => {
+      try {
+        return text(await listSops());
+      } catch (e) {
+        return err(e instanceof Error ? e.message : String(e));
+      }
+    },
+  );
+
+  server.tool(
+    "bootstrap_get_sop",
+    "Returns the current SOP.",
+    {
+      name: z.string().describe("SOP slug."),
+      version: z.string().optional().describe("For Bill and audits only."),
+    },
+    READ_ONLY,
+    async ({ name, version }) => {
+      try {
+        const sop = await getSop(name, version);
+        return text({
+          name: sop.name,
+          version: sop.version,
+          published_at: sop.published_at,
+          sha256: sop.sha256,
+          body: sop.body,
+        });
       } catch (e) {
         return err(e instanceof Error ? e.message : String(e));
       }

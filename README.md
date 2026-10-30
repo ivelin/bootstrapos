@@ -76,4 +76,6 @@ Invited founders who want Bill use [Install Bootstrap Bill](docs/install-bill.md
 
 The blueprint is [`company-os/operating-system.md`](company-os/operating-system.md), version 2.8.19. Instance secrets in the template are forbidden. The check is `mcp/test/no-instance-secrets.test.mjs`.
 
+Published SOP text is not in this repository. The source is Drive. Founders read the current SOP with `bootstrap_get_sop`. It has the same access as `bootstrap_get_doc`. tools/call needs no token. Publishing is [`docs/publish-sop.md`](docs/publish-sop.md).
+
 Free GitHub docs are the alternative to the hosted connector.
