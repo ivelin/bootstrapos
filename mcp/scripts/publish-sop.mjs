@@ -21,7 +21,7 @@ if (!name || !version || !file) {
 if (!/^[a-z0-9]+(-[a-z0-9]+)*$/.test(name)) {
   fail("name must be a lowercase slug");
 }
-if (!/^[0-9]+\.[0-9]+\.[0-9]+$/.test(version)) {
+if (!/^(0|[1-9][0-9]{0,8})\.(0|[1-9][0-9]{0,8})\.(0|[1-9][0-9]{0,8})$/.test(version)) {
   fail("version must be major.minor.patch");
 }
 

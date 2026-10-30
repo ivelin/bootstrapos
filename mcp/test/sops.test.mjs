@@ -190,6 +190,28 @@ describe("SOP tools", () => {
     }
   });
 
+  it("a non-ok RPC response is an error", async () => {
+    setSopRpcForTests(undefined);
+    const server = await new Promise((resolve, reject) => {
+      const http = createServer((req, res) => {
+        res.writeHead(500, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ name: "alpha-sop", version: "1.10.0", body: "fixture body ten" }));
+      });
+      http.listen(0, "127.0.0.1", () => resolve(http));
+      http.once("error", reject);
+    });
+    const addr = server.address();
+    process.env.BOOTSTRAP_SUPABASE_URL = `http://127.0.0.1:${addr.port}`;
+    process.env.BOOTSTRAP_SUPABASE_ANON_KEY = "anon-key-fixture";
+    try {
+      await assert.rejects(() => getSop("alpha-sop"), /SOP read failed 500/);
+    } finally {
+      await new Promise((resolve) => server.close(resolve));
+      delete process.env.BOOTSTRAP_SUPABASE_URL;
+      delete process.env.BOOTSTRAP_SUPABASE_ANON_KEY;
+    }
+  });
+
   it("publish-sop inserts the hash and refuses a duplicate without printing the key", async () => {
     const file = path.join(os.tmpdir(), `sop-fixture-${process.pid}.txt`);
     fs.writeFileSync(file, "fixture body alpha\n");

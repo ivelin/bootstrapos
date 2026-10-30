@@ -100,6 +100,24 @@ describe("PostgreSQL 16 SOP store", { concurrency: false }, () => {
       VALUES ('alpha-sop', '1.10.0', '${high}', '${sha(high)}');
     `);
 
+    const xSha = sha("x");
+    assert.throws(
+      () =>
+        psql(
+          `INSERT INTO public.bootstrap_os_sops (name, version, body, sha256) VALUES ('alpha-sop', '99999999999.0.0', 'x', '${xSha}')`,
+        ),
+      /check constraint/,
+    );
+    assert.throws(
+      () =>
+        psql(
+          `INSERT INTO public.bootstrap_os_sops (name, version, body, sha256) VALUES ('alpha-sop', '01.2.3', 'x', '${xSha}')`,
+        ),
+      /check constraint/,
+    );
+    const afterBad = JSON.parse(psql(`SELECT public.bootstrap_os_list_sops()::text;`).trim());
+    assert.equal(afterBad[0].version, "1.10.0");
+
     assert.throws(() => psql(`UPDATE public.bootstrap_os_sops SET body = body`), /append-only/);
     assert.throws(() => psql(`DELETE FROM public.bootstrap_os_sops`), /append-only/);
     assert.throws(
@@ -129,6 +147,18 @@ describe("PostgreSQL 16 SOP store", { concurrency: false }, () => {
     );
     assert.equal(badVersion.error, "unknown_version");
     assert.deepEqual(badVersion.valid_versions, ["1.9.0", "1.10.0"]);
+
+    const paths = psql(`
+      SELECT string_agg(coalesce(array_to_string(p.proconfig, ','), 'missing'), ' ')
+      FROM pg_proc p
+      JOIN pg_namespace n ON n.oid = p.pronamespace
+      WHERE n.nspname = 'public'
+        AND p.proname IN ('bootstrap_os_list_sops', 'bootstrap_os_get_sop');
+    `);
+    assert.equal((paths.match(/search_path=pg_catalog, public/g) || []).length, 2);
+
+    assert.throws(() => psql(`SET ROLE service_role; TRUNCATE public.bootstrap_os_sops;`), /append-only|permission denied/);
+    assert.throws(() => psql(`TRUNCATE public.bootstrap_os_sops;`), /append-only/);
 
     assert.throws(() => psql(`SET ROLE anon; SELECT * FROM public.bootstrap_os_sops;`), /permission denied/);
     const anonText = psql(`SET ROLE anon; SELECT public.bootstrap_os_list_sops()::text;`);

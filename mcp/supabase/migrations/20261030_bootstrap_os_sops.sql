@@ -16,7 +16,7 @@ $$;
 CREATE TABLE public.bootstrap_os_sops (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   name text NOT NULL CHECK (name ~ '^[a-z0-9]+(-[a-z0-9]+)*$'),
-  version text NOT NULL CHECK (version ~ '^[0-9]+\.[0-9]+\.[0-9]+$'),
+  version text NOT NULL CHECK (version ~ '^(0|[1-9][0-9]{0,8})\.(0|[1-9][0-9]{0,8})\.(0|[1-9][0-9]{0,8})$'),
   body text NOT NULL,
   sha256 text NOT NULL CHECK (sha256 ~ '^[0-9a-f]{64}$'),
   published_at timestamptz NOT NULL DEFAULT now(),
@@ -64,10 +64,17 @@ CREATE TRIGGER bootstrap_os_sops_no_delete
   FOR EACH ROW
   EXECUTE FUNCTION bootstrap_os.sops_append_only();
 
+DROP TRIGGER IF EXISTS bootstrap_os_sops_no_truncate ON public.bootstrap_os_sops;
+CREATE TRIGGER bootstrap_os_sops_no_truncate
+  BEFORE TRUNCATE ON public.bootstrap_os_sops
+  FOR EACH STATEMENT
+  EXECUTE FUNCTION bootstrap_os.sops_append_only();
+
 ALTER TABLE public.bootstrap_os_sops ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.bootstrap_os_sops FORCE ROW LEVEL SECURITY;
 
 REVOKE ALL ON TABLE public.bootstrap_os_sops FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON TABLE public.bootstrap_os_sops FROM service_role;
 GRANT INSERT, SELECT ON TABLE public.bootstrap_os_sops TO service_role;
 
 REVOKE ALL ON FUNCTION bootstrap_os.sops_reject_bad_sha() FROM PUBLIC, anon, authenticated;
