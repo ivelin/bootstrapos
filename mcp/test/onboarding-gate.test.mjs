@@ -518,14 +518,25 @@ describe("onboarding gate (PGlite, same commit, never prod)", { concurrency: fal
     }
   });
 
-  it("a missing recorder still accepts, and a recorder error does not", async () => {
+  it("a recorder failure logs and still accepts", async () => {
     const orig = globalThis.fetch;
+    const origError = console.error;
+    const logs = [];
+    console.error = (...args) => {
+      logs.push(args.map(String).join(" "));
+    };
     const seen = [];
     globalThis.fetch = async (url) => {
       const name = String(url);
       seen.push(name);
       if (name.includes("bootstrap_mcp_record_install_source")) {
-        return new Response("missing", { status: 404 });
+        return new Response(
+          JSON.stringify({
+            code: "PGRST202",
+            message: "Could not find the function public.bootstrap_mcp_record_install_source",
+          }),
+          { status: 404, headers: { "Content-Type": "application/json" } },
+        );
       }
       return new Response(JSON.stringify({ ok: true, email: "bill@example.test", accepted: [], labels: [] }), {
         status: 200,
@@ -540,23 +551,67 @@ describe("onboarding gate (PGlite, same commit, never prod)", { concurrency: fal
       );
       assert.equal(result.ok, true);
       assert.equal(seen.length, 2);
+      assert.ok(logs.some((line) => line.includes("PGRST202")));
     } finally {
       globalThis.fetch = orig;
+      console.error = origError;
     }
 
+    const seenAgain = [];
+    const logsAgain = [];
+    console.error = (...args) => {
+      logsAgain.push(args.map(String).join(" "));
+    };
     globalThis.fetch = async (url) => {
-      if (String(url).includes("bootstrap_mcp_record_install_source")) {
-        return new Response("no", { status: 500 });
+      const name = String(url);
+      seenAgain.push(name);
+      if (name.includes("bootstrap_mcp_record_install_source")) {
+        return new Response(
+          JSON.stringify({ code: "XX000", message: "bootstrap_mcp_record_install_source blew up" }),
+          { status: 500, headers: { "Content-Type": "application/json" } },
+        );
       }
-      return new Response(JSON.stringify({ ok: true }), { status: 200 });
+      return new Response(JSON.stringify({ ok: true, email: "bill@example.test", accepted: [], labels: [] }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
     };
     try {
       const store = new SupabaseInviteStore("https://fixture.example", "anon-key-fixture-xx", "header-token");
-      const result = await store.acceptPending({ email: "bill@example.test", installSource: "grokbot" });
-      assert.equal(result.ok, false);
-      assert.equal(result.reason, "invite_rpc_failed");
+      const result = await store.acceptPending(
+        { email: "bill@example.test", installSource: "grokbot" },
+        tokenFor(BILL_EMAIL, BILL_UID),
+      );
+      assert.equal(result.ok, true);
+      assert.equal(seenAgain.length, 2);
+      assert.equal(logsAgain.some((line) => line.includes("PGRST202")), false);
     } finally {
       globalThis.fetch = orig;
+      console.error = origError;
+    }
+
+    const seenNetwork = [];
+    console.error = () => {};
+    globalThis.fetch = async (url) => {
+      const name = String(url);
+      seenNetwork.push(name);
+      if (name.includes("bootstrap_mcp_record_install_source")) throw new Error("network");
+      return new Response(JSON.stringify({ ok: true, email: "bill@example.test", accepted: [], labels: [] }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    };
+    try {
+      const store = new SupabaseInviteStore("https://fixture.example", "anon-key-fixture-xx", "header-token");
+      const result = await store.acceptPending(
+        { email: "bill@example.test", installSource: "manual" },
+        tokenFor(BILL_EMAIL, BILL_UID),
+      );
+      assert.equal(result.ok, true);
+      assert.equal(seenNetwork.length, 2);
+    } finally {
+      globalThis.fetch = orig;
+      console.error = origError;
     }
   });
 

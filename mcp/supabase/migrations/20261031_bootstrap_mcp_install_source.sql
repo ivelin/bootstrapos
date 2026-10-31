@@ -111,10 +111,7 @@ BEGIN
   LIMIT 1;
 
   IF mentee_id IS NULL THEN
-    INSERT INTO public.bootstrap_mcp_mentees (email, auth_user_id, source)
-    VALUES (user_email, uid, v_source)
-    RETURNING id, source INTO mentee_id, prior;
-    wrote := true;
+    RETURN pg_catalog.jsonb_build_object('ok', false, 'status', 403, 'error', 'not_invited');
   ELSIF prior IS NULL THEN
     UPDATE public.bootstrap_mcp_mentees
     SET source = v_source

@@ -85,6 +85,30 @@ describe("install source (PGlite, never prod)", () => {
       ALTER TABLE public.bootstrap_os_admin_audit ENABLE ROW LEVEL SECURITY;
       ALTER TABLE public.bootstrap_os_admin_audit FORCE ROW LEVEL SECURITY;
       REVOKE ALL ON TABLE public.bootstrap_os_admin_audit FROM PUBLIC, anon, authenticated;
+      GRANT USAGE ON SCHEMA auth TO authenticated, anon;
+      GRANT EXECUTE ON FUNCTION auth.uid() TO authenticated, anon;
+      CREATE OR REPLACE FUNCTION public.bootstrap_mcp_my_labels()
+      RETURNS jsonb
+      LANGUAGE plpgsql
+      STABLE
+      SECURITY DEFINER
+      SET search_path = pg_catalog
+      AS $$
+      DECLARE
+        uid uuid := auth.uid();
+        found uuid;
+      BEGIN
+        SELECT id INTO found FROM public.bootstrap_mcp_mentees WHERE auth_user_id = uid;
+        IF found IS NULL THEN
+          RETURN jsonb_build_object(
+            'authenticated', false,
+            'reason', 'not_invited',
+            'labels', '[]'::jsonb
+          );
+        END IF;
+        RETURN jsonb_build_object('authenticated', true, 'reason', 'member', 'labels', '[]'::jsonb);
+      END;
+      $$;
     `);
     await db.exec(fs.readFileSync(MIGRATION, "utf8"));
     await db.query(
@@ -209,6 +233,10 @@ describe("install source (PGlite, never prod)", () => {
       "INSERT INTO auth.users (id, email, email_confirmed_at) VALUES ($1, 'eve@example.test', now())",
       [eve],
     );
+    await db.query(
+      "INSERT INTO public.bootstrap_mcp_mentees (email, auth_user_id) VALUES ('eve@example.test', $1)",
+      [eve],
+    );
     await signIn(eve, "eve@example.test");
     const plugin = (
       await db.query("SELECT public.bootstrap_mcp_record_install_source($1) AS body", ["plugin"])
@@ -260,5 +288,95 @@ describe("install source (PGlite, never prod)", () => {
         return true;
       },
     );
+    await db.exec("RESET ROLE");
+  });
+
+  it("does not create a mentee for an uninvited caller", async () => {
+    const frank = "66666666-6666-4666-8666-666666666666";
+    await db.exec("RESET ROLE");
+    await db.query(
+      "INSERT INTO auth.users (id, email, email_confirmed_at) VALUES ($1, 'frank@example.test', now())",
+      [frank],
+    );
+    const before = await db.query(
+      "SELECT count(*)::int AS n FROM public.bootstrap_mcp_mentees WHERE email = 'frank@example.test'",
+    );
+    await signIn(frank, "frank@example.test");
+    const body = (
+      await db.query("SELECT public.bootstrap_mcp_record_install_source($1) AS body", ["plugin"])
+    ).rows[0].body;
+    assert.equal(body.ok, false);
+    assert.equal(body.status, 403);
+    const labels = (await db.query("SELECT public.bootstrap_mcp_my_labels() AS body")).rows[0].body;
+    assert.equal(labels.authenticated, false);
+    assert.equal(labels.reason, "not_invited");
+    await db.exec("RESET ROLE");
+    const after = await db.query(
+      "SELECT count(*)::int AS n FROM public.bootstrap_mcp_mentees WHERE email = 'frank@example.test'",
+    );
+    assert.equal(before.rows[0].n, 0);
+    assert.equal(after.rows[0].n, 0);
+  });
+
+  it("freezes source against the table owner and service_role", async () => {
+    await db.exec("RESET ROLE");
+    await db.exec(`
+      DO $$ BEGIN
+        CREATE ROLE service_role NOLOGIN BYPASSRLS;
+      EXCEPTION WHEN duplicate_object THEN
+        ALTER ROLE service_role BYPASSRLS;
+      END $$;
+      GRANT SELECT, UPDATE ON TABLE public.bootstrap_mcp_mentees TO service_role;
+      GRANT EXECUTE ON FUNCTION public.bootstrap_mcp_mentees_source_once() TO service_role;
+    `);
+    await db.query(
+      "UPDATE public.bootstrap_mcp_mentees SET source = 'plugin' WHERE email = 'alice@example.test' AND source IS NULL",
+    );
+    await db.query(
+      "UPDATE public.bootstrap_mcp_mentees SET source = 'manual' WHERE email = 'alice@example.test'",
+    );
+    const owner = await db.query(
+      "SELECT source FROM public.bootstrap_mcp_mentees WHERE email = 'alice@example.test'",
+    );
+    assert.equal(owner.rows[0].source, "plugin");
+    await db.exec("SET ROLE service_role");
+    await db.query(
+      "UPDATE public.bootstrap_mcp_mentees SET source = 'grokbot' WHERE email = 'alice@example.test'",
+    );
+    await db.exec("RESET ROLE");
+    const asService = await db.query(
+      "SELECT source FROM public.bootstrap_mcp_mentees WHERE email = 'alice@example.test'",
+    );
+    assert.equal(asService.rows[0].source, "plugin");
+  });
+
+  it("rejects cursor and pins search_path on both definer functions", async () => {
+    await signIn(CAROL, "carol@example.test");
+    const body = (
+      await db.query("SELECT public.bootstrap_mcp_record_install_source($1) AS body", ["cursor"])
+    ).rows[0].body;
+    assert.equal(body.ok, false);
+    assert.equal(body.error, "invalid_install_source");
+    await db.exec("RESET ROLE");
+    const stored = await db.query(
+      "SELECT source FROM public.bootstrap_mcp_mentees WHERE email = 'carol@example.test'",
+    );
+    assert.equal(stored.rows[0].source, null);
+    const procs = await db.query(`
+      SELECT p.proname, p.proconfig
+      FROM pg_proc p
+      JOIN pg_namespace n ON n.oid = p.pronamespace
+      WHERE n.nspname = 'public'
+        AND p.prosecdef
+        AND p.proname IN (
+          'bootstrap_mcp_record_install_source',
+          'bootstrap_mcp_read_install_source'
+        )
+    `);
+    assert.equal(procs.rows.length, 2);
+    for (const row of procs.rows) {
+      const cfg = Array.isArray(row.proconfig) ? row.proconfig : [];
+      assert.ok(cfg.includes("search_path=pg_catalog"), row.proname);
+    }
   });
 });
