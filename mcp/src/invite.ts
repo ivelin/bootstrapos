@@ -34,6 +34,8 @@ export type InviteActor = {
   labels?: string[];
   /** Null means GoTrue email_confirmed_at is null. Omitted means the session is confirmed. */
   emailConfirmedAt?: string | null;
+  /** grokbot, plugin, or manual. Empty means the server stores manual. */
+  installSource?: string | null;
 };
 
 export type InviteCreateInput = {
@@ -178,6 +180,15 @@ export function parseInviteRpcJson(text: string): unknown {
 
 function isInviteRpcFail(raw: unknown): raw is InviteRpcFail {
   return Boolean(raw && typeof raw === "object" && (raw as InviteRpcFail).reason === "invite_rpc_failed");
+}
+
+function postgrestErrorCode(body: string): string | null {
+  try {
+    const parsed = JSON.parse(body) as { code?: unknown };
+    return typeof parsed.code === "string" ? parsed.code : null;
+  } catch {
+    return null;
+  }
 }
 
 function coercePending(raw: unknown): AcceptPendingResult {
@@ -918,7 +929,21 @@ export class SupabaseInviteStore implements InviteStore {
   }
 
   async acceptPending(actor: InviteActor, accessToken?: string): Promise<AcceptPendingResult> {
-    void actor;
+    try {
+      const recorded = await this.rpc("bootstrap_mcp_record_install_source", {
+        p_source: actor.installSource ?? null,
+      });
+      if (isInviteRpcFail(recorded)) {
+        const code = postgrestErrorCode(recorded.body);
+        if (code === "PGRST202") {
+          console.error("install source recorder is missing (PGRST202)");
+        } else {
+          console.error("install source recorder failed", recorded.status, code ?? "no_code");
+        }
+      }
+    } catch (err) {
+      console.error("install source recorder failed", err instanceof Error ? err.name : "error");
+    }
     if (accessToken && accessToken.length >= 16) {
       const state = await this.rpc("bootstrap_mcp_accept_pending_invites", {
         p_token: accessToken,
