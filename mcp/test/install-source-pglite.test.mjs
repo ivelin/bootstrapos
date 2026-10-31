@@ -128,13 +128,11 @@ describe("install source (PGlite, never prod)", () => {
     );
     assert.equal(first.rows[0].body.ok, true);
     assert.equal(first.rows[0].body.source, "plugin");
-    assert.equal(first.rows[0].body.recorded, true);
     const second = await db.query(
       "SELECT public.bootstrap_mcp_record_install_source($1) AS body",
       ["grokbot"],
     );
     assert.equal(second.rows[0].body.source, "plugin");
-    assert.equal(second.rows[0].body.recorded, false);
     await db.exec("RESET ROLE");
     const audits = await db.query(
       "SELECT count(*)::int AS n FROM public.bootstrap_os_admin_audit WHERE op = 'record_install_source' AND actor_email = 'alice@example.test'",

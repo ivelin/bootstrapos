@@ -131,8 +131,7 @@ BEGIN
   RETURN jsonb_build_object(
     'ok', true,
     'email', user_email,
-    'source', COALESCE(prior, 'manual'),
-    'recorded', wrote
+    'source', COALESCE(prior, 'manual')
   );
 END;
 $$;
