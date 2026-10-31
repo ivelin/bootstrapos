@@ -508,9 +508,11 @@ describe("onboarding gate (PGlite, same commit, never prod)", { concurrency: fal
       const store = new SupabaseInviteStore("https://fixture.example", "anon-key-fixture-xx", "header-token");
       const result = await store.acceptPending({ email: "bill@example.test", sub: BILL_UID }, tokenFor(BILL_EMAIL, BILL_UID));
       assert.equal(result.ok, true);
-      assert.match(seen[0].url, /bootstrap_mcp_accept_pending_invites/);
-      assert.equal(seen[0].body.p_email, undefined);
-      assert.equal(typeof seen[0].body.p_token, "string");
+      assert.match(seen[0].url, /bootstrap_mcp_record_install_source/);
+      assert.equal(seen[0].body.p_source, null);
+      assert.match(seen[1].url, /bootstrap_mcp_accept_pending_invites/);
+      assert.equal(seen[1].body.p_email, undefined);
+      assert.equal(typeof seen[1].body.p_token, "string");
     } finally {
       globalThis.fetch = orig;
     }

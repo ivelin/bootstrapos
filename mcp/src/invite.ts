@@ -34,6 +34,8 @@ export type InviteActor = {
   labels?: string[];
   /** Null means GoTrue email_confirmed_at is null. Omitted means the session is confirmed. */
   emailConfirmedAt?: string | null;
+  /** grokbot, plugin, or manual. Empty means the server stores manual. */
+  installSource?: string | null;
 };
 
 export type InviteCreateInput = {
@@ -918,7 +920,15 @@ export class SupabaseInviteStore implements InviteStore {
   }
 
   async acceptPending(actor: InviteActor, accessToken?: string): Promise<AcceptPendingResult> {
-    void actor;
+    const recorded = await this.rpc("bootstrap_mcp_record_install_source", {
+      p_source: actor.installSource ?? null,
+    });
+    if (isInviteRpcFail(recorded)) {
+      const missing =
+        recorded.status === 404 ||
+        (typeof recorded.body === "string" && recorded.body.includes("bootstrap_mcp_record_install_source"));
+      if (!missing) return { ok: false, reason: "invite_rpc_failed", status: recorded.status, body: recorded.body };
+    }
     if (accessToken && accessToken.length >= 16) {
       const state = await this.rpc("bootstrap_mcp_accept_pending_invites", {
         p_token: accessToken,

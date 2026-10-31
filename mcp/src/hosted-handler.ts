@@ -123,7 +123,14 @@ export function unauthorizedGatedToolResponse(
   );
 }
 
-async function bindVerifiedSession(authorization: string | null): Promise<HostedWhoami> {
+function installSourceFromRequest(req: Request): string | null {
+  const raw = req.headers.get("x-bootstrap-install-source");
+  if (!raw) return null;
+  const value = raw.trim().toLowerCase();
+  return value.length > 0 ? value : null;
+}
+
+async function bindVerifiedSession(authorization: string | null, req: Request): Promise<HostedWhoami> {
   const accessToken = parseBearerToken(authorization);
   const raw = await resolveHostedWhoami(authorization);
   if (
@@ -143,7 +150,12 @@ async function bindVerifiedSession(authorization: string | null): Promise<Hosted
   try {
     const claims = actorClaimsFromAccessToken(accessToken);
     const pending = await store.acceptPending(
-      { email: whoami.email, sub: claims?.sub, labels: whoami.labels },
+      {
+        email: whoami.email,
+        sub: claims?.sub,
+        labels: whoami.labels,
+        installSource: installSourceFromRequest(req),
+      },
       accessToken,
     );
     if (!pending.ok && pending.reason === "invalid_token") {
@@ -175,7 +187,7 @@ async function handleSessionGrant(req: Request): Promise<Response> {
       req,
     );
   }
-  const whoami = await bindVerifiedSession(authorization);
+  const whoami = await bindVerifiedSession(authorization, req);
   if (!whoami.authenticated) return unauthorizedGatedToolResponse(whoami, req);
   return new Response(JSON.stringify(sessionGrantBody(whoami)), {
     status: 200,
@@ -333,7 +345,7 @@ export async function handleHostedReadFetch(req: Request): Promise<Response> {
     );
   }
 
-  const whoami = await bindVerifiedSession(authorization);
+  const whoami = await bindVerifiedSession(authorization, req);
   const hasBearer = Boolean(parseBearerToken(authorization));
   const handshakeAuth = requiresHandshakeAuth(req);
   let actor: JourneyActor | undefined;
