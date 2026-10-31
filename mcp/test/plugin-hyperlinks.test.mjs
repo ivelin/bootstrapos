@@ -46,10 +46,7 @@ describe("preview plugin (hyperlink only)", () => {
       fs.readFileSync(path.join(PLUGIN, ".cursor-plugin", "plugin.json"), "utf8"),
     );
     assert.equal(cursorPlugin.version, "0.1.1");
-    assert.equal(
-      cursorPlugin.variables.properties.BOOTSTRAP_MCP_URL.default,
-      HOSTED_MCP_URL,
-    );
+    assert.equal("variables" in cursorPlugin, false);
 
     const mcpJson = JSON.parse(fs.readFileSync(path.join(PLUGIN, "mcp.json"), "utf8"));
     assert.equal(mcpJson.$schema, "https://agent-plugins.org/schemas/1.0.0/mcp.schema.json");

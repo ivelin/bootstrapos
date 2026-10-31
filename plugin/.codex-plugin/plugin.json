@@ -1,0 +1,14 @@
+{
+  "name": "bootstrap-os",
+  "version": "0.1.1",
+  "description": "Bootstrap OS hosted connector. Sign in with pirin.ai. Skills call bootstrap_get_sop and do not copy the SOP.",
+  "author": {
+    "name": "Ivelin Ivanov",
+    "url": "https://github.com/ivelin"
+  },
+  "homepage": "https://pirin.ai/bootstrap-os",
+  "repository": "https://github.com/ivelin/bootstrapos",
+  "license": "Apache-2.0",
+  "skills": "./skills/",
+  "mcpServers": "./mcp.json"
+}

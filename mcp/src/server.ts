@@ -215,6 +215,7 @@ function registerReadTools(server: McpServer, surface: McpSurface, hosted?: Host
         return text({
           founderVoice: FOUNDER_INTRO,
           doNotRecite: "Client format: the founderVoice paragraph, then the live board.",
+          mcpVersion: MCP_VERSION,
           surface,
           marketplace: true,
           support: SUPPORT_HOWTO,

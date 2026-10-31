@@ -98,6 +98,10 @@ Not a mentee dashboard. Not Path 1. Open the page only when the three gates hold
 
 See [mcp/docs/MARKETPLACE.md](../mcp/docs/MARKETPLACE.md). `/add-plugin` is the Cursor install command.
 
+Cursor and Codex portable packages read `mcp.json`. Claude Code reads `.mcp.json`. Both files in this folder name the same hosted URL. Cursor's manifest pins `mcpServers` to `./mcp.json`. Claude Code's manifest pins `./.mcp.json`. Codex's compatibility manifest pins `./mcp.json`.
+
+Sign in on pirin.ai when the client asks. This plugin does not schedule a weekly check.
+
 **(a) Team / dashboard Import from Repo**
 
 Cursor Dashboard → Plugins → Team Marketplaces → Import from Repo → `https://github.com/ivelin/bootstrap`
@@ -106,9 +110,7 @@ The repo-root [`.cursor-plugin/marketplace.json`](../.cursor-plugin/marketplace.
 
 **(b) Add the remote MCP**
 
-The hosted connector uses sign-in. Pin `https://mcp.bootstrap.pirin.ai/mcp` (handshake 401, then pirin.ai login). Path 1 with no account stays GitHub + install-os + local, with no hosted MCP URL. See [`HOSTED_IDENTITY.md`](../mcp/docs/HOSTED_IDENTITY.md).
-
-Optional `${BOOTSTRAP_MCP_URL}` override. It defaults to that pin. Read tools only. Do not use `mcp.pirin.ai`.
+The hosted connector uses sign-in. Pin `https://mcp.bootstrap.pirin.ai/mcp` (handshake 401, then pirin.ai login). Path 1 with no account stays GitHub + install-os + local, with no hosted MCP URL. See [`HOSTED_IDENTITY.md`](../mcp/docs/HOSTED_IDENTITY.md). Read tools only. Do not use `mcp.pirin.ai`.
 
 **(c) Local copy**
 
@@ -122,7 +124,7 @@ This is an escalation to Ivelin, not a public suggestion box. If a rule is uncle
 
 ## What stays in this folder
 
-Portable Agent Plugin: `plugin.json` + `mcp.json` + `skills/`. Cursor may also read `.cursor-plugin/plugin.json`.
+Portable Agent Plugin: `plugin.json` + `mcp.json` + `.mcp.json` + `skills/`. Cursor also reads `.cursor-plugin/plugin.json`. Claude Code reads `.claude-plugin/plugin.json`. Codex reads `.codex-plugin/plugin.json` when it does not use the portable manifest.
 
 ## Skills
 
@@ -136,10 +138,11 @@ Thin when-to-use + links to the published OS. They do not copy the constitution.
 | `first-hour` | Day 0 + install-first (plugin + this connector only) · After First Hour standing rules |
 | `after-proof-efficiency` | Open only if fences + proof + they asked. Otherwise two clocks. |
 | `when-to-write` | After a gate / founder yes in chat. Weekly constraint is the honest bottleneck, not a side quest. Comments never mutate phase. |
+| `bet-start` | Call `bootstrap_get_sop` with no version at the start of a bet. Stop if the connector or SOP is older than the skill floor. |
 
 ## Hosted MCP URL
 
-`mcp.json` pins the hosted Streamable HTTP connector `https://mcp.bootstrap.pirin.ai/mcp`. The hosted connector uses sign-in. Free Path 1 is GitHub + install-os + local. `${BOOTSTRAP_MCP_URL}` may override (default is that pin). Git-branch previews stay on `*.vercel.app` (undeclared deploy-only, not a pin). See [mcp/docs/MARKETPLACE.md](../mcp/docs/MARKETPLACE.md). Do not use `mcp.pirin.ai`. Contract: [`mcp/docs/HOSTED_IDENTITY.md`](../mcp/docs/HOSTED_IDENTITY.md).
+`mcp.json` pins the hosted Streamable HTTP connector `https://mcp.bootstrap.pirin.ai/mcp`. The hosted connector uses sign-in. Free Path 1 is GitHub + install-os + local. Git-branch previews stay on `*.vercel.app` (undeclared deploy-only, not a pin). See [mcp/docs/MARKETPLACE.md](../mcp/docs/MARKETPLACE.md). Do not use `mcp.pirin.ai`. Contract: [`mcp/docs/HOSTED_IDENTITY.md`](../mcp/docs/HOSTED_IDENTITY.md).
 
 Hosted pin: cookie-less handshake 401. Public OS tools stay listed after auth. Gated `bootstrap_whoami` / company labels return 401 + `WWW-Authenticate` to this MCP origin RFC 9728 (`authorization_servers` = pirin.ai login). Login is `/bootstrap-os/login` on pirin.ai (Web Builder; not this repo). The pin is the Pirin write plane (`create_company`, then `create_idea`). `~/.bootstrap-os` is a self-host kit, not the Pirin mentee path.
 
