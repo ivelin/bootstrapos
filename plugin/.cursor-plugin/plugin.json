@@ -9,16 +9,5 @@
   "repository": "https://github.com/ivelin/bootstrap",
   "license": "Apache-2.0",
   "keywords": ["bootstrap-os", "company-os", "preview"],
-  "mcpServers": "./mcp.json",
-  "variables": {
-    "type": "object",
-    "properties": {
-      "BOOTSTRAP_MCP_URL": {
-        "type": "string",
-        "title": "Hosted MCP URL override",
-        "description": "Optional override for the pinned https://mcp.bootstrap.pirin.ai/mcp URL. Preview read adapter only. Do not use mcp.pirin.ai.",
-        "default": "https://mcp.bootstrap.pirin.ai/mcp"
-      }
-    }
-  }
+  "mcpServers": "./mcp.json"
 }

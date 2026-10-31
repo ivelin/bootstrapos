@@ -65,12 +65,23 @@ function walkJson(dir, out = []) {
 
 const serverEntries = [];
 const secretRe =
-  /bearer\s+[a-z0-9._-]+|bos_[a-z0-9]|sk-[a-z0-9]|api[_-]?key|client_secret|private_key|password\s*[:=]/i;
+  /bearer\s+[a-z0-9._-]+|bos_[a-z0-9]|sk-[a-z0-9]|api[_-]?key|client_secret|private_key|password\s*[:=]|token|ghp_|github_pat_|eyJ[\w-]+\.[\w-]+\./i;
 for (const file of walkJson(plugin)) {
   const text = fs.readFileSync(file, "utf8");
   const doc = JSON.parse(text);
-  assert.equal(secretRe.test(text), false, `secret in ${path.relative(plugin, file)}`);
   assert.equal(/authorization/i.test(text), false, `auth header in ${file}`);
+  const values = [];
+  const collect = (value) => {
+    if (typeof value === "string") values.push(value);
+    else if (value && typeof value === "object") {
+      for (const child of Object.values(value)) collect(child);
+    }
+  };
+  collect(doc);
+  for (const value of values) {
+    assert.equal(secretRe.test(value), false, `secret in ${path.relative(plugin, file)}`);
+  }
+  if (doc.env) assert.equal(secretRe.test(JSON.stringify(doc.env)), false, `secret env in ${file}`);
   const found = [];
   const visit = (value) => {
     if (!value || typeof value !== "object") return;
@@ -121,11 +132,13 @@ for (const name of skills) {
 const bet = fs.readFileSync(path.join(skillDir, "bet-start", "SKILL.md"), "utf8");
 assert.match(bet, /min_connector_version: "0\.3\.5"/);
 assert.match(bet, /min_sop_version: "1\.0\.0"/);
+assert.match(bet, /bet-loop-founder/);
+assert.equal(bet.includes("bet-loop`"), false);
 assert.match(bet, /bootstrap_get_sop/);
 assert.equal(/\bp_version\b/.test(bet), false);
 assert.equal(/["']version["']\s*:/.test(bet), false);
 assert.match(bet, /Upgrade required\. Update the Bootstrap OS connector before continuing\./);
-assert.match(bet, /Upgrade required\. Update the Bootstrap OS plugin before continuing\./);
+assert.equal(/minimum plugin version/i.test(bet), false);
 assert.match(bet, /no fallback/i);
 assert.match(bet, /client/);
 assert.match(bet, /`cursor`/);

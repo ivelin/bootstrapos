@@ -110,9 +110,7 @@ The repo-root [`.cursor-plugin/marketplace.json`](../.cursor-plugin/marketplace.
 
 **(b) Add the remote MCP**
 
-The hosted connector uses sign-in. Pin `https://mcp.bootstrap.pirin.ai/mcp` (handshake 401, then pirin.ai login). Path 1 with no account stays GitHub + install-os + local, with no hosted MCP URL. See [`HOSTED_IDENTITY.md`](../mcp/docs/HOSTED_IDENTITY.md).
-
-Optional `${BOOTSTRAP_MCP_URL}` override. It defaults to that pin. Read tools only. Do not use `mcp.pirin.ai`.
+The hosted connector uses sign-in. Pin `https://mcp.bootstrap.pirin.ai/mcp` (handshake 401, then pirin.ai login). Path 1 with no account stays GitHub + install-os + local, with no hosted MCP URL. See [`HOSTED_IDENTITY.md`](../mcp/docs/HOSTED_IDENTITY.md). Read tools only. Do not use `mcp.pirin.ai`.
 
 **(c) Local copy**
 
@@ -144,7 +142,7 @@ Thin when-to-use + links to the published OS. They do not copy the constitution.
 
 ## Hosted MCP URL
 
-`mcp.json` pins the hosted Streamable HTTP connector `https://mcp.bootstrap.pirin.ai/mcp`. The hosted connector uses sign-in. Free Path 1 is GitHub + install-os + local. `${BOOTSTRAP_MCP_URL}` may override (default is that pin). Git-branch previews stay on `*.vercel.app` (undeclared deploy-only, not a pin). See [mcp/docs/MARKETPLACE.md](../mcp/docs/MARKETPLACE.md). Do not use `mcp.pirin.ai`. Contract: [`mcp/docs/HOSTED_IDENTITY.md`](../mcp/docs/HOSTED_IDENTITY.md).
+`mcp.json` pins the hosted Streamable HTTP connector `https://mcp.bootstrap.pirin.ai/mcp`. The hosted connector uses sign-in. Free Path 1 is GitHub + install-os + local. Git-branch previews stay on `*.vercel.app` (undeclared deploy-only, not a pin). See [mcp/docs/MARKETPLACE.md](../mcp/docs/MARKETPLACE.md). Do not use `mcp.pirin.ai`. Contract: [`mcp/docs/HOSTED_IDENTITY.md`](../mcp/docs/HOSTED_IDENTITY.md).
 
 Hosted pin: cookie-less handshake 401. Public OS tools stay listed after auth. Gated `bootstrap_whoami` / company labels return 401 + `WWW-Authenticate` to this MCP origin RFC 9728 (`authorization_servers` = pirin.ai login). Login is `/bootstrap-os/login` on pirin.ai (Web Builder; not this repo). The pin is the Pirin write plane (`create_company`, then `create_idea`). `~/.bootstrap-os` is a self-host kit, not the Pirin mentee path.
 

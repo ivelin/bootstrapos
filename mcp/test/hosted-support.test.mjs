@@ -7,7 +7,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
 import { handleHostedReadFetch } from "../dist/hosted-handler.js";
-import { HOSTED_GATED_TOOL_NAMES, HOSTED_READ_TOOL_NAMES } from "../dist/constants.js";
+import { HOSTED_GATED_TOOL_NAMES, HOSTED_READ_TOOL_NAMES, MCP_VERSION } from "../dist/constants.js";
 import {
   FOUNDER_INTRO,
   HOSTED_MCP_INSTRUCTIONS,
@@ -136,6 +136,12 @@ describe("hosted MCP support escape hatch", () => {
     assert.ok(!("from" in SUPPORT_HOWTO));
     assert.ok(!("mailFrom" in SUPPORT_HOWTO));
     assert.ok(!("queuedMail" in SUPPORT_HOWTO));
+  });
+
+  it("hosted bootstrap_os_info includes mcpVersion", async () => {
+    const info = parseTool(await rpc("tools/call", { name: "bootstrap_os_info", arguments: {} }, 11));
+    assert.equal(info.surface, "hosted-read");
+    assert.equal(info.mcpVersion, MCP_VERSION);
   });
 
   it("bootstrap_os_info and bootstrap_support return the address + what to include + human-routed", async () => {
