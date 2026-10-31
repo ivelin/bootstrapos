@@ -9,6 +9,7 @@
   "repository": "https://github.com/ivelin/bootstrap",
   "license": "Apache-2.0",
   "keywords": ["bootstrap-os", "company-os", "preview"],
+  "mcpServers": "./mcp.json",
   "variables": {
     "type": "object",
     "properties": {

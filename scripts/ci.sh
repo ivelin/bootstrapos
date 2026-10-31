@@ -7,6 +7,7 @@ ROOT=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
 cd "$ROOT"
 python3 tests/test_cleanup_stale_refs.py
 sh tests/test_day0.sh
+node tests/check-plugin-install.mjs
 
 # Spoken-card grounding EVAL wire (format A + grounding B + snapshot C).
 # Alpha / bravo fixtures only. No mentee PII. No live put_journey.

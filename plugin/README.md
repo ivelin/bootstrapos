@@ -98,6 +98,10 @@ Not a mentee dashboard. Not Path 1. Open the page only when the three gates hold
 
 See [mcp/docs/MARKETPLACE.md](../mcp/docs/MARKETPLACE.md). `/add-plugin` is the Cursor install command.
 
+Cursor and Codex portable packages read `mcp.json`. Claude Code reads `.mcp.json`. Both files in this folder name the same hosted URL. Cursor's manifest pins `mcpServers` to `./mcp.json`. Claude Code's manifest pins `./.mcp.json`. Codex's compatibility manifest pins `./mcp.json`.
+
+Sign in on pirin.ai when the client asks. This plugin does not schedule a weekly check.
+
 **(a) Team / dashboard Import from Repo**
 
 Cursor Dashboard → Plugins → Team Marketplaces → Import from Repo → `https://github.com/ivelin/bootstrap`
@@ -122,7 +126,7 @@ This is an escalation to Ivelin, not a public suggestion box. If a rule is uncle
 
 ## What stays in this folder
 
-Portable Agent Plugin: `plugin.json` + `mcp.json` + `skills/`. Cursor may also read `.cursor-plugin/plugin.json`.
+Portable Agent Plugin: `plugin.json` + `mcp.json` + `.mcp.json` + `skills/`. Cursor also reads `.cursor-plugin/plugin.json`. Claude Code reads `.claude-plugin/plugin.json`. Codex reads `.codex-plugin/plugin.json` when it does not use the portable manifest.
 
 ## Skills
 
@@ -136,6 +140,7 @@ Thin when-to-use + links to the published OS. They do not copy the constitution.
 | `first-hour` | Day 0 + install-first (plugin + this connector only) · After First Hour standing rules |
 | `after-proof-efficiency` | Open only if fences + proof + they asked. Otherwise two clocks. |
 | `when-to-write` | After a gate / founder yes in chat. Weekly constraint is the honest bottleneck, not a side quest. Comments never mutate phase. |
+| `bet-start` | Call `bootstrap_get_sop` with no version at the start of a bet. Stop if the connector or SOP is older than the skill floor. |
 
 ## Hosted MCP URL
 
