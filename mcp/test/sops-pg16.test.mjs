@@ -12,7 +12,9 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const SQL = path.join(__dirname, "..", "supabase", "migrations", "20261030_bootstrap_os_sops.sql");
+const MIGRATIONS = path.join(__dirname, "..", "supabase", "migrations");
+const SQL = path.join(MIGRATIONS, "20261030_bootstrap_os_sops.sql");
+const SHA_FIX = path.join(MIGRATIONS, "20261030b_bootstrap_os_sops_sha_fix.sql");
 const BIN = "/usr/lib/postgresql/16/bin";
 
 let dataDir;
@@ -89,8 +91,11 @@ describe("PostgreSQL 16 SOP store", { concurrency: false }, () => {
     psql(`
       DO $$ BEGIN CREATE ROLE anon NOLOGIN; EXCEPTION WHEN duplicate_object THEN NULL; END $$;
       DO $$ BEGIN CREATE ROLE authenticated NOLOGIN; EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+      CREATE SCHEMA IF NOT EXISTS extensions;
+      CREATE EXTENSION IF NOT EXISTS pgcrypto SCHEMA extensions;
     `);
     psql(fs.readFileSync(SQL, "utf8"));
+    psql(fs.readFileSync(SHA_FIX, "utf8"));
     const low = "fixture body nine";
     const high = "fixture body ten";
     psql(`
