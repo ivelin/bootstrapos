@@ -123,6 +123,9 @@ export function unauthorizedGatedToolResponse(
   );
 }
 
+// x-bootstrap-install-source is client-asserted and for analytics only.
+// It must never be used for authz, routing, or role-to-bot mapping.
+// Those use the per-call client param.
 function installSourceFromRequest(req: Request): string | null {
   const raw = req.headers.get("x-bootstrap-install-source");
   if (!raw) return null;

@@ -1,5 +1,8 @@
 -- Install path for one signup. Written once. Unknown stays manual.
 -- source is grokbot, plugin, or manual. Anything else is rejected.
+-- x-bootstrap-install-source is client-asserted and for analytics only.
+-- It must never be used for authz, routing, or role-to-bot mapping.
+-- Those use the per-call client param.
 -- DO NOT apply from a PR cloud agent. Do not migrate or live-probe supabase-pirin-ai.
 
 ALTER TABLE public.bootstrap_mcp_mentees
@@ -20,10 +23,11 @@ GRANT SELECT (id, email, auth_user_id, created_at)
 CREATE OR REPLACE FUNCTION public.bootstrap_mcp_mentees_source_once()
 RETURNS trigger
 LANGUAGE plpgsql
-SET search_path = pg_catalog, public
+SET search_path = pg_catalog
 AS $$
 BEGIN
-  IF OLD.source IS NOT NULL AND NEW.source IS DISTINCT FROM OLD.source THEN
+  -- One transition only: NULL to a value. A later update keeps the stored value.
+  IF OLD.source IS NOT NULL THEN
     NEW.source := OLD.source;
   END IF;
   RETURN NEW;
@@ -69,7 +73,7 @@ CREATE OR REPLACE FUNCTION public.bootstrap_mcp_record_install_source(p_source t
 RETURNS jsonb
 LANGUAGE plpgsql
 SECURITY DEFINER
-SET search_path = pg_catalog, public
+SET search_path = pg_catalog
 AS $$
 DECLARE
   uid uuid := auth.uid();
@@ -80,24 +84,24 @@ DECLARE
   wrote boolean := false;
 BEGIN
   IF uid IS NULL THEN
-    RETURN jsonb_build_object('ok', false, 'status', 401, 'error', 'email_required');
+    RETURN pg_catalog.jsonb_build_object('ok', false, 'status', 401, 'error', 'email_required');
   END IF;
 
-  SELECT lower(u.email) INTO user_email
+  SELECT pg_catalog.lower(u.email) INTO user_email
   FROM auth.users AS u
   WHERE u.id = uid
     AND u.email_confirmed_at IS NOT NULL;
   IF user_email IS NULL OR user_email = '' THEN
-    RETURN jsonb_build_object('ok', false, 'status', 401, 'error', 'email_required');
+    RETURN pg_catalog.jsonb_build_object('ok', false, 'status', 401, 'error', 'email_required');
   END IF;
 
-  IF p_source IS NULL OR btrim(p_source) = '' THEN
+  IF p_source IS NULL OR pg_catalog.btrim(p_source) = '' THEN
     v_source := 'manual';
   ELSE
-    v_source := lower(btrim(p_source));
+    v_source := pg_catalog.lower(pg_catalog.btrim(p_source));
   END IF;
   IF v_source NOT IN ('grokbot', 'plugin', 'manual') THEN
-    RETURN jsonb_build_object('ok', false, 'status', 400, 'error', 'invalid_install_source');
+    RETURN pg_catalog.jsonb_build_object('ok', false, 'status', 400, 'error', 'invalid_install_source');
   END IF;
 
   SELECT m.id, m.source INTO mentee_id, prior
@@ -128,7 +132,7 @@ BEGIN
     VALUES ('record_install_source', mentee_id, user_email, prior);
   END IF;
 
-  RETURN jsonb_build_object(
+  RETURN pg_catalog.jsonb_build_object(
     'ok', true,
     'email', user_email,
     'source', COALESCE(prior, 'manual')
@@ -140,7 +144,7 @@ CREATE OR REPLACE FUNCTION public.bootstrap_mcp_read_install_source(p_email text
 RETURNS jsonb
 LANGUAGE plpgsql
 SECURITY DEFINER
-SET search_path = pg_catalog, public
+SET search_path = pg_catalog
 AS $$
 DECLARE
   uid uuid := auth.uid();
@@ -152,15 +156,15 @@ DECLARE
   found text;
 BEGIN
   IF uid IS NULL THEN
-    RETURN jsonb_build_object('ok', false, 'status', 403, 'error', 'forbidden');
+    RETURN pg_catalog.jsonb_build_object('ok', false, 'status', 403, 'error', 'forbidden');
   END IF;
 
-  SELECT lower(u.email) INTO user_email
+  SELECT pg_catalog.lower(u.email) INTO user_email
   FROM auth.users AS u
   WHERE u.id = uid
     AND u.email_confirmed_at IS NOT NULL;
   IF user_email IS NULL OR user_email = '' THEN
-    RETURN jsonb_build_object('ok', false, 'status', 403, 'error', 'forbidden');
+    RETURN pg_catalog.jsonb_build_object('ok', false, 'status', 403, 'error', 'forbidden');
   END IF;
 
   SELECT m.id INTO caller
@@ -169,7 +173,7 @@ BEGIN
   ORDER BY CASE WHEN m.auth_user_id = uid THEN 0 ELSE 1 END
   LIMIT 1;
   IF caller IS NULL THEN
-    RETURN jsonb_build_object('ok', false, 'status', 403, 'error', 'forbidden');
+    RETURN pg_catalog.jsonb_build_object('ok', false, 'status', 403, 'error', 'forbidden');
   END IF;
 
   is_admin := EXISTS (
@@ -181,14 +185,14 @@ BEGIN
     WHERE r.mentee_id = caller AND r.revoked_at IS NULL AND r.role = 'owner'
   );
 
-  target_email := lower(btrim(COALESCE(p_email, user_email)));
+  target_email := pg_catalog.lower(pg_catalog.btrim(COALESCE(p_email, user_email)));
   IF target_email = '' THEN
     target_email := user_email;
   END IF;
 
   IF is_admin IS DISTINCT FROM true THEN
     IF is_owner IS DISTINCT FROM true OR target_email <> user_email THEN
-      RETURN jsonb_build_object('ok', false, 'status', 403, 'error', 'forbidden');
+      RETURN pg_catalog.jsonb_build_object('ok', false, 'status', 403, 'error', 'forbidden');
     END IF;
   END IF;
 
@@ -198,10 +202,10 @@ BEGIN
   IF NOT EXISTS (
     SELECT 1 FROM public.bootstrap_mcp_mentees AS m WHERE m.email = target_email
   ) THEN
-    RETURN jsonb_build_object('ok', false, 'status', 404, 'error', 'not_found');
+    RETURN pg_catalog.jsonb_build_object('ok', false, 'status', 404, 'error', 'not_found');
   END IF;
 
-  RETURN jsonb_build_object(
+  RETURN pg_catalog.jsonb_build_object(
     'ok', true,
     'email', target_email,
     'source', COALESCE(found, 'manual')

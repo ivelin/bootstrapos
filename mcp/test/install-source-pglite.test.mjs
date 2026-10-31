@@ -202,6 +202,33 @@ describe("install source (PGlite, never prod)", () => {
     );
   });
 
+  it("a second connect with a different header leaves the value and writes no second audit row", async () => {
+    const eve = "55555555-5555-4555-8555-555555555555";
+    await db.exec("RESET ROLE");
+    await db.query(
+      "INSERT INTO auth.users (id, email, email_confirmed_at) VALUES ($1, 'eve@example.test', now())",
+      [eve],
+    );
+    await signIn(eve, "eve@example.test");
+    const plugin = (
+      await db.query("SELECT public.bootstrap_mcp_record_install_source($1) AS body", ["plugin"])
+    ).rows[0].body;
+    assert.equal(plugin.source, "plugin");
+    const grokbot = (
+      await db.query("SELECT public.bootstrap_mcp_record_install_source($1) AS body", ["grokbot"])
+    ).rows[0].body;
+    assert.equal(grokbot.source, "plugin");
+    await db.exec("RESET ROLE");
+    const row = await db.query(
+      "SELECT source FROM public.bootstrap_mcp_mentees WHERE email = 'eve@example.test'",
+    );
+    assert.equal(row.rows[0].source, "plugin");
+    const audits = await db.query(
+      "SELECT count(*)::int AS n FROM public.bootstrap_os_admin_audit WHERE op = 'record_install_source' AND actor_email = 'eve@example.test'",
+    );
+    assert.equal(audits.rows[0].n, 1);
+  });
+
   it("lets a super admin read another founder and denies a member", async () => {
     await signIn(DAVE, "dave@example.test");
     const seen = (
@@ -221,6 +248,13 @@ describe("install source (PGlite, never prod)", () => {
     await db.exec("SET ROLE anon");
     await assert.rejects(
       () => db.query("SELECT public.bootstrap_mcp_read_install_source(NULL)"),
+      (err) => {
+        assert.equal(err.code, "42501");
+        return true;
+      },
+    );
+    await assert.rejects(
+      () => db.query("SELECT public.bootstrap_mcp_record_install_source(NULL)"),
       (err) => {
         assert.equal(err.code, "42501");
         return true;

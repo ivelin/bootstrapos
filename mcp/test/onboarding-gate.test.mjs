@@ -517,4 +517,67 @@ describe("onboarding gate (PGlite, same commit, never prod)", { concurrency: fal
       globalThis.fetch = orig;
     }
   });
+
+  it("a missing recorder still accepts, and a recorder error does not", async () => {
+    const orig = globalThis.fetch;
+    const seen = [];
+    globalThis.fetch = async (url) => {
+      const name = String(url);
+      seen.push(name);
+      if (name.includes("bootstrap_mcp_record_install_source")) {
+        return new Response("missing", { status: 404 });
+      }
+      return new Response(JSON.stringify({ ok: true, email: "bill@example.test", accepted: [], labels: [] }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    };
+    try {
+      const store = new SupabaseInviteStore("https://fixture.example", "anon-key-fixture-xx", "header-token");
+      const result = await store.acceptPending(
+        { email: "bill@example.test", installSource: "plugin" },
+        tokenFor(BILL_EMAIL, BILL_UID),
+      );
+      assert.equal(result.ok, true);
+      assert.equal(seen.length, 2);
+    } finally {
+      globalThis.fetch = orig;
+    }
+
+    globalThis.fetch = async (url) => {
+      if (String(url).includes("bootstrap_mcp_record_install_source")) {
+        return new Response("no", { status: 500 });
+      }
+      return new Response(JSON.stringify({ ok: true }), { status: 200 });
+    };
+    try {
+      const store = new SupabaseInviteStore("https://fixture.example", "anon-key-fixture-xx", "header-token");
+      const result = await store.acceptPending({ email: "bill@example.test", installSource: "grokbot" });
+      assert.equal(result.ok, false);
+      assert.equal(result.reason, "invite_rpc_failed");
+    } finally {
+      globalThis.fetch = orig;
+    }
+  });
+
+  it("reads the install header on connect and does not use it to choose the board", async () => {
+    useStores();
+    const token = tokenFor(IVELIN_SEED_EMAIL, IVELIN_UID);
+    const plugin = await callTool("bootstrap_whoami", {}, token, {
+      "x-bootstrap-install-source": "  Plugin ",
+    });
+    assert.equal(plugin.res.status, 200);
+    const grokbot = await callTool("bootstrap_whoami", {}, token, {
+      "x-bootstrap-install-source": "grokbot",
+    });
+    assert.equal(grokbot.res.status, 200);
+    const blank = await callTool("bootstrap_whoami", {}, token, {
+      "x-bootstrap-install-source": "   ",
+    });
+    assert.equal(blank.res.status, 200);
+    const first = parseTool(plugin.body);
+    const second = parseTool(grokbot.body);
+    assert.deepEqual(first.labels, second.labels);
+    assert.equal(first.email, second.email);
+  });
 });
