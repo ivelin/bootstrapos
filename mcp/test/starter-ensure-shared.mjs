@@ -295,3 +295,26 @@ export function guardAbsent(sql) {
     "IF email IS NOT NULL THEN",
   );
 }
+
+export const NON_STARTER_SEED = `
+INSERT INTO bootstrap_os.companies (slug, label, starter)
+VALUES ('alpha', 'Alpha', false);
+`;
+
+export const NON_STARTER_IDEA_COUNT = `
+SELECT count(*)::int AS n
+FROM bootstrap_os.ideas i
+JOIN bootstrap_os.companies c ON c.id = i.company_id
+WHERE c.slug = 'alpha' AND c.starter IS FALSE;
+`;
+
+export function dropStarterJoin(sql) {
+  const next = sql.replace(
+    "JOIN bootstrap_os.starter_boards s ON s.company_id = c.id\n",
+    "",
+  );
+  if (next === sql) {
+    throw new Error("backfill lost its marker before the test could remove it");
+  }
+  return next;
+}

@@ -10,7 +10,10 @@ import {
   HARNESS,
   RPCS,
   SCENARIO,
+  NON_STARTER_IDEA_COUNT,
+  NON_STARTER_SEED,
   STARTER_SQL,
+  dropStarterJoin,
   guardAbsent,
   readFix,
 } from "./starter-ensure-shared.mjs";
@@ -39,11 +42,15 @@ describe("PGlite starter ensure_company (isolated, never prod)", { concurrency: 
     await db.exec(HARNESS);
     await db.exec(fs.readFileSync(STARTER_SQL, "utf8"));
     await openBoard(db, "backfill@example.test");
+    await db.exec(NON_STARTER_SEED);
     assert.equal(await ideaCount(db, "backfill@example.test"), 0);
+    assert.equal((await db.query(NON_STARTER_IDEA_COUNT)).rows[0].n, 0);
     await db.exec(fs.readFileSync(FIX_SQL, "utf8"));
     assert.equal(await ideaCount(db, "backfill@example.test"), 1);
+    assert.equal((await db.query(NON_STARTER_IDEA_COUNT)).rows[0].n, 0);
     await db.exec(fs.readFileSync(FIX_SQL, "utf8"));
     assert.equal(await ideaCount(db, "backfill@example.test"), 1);
+    assert.equal((await db.query(NON_STARTER_IDEA_COUNT)).rows[0].n, 0);
     await db.exec(RPCS);
     await db.exec(SCENARIO);
   });
@@ -54,6 +61,7 @@ describe("PGlite starter ensure_company (isolated, never prod)", { concurrency: 
 
   it("owner journey calls keep one ACL row and the backfill stays one idea", async () => {
     assert.equal(await ideaCount(db, "backfill@example.test"), 1);
+    assert.equal((await db.query(NON_STARTER_IDEA_COUNT)).rows[0].n, 0);
     const acl = await db.query(
       `SELECT count(*)::int AS n
        FROM bootstrap_os.company_acl a
@@ -86,6 +94,21 @@ describe("PGlite starter ensure_company (isolated, never prod)", { concurrency: 
       );
     } finally {
       await broken.close();
+    }
+  });
+
+  it("removing the starter_boards join makes the backfill write a non-starter idea", async () => {
+    const mutated = dropStarterJoin(readFix());
+    assert.notEqual(mutated, readFix());
+    const leaked = new PGlite();
+    try {
+      await leaked.exec(HARNESS);
+      await leaked.exec(fs.readFileSync(STARTER_SQL, "utf8"));
+      await leaked.exec(NON_STARTER_SEED);
+      await leaked.exec(mutated);
+      assert.equal((await leaked.query(NON_STARTER_IDEA_COUNT)).rows[0].n, 1);
+    } finally {
+      await leaked.close();
     }
   });
 });

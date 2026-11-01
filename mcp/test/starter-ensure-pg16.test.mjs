@@ -8,7 +8,15 @@ import fs from "node:fs";
 import net from "node:net";
 import os from "node:os";
 import path from "node:path";
-import { FIX_SQL, HARNESS, RPCS, SCENARIO, STARTER_SQL } from "./starter-ensure-shared.mjs";
+import {
+  FIX_SQL,
+  HARNESS,
+  NON_STARTER_IDEA_COUNT,
+  NON_STARTER_SEED,
+  RPCS,
+  SCENARIO,
+  STARTER_SQL,
+} from "./starter-ensure-shared.mjs";
 
 const BIN = "/usr/lib/postgresql/16/bin";
 
@@ -77,6 +85,7 @@ describe("PostgreSQL 16 starter ensure_company", { concurrency: false }, () => {
       SELECT set_config('app.actor_email', 'backfill@example.test', false);
       SELECT public.bootstrap_os_create_starter_board();
     `);
+    psql(NON_STARTER_SEED);
     const before = psql(`
       SELECT count(*)::text
       FROM bootstrap_os.ideas i
@@ -93,6 +102,8 @@ describe("PostgreSQL 16 starter ensure_company", { concurrency: false }, () => {
       WHERE s.owner_email = 'backfill@example.test';
     `);
     assert.equal(after.trim(), "1");
+    const plain = psql(NON_STARTER_IDEA_COUNT);
+    assert.equal(plain.trim(), "0");
     psql(RPCS);
     psql(SCENARIO);
     const acl = psql(`
