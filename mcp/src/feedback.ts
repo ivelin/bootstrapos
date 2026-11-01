@@ -404,19 +404,29 @@ export class SupabaseFeedbackStore implements FeedbackStore {
 
   async listRecent(limit = 50): Promise<FeedbackListRow[]> {
     const base = this.url.replace(/\/+$/, "");
-    const res = await fetch(`${base}/rest/v1/rpc/bootstrap_os_list_feedback`, {
-      method: "POST",
-      headers: {
-        apikey: this.anonKey,
-        Authorization: `Bearer ${this.accessToken}`,
-        "Content-Type": "application/json",
-        Accept: "application/json",
-      },
-      body: JSON.stringify({ p_limit: limit }),
-      signal: AbortSignal.timeout(10_000),
-    });
+    let res: Response;
+    try {
+      res = await fetch(`${base}/rest/v1/rpc/bootstrap_os_list_feedback`, {
+        method: "POST",
+        headers: {
+          apikey: this.anonKey,
+          Authorization: `Bearer ${this.accessToken}`,
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
+        body: JSON.stringify({ p_limit: limit }),
+        signal: AbortSignal.timeout(10_000),
+      });
+    } catch {
+      return [];
+    }
     if (!res.ok) return [];
-    const raw = (await res.json()) as unknown;
+    let raw: unknown = null;
+    try {
+      raw = await res.json();
+    } catch {
+      return [];
+    }
     if (!Array.isArray(raw)) return [];
     return raw.flatMap((row) => {
       if (!row || typeof row !== "object") return [];

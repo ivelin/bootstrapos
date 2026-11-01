@@ -438,4 +438,26 @@ describe("submit_feedback hosted tool", () => {
       global.fetch = original;
     }
   });
+
+  it("returns an empty list when the reader call fails", async () => {
+    process.env.VERCEL_ENV = "production";
+    process.env.BOOTSTRAP_SUPABASE_URL = "https://db.example.test";
+    process.env.BOOTSTRAP_SUPABASE_ANON_KEY = "anon-key";
+    const live = createSupabaseFeedbackStore("signed-token-value");
+    const original = global.fetch;
+    global.fetch = async () => {
+      throw new Error("socket hang up");
+    };
+    try {
+      assert.deepEqual(await live.listRecent(), []);
+    } finally {
+      global.fetch = original;
+    }
+    global.fetch = async () => new Response("not-json", { status: 200 });
+    try {
+      assert.deepEqual(await live.listRecent(), []);
+    } finally {
+      global.fetch = original;
+    }
+  });
 });

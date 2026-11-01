@@ -164,8 +164,16 @@ describe("PGlite submit_feedback (isolated, never prod)", { concurrency: false }
     const authSubmit = await db.query(
       "SELECT has_function_privilege('authenticated', 'public.bootstrap_os_submit_feedback(jsonb)', 'EXECUTE') AS allowed",
     );
+    const anonRedact = await db.query(
+      "SELECT has_function_privilege('anon', 'bootstrap_os.redact_feedback_text(text, text)', 'EXECUTE') AS allowed",
+    );
+    const anonFp = await db.query(
+      "SELECT has_function_privilege('anon', 'bootstrap_os.feedback_fingerprint(text, text, text, text)', 'EXECUTE') AS allowed",
+    );
     assert.equal(anonSubmit.rows[0].allowed, false);
     assert.equal(anonList.rows[0].allowed, false);
+    assert.equal(anonRedact.rows[0].allowed, false);
+    assert.equal(anonFp.rows[0].allowed, false);
     assert.equal(authSubmit.rows[0].allowed, true);
     await db.query("SET ROLE anon");
     try {
@@ -215,6 +223,32 @@ describe("PGlite submit_feedback (isolated, never prod)", { concurrency: false }
     assert.equal(again[0].body.duplicate, true);
     assert.equal(again[0].body.id, first[0].body.id);
 
+    await db.query("UPDATE bootstrap_os.feedback SET created_at = now() - interval '25 hours' WHERE id = $1", [
+      first[0].body.id,
+    ]);
+    const afterWindow = await asJwt(
+      { email: "a@example.test" },
+      "SELECT public.bootstrap_os_submit_feedback($1::jsonb) AS body",
+      [JSON.stringify({ kind: "bug", summary: `${prefix} alpha`, user_consented: true })],
+    );
+    assert.equal(afterWindow[0].body.duplicate, false);
+    assert.notEqual(afterWindow[0].body.id, first[0].body.id);
+
+    const sharedKey = "samekey01";
+    const owner = await asJwt(
+      { email: "a@example.test" },
+      "SELECT public.bootstrap_os_submit_feedback($1::jsonb) AS body",
+      [JSON.stringify({ kind: "docs", summary: "owner ticket", user_consented: true, submission_id: sharedKey })],
+    );
+    const otherActor = await asJwt(
+      { email: "c@example.test" },
+      "SELECT public.bootstrap_os_submit_feedback($1::jsonb) AS body",
+      [JSON.stringify({ kind: "docs", summary: "owner ticket", user_consented: true, submission_id: sharedKey })],
+    );
+    assert.equal(owner[0].body.ok, true);
+    assert.equal(otherActor[0].body.duplicate, false);
+    assert.notEqual(otherActor[0].body.id, owner[0].body.id);
+
     await db.query("SELECT set_config('app.actor_role', 'super_admin', false)");
     await db.query("SET ROLE authenticated");
     try {
@@ -226,6 +260,24 @@ describe("PGlite submit_feedback (isolated, never prod)", { concurrency: false }
       assert.equal(hit.severity, "annoying");
       assert.equal(hit.status, "new");
       assert.match(hit.summary, /^z{80} alpha$/);
+
+      for (let i = 0; i < 101; i += 1) {
+        await db.query("SELECT public.bootstrap_os_submit_feedback($1::jsonb)", [
+          JSON.stringify({
+            kind: "docs",
+            summary: `cap row ${i} ${"q".repeat(12)}`,
+            user_consented: true,
+          }),
+        ]);
+      }
+      const one = await db.query("SELECT public.bootstrap_os_list_feedback(-5) AS body");
+      const many = await db.query("SELECT public.bootstrap_os_list_feedback(100000) AS body");
+      assert.ok(Array.isArray(one.rows[0].body));
+      assert.ok(Array.isArray(many.rows[0].body));
+      assert.ok(one.rows[0].body.length <= 1);
+      assert.equal(one.rows[0].body.length, 1);
+      assert.ok(many.rows[0].body.length <= 100);
+      assert.equal(many.rows[0].body.length, 100);
     } finally {
       await db.query("RESET ROLE");
     }
