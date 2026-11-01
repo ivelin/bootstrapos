@@ -12,6 +12,7 @@ import { feedbackFingerprint } from "../dist/feedback.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const SQL = path.join(__dirname, "..", "supabase", "migrations", "20260930_bootstrap_os_submit_feedback.sql");
+const HARDEN = path.join(__dirname, "..", "supabase", "migrations", "20261031_bootstrap_os_feedback_harden.sql");
 
 const HARNESS = `
 DO $$ BEGIN CREATE ROLE anon; EXCEPTION WHEN duplicate_object THEN NULL; END $$;
@@ -45,6 +46,23 @@ describe("PGlite submit_feedback (isolated, never prod)", { concurrency: false }
     db = new PGlite();
     await db.exec(HARNESS);
     await db.exec(fs.readFileSync(SQL, "utf8"));
+    await db.exec(
+      "GRANT EXECUTE ON FUNCTION public.bootstrap_os_submit_feedback(jsonb) TO anon",
+    );
+    await db.exec(fs.readFileSync(HARDEN, "utf8"));
+    await db.exec(`
+      CREATE OR REPLACE FUNCTION public.bootstrap_os_admin_gate()
+      RETURNS jsonb
+      LANGUAGE plpgsql
+      AS $fn$
+      BEGIN
+        IF current_setting('app.actor_role', true) = 'super_admin' THEN
+          RETURN jsonb_build_object('ok', true);
+        END IF;
+        RETURN jsonb_build_object('ok', false, 'status', 403);
+      END;
+      $fn$;
+    `);
   });
 
   after(async () => {
@@ -89,7 +107,7 @@ describe("PGlite submit_feedback (isolated, never prod)", { concurrency: false }
     assert.doesNotMatch(stored[0].summary, /other@example\.test|Bearer abc|intruder/);
     assert.equal(
       stored[0].fingerprint,
-      feedbackFingerprint({ kind: "bug", summary: stored[0].summary }),
+      feedbackFingerprint({ kind: "bug", summary: stored[0].summary, actorId: "a@example.test" }),
     );
     const again = await asJwt(
       { email: "a@example.test" },
@@ -134,5 +152,82 @@ describe("PGlite submit_feedback (isolated, never prod)", { concurrency: false }
     );
     assert.equal(anon[0].body.error, "Sign in to Bootstrap OS and ask again.");
     assert.doesNotMatch(JSON.stringify(anon[0].body), /a@example\.test/);
+  });
+
+  it("anon cannot execute submit or list, and a member cannot read the list", async () => {
+    const anonSubmit = await db.query(
+      "SELECT has_function_privilege('anon', 'public.bootstrap_os_submit_feedback(jsonb)', 'EXECUTE') AS allowed",
+    );
+    const anonList = await db.query(
+      "SELECT has_function_privilege('anon', 'public.bootstrap_os_list_feedback(integer)', 'EXECUTE') AS allowed",
+    );
+    const authSubmit = await db.query(
+      "SELECT has_function_privilege('authenticated', 'public.bootstrap_os_submit_feedback(jsonb)', 'EXECUTE') AS allowed",
+    );
+    assert.equal(anonSubmit.rows[0].allowed, false);
+    assert.equal(anonList.rows[0].allowed, false);
+    assert.equal(authSubmit.rows[0].allowed, true);
+    await db.query("SET ROLE anon");
+    try {
+      await assert.rejects(
+        () => db.query("SELECT public.bootstrap_os_submit_feedback('{}'::jsonb)"),
+        /permission denied/i,
+      );
+      await assert.rejects(
+        () => db.query("SELECT public.bootstrap_os_list_feedback(5)"),
+        /permission denied/i,
+      );
+    } finally {
+      await db.query("RESET ROLE");
+    }
+    await db.query("SELECT set_config('app.actor_role', 'member', false)");
+    await db.query("SET ROLE authenticated");
+    try {
+      const denied = await db.query("SELECT public.bootstrap_os_list_feedback(5) AS body");
+      assert.equal(denied.rows[0].body.ok, false);
+      assert.equal(denied.rows[0].body.rows, undefined);
+      assert.doesNotMatch(JSON.stringify(denied.rows[0].body), /board did not load|B wrote/);
+    } finally {
+      await db.query("RESET ROLE");
+    }
+  });
+
+  it("does not merge distinct summaries that share 80 characters, and a super admin can list", async () => {
+    const prefix = "z".repeat(80);
+    const first = await asJwt(
+      { email: "a@example.test" },
+      "SELECT public.bootstrap_os_submit_feedback($1::jsonb) AS body",
+      [JSON.stringify({ kind: "bug", summary: `${prefix} alpha`, user_consented: true, severity: "annoying" })],
+    );
+    const second = await asJwt(
+      { email: "a@example.test" },
+      "SELECT public.bootstrap_os_submit_feedback($1::jsonb) AS body",
+      [JSON.stringify({ kind: "bug", summary: `${prefix} bravo`, user_consented: true, severity: "wish" })],
+    );
+    const again = await asJwt(
+      { email: "a@example.test" },
+      "SELECT public.bootstrap_os_submit_feedback($1::jsonb) AS body",
+      [JSON.stringify({ kind: "bug", summary: `${prefix} alpha`, user_consented: true })],
+    );
+    assert.equal(first[0].body.duplicate, false);
+    assert.equal(second[0].body.duplicate, false);
+    assert.notEqual(second[0].body.id, first[0].body.id);
+    assert.equal(again[0].body.duplicate, true);
+    assert.equal(again[0].body.id, first[0].body.id);
+
+    await db.query("SELECT set_config('app.actor_role', 'super_admin', false)");
+    await db.query("SET ROLE authenticated");
+    try {
+      const listed = await db.query("SELECT public.bootstrap_os_list_feedback(20) AS body");
+      const rows = listed.rows[0].body;
+      assert.ok(Array.isArray(rows));
+      const hit = rows.find((row) => row.id === first[0].body.id);
+      assert.equal(hit.kind, "bug");
+      assert.equal(hit.severity, "annoying");
+      assert.equal(hit.status, "new");
+      assert.match(hit.summary, /^z{80} alpha$/);
+    } finally {
+      await db.query("RESET ROLE");
+    }
   });
 });

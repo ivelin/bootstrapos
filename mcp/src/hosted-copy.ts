@@ -108,7 +108,10 @@ export const NOTE_OS_INFO_HOSTED =
 export const SUPPORT_EMAIL = "bootstrap@pirin.ai";
 
 export const TOOL_SUBMIT_FEEDBACK =
-  "File a bug, a missing piece, confusing output, or a docs gap. The person must say yes in this chat. A person reads it. This does not change the board, and nothing is emailed until they approve.";
+  "File a bug, a missing piece, confusing output, or a docs gap. The person must say yes in this chat. A person reads it. This does not change the board. submit_feedback is the default. If this call fails, email bootstrap@pirin.ai.";
+
+export const TOOL_LIST_FEEDBACK =
+  "Recent feedback tickets. Super admin only. Read only. id, when it was filed, kind, severity, status, and summary.";
 
 export const TOOL_SUPPORT =
   "How to ask for help with Bootstrap OS hosted MCP. Email bootstrap@pirin.ai. Returns what to include. Human-routed, not an auto-fix. To file what went wrong, call submit_feedback.";

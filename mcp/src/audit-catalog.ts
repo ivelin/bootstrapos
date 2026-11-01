@@ -12,6 +12,7 @@ export const READ_ONLY_GATED_TOOLS = [
   "bootstrap_where_are_we",
   "list_subscribers",
   "list_provenance",
+  "list_feedback",
 ] as const;
 
 export const MUTATING_TOOL_AUDIT = {

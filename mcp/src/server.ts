@@ -82,6 +82,7 @@ import {
   TOOL_LIST_COMPANIES,
   TOOL_LIST_COMPANY_LABELS_ALIAS,
   TOOL_USE_COMPANY,
+  TOOL_LIST_FEEDBACK,
   TOOL_SUPPORT,
   TOOL_SUBMIT_FEEDBACK,
   TOOL_WHOAMI,
@@ -586,6 +587,23 @@ function registerGatedIdentityTools(server: McpServer, ctx: HostedRequestContext
       const filed = await store.submit(prepared.ticket);
       if (!filed.ok) return err(filed.error);
       return text({ ok: true, id: filed.id, line: filed.line, duplicate: filed.duplicate });
+    },
+  );
+
+  server.tool(
+    "list_feedback",
+    TOOL_LIST_FEEDBACK,
+    {
+      limit: z.number().int().min(1).max(100).optional(),
+    },
+    READ_ONLY,
+    async ({ limit }) => {
+      if (!ctx.whoami.authenticated) return err(NOTE_NOT_SIGNED_IN);
+      if (ctx.whoami.role !== "super_admin") return err("A super admin reads this list.");
+      const store = resolveFeedbackStore(ctx.accessToken);
+      if (!store?.listRecent) return err("The feedback list is not available on this surface.");
+      const rows = await store.listRecent(limit ?? 50);
+      return text({ ok: true, rows });
     },
   );
 }

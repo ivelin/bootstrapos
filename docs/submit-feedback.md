@@ -8,4 +8,4 @@ Folder: Business / pirin.ai / 2026 / MCP
 
 Covers auth, identification, wire meta, context levels, and storage.
 
-Hosted tool: `submit_feedback`. Append-only. The signed-in account is the tenant. The database is the record. Mail waits until a person approves. This file stays a pointer.
+Hosted tool: `submit_feedback`. Append-only. The signed-in account is the tenant. The database is the record. `submit_feedback` is the default. Email bootstrap@pirin.ai when that call fails. This file stays a pointer.

@@ -7,7 +7,7 @@ description: Bootstrap OS Day 0 (~60 minutes) and install-first. Use when a foun
 
 When to use: Day 0 (~60 minutes), or installing this plugin.
 
-Day 0 is about 60 minutes (thesis ~20, ≥3 groups ~25, first “Where are we?” ~15). The two-minute figure is the snapshot *read*, not the hour. Path 1 is chat plus a weekly ritual.
+Day 0 is about 60 minutes (thesis ~20, ≥3 groups ~25, first “Where are we?” ~15). Path 1 is chat plus a weekly ritual. If a tool fails, offer submit_feedback, else email bootstrap@pirin.ai.
 
 Install-first / Path 1: https://github.com/ivelin/bootstrap + install-os + local. Not a hosted MCP URL. No auth. No database. No other connectors. The hosted connector uses sign-in. Pin `https://mcp.bootstrap.pirin.ai/mcp` — https://github.com/ivelin/bootstrap/blob/main/mcp/docs/HOSTED_IDENTITY.md
 
@@ -20,3 +20,4 @@ After First Hour: query the published OS on GitHub / install-os / local. Do not 
 https://github.com/ivelin/bootstrap/blob/main/company-os/first-hour.md#standing-rules
 
 Lifestyle or swinging for the fences (not a house rule) — https://github.com/ivelin/bootstrap/blob/main/company-os/operating-system.md#day-0-lifestyle-or-swinging-for-the-fences
+
