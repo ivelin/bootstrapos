@@ -36,9 +36,9 @@ Apply order:
 - `20260927_bootstrap_os_dual_read_dead.sql`
 - `20260928_bootstrap_os_roles.sql`
 - `20260930_bootstrap_os_submit_feedback.sql`
-- `20261101_bootstrap_os_feedback_harden.sql`
 - `20261019_bootstrap_rate_limit.sql`
 - `20261021_bootstrap_os_company_founder.sql`
+- `20261101_bootstrap_os_feedback_harden.sql`
 
 Seed slugs exist **only** in the PGlite fixture: `dyeconverter`, `corehaul`. One default idea each. Fixture emails are synthetic `@example.test`. Real FAST emails are not in git.
 
