@@ -12,7 +12,7 @@ import { feedbackFingerprint } from "../dist/feedback.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const SQL = path.join(__dirname, "..", "supabase", "migrations", "20260930_bootstrap_os_submit_feedback.sql");
-const HARDEN = path.join(__dirname, "..", "supabase", "migrations", "20261031_bootstrap_os_feedback_harden.sql");
+const HARDEN = path.join(__dirname, "..", "supabase", "migrations", "20261101_bootstrap_os_feedback_harden.sql");
 
 const HARNESS = `
 DO $$ BEGIN CREATE ROLE anon; EXCEPTION WHEN duplicate_object THEN NULL; END $$;
