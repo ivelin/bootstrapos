@@ -337,6 +337,7 @@ export function isKillCondition(text: string): boolean {
 export const REDACT_RAW_KEYS = new Set([
   "kind",
   "id",
+  "card_id",
   "status",
   "outcome",
   "impact",
@@ -418,7 +419,6 @@ export const REDACT_ALLOW_KEYS = new Set([
   "buyer",
   "boards",
   "card",
-  "card_id",
   "challenges",
   "channel",
   "clock",

@@ -13,6 +13,7 @@ import {
   SHAPE_UP_FIXTURE_SLUG,
   SHAPE_UP_FLEET_SLUG,
   allowShapeUpSlugForTests,
+  parseNudgeMarker,
   validateShapeUpPut,
 } from "../dist/shape-up.js";
 
@@ -108,6 +109,14 @@ describe("shape up contract", () => {
       now: new Date("2026-11-02T18:00:00.000Z"),
     });
     assert.equal(checked.ok, false);
+    const seeded = await store.putJourney(FOUNDER, {
+      companySlug: "harbor",
+      why: "client nudge list",
+      founderYes: true,
+      scoreboard: shape({ shape_up_nudges: [{ card_id: "card-1", breach: "spend" }] }),
+    });
+    assert.equal(seeded.ok, false);
+    assert.match(String(seeded.error), /shape_up_nudges is server-written/);
   });
 
   it("round-trips appetite and breaker, and old cards stay null-safe", async () => {
@@ -141,6 +150,7 @@ describe("shape up contract", () => {
       [shape({ breaker: { kill_on: "2026-02-31", rule: "x" } }), /ISO date/],
       [shape({ breaker: { kill_on: "2026-10-01", rule: "y".repeat(281) } }), /280/],
       [shape({ breaker_state: "tripped" }), /server-written/],
+      [shape({ shape_up_nudges: [{ card_id: "card-1", breach: "spend" }] }), /shape_up_nudges is server-written/],
       [shape({ shape_up_test: false }), /must be true/],
     ];
     for (const [scoreboard, pattern] of cases) {
@@ -210,6 +220,69 @@ describe("check_breakers", () => {
     });
     assert.equal(after.ideas[0].comments.length, 2);
     assert.equal(after.ideas[0].clocks.currentGate, "hold");
+    const nudgeAudits = viewed.audit.filter((row) => row.whatChanged?.op === "check_breakers");
+    assert.equal(nudgeAudits.length, 2);
+    for (const row of nudgeAudits) assert.equal(row.whatChanged.op, "check_breakers");
+  });
+
+  it("still trips after an advisor posts a comment that looks like a nudge marker", async () => {
+    const store = board(SHAPE_UP_FIXTURE_SLUG);
+    await store.putJourney(FOUNDER, {
+      companySlug: SHAPE_UP_FIXTURE_SLUG,
+      why: "arm the card",
+      founderYes: true,
+      scoreboard: shape(),
+    });
+    const fake = await store.postComment(ADVISOR, {
+      companySlug: SHAPE_UP_FIXTURE_SLUG,
+      body: JSON.stringify({ card_id: "card-1", breach: "kill_on" }),
+    });
+    assert.equal(fake.ok, true);
+    const monday = new Date("2026-11-02T18:00:00.000Z");
+    const hit = await store.checkBreakers(FOUNDER, { companySlug: SHAPE_UP_FIXTURE_SLUG, now: monday });
+    assert.equal(hit.readOnly, false);
+    assert.ok(hit.tripped.some((row) => row.breach === "kill_on"));
+  });
+
+  it("defers while Chicago is still Sunday even if UTC has already reached Monday", async () => {
+    const store = board(SHAPE_UP_FIXTURE_SLUG);
+    await store.putJourney(FOUNDER, {
+      companySlug: SHAPE_UP_FIXTURE_SLUG,
+      why: "arm the card",
+      founderYes: true,
+      scoreboard: shape({ pnl: { costs: 10 } }),
+    });
+    const stillSundayInChicago = new Date("2026-11-02T02:00:00.000Z");
+    const hit = await store.checkBreakers(FOUNDER, {
+      companySlug: SHAPE_UP_FIXTURE_SLUG,
+      now: stillSundayInChicago,
+    });
+    assert.equal(hit.readOnly, true);
+    assert.deepEqual(hit.tripped, []);
+  });
+
+  it("does not trip kill_on on the Chicago calendar day of the date", async () => {
+    const store = board(SHAPE_UP_FIXTURE_SLUG);
+    await store.putJourney(FOUNDER, {
+      companySlug: SHAPE_UP_FIXTURE_SLUG,
+      why: "arm the card",
+      founderYes: true,
+      scoreboard: shape({ breaker: { kill_on: "2026-11-02", rule: "today" }, pnl: { costs: 1 } }),
+    });
+    const hit = await store.checkBreakers(FOUNDER, {
+      companySlug: SHAPE_UP_FIXTURE_SLUG,
+      now: new Date("2026-11-02T18:00:00.000Z"),
+    });
+    assert.equal(hit.readOnly, true);
+  });
+
+  it("rejects a broken nudge marker and keeps a valid one", () => {
+    assert.equal(parseNudgeMarker("{"), null);
+    assert.equal(parseNudgeMarker("not-json"), null);
+    assert.deepEqual(parseNudgeMarker('{"card_id":"card-1","breach":"spend"}'), {
+      card_id: "card-1",
+      breach: "spend",
+    });
   });
 
   it("defers a Sunday breach unless costs are more than twice the cap", async () => {
@@ -316,6 +389,7 @@ describe("confirm kill", () => {
     assert.equal(viewed.ideas[0].clocks.currentGate, "hold");
     const denials = viewed.audit.filter((row) => row.whatChanged?.op === "confirm_kill_denied");
     assert.equal(denials.length, 3);
+    for (const row of denials) assert.equal(row.whatChanged.op, "confirm_kill_denied");
     assert.deepEqual(
       denials.map((row) => row.whatChanged.denied).sort(),
       ["bot", "non_owner", "non_owner"],
@@ -482,5 +556,141 @@ describe("supabase check_breakers", () => {
     } finally {
       globalThis.fetch = orig;
     }
+  });
+
+  it("refuses harbor before any put or comment", async () => {
+    const calls = [];
+    const orig = globalThis.fetch;
+    globalThis.fetch = async (url, init) => {
+      calls.push({ url: String(url), body: JSON.parse(String(init?.body || "{}")) });
+      return Response.json({ ok: true, ideas: [] });
+    };
+    try {
+      const store = new SupabaseJourneyStore("https://example.supabase.co", "anon-test-key", "token");
+      const hit = await store.checkBreakers(FOUNDER, {
+        companySlug: "harbor",
+        now: new Date("2026-11-02T18:00:00.000Z"),
+      });
+      assert.equal(hit.ok, false);
+      assert.match(String(hit.error), /not enabled/);
+      assert.equal(calls.some((row) => row.url.includes("bootstrap_os_post_comment")), false);
+      assert.equal(calls.some((row) => row.url.includes("bootstrap_os_put_journey")), false);
+    } finally {
+      globalThis.fetch = orig;
+    }
+  });
+
+  it("writes both breaches into the second put and skips the comment when the put fails", async () => {
+    const calls = [];
+    const orig = globalThis.fetch;
+    globalThis.fetch = async (url, init) => {
+      const body = JSON.parse(String(init?.body || "{}"));
+      calls.push({ url: String(url), body });
+      if (String(url).includes("bootstrap_os_put_journey")) {
+        return new Response(JSON.stringify({ message: "no" }), { status: 400 });
+      }
+      if (String(url).includes("bootstrap_os_get_journey")) {
+        return Response.json({
+          ok: true,
+          ideas: [
+            {
+              slug: "default",
+              clocks: { currentGate: "hold" },
+              scoreboard: shape({ pnl: { costs: 150 } }),
+              comments: [{ body: JSON.stringify({ card_id: "default", breach: "kill_on" }) }],
+            },
+          ],
+        });
+      }
+      return Response.json({ ok: true });
+    };
+    try {
+      const store = new SupabaseJourneyStore("https://example.supabase.co", "anon-test-key", "token");
+      const hit = await store.checkBreakers(FOUNDER, {
+        companySlug: SHAPE_UP_FIXTURE_SLUG,
+        now: new Date("2026-11-02T18:00:00.000Z"),
+      });
+      assert.equal(hit.ok, false);
+      const puts = calls.filter((row) => row.url.includes("bootstrap_os_put_journey"));
+      assert.equal(puts.length, 1);
+      assert.equal(calls.some((row) => row.url.includes("bootstrap_os_post_comment")), false);
+    } finally {
+      globalThis.fetch = orig;
+    }
+  });
+
+  it("keeps both nudge rows when one hosted run trips date and spend", async () => {
+    const calls = [];
+    const orig = globalThis.fetch;
+    globalThis.fetch = async (url, init) => {
+      calls.push({ url: String(url), body: JSON.parse(String(init?.body || "{}")) });
+      if (String(url).includes("bootstrap_os_get_journey")) {
+        return Response.json({
+          ok: true,
+          ideas: [
+            {
+              slug: "default",
+              clocks: { currentGate: "hold" },
+              scoreboard: shape({ pnl: { costs: 150 } }),
+            },
+          ],
+        });
+      }
+      return Response.json({ ok: true, ideas: [] });
+    };
+    try {
+      const store = new SupabaseJourneyStore("https://example.supabase.co", "anon-test-key", "token");
+      const hit = await store.checkBreakers(FOUNDER, {
+        companySlug: SHAPE_UP_FIXTURE_SLUG,
+        now: new Date("2026-11-02T18:00:00.000Z"),
+      });
+      assert.equal(hit.tripped.length, 2);
+      const puts = calls.filter((row) => row.url.includes("bootstrap_os_put_journey"));
+      assert.equal(puts.length, 2);
+      const second = puts[1].body.p_scoreboard.shape_up_nudges.map((row) => row.breach).sort();
+      assert.deepEqual(second, ["kill_on", "spend"]);
+    } finally {
+      globalThis.fetch = orig;
+    }
+  });
+});
+
+describe("check_breakers handler", () => {
+  it("calls the store for an allowlisted label and returns the read-only result", async () => {
+    const token = "bos_shapeup_handler_token";
+    setIdentityStoreForTests(
+      new MemoryIdentityStore([
+        {
+          id: "mentee-shape",
+          email: "founder@example.test",
+          authUserId: "auth-shape",
+          labels: [SHAPE_UP_FIXTURE_SLUG],
+          role: "member",
+          tokenHashes: [hashMcpToken(token)],
+        },
+      ]),
+    );
+    setJourneyStoreForTests(board(SHAPE_UP_FIXTURE_SLUG));
+    const res = await handleHostedReadFetch(
+      new Request("https://preview.example/mcp", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json, text/event-stream",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          jsonrpc: "2.0",
+          id: 3,
+          method: "tools/call",
+          params: { name: "check_breakers", arguments: { company: SHAPE_UP_FIXTURE_SLUG } },
+        }),
+      }),
+    );
+    const raw = await res.text();
+    assert.equal(res.status, 200, raw);
+    const payload = JSON.parse(raw);
+    assert.equal(payload.result.isError, undefined);
+    assert.match(payload.result.content[0].text, /"readOnly": true/);
   });
 });

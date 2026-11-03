@@ -3,7 +3,7 @@
  * Spend is owner-entered scoreboard.pnl.costs. There is no other spend ledger.
  */
 
-export const SHAPE_UP_KEYS = ["appetite", "breaker", "shape_up_test", "breaker_state"] as const;
+export const SHAPE_UP_KEYS = ["appetite", "breaker", "shape_up_test", "breaker_state", "shape_up_nudges"] as const;
 
 /** The one real fleet company. Not an env var. Not a client field. */
 export const SHAPE_UP_FLEET_SLUG = "pirin";
@@ -66,6 +66,7 @@ export function validateShapeUpPut(companySlug: string, scoreboard: unknown): st
   if (!scoreboard || typeof scoreboard !== "object" || Array.isArray(scoreboard)) return null;
   const record = scoreboard as Record<string, unknown>;
   if ("breaker_state" in record) return "breaker_state is server-written";
+  if ("shape_up_nudges" in record) return "shape_up_nudges is server-written";
   const present = SHAPE_UP_KEYS.filter((key) => key in record);
   if (present.length === 0) return null;
   if (!shapeUpEnabled(companySlug)) return "shape up is not enabled for this company";
@@ -163,22 +164,16 @@ export function parseNudgeMarker(body: string): ShapeUpNudge | null {
   }
 }
 
-export function storedNudges(scoreboard: Record<string, unknown>, comments: readonly string[]): ShapeUpNudge[] {
-  const fromBoard = Array.isArray(scoreboard.shape_up_nudges)
-    ? scoreboard.shape_up_nudges.flatMap((row) => {
-        if (!row || typeof row !== "object") return [];
-        const cardId = (row as { card_id?: unknown }).card_id;
-        const breach = (row as { breach?: unknown }).breach;
-        if (typeof cardId !== "string") return [];
-        if (breach !== "kill_on" && breach !== "spend") return [];
-        return [{ card_id: cardId, breach: breach as ShapeUpBreach }];
-      })
-    : [];
-  const fromComments = comments.flatMap((body) => {
-    const hit = parseNudgeMarker(body);
-    return hit ? [hit] : [];
+export function storedNudges(scoreboard: Record<string, unknown>): ShapeUpNudge[] {
+  if (!Array.isArray(scoreboard.shape_up_nudges)) return [];
+  return scoreboard.shape_up_nudges.flatMap((row) => {
+    if (!row || typeof row !== "object") return [];
+    const cardId = (row as { card_id?: unknown }).card_id;
+    const breach = (row as { breach?: unknown }).breach;
+    if (typeof cardId !== "string") return [];
+    if (breach !== "kill_on" && breach !== "spend") return [];
+    return [{ card_id: cardId, breach: breach as ShapeUpBreach }];
   });
-  return [...fromBoard, ...fromComments];
 }
 
 export function breachesForCard(card: ShapeUpCard, now: Date): ShapeUpBreach[] {
@@ -201,15 +196,11 @@ export function breachesForCard(card: ShapeUpCard, now: Date): ShapeUpBreach[] {
 
 export type ShapeUpAction = { card: ShapeUpCard; breach: ShapeUpBreach };
 
-export function pendingBreakerActions(
-  cards: readonly ShapeUpCard[],
-  comments: readonly string[],
-  now: Date,
-): ShapeUpAction[] {
+export function pendingBreakerActions(cards: readonly ShapeUpCard[], now: Date): ShapeUpAction[] {
   const actions: ShapeUpAction[] = [];
   for (const card of cards) {
     const already = new Set(
-      storedNudges(card.scoreboard, comments)
+      storedNudges(card.scoreboard)
         .filter((row) => row.card_id === card.id)
         .map((row) => row.breach),
     );
@@ -236,21 +227,5 @@ export function cardsFromJourneyPayload(payload: unknown): ShapeUpCard[] {
         : {};
     const gate = typeof row.clocks?.currentGate === "string" ? row.clocks.currentGate : "hold";
     return [{ id, slug, gate, scoreboard }];
-  });
-}
-
-export function commentBodiesFromJourney(payload: unknown): string[] {
-  if (!payload || typeof payload !== "object") return [];
-  const ideas = (payload as { ideas?: unknown }).ideas;
-  if (!Array.isArray(ideas)) return [];
-  return ideas.flatMap((idea) => {
-    if (!idea || typeof idea !== "object") return [];
-    const comments = (idea as { comments?: unknown }).comments;
-    if (!Array.isArray(comments)) return [];
-    return comments.flatMap((comment) => {
-      if (!comment || typeof comment !== "object") return [];
-      const body = (comment as { body?: unknown }).body;
-      return typeof body === "string" ? [body] : [];
-    });
   });
 }

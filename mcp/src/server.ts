@@ -1683,7 +1683,15 @@ function registerJourneyTools(server: McpServer, ctx: HostedRequestContext) {
       },
       async (input) => {
         const store = storeOf();
-        const actor = ctx.actor;
+        const actor =
+          ctx.actor ??
+          (ctx.whoami.authenticated && ctx.whoami.email
+            ? {
+                authenticated: true as const,
+                email: ctx.whoami.email,
+                principal: ctx.whoami.email,
+              }
+            : undefined);
         if (!store || !actor?.authenticated) {
           return err("Gated. Founder or founder-authorized token required.");
         }
