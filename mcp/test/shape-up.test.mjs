@@ -9,10 +9,14 @@ import { SupabaseJourneyStore } from "../dist/hosted-journey-store.js";
 import { MemoryIdentityStore, hashMcpToken, setIdentityStoreForTests } from "../dist/identity.js";
 import { MemoryJourneyStore, defaultScoreboard, setJourneyStoreForTests } from "../dist/journey.js";
 import {
+  SHAPE_UP_COMPANY_SLUGS,
   SHAPE_UP_FIXTURE_SLUG,
   SHAPE_UP_FLEET_SLUG,
+  allowShapeUpSlugForTests,
   validateShapeUpPut,
 } from "../dist/shape-up.js";
+
+allowShapeUpSlugForTests(SHAPE_UP_FIXTURE_SLUG);
 
 const FOUNDER = {
   authenticated: true,
@@ -83,9 +87,27 @@ function shape(extra = {}) {
 }
 
 describe("shape up contract", () => {
-  it("keeps the fleet slug empty until a founder fills the TODO", () => {
-    assert.equal(SHAPE_UP_FLEET_SLUG, "");
-    assert.equal(SHAPE_UP_FIXTURE_SLUG, "shapeup-fixture");
+  it("allowlists only the fleet slug pirin", () => {
+    assert.equal(SHAPE_UP_FLEET_SLUG, "pirin");
+    assert.deepEqual([...SHAPE_UP_COMPANY_SLUGS], ["pirin"]);
+    assert.equal(SHAPE_UP_COMPANY_SLUGS.includes(SHAPE_UP_FIXTURE_SLUG), false);
+  });
+
+  it("rejects shape-up keys on a real-looking slug that is not pirin", async () => {
+    const store = board("harbor");
+    const hit = await store.putJourney(FOUNDER, {
+      companySlug: "harbor",
+      why: "not the fleet company",
+      founderYes: true,
+      scoreboard: shape(),
+    });
+    assert.equal(hit.ok, false);
+    assert.match(String(hit.error), /not enabled/);
+    const checked = await store.checkBreakers(FOUNDER, {
+      companySlug: "harbor",
+      now: new Date("2026-11-02T18:00:00.000Z"),
+    });
+    assert.equal(checked.ok, false);
   });
 
   it("round-trips appetite and breaker, and old cards stay null-safe", async () => {

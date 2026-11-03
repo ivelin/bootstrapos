@@ -5,18 +5,22 @@
 
 export const SHAPE_UP_KEYS = ["appetite", "breaker", "shape_up_test", "breaker_state"] as const;
 
-/**
- * TODO(founder): set this to the one fleet company slug.
- * Leave it empty until you fill it in. Not an env var. Not a client field.
- */
-export const SHAPE_UP_FLEET_SLUG = "";
+/** The one real fleet company. Not an env var. Not a client field. */
+export const SHAPE_UP_FLEET_SLUG = "pirin";
 
-/** Fictional company slug for tests. Not a live company. */
+/** Fictional company slug for tests. Not a live company. Not an allowlist entry. */
 export const SHAPE_UP_FIXTURE_SLUG = "shapeup-fixture";
 
-export const SHAPE_UP_COMPANY_SLUGS: readonly string[] = [SHAPE_UP_FLEET_SLUG, SHAPE_UP_FIXTURE_SLUG].filter(
-  (slug) => slug.length > 0,
-);
+/** Real allowlist. The fixture slug is added only by allowShapeUpSlugForTests. */
+export const SHAPE_UP_COMPANY_SLUGS: readonly string[] = [SHAPE_UP_FLEET_SLUG];
+
+const testSlugs = new Set<string>();
+
+/** Tests only. Does not add a second real company. */
+export function allowShapeUpSlugForTests(slug: string): void {
+  const trimmed = slug.trim().toLowerCase();
+  if (trimmed) testSlugs.add(trimmed);
+}
 
 export const TOOL_CHECK_BREAKERS =
   "Internal allowlist tool. Compare kill_on and owner-entered pnl.costs with the appetite. Set breaker_state to tripped and post one nudge per breach. Do not change the gate.";
@@ -37,7 +41,7 @@ const BOT_CLIENT = /(^|[^a-z0-9])bot([^a-z0-9]|$)/i;
 
 export function shapeUpEnabled(companySlug: string | undefined): boolean {
   const slug = (companySlug ?? "").trim().toLowerCase();
-  return SHAPE_UP_COMPANY_SLUGS.includes(slug);
+  return SHAPE_UP_COMPANY_SLUGS.includes(slug) || testSlugs.has(slug);
 }
 
 export function shapeUpToolVisible(labels: readonly string[]): boolean {
