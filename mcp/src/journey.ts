@@ -1707,10 +1707,6 @@ export class MemoryJourneyStore implements JourneyStore {
         };
       }
     }
-    if (!input.shapeUpServerWrite) {
-      if (idea.scoreboard.breaker_state) nextScoreboard.breaker_state = idea.scoreboard.breaker_state;
-      if (idea.scoreboard.shape_up_nudges) nextScoreboard.shape_up_nudges = idea.scoreboard.shape_up_nudges;
-    }
     if (input.journeyPhase !== undefined) {
       if (!isJourneyPhase(input.journeyPhase)) {
         return forbidden("journey_phase is a strict enum 1-9");
@@ -1922,14 +1918,13 @@ export class MemoryJourneyStore implements JourneyStore {
     }
     const now = input.now ?? new Date();
     const ideas = this.ideasFor(company.id);
-    const comments = this.comments.map((row) => row.body);
     const cards: ShapeUpCard[] = ideas.map((idea) => ({
       id: idea.id,
       slug: idea.slug,
       gate: idea.currentGate,
       scoreboard: idea.scoreboard as unknown as Record<string, unknown>,
     }));
-    const actions = pendingBreakerActions(cards, comments, now);
+    const actions = pendingBreakerActions(cards, now);
     if (actions.length === 0) {
       return { ok: true, readOnly: true, tripped: [], gateUnchanged: true };
     }
@@ -1939,6 +1934,16 @@ export class MemoryJourneyStore implements JourneyStore {
       if (!idea) continue;
       const gateBefore = idea.currentGate;
       const marker = nudgeMarker(idea.id, action.breach);
+      const nudges = [
+        ...storedNudges(idea.scoreboard as unknown as Record<string, unknown>).filter((row) => row.card_id === idea.id),
+        { card_id: idea.id, breach: action.breach },
+      ];
+      const before = ideaBoardSnapshot(idea);
+      idea.scoreboard = {
+        ...idea.scoreboard,
+        breaker_state: "tripped",
+        shape_up_nudges: nudges,
+      };
       this.comments.push({
         id: this.nextId("c"),
         ideaId: idea.id,
@@ -1947,15 +1952,6 @@ export class MemoryJourneyStore implements JourneyStore {
         who: actor.principal,
       });
       const comment = this.comments.at(-1)!;
-      const nudges = storedNudges(idea.scoreboard as unknown as Record<string, unknown>, [marker]).filter(
-        (row) => row.card_id === idea.id,
-      );
-      const before = ideaBoardSnapshot(idea);
-      idea.scoreboard = {
-        ...idea.scoreboard,
-        breaker_state: "tripped",
-        shape_up_nudges: nudges,
-      };
       idea.currentGate = gateBefore;
       const after = ideaBoardSnapshot(idea);
       this.emitAudit({

@@ -41,9 +41,10 @@ import {
 import { notifyPirinInviteMail, shouldPostPirinInviteMail, type PirinInviteMailKick } from "./invite-mail.js";
 import {
   cardsFromJourneyPayload,
-  commentBodiesFromJourney,
   confirmKillDenial,
   pendingBreakerActions,
+  shapeUpEnabled,
+  storedNudges,
   validateShapeUpPut,
 } from "./shape-up.js";
 
@@ -630,6 +631,9 @@ export class SupabaseJourneyStore implements JourneyStore {
     actor: JourneyActor,
     input: { companySlug: string; now?: Date },
   ): Promise<unknown> {
+    if (!shapeUpEnabled(input.companySlug)) {
+      return { ok: false, error: "shape up is not enabled for this company" };
+    }
     const viewed = await this.getJourney(actor, {
       companySlug: input.companySlug,
       expandMeetingDoc: true,
@@ -637,24 +641,14 @@ export class SupabaseJourneyStore implements JourneyStore {
     if (!viewed || typeof viewed !== "object" || (viewed as { ok?: boolean }).ok === false) return viewed;
     const now = input.now ?? new Date();
     const cards = cardsFromJourneyPayload(viewed);
-    const actions = pendingBreakerActions(cards, commentBodiesFromJourney(viewed), now);
+    const actions = pendingBreakerActions(cards, now);
     if (actions.length === 0) return { ok: true, readOnly: true, tripped: [], gateUnchanged: true };
     const tripped: Array<{ card_id: string; breach: string }> = [];
+    const carried = new Map<string, ReturnType<typeof storedNudges>>();
     for (const action of actions) {
-      const marker = JSON.stringify({ card_id: action.card.id, breach: action.breach });
-      const comment = await this.postComment(actor, {
-        companySlug: input.companySlug,
-        ideaSlug: action.card.slug,
-        body: marker,
-        client: "check_breakers",
-      });
-      if (comment && typeof comment === "object" && (comment as { ok?: boolean }).ok === false) return comment;
-      const nudges = [
-        ...(Array.isArray(action.card.scoreboard.shape_up_nudges)
-          ? (action.card.scoreboard.shape_up_nudges as unknown[])
-          : []),
-        { card_id: action.card.id, breach: action.breach },
-      ];
+      const prior = carried.get(action.card.id) ?? storedNudges(action.card.scoreboard);
+      const nudges = [...prior, { card_id: action.card.id, breach: action.breach }];
+      carried.set(action.card.id, nudges);
       const written = await this.putJourney(actor, {
         companySlug: input.companySlug,
         ideaSlug: action.card.slug,
@@ -665,10 +659,18 @@ export class SupabaseJourneyStore implements JourneyStore {
         scoreboard: {
           ...(action.card.scoreboard as Scoreboard),
           breaker_state: "tripped",
-          shape_up_nudges: nudges as Scoreboard["shape_up_nudges"],
+          shape_up_nudges: nudges,
         },
       });
       if (written && typeof written === "object" && (written as { ok?: boolean }).ok === false) return written;
+      const marker = JSON.stringify({ card_id: action.card.id, breach: action.breach });
+      const comment = await this.postComment(actor, {
+        companySlug: input.companySlug,
+        ideaSlug: action.card.slug,
+        body: marker,
+        client: "check_breakers",
+      });
+      if (comment && typeof comment === "object" && (comment as { ok?: boolean }).ok === false) return comment;
       tripped.push({ card_id: action.card.id, breach: action.breach });
     }
     return { ok: true, readOnly: false, tripped, gateUnchanged: true };
