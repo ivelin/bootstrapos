@@ -459,57 +459,44 @@ describe("check_breakers tool visibility", () => {
 });
 
 describe("supabase check_breakers", () => {
-  it("posts one nudge and a server scoreboard write, then reads them back as idle", async () => {
+  it("calls check_breakers and posts one comment per breach the server recorded", async () => {
     const calls = [];
     const orig = globalThis.fetch;
-    let nudged = false;
+    let ran = false;
     globalThis.fetch = async (url, init) => {
       const body = JSON.parse(String(init?.body || "{}"));
       calls.push({ url: String(url), body });
-      if (String(url).includes("bootstrap_os_get_journey")) {
-        return Response.json({
-          ok: true,
-          owners: [{ principal: "founder@example.test", role: "founder" }],
-          ideas: [
-            {
-              slug: "default",
-              clocks: { currentGate: "hold" },
-              scoreboard: nudged
-                ? {
-                    ...shape({
-                      pnl: { costs: 150 },
-                      breaker: { kill_on: "2026-12-01", rule: "cap" },
-                    }),
-                    breaker_state: "tripped",
-                    shape_up_nudges: [{ card_id: "default", breach: "spend" }],
-                  }
-                : shape({ pnl: { costs: 150 }, breaker: { kill_on: "2026-12-01", rule: "cap" } }),
-              comments: nudged ? [{ body: JSON.stringify({ card_id: "default", breach: "spend" }) }] : [],
-            },
-          ],
-        });
+      if (String(url).includes("bootstrap_os_check_breakers")) {
+        const first = !ran;
+        ran = true;
+        return Response.json(
+          first
+            ? {
+                ok: true,
+                readOnly: false,
+                gateUnchanged: true,
+                tripped: [{ card_id: "card-1", breach: "spend", slug: "default" }],
+              }
+            : { ok: true, readOnly: true, gateUnchanged: true, tripped: [] },
+        );
       }
-      if (String(url).includes("bootstrap_os_post_comment")) nudged = true;
       return Response.json({ ok: true });
     };
     try {
       const store = new SupabaseJourneyStore("https://example.supabase.co", "anon-test-key", "token");
-      const first = await store.checkBreakers(FOUNDER, {
-        companySlug: SHAPE_UP_FIXTURE_SLUG,
-        now: new Date("2026-11-02T18:00:00.000Z"),
-      });
+      const first = await store.checkBreakers(FOUNDER, { companySlug: SHAPE_UP_FIXTURE_SLUG });
       assert.equal(first.readOnly, false);
-      assert.equal(first.tripped.length, 1);
+      assert.deepEqual(first.tripped, [{ card_id: "card-1", breach: "spend" }]);
       const comment = calls.find((row) => row.url.includes("bootstrap_os_post_comment"));
       assert.equal(JSON.parse(comment.body.p_body).breach, "spend");
-      const put = calls.find((row) => row.url.includes("bootstrap_os_put_journey"));
-      assert.equal(put.body.p_scoreboard.breaker_state, "tripped");
-      assert.equal(put.body.p_current_gate, null);
-      const second = await store.checkBreakers(FOUNDER, {
-        companySlug: SHAPE_UP_FIXTURE_SLUG,
-        now: new Date("2026-11-02T18:00:00.000Z"),
-      });
+      assert.equal(comment.body.p_idea, "default");
+      assert.equal(calls.some((row) => row.url.includes("bootstrap_os_put_journey")), false);
+      const check = calls.find((row) => row.url.includes("bootstrap_os_check_breakers"));
+      assert.equal(check.body.p_slug, SHAPE_UP_FIXTURE_SLUG);
+      assert.equal("p_now" in check.body, false);
+      const second = await store.checkBreakers(FOUNDER, { companySlug: SHAPE_UP_FIXTURE_SLUG });
       assert.equal(second.readOnly, true);
+      assert.equal(calls.filter((row) => row.url.includes("bootstrap_os_post_comment")).length, 1);
     } finally {
       globalThis.fetch = orig;
     }
@@ -558,21 +545,24 @@ describe("supabase check_breakers", () => {
     }
   });
 
-  it("refuses harbor before any put or comment", async () => {
+  it("asks the server about harbor and does not put or comment", async () => {
     const calls = [];
     const orig = globalThis.fetch;
     globalThis.fetch = async (url, init) => {
       calls.push({ url: String(url), body: JSON.parse(String(init?.body || "{}")) });
+      if (String(url).includes("bootstrap_os_check_breakers")) {
+        return new Response(JSON.stringify({ message: "shape up is not enabled for this company" }), {
+          status: 400,
+        });
+      }
       return Response.json({ ok: true, ideas: [] });
     };
     try {
       const store = new SupabaseJourneyStore("https://example.supabase.co", "anon-test-key", "token");
-      const hit = await store.checkBreakers(FOUNDER, {
-        companySlug: "harbor",
-        now: new Date("2026-11-02T18:00:00.000Z"),
-      });
+      const hit = await store.checkBreakers(FOUNDER, { companySlug: "harbor" });
       assert.equal(hit.ok, false);
-      assert.match(String(hit.error), /not enabled/);
+      assert.match(String(hit.error), /journey_rpc_failed:400/);
+      assert.equal(calls.some((row) => row.url.includes("bootstrap_os_check_breakers")), true);
       assert.equal(calls.some((row) => row.url.includes("bootstrap_os_post_comment")), false);
       assert.equal(calls.some((row) => row.url.includes("bootstrap_os_put_journey")), false);
     } finally {
@@ -580,25 +570,41 @@ describe("supabase check_breakers", () => {
     }
   });
 
-  it("writes both breaches into the second put and skips the comment when the put fails", async () => {
+  it("posts no comment when the breaker RPC fails", async () => {
     const calls = [];
     const orig = globalThis.fetch;
     globalThis.fetch = async (url, init) => {
-      const body = JSON.parse(String(init?.body || "{}"));
-      calls.push({ url: String(url), body });
-      if (String(url).includes("bootstrap_os_put_journey")) {
+      calls.push({ url: String(url), body: JSON.parse(String(init?.body || "{}")) });
+      if (String(url).includes("bootstrap_os_check_breakers")) {
         return new Response(JSON.stringify({ message: "no" }), { status: 400 });
       }
-      if (String(url).includes("bootstrap_os_get_journey")) {
+      return Response.json({ ok: true });
+    };
+    try {
+      const store = new SupabaseJourneyStore("https://example.supabase.co", "anon-test-key", "token");
+      const hit = await store.checkBreakers(FOUNDER, { companySlug: SHAPE_UP_FIXTURE_SLUG });
+      assert.equal(hit.ok, false);
+      assert.equal(calls.filter((row) => row.url.includes("bootstrap_os_check_breakers")).length, 1);
+      assert.equal(calls.some((row) => row.url.includes("bootstrap_os_post_comment")), false);
+      assert.equal(calls.some((row) => row.url.includes("bootstrap_os_put_journey")), false);
+    } finally {
+      globalThis.fetch = orig;
+    }
+  });
+
+  it("posts both breaches from one server result and does not put the scoreboard", async () => {
+    const calls = [];
+    const orig = globalThis.fetch;
+    globalThis.fetch = async (url, init) => {
+      calls.push({ url: String(url), body: JSON.parse(String(init?.body || "{}")) });
+      if (String(url).includes("bootstrap_os_check_breakers")) {
         return Response.json({
           ok: true,
-          ideas: [
-            {
-              slug: "default",
-              clocks: { currentGate: "hold" },
-              scoreboard: shape({ pnl: { costs: 150 } }),
-              comments: [{ body: JSON.stringify({ card_id: "default", breach: "kill_on" }) }],
-            },
+          readOnly: false,
+          gateUnchanged: true,
+          tripped: [
+            { card_id: "card-1", breach: "kill_on", slug: "default" },
+            { card_id: "card-1", breach: "spend", slug: "default" },
           ],
         });
       }
@@ -606,49 +612,17 @@ describe("supabase check_breakers", () => {
     };
     try {
       const store = new SupabaseJourneyStore("https://example.supabase.co", "anon-test-key", "token");
-      const hit = await store.checkBreakers(FOUNDER, {
-        companySlug: SHAPE_UP_FIXTURE_SLUG,
-        now: new Date("2026-11-02T18:00:00.000Z"),
-      });
-      assert.equal(hit.ok, false);
-      const puts = calls.filter((row) => row.url.includes("bootstrap_os_put_journey"));
-      assert.equal(puts.length, 1);
-      assert.equal(calls.some((row) => row.url.includes("bootstrap_os_post_comment")), false);
-    } finally {
-      globalThis.fetch = orig;
-    }
-  });
-
-  it("keeps both nudge rows when one hosted run trips date and spend", async () => {
-    const calls = [];
-    const orig = globalThis.fetch;
-    globalThis.fetch = async (url, init) => {
-      calls.push({ url: String(url), body: JSON.parse(String(init?.body || "{}")) });
-      if (String(url).includes("bootstrap_os_get_journey")) {
-        return Response.json({
-          ok: true,
-          ideas: [
-            {
-              slug: "default",
-              clocks: { currentGate: "hold" },
-              scoreboard: shape({ pnl: { costs: 150 } }),
-            },
-          ],
-        });
-      }
-      return Response.json({ ok: true, ideas: [] });
-    };
-    try {
-      const store = new SupabaseJourneyStore("https://example.supabase.co", "anon-test-key", "token");
-      const hit = await store.checkBreakers(FOUNDER, {
-        companySlug: SHAPE_UP_FIXTURE_SLUG,
-        now: new Date("2026-11-02T18:00:00.000Z"),
-      });
-      assert.equal(hit.tripped.length, 2);
-      const puts = calls.filter((row) => row.url.includes("bootstrap_os_put_journey"));
-      assert.equal(puts.length, 2);
-      const second = puts[1].body.p_scoreboard.shape_up_nudges.map((row) => row.breach).sort();
-      assert.deepEqual(second, ["kill_on", "spend"]);
+      const hit = await store.checkBreakers(FOUNDER, { companySlug: SHAPE_UP_FIXTURE_SLUG });
+      assert.deepEqual(
+        hit.tripped.map((row) => row.breach),
+        ["kill_on", "spend"],
+      );
+      const comments = calls.filter((row) => row.url.includes("bootstrap_os_post_comment"));
+      assert.deepEqual(
+        comments.map((row) => JSON.parse(row.body.p_body).breach),
+        ["kill_on", "spend"],
+      );
+      assert.equal(calls.some((row) => row.url.includes("bootstrap_os_put_journey")), false);
     } finally {
       globalThis.fetch = orig;
     }
