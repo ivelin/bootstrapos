@@ -610,8 +610,8 @@ assert plugin["version"] == "0.1.1"
 assert plugin["$schema"] == "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json"
 cursor_plugin = json.loads((root / ".cursor-plugin/plugin.json").read_text())
 assert cursor_plugin["version"] == "0.1.1"
-default_url = cursor_plugin["variables"]["properties"]["BOOTSTRAP_MCP_URL"]["default"]
-assert default_url == "https://mcp.bootstrap.pirin.ai/mcp"
+assert "variables" not in cursor_plugin
+assert "BOOTSTRAP_MCP_URL" not in cursor_plugin.get("description", "")
 mcp = json.loads((root / "mcp.json").read_text())
 assert list(mcp["mcpServers"]) == ["bootstrap-os"]
 server = mcp["mcpServers"]["bootstrap-os"]

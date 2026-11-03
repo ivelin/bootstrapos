@@ -140,6 +140,19 @@ describe("SOP tools", () => {
     }
   });
 
+  it("ignores an unknown client argument", async () => {
+    installRpc();
+    const sop = await callTool("bootstrap_get_sop", { name: "alpha-sop", client: "cursor" });
+    const sopBody = JSON.parse(sop.raw);
+    assert.equal(sop.status, 200, sop.raw);
+    assert.notEqual(sopBody.result?.isError, true, sop.raw);
+    assert.equal(JSON.parse(sopBody.result.content[0].text).version, "1.10.0");
+    const info = await callTool("bootstrap_os_info", { client: "claude" });
+    const infoBody = JSON.parse(info.raw);
+    assert.equal(info.status, 200, info.raw);
+    assert.notEqual(infoBody.result?.isError, true, info.raw);
+  });
+
   it("get_sop, list_sops, and get_doc succeed with no bearer", async () => {
     installRpc();
     const calls = [
