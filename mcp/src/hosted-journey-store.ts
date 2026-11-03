@@ -38,6 +38,13 @@ import {
   admitPrimaryPhaseWhy,
   admitPrimaryWhy,
 } from "./control-plane.js";
+import {
+  cardsFromJourneyPayload,
+  commentBodiesFromJourney,
+  confirmKillDenial,
+  pendingBreakerActions,
+  validateShapeUpPut,
+} from "./shape-up.js";
 
 /** Scoreboard adapter: top-level card from initiatives[]. Dual-read dead for card lead when initiatives present. No prod SQL. */
 function attachCardFromScoreboard(raw: unknown): unknown {
@@ -195,6 +202,16 @@ export class HostedMembershipJourneyStore implements JourneyStore {
       ...input,
       ideaSlug: input.ideaSlug || "default",
     });
+  }
+
+  async checkBreakers(
+    actor: JourneyActor,
+    input: { companySlug: string; now?: Date },
+  ): Promise<unknown> {
+    const denied = this.denyUnlessHeld(actor, input.companySlug);
+    if (denied) return denied;
+    this.ensureHeld(input.companySlug, actor);
+    return this.inner.checkBreakers(actor, input);
   }
 
   async postComment(
@@ -389,8 +406,36 @@ export class SupabaseJourneyStore implements JourneyStore {
       supporting?: SupportingRow[];
       engagements?: EngagementRow[];
       initiatives?: Initiative[];
+      shapeUpServerWrite?: boolean;
     },
   ): Promise<unknown> {
+    if (!input.shapeUpServerWrite) {
+      const shapeUpError = validateShapeUpPut(input.companySlug, input.scoreboard);
+      if (shapeUpError) return { ok: false, error: shapeUpError };
+    }
+    if (input.currentGate === "kill" && !input.shapeUpServerWrite) {
+      const current = await this.getJourney(_actor, {
+        companySlug: input.companySlug,
+        ideaSlug: input.ideaSlug,
+        expandMeetingDoc: true,
+      });
+      const card = cardsFromJourneyPayload(current)[0];
+      if (card?.scoreboard.breaker_state === "tripped") {
+        const owners = (current as { owners?: Array<{ principal?: string; role?: string }> }).owners ?? [];
+        const principal = _actor.principal ?? _actor.email;
+        const role = owners.find((row) => row.principal === principal)?.role;
+        const denial = confirmKillDenial({ client: input.client, role });
+        if (denial) {
+          await this.postComment(_actor, {
+            companySlug: input.companySlug,
+            ideaSlug: input.ideaSlug,
+            body: JSON.stringify({ op: "confirm_kill_denied", denied: denial, card_id: card.id }),
+            client: input.client,
+          });
+          return { ok: false, error: "confirm_kill_denied", denied: denial };
+        }
+      }
+    }
     if (spokenLoopWriteRejected(input) || spokenLoopWriteRejected(input.scoreboard)) {
       return { ok: false, error: SPOKEN_LOOP_WRITE_REJECTED };
     }
@@ -449,6 +494,54 @@ export class SupabaseJourneyStore implements JourneyStore {
       event: "put_journey",
     });
     return attachCardFromScoreboard(hit.raw);
+  }
+
+  async checkBreakers(
+    actor: JourneyActor,
+    input: { companySlug: string; now?: Date },
+  ): Promise<unknown> {
+    const viewed = await this.getJourney(actor, {
+      companySlug: input.companySlug,
+      expandMeetingDoc: true,
+    });
+    if (!viewed || typeof viewed !== "object" || (viewed as { ok?: boolean }).ok === false) return viewed;
+    const now = input.now ?? new Date();
+    const cards = cardsFromJourneyPayload(viewed);
+    const actions = pendingBreakerActions(cards, commentBodiesFromJourney(viewed), now);
+    if (actions.length === 0) return { ok: true, readOnly: true, tripped: [], gateUnchanged: true };
+    const tripped: Array<{ card_id: string; breach: string }> = [];
+    for (const action of actions) {
+      const marker = JSON.stringify({ card_id: action.card.id, breach: action.breach });
+      const comment = await this.postComment(actor, {
+        companySlug: input.companySlug,
+        ideaSlug: action.card.slug,
+        body: marker,
+        client: "check_breakers",
+      });
+      if (comment && typeof comment === "object" && (comment as { ok?: boolean }).ok === false) return comment;
+      const nudges = [
+        ...(Array.isArray(action.card.scoreboard.shape_up_nudges)
+          ? (action.card.scoreboard.shape_up_nudges as unknown[])
+          : []),
+        { card_id: action.card.id, breach: action.breach },
+      ];
+      const written = await this.putJourney(actor, {
+        companySlug: input.companySlug,
+        ideaSlug: action.card.slug,
+        why: "shape up breaker",
+        founderYes: true,
+        client: "check_breakers",
+        shapeUpServerWrite: true,
+        scoreboard: {
+          ...(action.card.scoreboard as Scoreboard),
+          breaker_state: "tripped",
+          shape_up_nudges: nudges as Scoreboard["shape_up_nudges"],
+        },
+      });
+      if (written && typeof written === "object" && (written as { ok?: boolean }).ok === false) return written;
+      tripped.push({ card_id: action.card.id, breach: action.breach });
+    }
+    return { ok: true, readOnly: false, tripped, gateUnchanged: true };
   }
 
   async postComment(
