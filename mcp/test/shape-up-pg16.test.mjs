@@ -254,6 +254,18 @@ describe("PostgreSQL 16 shape-up put", { concurrency: false }, () => {
     assert.equal(kinds, "1,1");
   });
 
+  it("writes an ideas audit row when check_breakers trips a card", () => {
+    const row = psql(`
+      SELECT e.what_changed->>'via' || '|' || coalesce(e.what_changed->>'current_gate', '')
+      FROM bootstrap_os.audit_events e
+      JOIN bootstrap_os.ideas i ON i.id = e.idea_id
+      JOIN bootstrap_os.companies c ON c.id = i.company_id
+      WHERE c.slug = 'pirin' AND i.slug = 'date-card'
+        AND e.what_changed->>'via' = 'card.update';
+    `).trim();
+    assert.equal(row, "card.update|hold");
+  });
+
   it("trips a spend breach", () => {
     freeze("2026-11-02 18:00:00+00");
     seedPirinIdea(
