@@ -15,6 +15,7 @@ import {
 } from "./constants.js";
 import { TOOL_SCOPE_TABLE } from "./tool-scopes.js";
 import { enableBoardWatch } from "./board-watch.js";
+import { TOOL_CHECK_BREAKERS, shapeUpToolVisible } from "./shape-up.js";
 import {
   prepareFeedback,
   resolveFeedbackStore,
@@ -1747,6 +1748,28 @@ function registerJourneyTools(server: McpServer, ctx: HostedRequestContext) {
       }
     },
   );
+
+  if (shapeUpToolVisible(ctx.whoami.labels)) {
+    server.tool(
+      "check_breakers",
+      TOOL_CHECK_BREAKERS,
+      {
+        company: z.string().describe("Company slug on the shape-up allowlist."),
+      },
+      async (input) => {
+        const store = storeOf();
+        const actor = ctx.actor;
+        if (!store || !actor?.authenticated) {
+          return err("Gated. Founder or founder-authorized token required.");
+        }
+        try {
+          return text(await store.checkBreakers(actor, { companySlug: input.company }));
+        } catch (e) {
+          return err(e instanceof Error ? e.message : String(e));
+        }
+      },
+    );
+  }
 }
 
 export function createBootstrapServer(
