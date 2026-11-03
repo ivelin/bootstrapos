@@ -68,6 +68,16 @@ export {
 } from "./initiative-card.js";
 import type { JourneyAclRole, JourneyActor } from "./journey-auth.js";
 import {
+  confirmKillDenial,
+  nudgeMarker,
+  shapeUpEnabled,
+  pendingBreakerActions,
+  storedNudges,
+  validateShapeUpPut,
+  type ShapeUpBreach,
+  type ShapeUpCard,
+} from "./shape-up.js";
+import {
   COMMENT_BODY_MAX_BYTES,
   COMMENT_TOO_LONG_MESSAGE,
   HOSTED_DAILY_CAPS,
@@ -129,7 +139,14 @@ export type Scoreboard = {
   initiatives?: Initiative[];
   /** Who buys. Not the bet text. Empty stays off the card. */
   buyer?: string;
-  /** Money window for the board card. Never invented on read. */
+  /** Shape Up test. Allowlisted companies only. Server rejects these keys elsewhere. */
+  appetite?: { weeks: number; usd_cap: number };
+  breaker?: { kill_on: string; rule: string };
+  shape_up_test?: true;
+  /** Server-written. Clients cannot set this on put. */
+  breaker_state?: "tripped";
+  shape_up_nudges?: Array<{ card_id: string; breach: "kill_on" | "spend" }>;
+  /** Money window for the board card. Never invented on read. Owner-entered costs are the spend source. */
   pnl?: {
     days?: number;
     revenue?: number | null;
@@ -1101,6 +1118,7 @@ export type JourneyStore = {
       supporting?: SupportingRow[];
       engagements?: EngagementRow[];
       initiatives?: Initiative[];
+      shapeUpServerWrite?: boolean;
     },
   ): Promise<unknown>;
   putPortfolioScore(
@@ -1124,6 +1142,10 @@ export type JourneyStore = {
   postComment(
     actor: JourneyActor,
     input: { companySlug: string; ideaSlug?: string; body: string; client?: string },
+  ): Promise<unknown>;
+  checkBreakers(
+    actor: JourneyActor,
+    input: { companySlug: string; now?: Date },
   ): Promise<unknown>;
   changeAcl(
     actor: JourneyActor,
@@ -1456,6 +1478,7 @@ export class MemoryJourneyStore implements JourneyStore {
       supporting?: SupportingRow[];
       engagements?: EngagementRow[];
       initiatives?: Initiative[];
+      shapeUpServerWrite?: boolean;
     },
   ): Promise<unknown> {
     if (!actor.authenticated || !actor.principal) {
@@ -1476,7 +1499,7 @@ export class MemoryJourneyStore implements JourneyStore {
       return forbidden("why required");
     }
     const company = this.companyBySlug(input.companySlug);
-    if (!company || !canWriteJourney(this.acl, actor, company.id)) {
+    if (!company || !canReadCompany(this.acl, actor, company.id)) {
       return forbidden("founder or founder-authorized only");
     }
     const ideas = this.ideasFor(company.id, input.ideaSlug);
@@ -1484,6 +1507,37 @@ export class MemoryJourneyStore implements JourneyStore {
       return notFound(IDEA_NOT_FOUND_WRITE);
     }
     const idea = ideas[0];
+    if (
+      input.currentGate === "kill" &&
+      idea.scoreboard.breaker_state === "tripped" &&
+      !input.shapeUpServerWrite
+    ) {
+      const denial = confirmKillDenial({
+        client: input.client,
+        role: roleOnCompany(this.acl, actor, company.id),
+      });
+      if (denial) {
+        const snap = ideaBoardSnapshot(idea);
+        const audit = this.emitAudit({
+          companyId: company.id,
+          ideaId: idea.id,
+          who: actor.principal,
+          client: input.client?.trim() || "put_journey",
+          whatChanged: {
+            op: "confirm_kill_denied",
+            via: "put_journey",
+            denied: denial,
+            card_id: idea.id,
+            before: snap,
+            after: snap,
+          },
+        });
+        return { ok: false, error: "confirm_kill_denied", denied: denial, audit };
+      }
+    }
+    if (!canWriteJourney(this.acl, actor, company.id)) {
+      return forbidden("founder or founder-authorized only");
+    }
     if (spokenLoopWriteRejected(input) || spokenLoopWriteRejected(input.scoreboard)) {
       return forbidden(SPOKEN_LOOP_WRITE_REJECTED);
     }
@@ -1491,6 +1545,10 @@ export class MemoryJourneyStore implements JourneyStore {
       return forbidden(LOOP_STAGE_MUTATION_REJECTED);
     }
     const before = ideaBoardSnapshot(idea);
+    if (!input.shapeUpServerWrite) {
+      const shapeUpError = validateShapeUpPut(company.slug, input.scoreboard);
+      if (shapeUpError) return forbidden(shapeUpError);
+    }
     let nextScoreboard: Scoreboard = { ...idea.scoreboard };
     if (input.scoreboard) {
       const fromBoard = normalizeConstraintThisWeek(input.scoreboard.constraint_this_week);
@@ -1808,6 +1866,81 @@ export class MemoryJourneyStore implements JourneyStore {
       portfolio: portfolioViewOf(this.ideasFor(company.id)),
       audit,
     };
+  }
+
+  async checkBreakers(
+    actor: JourneyActor,
+    input: { companySlug: string; now?: Date },
+  ): Promise<unknown> {
+    if (!actor.authenticated || !actor.principal) return forbidden("unauthenticated");
+    const company = this.companyBySlug(input.companySlug);
+    if (!company || !canReadCompany(this.acl, actor, company.id)) return notFound("company not visible");
+    if (!shapeUpEnabled(company.slug)) {
+      return { ok: false, error: "shape up is not enabled for this company" };
+    }
+    const now = input.now ?? new Date();
+    const ideas = this.ideasFor(company.id);
+    const cards: ShapeUpCard[] = ideas.map((idea) => ({
+      id: idea.id,
+      slug: idea.slug,
+      gate: idea.currentGate,
+      scoreboard: idea.scoreboard as unknown as Record<string, unknown>,
+    }));
+    const actions = pendingBreakerActions(cards, now);
+    if (actions.length === 0) {
+      return { ok: true, readOnly: true, tripped: [], gateUnchanged: true };
+    }
+    const tripped: Array<{ card_id: string; breach: ShapeUpBreach }> = [];
+    for (const action of actions) {
+      const idea = ideas.find((row) => row.id === action.card.id);
+      if (!idea) continue;
+      const gateBefore = idea.currentGate;
+      const marker = nudgeMarker(idea.id, action.breach);
+      const nudges = [
+        ...storedNudges(idea.scoreboard as unknown as Record<string, unknown>).filter((row) => row.card_id === idea.id),
+        { card_id: idea.id, breach: action.breach },
+      ];
+      const before = ideaBoardSnapshot(idea);
+      idea.scoreboard = {
+        ...idea.scoreboard,
+        breaker_state: "tripped",
+        shape_up_nudges: nudges,
+      };
+      this.comments.push({
+        id: this.nextId("c"),
+        ideaId: idea.id,
+        body: marker,
+        at: now.toISOString(),
+        who: actor.principal,
+      });
+      const comment = this.comments.at(-1)!;
+      idea.currentGate = gateBefore;
+      const after = ideaBoardSnapshot(idea);
+      this.emitAudit({
+        companyId: company.id,
+        ideaId: idea.id,
+        who: actor.principal,
+        client: "check_breakers",
+        whatChanged: {
+          op: "check_breakers",
+          via: "check_breakers",
+          card_id: idea.id,
+          breach: action.breach,
+          commentId: comment.id,
+          before,
+          after,
+        },
+      });
+      this.fireBoardNotify({
+        company,
+        idea,
+        event: "post_comment",
+        who: actor.principal,
+        summary: marker,
+      });
+      tripped.push({ card_id: idea.id, breach: action.breach });
+    }
+    return { ok: true, readOnly: false, tripped, gateUnchanged: true };
   }
 
   async postComment(
