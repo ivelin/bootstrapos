@@ -275,7 +275,6 @@ BEGIN
       CONTINUE;
     END IF;
 
-    PERFORM set_config('session_replication_role', 'replica', true);
     UPDATE bootstrap_os.ideas
     SET scoreboard = jsonb_set(
           jsonb_set(coalesce(scoreboard, '{}'::jsonb), '{shape_up_nudges}', v_nudges, true),
@@ -285,7 +284,6 @@ BEGIN
         ),
         updated_at = pg_catalog.now()
     WHERE id = v_idea.id;
-    PERFORM set_config('session_replication_role', 'origin', true);
   END LOOP;
 
   RETURN jsonb_build_object(
@@ -302,5 +300,40 @@ GRANT EXECUTE ON FUNCTION public.bootstrap_os_check_breakers(text) TO authentica
 
 COMMENT ON FUNCTION public.bootstrap_os_check_breakers(text) IS
   'Fleet slug only. Writes breaker_state and shape_up_nudges from stored cards. No caller clock.';
+
+-- A founder UPDATE grant cannot clear server keys. The definer's current_user is the function owner.
+-- On Supabase this migration runs as postgres, so postgres owns the function. No superuser GUC.
+CREATE OR REPLACE FUNCTION bootstrap_os.ideas_keep_breaker_state()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = pg_catalog, public, bootstrap_os
+AS $$
+DECLARE
+  v_owner name;
+BEGIN
+  SELECT pg_catalog.pg_get_userbyid(p.proowner) INTO v_owner
+  FROM pg_catalog.pg_proc p
+  JOIN pg_catalog.pg_namespace n ON n.oid = p.pronamespace
+  WHERE n.nspname = 'public' AND p.proname = 'bootstrap_os_check_breakers'
+  ORDER BY p.oid
+  LIMIT 1;
+  IF v_owner IS NOT NULL AND current_user = v_owner THEN
+    RETURN NEW;
+  END IF;
+  IF (NEW.scoreboard -> 'breaker_state') IS DISTINCT FROM (OLD.scoreboard -> 'breaker_state')
+     OR (NEW.scoreboard -> 'shape_up_nudges') IS DISTINCT FROM (OLD.scoreboard -> 'shape_up_nudges') THEN
+    RAISE EXCEPTION 'server-written scoreboard key';
+  END IF;
+  RETURN NEW;
+END;
+$$;
+
+REVOKE ALL ON FUNCTION bootstrap_os.ideas_keep_breaker_state() FROM PUBLIC, anon, authenticated;
+
+DROP TRIGGER IF EXISTS ideas_keep_breaker_state ON bootstrap_os.ideas;
+CREATE TRIGGER ideas_keep_breaker_state
+  BEFORE UPDATE ON bootstrap_os.ideas
+  FOR EACH ROW
+  EXECUTE FUNCTION bootstrap_os.ideas_keep_breaker_state();
 
 COMMIT;

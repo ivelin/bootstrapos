@@ -242,7 +242,16 @@ describe("PostgreSQL 16 shape-up put", { concurrency: false }, () => {
     assert.match(row, /^hold\|/);
     assert.match(row, /"breaker_state": "tripped"/);
     assert.match(row, /"breach": "kill_on"/);
-    assert.equal(ideaAuditCount("date-card"), "1");
+    const kinds = psql(`
+      SELECT count(*) FILTER (WHERE e.what_changed->>'op' = 'check_breakers')::text
+        || ',' ||
+        count(*) FILTER (WHERE e.what_changed->>'via' = 'card.update')::text
+      FROM bootstrap_os.audit_events e
+      JOIN bootstrap_os.ideas i ON i.id = e.idea_id
+      JOIN bootstrap_os.companies c ON c.id = i.company_id
+      WHERE c.slug = 'pirin' AND i.slug = 'date-card';
+    `).trim();
+    assert.equal(kinds, "1,1");
   });
 
   it("trips a spend breach", () => {
@@ -260,7 +269,7 @@ describe("PostgreSQL 16 shape-up put", { concurrency: false }, () => {
     `).trim();
     assert.match(board, /"breach": "spend"/);
     assert.doesNotMatch(board, /"breach": "kill_on"/);
-    assert.equal(ideaAuditCount("spend-card"), "1");
+    assert.equal(ideaAuditCount("spend-card"), "2");
   });
 
   it("defers a Sunday breach unless costs are more than twice the cap", () => {
@@ -289,7 +298,7 @@ describe("PostgreSQL 16 shape-up put", { concurrency: false }, () => {
     `).trim();
     assert.match(urgent, /"breaker_state": "tripped"/);
     assert.match(urgent, /"breach": "spend"/);
-    assert.equal(ideaAuditCount("urgent-card"), "1");
+    assert.equal(ideaAuditCount("urgent-card"), "2");
   });
 
   it("writes nothing on a second call with the same state", () => {
@@ -316,5 +325,46 @@ describe("PostgreSQL 16 shape-up put", { concurrency: false }, () => {
       WHERE c.slug = 'pirin' AND i.slug = 'twice-card';
     `).trim();
     assert.equal(again, board);
+  });
+
+  it("stops a founder UPDATE from clearing breaker fields and still allows other keys", () => {
+    const asFounder = (statement) => psql(`
+      BEGIN;
+      SELECT set_config('request.jwt.claim.email', 'founder@example.test', true);
+      SELECT set_config('request.jwt.claim.sub', '11111111-1111-4111-8111-111111111111', true);
+      SET LOCAL ROLE authenticated;
+      ${statement}
+      COMMIT;
+    `);
+    assert.throws(
+      () =>
+        asFounder(`
+          UPDATE bootstrap_os.ideas
+          SET scoreboard = scoreboard - 'breaker_state' - 'shape_up_nudges'
+          WHERE id = (
+            SELECT i.id FROM bootstrap_os.ideas i
+            JOIN bootstrap_os.companies c ON c.id = i.company_id
+            WHERE c.slug = 'pirin' AND i.slug = 'date-card'
+          );
+        `),
+      /server-written scoreboard key/,
+    );
+    asFounder(`
+      UPDATE bootstrap_os.ideas
+      SET scoreboard = jsonb_set(scoreboard, '{constraint_this_week}', '"still here"')
+      WHERE id = (
+        SELECT i.id FROM bootstrap_os.ideas i
+        JOIN bootstrap_os.companies c ON c.id = i.company_id
+        WHERE c.slug = 'pirin' AND i.slug = 'date-card'
+      );
+    `);
+    const board = psql(`
+      SELECT scoreboard::text FROM bootstrap_os.ideas i
+      JOIN bootstrap_os.companies c ON c.id = i.company_id
+      WHERE c.slug = 'pirin' AND i.slug = 'date-card';
+    `).trim();
+    assert.match(board, /still here/);
+    assert.match(board, /"breaker_state": "tripped"/);
+    assert.match(board, /shape_up_nudges/);
   });
 });
