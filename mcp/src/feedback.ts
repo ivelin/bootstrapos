@@ -1,11 +1,12 @@
 /**
  * submit_feedback — append-only ticket for the signed-in account.
  * House name until MCP core ships a feedback primitive. No board write.
- * No mail from this host. Database is the record. Cos applies the SQL.
+ * Database is the record. A new ticket may alert bootstrap@pirin.ai. Cos applies the SQL.
  * PR agents: memory or PGlite only. Do not live-probe supabase-pirin-ai.
  */
 import { createHash, randomBytes } from "node:crypto";
 import { MCP_VERSION } from "./constants.js";
+import { alertNewFeedback } from "./feedback-alert.js";
 import { hostedProdIdentityAllowed } from "./identity.js";
 
 export const FEEDBACK_PRODUCT = "bootstrap-os";
@@ -73,9 +74,21 @@ export type FeedbackAck = {
 export type FeedbackFailure = { ok: false; error: string };
 export type FeedbackResult = FeedbackAck | FeedbackFailure;
 
+export type FeedbackListRow = {
+  id: string;
+  created_at: string;
+  kind: string;
+  severity: string;
+  status: string;
+  summary: string;
+};
+
 export type FeedbackStore = {
   submit(ticket: PreparedFeedback, nowMs?: number): Promise<FeedbackResult>;
+  listRecent?(limit?: number): Promise<FeedbackListRow[]>;
 };
+
+export const FEEDBACK_FILE_ERROR = "Could not file that. Email bootstrap@pirin.ai.";
 
 const EMAIL_RE = /[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/g;
 const BEARER_RE = /Bearer\s+\S+/gi;
@@ -103,9 +116,17 @@ export function feedbackFingerprint(input: {
   tool?: string | null;
   kind: string;
   summary: string;
+  actorId?: string | null;
 }): string {
-  const prefix = input.summary.trim().toLowerCase().replace(/\s+/g, " ").slice(0, 80);
-  const payload = [FEEDBACK_PRODUCT, input.tool?.trim() || "", input.kind, prefix].join("\n");
+  const normalized = input.summary.trim().toLowerCase().replace(/\s+/g, " ");
+  const summaryHash = createHash("md5").update(normalized, "utf8").digest("hex");
+  const payload = [
+    FEEDBACK_PRODUCT,
+    input.tool?.trim() || "",
+    input.kind,
+    summaryHash,
+    (input.actorId || "").trim().toLowerCase(),
+  ].join("\n");
   return createHash("md5").update(payload, "utf8").digest("hex");
 }
 
@@ -258,7 +279,7 @@ export function prepareFeedback(
     clientName: stamp.clientName?.trim() || null,
     clientVersion: stamp.clientVersion?.trim() || null,
     httpUserAgent: stamp.httpUserAgent?.trim()?.slice(0, 200) || null,
-    fingerprint: feedbackFingerprint({ tool: toolRaw, kind, summary }),
+    fingerprint: feedbackFingerprint({ tool: toolRaw, kind, summary, actorId }),
   };
   return { ok: true, ticket };
 }
@@ -284,7 +305,28 @@ export class MemoryFeedbackStore implements FeedbackStore {
     }
     const id = `fb_${randomBytes(8).toString("hex")}`;
     this.rows.push({ ...ticket, id, createdAt: nowMs });
+    await alertNewFeedback({
+      id,
+      kind: ticket.kind,
+      severity: ticket.severity,
+      summary: ticket.summary,
+    });
     return { ok: true, id, line: feedbackLine(id, false), duplicate: false };
+  }
+
+  async listRecent(limit = 50): Promise<FeedbackListRow[]> {
+    const cap = Math.min(Math.max(limit, 1), 100);
+    return [...this.rows]
+      .sort((a, b) => b.createdAt - a.createdAt)
+      .slice(0, cap)
+      .map((row) => ({
+        id: row.id,
+        created_at: new Date(row.createdAt).toISOString(),
+        kind: row.kind,
+        severity: row.severity,
+        status: "new",
+        summary: row.summary,
+      }));
   }
 
   /** Test canary. Not an MCP tool. */
@@ -321,9 +363,50 @@ export class SupabaseFeedbackStore implements FeedbackStore {
 
   async submit(ticket: PreparedFeedback): Promise<FeedbackResult> {
     const base = this.url.replace(/\/+$/, "");
+    for (let attempt = 0; attempt < 2; attempt++) {
+      let res: Response;
+      try {
+        res = await fetch(`${base}/rest/v1/rpc/bootstrap_os_submit_feedback`, {
+          method: "POST",
+          headers: {
+            apikey: this.anonKey,
+            Authorization: `Bearer ${this.accessToken}`,
+            "Content-Type": "application/json",
+            Accept: "application/json",
+          },
+          body: JSON.stringify({ p_body: ticketToRpcBody(ticket) }),
+          signal: AbortSignal.timeout(10_000),
+        });
+      } catch {
+        continue;
+      }
+      if (res.status >= 500) continue;
+      if (!res.ok) return { ok: false, error: `feedback_rpc_failed:${res.status}` };
+      let raw: unknown = null;
+      try {
+        raw = await res.json();
+      } catch {
+        continue;
+      }
+      const parsed = parseFeedbackAck(raw);
+      if (parsed.ok && !parsed.duplicate) {
+        await alertNewFeedback({
+          id: parsed.id,
+          kind: ticket.kind,
+          severity: ticket.severity,
+          summary: ticket.summary,
+        });
+      }
+      return parsed;
+    }
+    return { ok: false, error: FEEDBACK_FILE_ERROR };
+  }
+
+  async listRecent(limit = 50): Promise<FeedbackListRow[]> {
+    const base = this.url.replace(/\/+$/, "");
     let res: Response;
     try {
-      res = await fetch(`${base}/rest/v1/rpc/bootstrap_os_submit_feedback`, {
+      res = await fetch(`${base}/rest/v1/rpc/bootstrap_os_list_feedback`, {
         method: "POST",
         headers: {
           apikey: this.anonKey,
@@ -331,20 +414,35 @@ export class SupabaseFeedbackStore implements FeedbackStore {
           "Content-Type": "application/json",
           Accept: "application/json",
         },
-        body: JSON.stringify({ p_body: ticketToRpcBody(ticket) }),
+        body: JSON.stringify({ p_limit: limit }),
         signal: AbortSignal.timeout(10_000),
       });
     } catch {
-      return { ok: false, error: "Could not file that." };
+      return [];
     }
-    if (!res.ok) return { ok: false, error: `feedback_rpc_failed:${res.status}` };
+    if (!res.ok) return [];
     let raw: unknown = null;
     try {
       raw = await res.json();
     } catch {
-      return { ok: false, error: "Could not file that." };
+      return [];
     }
-    return parseFeedbackAck(raw);
+    if (!Array.isArray(raw)) return [];
+    return raw.flatMap((row) => {
+      if (!row || typeof row !== "object") return [];
+      const item = row as Record<string, unknown>;
+      if (typeof item.id !== "string" || typeof item.summary !== "string") return [];
+      return [
+        {
+          id: item.id,
+          created_at: String(item.created_at ?? ""),
+          kind: String(item.kind ?? ""),
+          severity: String(item.severity ?? ""),
+          status: String(item.status ?? ""),
+          summary: item.summary,
+        },
+      ];
+    });
   }
 }
 

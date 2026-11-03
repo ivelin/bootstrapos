@@ -5,8 +5,15 @@
 import { afterEach, describe, it } from "node:test";
 import assert from "node:assert/strict";
 import { handleHostedReadFetch } from "../dist/hosted-handler.js";
-import { IVELIN_SEED_EMAIL, ivelinMemoryFixture, setIdentityStoreForTests } from "../dist/identity.js";
 import {
+  IVELIN_SEED_EMAIL,
+  MemoryIdentityStore,
+  hashMcpToken,
+  ivelinMemoryFixture,
+  setIdentityStoreForTests,
+} from "../dist/identity.js";
+import {
+  FEEDBACK_FILE_ERROR,
   MemoryFeedbackStore,
   createSupabaseFeedbackStore,
   feedbackFingerprint,
@@ -26,6 +33,7 @@ afterEach(() => {
   setFeedbackStoreForTests(undefined);
   setIdentityStoreForTests(undefined);
   delete process.env.VERCEL_ENV;
+  delete process.env.RESEND_API_KEY;
   delete process.env.BOOTSTRAP_SUPABASE_URL;
   delete process.env.BOOTSTRAP_SUPABASE_ANON_KEY;
 });
@@ -63,7 +71,7 @@ describe("submit_feedback prepare", () => {
     assert.equal(ticket.severity, "annoying");
     assert.equal(
       ticket.fingerprint,
-      feedbackFingerprint({ kind: "bug", summary: "The board did not load" }),
+      feedbackFingerprint({ kind: "bug", summary: "The board did not load", actorId: "actor-a" }),
     );
   });
 
@@ -142,6 +150,30 @@ describe("submit_feedback store", () => {
     assert.equal(second.duplicate, true);
     assert.equal(store.rows.length, 1);
   });
+
+  it("keeps two reports that share a prefix and merges an exact resubmit", async () => {
+    const store = new MemoryFeedbackStore();
+    const prefix = "x".repeat(80);
+    const first = await store.submit(
+      filed({ kind: "bug", summary: `${prefix} alpha detail`, user_consented: true }),
+    );
+    const other = await store.submit(
+      filed({ kind: "bug", summary: `${prefix} bravo detail`, user_consented: true }),
+    );
+    const same = await store.submit(
+      filed({ kind: "bug", summary: `${prefix} alpha detail`, user_consented: true }),
+    );
+    const otherKind = await store.submit(
+      filed({ kind: "docs", summary: `${prefix} alpha detail`, user_consented: true }),
+    );
+    assert.equal(first.duplicate, false);
+    assert.equal(other.duplicate, false);
+    assert.notEqual(other.id, first.id);
+    assert.equal(same.duplicate, true);
+    assert.equal(same.id, first.id);
+    assert.equal(otherKind.duplicate, false);
+    assert.equal(store.rows.length, 3);
+  });
 });
 
 describe("submit_feedback hosted tool", () => {
@@ -209,6 +241,75 @@ describe("submit_feedback hosted tool", () => {
     assert.equal(store.rows[0].httpUserAgent, "feedback-test");
   });
 
+  it("lets a super admin list tickets and refuses a member", async () => {
+    const adminToken = "bos_admin_fixture_token_xx";
+    const people = new MemoryIdentityStore([
+      {
+        id: "mentee-ivelin",
+        email: IVELIN_SEED_EMAIL,
+        authUserId: "auth-ivelin",
+        labels: ["alpha"],
+        role: "member",
+        tokenHashes: [hashMcpToken(TOKEN)],
+      },
+      {
+        id: "mentee-admin",
+        email: "admin@example.test",
+        authUserId: "auth-admin",
+        labels: ["alpha"],
+        role: "super_admin",
+        tokenHashes: [hashMcpToken(adminToken)],
+      },
+    ]);
+    setIdentityStoreForTests(people);
+    const store = new MemoryFeedbackStore();
+    setFeedbackStoreForTests(store);
+    await store.submit(filed({ kind: "docs", summary: "List me", user_consented: true }));
+    const member = await handleHostedReadFetch(
+      new Request("https://preview.example/mcp", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json, text/event-stream",
+          Authorization: `Bearer ${TOKEN}`,
+        },
+        body: JSON.stringify({
+          jsonrpc: "2.0",
+          id: 3,
+          method: "tools/call",
+          params: { name: "list_feedback", arguments: {} },
+        }),
+      }),
+    );
+    const memberBody = await member.text();
+    assert.equal(member.status, 200);
+    assert.match(memberBody, /super admin/);
+    assert.doesNotMatch(memberBody, /List me/);
+
+    const admin = await handleHostedReadFetch(
+      new Request("https://preview.example/mcp", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json, text/event-stream",
+          Authorization: `Bearer ${adminToken}`,
+        },
+        body: JSON.stringify({
+          jsonrpc: "2.0",
+          id: 4,
+          method: "tools/call",
+          params: { name: "list_feedback", arguments: {} },
+        }),
+      }),
+    );
+    const adminText = await admin.text();
+    assert.equal(admin.status, 200, adminText);
+    const payload = JSON.parse(JSON.parse(adminText).result.content.map((part) => part.text).join(""));
+    assert.equal(payload.ok, true);
+    assert.equal(payload.rows[0].summary, "List me");
+    assert.equal(payload.rows[0].kind, "docs");
+  });
+
   it("does not attach a live database outside production", () => {
     process.env.BOOTSTRAP_SUPABASE_URL = "https://example.test";
     process.env.BOOTSTRAP_SUPABASE_ANON_KEY = "anon";
@@ -227,14 +328,14 @@ describe("submit_feedback hosted tool", () => {
     let seen;
     global.fetch = async (url, init) => {
       seen = { url, init };
-      return new Response(JSON.stringify({ secret: "other-tenant" }), { status: 500 });
+      return new Response(JSON.stringify({ secret: "other-tenant" }), { status: 400 });
     };
     try {
       const result = await live.submit(
         filed({ kind: "bug", summary: "The board did not load", user_consented: true }),
       );
       assert.equal(result.ok, false);
-      assert.equal(result.error, "feedback_rpc_failed:500");
+      assert.equal(result.error, "feedback_rpc_failed:400");
       assert.doesNotMatch(result.error, /other-tenant|secret/);
       assert.match(String(seen.url), /\/rpc\/bootstrap_os_submit_feedback$/);
       const sent = JSON.parse(seen.init.body);
@@ -246,5 +347,117 @@ describe("submit_feedback hosted tool", () => {
       global.fetch = original;
     }
     assert.deepEqual(parseFeedbackAck({ ok: true, id: "fb_abc", line: "Filed fb_abc. A person reads it.", duplicate: false }).id, "fb_abc");
+  });
+
+  it("retries one 5xx or network failure, then names the mailbox", async () => {
+    process.env.VERCEL_ENV = "production";
+    process.env.BOOTSTRAP_SUPABASE_URL = "https://db.example.test";
+    process.env.BOOTSTRAP_SUPABASE_ANON_KEY = "anon-key";
+    const live = createSupabaseFeedbackStore("signed-token-value");
+    const original = global.fetch;
+    let hits = 0;
+    global.fetch = async () => {
+      hits += 1;
+      return new Response("nope", { status: 503 });
+    };
+    try {
+      const result = await live.submit(
+        filed({ kind: "bug", summary: "The board did not load", user_consented: true }),
+      );
+      assert.equal(hits, 2);
+      assert.equal(result.ok, false);
+      assert.equal(result.error, FEEDBACK_FILE_ERROR);
+    } finally {
+      global.fetch = original;
+    }
+
+    hits = 0;
+    global.fetch = async () => {
+      hits += 1;
+      throw new Error("socket hang up");
+    };
+    try {
+      const result = await live.submit(
+        filed({ kind: "bug", summary: "The board did not load", user_consented: true }),
+      );
+      assert.equal(hits, 2);
+      assert.equal(result.error, FEEDBACK_FILE_ERROR);
+    } finally {
+      global.fetch = original;
+    }
+  });
+
+  it("still files when the new-ticket alert fails", async () => {
+    process.env.VERCEL_ENV = "production";
+    process.env.RESEND_API_KEY = "re_test_key_not_a_secret_body";
+    process.env.BOOTSTRAP_SUPABASE_URL = "https://db.example.test";
+    process.env.BOOTSTRAP_SUPABASE_ANON_KEY = "anon-key";
+    const live = createSupabaseFeedbackStore("signed-token-value");
+    const original = global.fetch;
+    const errors = [];
+    const prior = console.error;
+    console.error = (...args) => errors.push(args.join(" "));
+    const prefix = "y".repeat(80);
+    let alertBody = "";
+    global.fetch = async (url, init) => {
+      const href = String(url);
+      if (href.includes("api.resend.com")) {
+        alertBody = String(init?.body ?? "");
+        throw new Error("mailbox down");
+      }
+      return new Response(
+        JSON.stringify({
+          ok: true,
+          id: "fb_newticket",
+          line: "Filed fb_newticket. A person reads it.",
+          duplicate: false,
+        }),
+        { status: 200 },
+      );
+    };
+    try {
+      const result = await live.submit(
+        filed({
+          kind: "bug",
+          severity: "blocker",
+          summary: `${prefix} tail that must stay out of the alert`,
+          user_consented: true,
+        }),
+      );
+      assert.equal(result.ok, true);
+      assert.equal(result.duplicate, false);
+      assert.match(alertBody, /fb_newticket/);
+      assert.match(alertBody, /blocker/);
+      assert.match(alertBody, new RegExp(`summary: ${"y".repeat(80)}`));
+      assert.doesNotMatch(alertBody, /tail that must stay/);
+      assert.doesNotMatch(alertBody, /re_test_key/);
+      assert.match(errors.join("\n"), /feedback_alert_failed/);
+      assert.doesNotMatch(errors.join("\n"), /re_test_key/);
+    } finally {
+      console.error = prior;
+      global.fetch = original;
+    }
+  });
+
+  it("returns an empty list when the reader call fails", async () => {
+    process.env.VERCEL_ENV = "production";
+    process.env.BOOTSTRAP_SUPABASE_URL = "https://db.example.test";
+    process.env.BOOTSTRAP_SUPABASE_ANON_KEY = "anon-key";
+    const live = createSupabaseFeedbackStore("signed-token-value");
+    const original = global.fetch;
+    global.fetch = async () => {
+      throw new Error("socket hang up");
+    };
+    try {
+      assert.deepEqual(await live.listRecent(), []);
+    } finally {
+      global.fetch = original;
+    }
+    global.fetch = async () => new Response("not-json", { status: 200 });
+    try {
+      assert.deepEqual(await live.listRecent(), []);
+    } finally {
+      global.fetch = original;
+    }
   });
 });

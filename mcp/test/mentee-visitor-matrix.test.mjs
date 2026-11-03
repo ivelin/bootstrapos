@@ -152,10 +152,9 @@ describe("merge-gate visitor matrix (CoS smell-test)", () => {
     assert.match(readme, /escalation to Ivelin/i);
     assert.match(readme, /not a public suggestion box/);
     assert.match(readme, /bootstrap@pirin\.ai/);
-    assert.match(readme, /Bill approve-card/);
-    assert.match(readme, /Exact preview/);
-    assert.match(readme, /Nothing sends until approve/);
-    assert.match(readme, /Cos does not own this card/);
+    assert.match(readme, /submit_feedback/);
+    assert.doesNotMatch(readme, /Nothing sends until approve/);
+    assert.doesNotMatch(readme, /Bill approve-card/);
     assert.match(readme, /public GitHub issue is OK/);
     assert.match(readme, /no PII/);
     assert.match(readme, /open-source public repo/);

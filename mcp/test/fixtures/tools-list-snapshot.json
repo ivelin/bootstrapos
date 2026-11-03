@@ -85,6 +85,10 @@
       "readOnlyHint": false
     },
     {
+      "name": "list_feedback",
+      "readOnlyHint": true
+    },
+    {
       "name": "list_provenance",
       "readOnlyHint": true
     },

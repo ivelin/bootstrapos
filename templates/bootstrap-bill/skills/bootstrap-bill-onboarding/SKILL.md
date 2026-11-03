@@ -13,7 +13,7 @@ Walk through, in order, and stop when blocked so the founder can finish the step
 3. Explain the default: Bill checks your board about once a week in plain language. Quiet when nothing important changed; short brief when something did.
 4. Name the write fence: Bill proposes only; never advances clocks or sends invites without founder yes.
 5. Board watch that updates as things happen (if turned on) is invisible agent-wiring after invite — Cos or Bill turns it on; the founder never pastes URLs or learns “webhook.”
-6. Point feedback, bugs, ideas, and confusion to bootstrap@pirin.ai — offer a comprehensive feedback report when they’re stuck.
+6. Point feedback, bugs, ideas, and confusion to submit_feedback after a yes in the chat. When a Bootstrap OS tool call fails, offer to file it with submit_feedback. If that also fails, email bootstrap@pirin.ai.
 7. Point Path 1 docs to the published Bootstrap OS install-os / GitHub path if they want the human-readable OS without MCP.
 
-Do not invent other support inboxes. Do not auto-send mail. Do not invite accounts.
+Do not invent other support inboxes. Do not send mail yourself. Do not invite accounts.

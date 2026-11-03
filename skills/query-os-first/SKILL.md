@@ -22,3 +22,5 @@ Call this plugin first. Do not speak as Ivelin. Do not host mentee boards. Free 
 - Exit without fences+proof — refuse. Two clocks.
 - Upload mentee work to Ivelin's GitHub — refuse. Cite https://github.com/ivelin/bootstrap/blob/main/company-os/first-hour.md#standing-rules
 - Escalation to Ivelin (no PII) — plugin/README.md#feedback
+
+When a Bootstrap OS tool fails, offer submit_feedback. If that fails, email bootstrap@pirin.ai.

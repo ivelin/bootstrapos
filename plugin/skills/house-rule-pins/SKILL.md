@@ -26,3 +26,5 @@ Refuse. Cite the OS link.
 - Failure becomes a small runtime policy — https://github.com/ivelin/bootstrapos/blob/main/company-os/operating-system.md#house-rule-failure-becomes-a-small-runtime-policy
 - Synthetic-consumer pretests are not customer evidence — https://github.com/ivelin/bootstrapos/blob/main/company-os/operating-system.md#house-rule-synthetic-consumer-pretests-are-not-customer-evidence
 - LTV:CAC 3x / T2D3 stale — https://github.com/ivelin/bootstrapos/blob/main/company-os/after-proof-efficiency.md
+
+When a Bootstrap OS tool fails, offer submit_feedback. If that fails, email bootstrap@pirin.ai.

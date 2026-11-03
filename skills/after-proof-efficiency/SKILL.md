@@ -12,3 +12,5 @@ Otherwise do not open this page. Two clocks. Lifestyle: do not send this page. N
 https://github.com/ivelin/bootstrapos/blob/main/company-os/after-proof-efficiency.md
 
 LTV:CAC 3x or T2D3 as the aim is stale — cite that page.
+
+When a Bootstrap OS tool fails, offer submit_feedback. If that fails, email bootstrap@pirin.ai.

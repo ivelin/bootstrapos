@@ -16,3 +16,5 @@ Open your private starter bet board. Next tool is create_starter_board.
 Name the first bet on this bet board. Next tool is create_idea.
 
 The server catalog is the only format source. A confirmed account can open up to 3 bet boards.
+
+When a Bootstrap OS tool fails, offer submit_feedback. If that fails, email bootstrap@pirin.ai.

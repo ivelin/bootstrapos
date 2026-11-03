@@ -9,7 +9,7 @@ When to use: after Advance / Iterate / Hold / Kill, or a founder yes in chat. No
 
 Company and idea are separate. One board per idea.
 
-The weekly constraint is the honest biggest bottleneck. Not a fun side quest. Preference cannot name it. Challenge a side quest dressed as the bottleneck. Founder decides with a written override; do not rubber-stamp. Refuse “new landing page” when no one has talked to customers, unless the founder writes that override.
+The weekly constraint is the honest biggest bottleneck. Not a fun side quest. Founder decides with a written override; do not rubber-stamp. Refuse “new landing page” when no one has talked to customers, unless the founder writes that override. Preference cannot name it. On a failed tool, offer submit_feedback.
 
 Owner comes from the ACL, not a name you invent. Prefer a material-change notify over polling. Digests do not invent stage or Advance.
 
@@ -22,3 +22,4 @@ Owner comes from the ACL, not a name you invent. Prefer a material-change notify
 - Path 1: GitHub + local, not a hosted MCP URL. Collab `https://mcp.bootstrap.pirin.ai/mcp`. https://github.com/ivelin/bootstrap/blob/main/mcp/docs/HOSTED_IDENTITY.md — Gated journey write is not that pin.
 
 Do not speak as Ivelin. Do not host a snapshot UI.
+

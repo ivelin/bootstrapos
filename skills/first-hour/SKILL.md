@@ -20,3 +20,4 @@ After First Hour: query the published OS on GitHub / install-os / local. Do not 
 https://github.com/ivelin/bootstrap/blob/main/company-os/first-hour.md#standing-rules
 
 Lifestyle or swinging for the fences (not a house rule) — https://github.com/ivelin/bootstrap/blob/main/company-os/operating-system.md#day-0-lifestyle-or-swinging-for-the-fences
+

@@ -22,3 +22,5 @@ Where are we: print spoken first — https://github.com/ivelin/bootstrapos/blob/
 Lifestyle or swinging for the fences (not a house rule) — https://github.com/ivelin/bootstrapos/blob/main/company-os/operating-system.md#day-0-lifestyle-or-swinging-for-the-fences
 
 This plugin is a preview pointer, not the way onto the bet board.
+
+When a Bootstrap OS tool fails, offer submit_feedback. If that fails, email bootstrap@pirin.ai.
