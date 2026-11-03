@@ -137,4 +137,170 @@ GRANT EXECUTE ON FUNCTION public.bootstrap_os_put_journey(text, text, text, bool
 COMMENT ON FUNCTION public.bootstrap_os_put_journey(text, text, text, boolean, int, int, text, text, text, jsonb, text) IS
   'User JWT cannot write breaker_state or shape_up_nudges. Shape Up keys require the fleet slug.';
 
+-- Clock for the breaker. Tests replace this function. Callers cannot.
+CREATE OR REPLACE FUNCTION bootstrap_os.shape_up_now()
+RETURNS timestamptz
+LANGUAGE sql
+STABLE
+SET search_path = pg_catalog
+AS $$
+  SELECT pg_catalog.now();
+$$;
+
+REVOKE ALL ON FUNCTION bootstrap_os.shape_up_now() FROM PUBLIC, anon, authenticated;
+
+-- CTO option 4. The breach rules live here. The user JWT cannot pass the time or the server keys.
+CREATE OR REPLACE FUNCTION public.bootstrap_os_check_breakers(p_slug text)
+RETURNS jsonb
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = pg_catalog, public, bootstrap_os
+AS $$
+DECLARE
+  v_slug text := lower(btrim(coalesce(p_slug, '')));
+  v_company uuid;
+  v_local timestamp;
+  v_iso text;
+  v_sunday boolean;
+  v_idea bootstrap_os.ideas%ROWTYPE;
+  v_cap numeric;
+  v_costs numeric;
+  v_kill text;
+  v_over boolean;
+  v_hits text[];
+  v_breach text;
+  v_nudges jsonb;
+  v_card text;
+  v_added boolean;
+  v_who text;
+  v_tripped jsonb := '[]'::jsonb;
+BEGIN
+  IF NOT public.bootstrap_os_held_label(v_slug) THEN
+    RAISE EXCEPTION 'company not visible';
+  END IF;
+  IF v_slug IS DISTINCT FROM 'pirin' THEN
+    RAISE EXCEPTION 'shape up is not enabled for this company';
+  END IF;
+
+  SELECT id INTO v_company FROM bootstrap_os.companies WHERE slug = v_slug;
+  IF v_company IS NULL THEN
+    RETURN jsonb_build_object('ok', true, 'readOnly', true, 'tripped', '[]'::jsonb, 'gateUnchanged', true);
+  END IF;
+
+  v_local := bootstrap_os.shape_up_now() AT TIME ZONE 'America/Chicago';
+  v_iso := to_char(v_local, 'YYYY-MM-DD');
+  v_sunday := EXTRACT(DOW FROM v_local) = 0;
+  v_who := coalesce(bootstrap_os.actor_principal(), 'unknown');
+
+  FOR v_idea IN
+    SELECT * FROM bootstrap_os.ideas
+    WHERE company_id = v_company AND current_gate <> 'kill'
+    ORDER BY slug
+  LOOP
+    IF (v_idea.scoreboard -> 'shape_up_test') IS DISTINCT FROM 'true'::jsonb THEN
+      CONTINUE;
+    END IF;
+
+    v_cap := NULL;
+    v_costs := NULL;
+    IF jsonb_typeof(v_idea.scoreboard -> 'appetite') = 'object'
+       AND jsonb_typeof(v_idea.scoreboard #> '{appetite,usd_cap}') = 'number' THEN
+      v_cap := (v_idea.scoreboard #>> '{appetite,usd_cap}')::numeric;
+    END IF;
+    IF jsonb_typeof(v_idea.scoreboard -> 'pnl') = 'object'
+       AND coalesce(v_idea.scoreboard #>> '{pnl,costsUnknown}', '') IS DISTINCT FROM 'true'
+       AND jsonb_typeof(v_idea.scoreboard #> '{pnl,costs}') = 'number' THEN
+      v_costs := (v_idea.scoreboard #>> '{pnl,costs}')::numeric;
+    END IF;
+    v_over := v_cap IS NOT NULL AND v_costs IS NOT NULL AND v_costs > (v_cap * 2);
+    IF v_sunday AND NOT v_over THEN
+      CONTINUE;
+    END IF;
+
+    v_hits := ARRAY[]::text[];
+    v_kill := NULL;
+    IF jsonb_typeof(v_idea.scoreboard -> 'breaker') = 'object' THEN
+      v_kill := v_idea.scoreboard #>> '{breaker,kill_on}';
+    END IF;
+    IF v_kill ~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}$' THEN
+      BEGIN
+        IF to_char(v_kill::date, 'YYYY-MM-DD') = v_kill AND v_iso > v_kill THEN
+          v_hits := array_append(v_hits, 'kill_on');
+        END IF;
+      EXCEPTION
+        WHEN invalid_datetime_format OR datetime_field_overflow OR invalid_text_representation THEN
+          NULL;
+      END;
+    END IF;
+    IF v_cap IS NOT NULL AND v_costs IS NOT NULL AND v_costs >= v_cap THEN
+      v_hits := array_append(v_hits, 'spend');
+    END IF;
+
+    v_nudges := CASE
+      WHEN jsonb_typeof(v_idea.scoreboard -> 'shape_up_nudges') = 'array' THEN v_idea.scoreboard -> 'shape_up_nudges'
+      ELSE '[]'::jsonb
+    END;
+    v_card := v_idea.id::text;
+    v_added := false;
+    FOREACH v_breach IN ARRAY v_hits LOOP
+      IF EXISTS (
+        SELECT 1
+        FROM jsonb_array_elements(v_nudges) AS elem
+        WHERE elem->>'card_id' = v_card AND elem->>'breach' = v_breach
+      ) THEN
+        CONTINUE;
+      END IF;
+      v_nudges := v_nudges || jsonb_build_array(jsonb_build_object('card_id', v_card, 'breach', v_breach));
+      v_tripped := v_tripped || jsonb_build_array(jsonb_build_object(
+        'card_id', v_card,
+        'breach', v_breach,
+        'slug', v_idea.slug
+      ));
+      PERFORM bootstrap_os.emit_audit(
+        v_company,
+        v_idea.id,
+        v_who,
+        'check_breakers',
+        jsonb_build_object(
+          'op', 'check_breakers',
+          'via', 'check_breakers',
+          'card_id', v_card,
+          'breach', v_breach,
+          'gateUnchanged', true
+        )
+      );
+      v_added := true;
+    END LOOP;
+    IF NOT v_added THEN
+      CONTINUE;
+    END IF;
+
+    PERFORM set_config('session_replication_role', 'replica', true);
+    UPDATE bootstrap_os.ideas
+    SET scoreboard = jsonb_set(
+          jsonb_set(coalesce(scoreboard, '{}'::jsonb), '{shape_up_nudges}', v_nudges, true),
+          '{breaker_state}',
+          '"tripped"'::jsonb,
+          true
+        ),
+        updated_at = pg_catalog.now()
+    WHERE id = v_idea.id;
+    PERFORM set_config('session_replication_role', 'origin', true);
+  END LOOP;
+
+  RETURN jsonb_build_object(
+    'ok', true,
+    'readOnly', jsonb_array_length(v_tripped) = 0,
+    'tripped', v_tripped,
+    'gateUnchanged', true
+  );
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.bootstrap_os_check_breakers(text) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.bootstrap_os_check_breakers(text) TO authenticated;
+
+COMMENT ON FUNCTION public.bootstrap_os_check_breakers(text) IS
+  'Fleet slug only. Writes breaker_state and shape_up_nudges from stored cards. No caller clock.';
+
 COMMIT;

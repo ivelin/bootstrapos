@@ -40,6 +40,47 @@ function psql(sql, { stop = true } = {}) {
   return execFileSync(psqlBin, args, { encoding: "utf8" });
 }
 
+function freeze(at) {
+  psql(`
+    CREATE OR REPLACE FUNCTION bootstrap_os.shape_up_now()
+    RETURNS timestamptz
+    LANGUAGE sql
+    STABLE
+    SET search_path = pg_catalog
+    AS $$ SELECT timestamptz '${at}' $$;
+  `);
+}
+
+function callCheck(slug, email = "founder@example.test") {
+  const sub = email === "founder@example.test" ? "11111111-1111-4111-8111-111111111111" : "22222222-2222-4222-8222-222222222222";
+  return psql(`
+    BEGIN;
+    SELECT set_config('request.jwt.claim.email', '${email}', true);
+    SELECT set_config('request.jwt.claim.sub', '${sub}', true);
+    SET LOCAL ROLE authenticated;
+    SELECT public.bootstrap_os_check_breakers('${slug}');
+    COMMIT;
+  `);
+}
+
+function seedPirinIdea(slug, scoreboard) {
+  psql(`
+    INSERT INTO bootstrap_os.ideas (company_id, slug, name, journey_phase, loop_stage, current_gate, scoreboard)
+    SELECT id, '${slug}', '${slug}', 1, 1, 'hold', $board$${scoreboard}$board$::jsonb
+    FROM bootstrap_os.companies WHERE slug = 'pirin';
+  `);
+}
+
+function ideaAuditCount(slug) {
+  return psql(`
+    SELECT count(*)
+    FROM bootstrap_os.audit_events e
+    JOIN bootstrap_os.ideas i ON i.id = e.idea_id
+    JOIN bootstrap_os.companies c ON c.id = i.company_id
+    WHERE c.slug = 'pirin' AND i.slug = '${slug}';
+  `).trim();
+}
+
 function callPut(company, scoreboardSql) {
   return psql(`
     BEGIN;
@@ -169,5 +210,111 @@ describe("PostgreSQL 16 shape-up put", { concurrency: false }, () => {
     assert.match(next, /"usd_cap": 40/);
     assert.match(next, /"costs": 9/);
     assert.doesNotMatch(next, /breaker_state/);
+  });
+
+  it("denies the clock helper and a non-member without saying a card is missing", () => {
+    assert.throws(() => psql("SET ROLE authenticated; SELECT bootstrap_os.shape_up_now();"), /permission denied/);
+    assert.throws(() => callCheck("pirin", "stranger@example.test"), /company not visible/);
+    assert.throws(() => callCheck("missing-board", "stranger@example.test"), /company not visible/);
+  });
+
+  it("denies a member of a slug that is not the fleet", () => {
+    const before = psql(`SELECT scoreboard::text FROM bootstrap_os.ideas i JOIN bootstrap_os.companies c ON c.id = i.company_id WHERE c.slug = 'harbor' AND i.slug = 'default';`).trim();
+    assert.throws(() => callCheck("harbor"), /shape up is not enabled for this company/);
+    const after = psql(`SELECT scoreboard::text FROM bootstrap_os.ideas i JOIN bootstrap_os.companies c ON c.id = i.company_id WHERE c.slug = 'harbor' AND i.slug = 'default';`).trim();
+    assert.equal(after, before);
+  });
+
+  it("trips a date breach and leaves the gate", () => {
+    freeze("2026-11-02 18:00:00+00");
+    seedPirinIdea(
+      "date-card",
+      '{"schema_version":1,"shape_up_test":true,"appetite":{"weeks":6,"usd_cap":100},"breaker":{"kill_on":"2026-11-01","rule":"date"},"pnl":{"costs":10}}',
+    );
+    const hit = callCheck("pirin");
+    assert.match(hit, /"breach": "kill_on"/);
+    assert.match(hit, /"slug": "date-card"/);
+    const row = psql(`
+      SELECT current_gate, scoreboard::text
+      FROM bootstrap_os.ideas i JOIN bootstrap_os.companies c ON c.id = i.company_id
+      WHERE c.slug = 'pirin' AND i.slug = 'date-card';
+    `).trim();
+    assert.match(row, /^hold\|/);
+    assert.match(row, /"breaker_state": "tripped"/);
+    assert.match(row, /"breach": "kill_on"/);
+    assert.equal(ideaAuditCount("date-card"), "1");
+  });
+
+  it("trips a spend breach", () => {
+    freeze("2026-11-02 18:00:00+00");
+    seedPirinIdea(
+      "spend-card",
+      '{"schema_version":1,"shape_up_test":true,"appetite":{"weeks":6,"usd_cap":100},"breaker":{"kill_on":"2026-12-01","rule":"cap"},"pnl":{"costs":150}}',
+    );
+    const hit = callCheck("pirin");
+    assert.match(hit, /spend-card|spend/);
+    const board = psql(`
+      SELECT scoreboard::text FROM bootstrap_os.ideas i
+      JOIN bootstrap_os.companies c ON c.id = i.company_id
+      WHERE c.slug = 'pirin' AND i.slug = 'spend-card';
+    `).trim();
+    assert.match(board, /"breach": "spend"/);
+    assert.doesNotMatch(board, /"breach": "kill_on"/);
+    assert.equal(ideaAuditCount("spend-card"), "1");
+  });
+
+  it("defers a Sunday breach unless costs are more than twice the cap", () => {
+    freeze("2026-11-01 18:00:00+00");
+    seedPirinIdea(
+      "sunday-card",
+      '{"schema_version":1,"shape_up_test":true,"appetite":{"weeks":6,"usd_cap":100},"breaker":{"kill_on":"2026-10-01","rule":"date"},"pnl":{"costs":10}}',
+    );
+    seedPirinIdea(
+      "urgent-card",
+      '{"schema_version":1,"shape_up_test":true,"appetite":{"weeks":6,"usd_cap":100},"breaker":{"kill_on":"2026-12-01","rule":"cap"},"pnl":{"costs":250}}',
+    );
+    const hit = callCheck("pirin");
+    assert.match(hit, /"breach": "spend"/);
+    const sunday = psql(`
+      SELECT coalesce(scoreboard->>'breaker_state', '') FROM bootstrap_os.ideas i
+      JOIN bootstrap_os.companies c ON c.id = i.company_id
+      WHERE c.slug = 'pirin' AND i.slug = 'sunday-card';
+    `).trim();
+    assert.equal(sunday, "");
+    assert.equal(ideaAuditCount("sunday-card"), "0");
+    const urgent = psql(`
+      SELECT scoreboard::text FROM bootstrap_os.ideas i
+      JOIN bootstrap_os.companies c ON c.id = i.company_id
+      WHERE c.slug = 'pirin' AND i.slug = 'urgent-card';
+    `).trim();
+    assert.match(urgent, /"breaker_state": "tripped"/);
+    assert.match(urgent, /"breach": "spend"/);
+    assert.equal(ideaAuditCount("urgent-card"), "1");
+  });
+
+  it("writes nothing on a second call with the same state", () => {
+    freeze("2026-11-02 18:00:00+00");
+    seedPirinIdea(
+      "twice-card",
+      '{"schema_version":1,"shape_up_test":true,"appetite":{"weeks":6,"usd_cap":100},"breaker":{"kill_on":"2026-10-01","rule":"date"},"pnl":{"costs":1}}',
+    );
+    const first = callCheck("pirin");
+    assert.match(first, /"breach": "kill_on"/);
+    const audits = ideaAuditCount("twice-card");
+    const board = psql(`
+      SELECT scoreboard::text FROM bootstrap_os.ideas i
+      JOIN bootstrap_os.companies c ON c.id = i.company_id
+      WHERE c.slug = 'pirin' AND i.slug = 'twice-card';
+    `).trim();
+    const second = callCheck("pirin");
+    assert.match(second, /"readOnly": true/);
+    assert.doesNotMatch(second, /twice-card/);
+    assert.equal(ideaAuditCount("twice-card"), audits);
+    const again = psql(`
+      SELECT scoreboard::text FROM bootstrap_os.ideas i
+      JOIN bootstrap_os.companies c ON c.id = i.company_id
+      WHERE c.slug = 'pirin' AND i.slug = 'twice-card';
+    `).trim();
+    assert.equal(again, board);
   });
 });
