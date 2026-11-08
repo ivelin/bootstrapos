@@ -5,13 +5,13 @@
   },
   "metadata": {
     "description": "Bootstrap OS by pirin.ai. Hosted bet board connector. See mcp/docs/MARKETPLACE.md.",
-    "version": "0.1.1"
+    "version": "0.2.0"
   },
   "plugins": [
     {
       "name": "bootstrap-os",
       "source": "plugin",
-      "version": "0.1.1",
+      "version": "0.2.0",
       "description": "Hosted bet board connector for solo founders. See mcp/docs/MARKETPLACE.md."
     }
   ]

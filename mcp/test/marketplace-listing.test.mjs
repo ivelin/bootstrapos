@@ -86,7 +86,7 @@ describe("cursor catalog listing", () => {
     assert.equal(plugin.author.email, "ivelin@pirin.ai");
     assert.equal(plugin.homepage, "https://pirin.ai/bootstrap-os");
     assert.equal(plugin.repository, "https://github.com/ivelin/bootstrapos");
-    assert.equal(plugin.version, "0.1.1");
+    assert.equal(plugin.version, "0.2.0");
     const market = JSON.parse(
       fs.readFileSync(path.join(REPO_ROOT, ".cursor-plugin", "marketplace.json"), "utf8"),
     );

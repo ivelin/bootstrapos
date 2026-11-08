@@ -1,8 +1,8 @@
 {
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "bootstrap-os",
-  "version": "0.1.1",
-  "description": "Bootstrap OS hosted connector from Pirin.ai. An invite-only bet board for solo founders in the 0-to-1 journey. Sign in on pirin.ai.",
+  "version": "0.2.0",
+  "description": "Bootstrap OS from Pirin.ai in one install: Bootstrap Bill's method skills plus the hosted Bootstrap OS MCP connector — an invite-only bet board for solo founders in the 0-to-1 journey. Sign in on pirin.ai. Free. See mcp/docs/MARKETPLACE.md.",
   "author": {
     "name": "Pirin.ai",
     "email": "ivelin@pirin.ai",
@@ -11,5 +11,10 @@
   "homepage": "https://pirin.ai/bootstrap-os",
   "repository": "https://github.com/ivelin/bootstrapos",
   "license": "Apache-2.0",
-  "keywords": ["bootstrap-os", "company-os", "founders", "mcp"]
+  "keywords": [
+    "bootstrap-os",
+    "company-os",
+    "founders",
+    "mcp"
+  ]
 }

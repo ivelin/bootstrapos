@@ -35,17 +35,17 @@ function skillFiles() {
     .map((d) => path.join(skillsDir, d.name, "SKILL.md"));
 }
 
-describe("preview plugin (hyperlink only)", () => {
+describe("plugin bundle (hyperlink only)", () => {
   it("has portable Agent Plugins manifests and a marketplace doc pointer", () => {
     const pluginJson = JSON.parse(fs.readFileSync(path.join(PLUGIN, "plugin.json"), "utf8"));
     assert.equal(pluginJson.$schema, "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json");
     assert.equal(pluginJson.name, "bootstrap-os");
-    assert.equal(pluginJson.version, "0.1.1");
+    assert.equal(pluginJson.version, "0.2.0");
 
     const cursorPlugin = JSON.parse(
       fs.readFileSync(path.join(PLUGIN, ".cursor-plugin", "plugin.json"), "utf8"),
     );
-    assert.equal(cursorPlugin.version, "0.1.1");
+    assert.equal(cursorPlugin.version, "0.2.0");
     assert.equal(
       cursorPlugin.variables.properties.BOOTSTRAP_MCP_URL.default,
       HOSTED_MCP_URL,
