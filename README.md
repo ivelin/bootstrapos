@@ -7,7 +7,7 @@ Bootstrap OS is a bet board for solo founders going from idea to first real cust
 | **Publisher** | Pirin.ai |
 | **Contact** | bootstrap@pirin.ai |
 | **License** | Apache-2.0 |
-| **Version** | Blueprint **v2.8.19**. Plugin **0.1.1**. |
+| **Version** | Blueprint **v2.8.19**. Plugin **0.2.0**. |
 | **Homepage** | [pirin.ai/bootstrap-os](https://pirin.ai/bootstrap-os) |
 | **Privacy** | [pirin.ai/privacy](https://pirin.ai/privacy) |
 | **Terms** | [pirin.ai/terms](https://pirin.ai/terms) |
