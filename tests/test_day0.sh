@@ -589,6 +589,13 @@ for dir in plugin/skills/*/; do
   if [ ! -f "skills/$name/SKILL.md" ] || ! cmp -s "plugin/skills/$name/SKILL.md" "skills/$name/SKILL.md"; then
     skill_sync_ok=0
   fi
+  # references/*.md (progressive-disclosure tier 3) mirror byte for byte too:
+  # if either side has a references/ dir, both must, with identical contents.
+  if [ -d "plugin/skills/$name/references" ] || [ -d "skills/$name/references" ]; then
+    if ! diff -r "plugin/skills/$name/references" "skills/$name/references" >/dev/null 2>&1; then
+      skill_sync_ok=0
+    fi
+  fi
 done
 for dir in skills/*/; do
   name=$(basename "$dir")
@@ -697,15 +704,21 @@ assert required <= found, found
 for skill in (root / "skills").glob("*/SKILL.md"):
     body = skill.read_text()
     assert "https://github.com/ivelin/bootstrap" in body, skill
-    if skill.parent.name == "house-rule-pins":
-        limit = 4000
-    elif skill.parent.name == "query-os-first":
-        limit = 2800
-    else:
-        limit = 1800
-    assert len(body) < limit, (skill, len(body), limit)
+    # Size follows the Agent Skills progressive-disclosure guidance (via the
+    # agent-plugins design guidelines): metadata loads first, the SKILL.md
+    # body loads on match and stays under ~500 lines and ~5,000 tokens, and
+    # detail beyond that lives in references/*.md, loaded on demand
+    # (tier 3), each reference <= 100 lines. Tokens are approximated as
+    # ceil(chars / 4). One rule for every skill; no per-skill exemptions.
+    body_lines = len(body.splitlines())
+    approx_tokens = -(-len(body) // 4)
+    assert body_lines <= 500, (skill, body_lines)
+    assert approx_tokens <= 5000, (skill, approx_tokens)
     for phrase in forbidden:
         assert phrase not in body, (skill, phrase)
+    for ref in sorted((skill.parent / "references").glob("*.md")):
+        ref_lines = len(ref.read_text().splitlines())
+        assert ref_lines <= 100, (ref, ref_lines)
 pins = (root / "skills/house-rule-pins/SKILL.md").read_text()
 assert "house-rule-marketing-volume-cannot-promote" in pins
 assert "house-rule-a-security-program-cannot-promote" in pins
@@ -829,7 +842,21 @@ else
   not_ok "plugin must stay thin hyperlinks; one hosted MCP connector; team marketplace.json at plugin/"
 fi
 
-# --- r2) plugin bundle 0.2.0: one manifest story (name/version/repository/homepage/description agree) ---
+# --- r2) skills carry method only: no member-only asset or download URLs ---
+# Access policy (2026-11-07): member assets (fleet bot templates, Agent Skills
+# library downloads) live in member distribution, never in this public repo —
+# anything committed here is free forever. A skill file that links a member
+# download path leaks the shelf into the free layer. Denylist: member-area and
+# member-download URL shapes on pirin.ai. The hosted connector pin
+# (mcp.bootstrap.pirin.ai) and public pirin.ai pages are not member URLs.
+if ! grep -REq 'pirin\.ai/member|pirin\.ai/api/member|/member-download' \
+    skills/*/SKILL.md plugin/skills/*/SKILL.md; then
+  ok "skills reference no member-only asset or download URLs"
+else
+  not_ok "skills must not reference member-only asset/download URLs (member assets never enter this public repo)"
+fi
+
+# --- r3) plugin bundle 0.2.0: one manifest story (name/version/repository/homepage/description agree) ---
 if python3 - <<'PY'
 import json, pathlib, re
 old_repo = re.compile(r"ivelin/bootstrap(?!os)")
