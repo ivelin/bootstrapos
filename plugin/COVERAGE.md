@@ -1,8 +1,8 @@
-# Plugin 0.1.1 — coverage story (this PR, not a product)
+# Plugin 0.2.0 — coverage story
 
 Process bar stays on **Vercel’s current** Git integration, preview, env, and tests. No second CI host. Free Path 1 is GitHub + install-os + local. The hosted connector uses sign-in. Pin `https://mcp.bootstrap.pirin.ai/mcp`. Handshake 401. Optional gated identity (whoami + labels) uses the existing pirin.ai Supabase — not a new Neon, not company-state. Contract: [`mcp/docs/HOSTED_IDENTITY.md`](../mcp/docs/HOSTED_IDENTITY.md).
 
-This is a **preview package**. Free GitHub docs are the alternative.
+This is the **plugin bundle**: Bill's method skills + the hosted MCP in one install. Free GitHub docs are the alternative.
 
 ## Locked (CI / file)
 
@@ -11,7 +11,7 @@ This is a **preview package**. Free GitHub docs are the alternative.
 | Team file shape → `plugin/` | `.cursor-plugin/marketplace.json` + Day-0 + MCP unit | One plugin. Import from Repo file shape. See [mcp/docs/MARKETPLACE.md](../mcp/docs/MARKETPLACE.md). |
 | Connector URL | `plugin/mcp.json` | Collab / Grok pin `https://mcp.bootstrap.pirin.ai/mcp`. No Gmail/Stripe/other. |
 | `${BOOTSTRAP_MCP_URL}` default | `plugin/.cursor-plugin/plugin.json` | Optional override defaults to that host. |
-| Plugin 0.1.1 + progressive-disclosure skills | `plugin/plugin.json`, `skills/*/SKILL.md`, `tests/test_day0.sh` | Day-0 lock: SKILL.md ≤ 500 lines and ≤ 5,000 approx tokens (ceil(chars/4)); references/*.md ≤ 100 lines each, mirrored byte for byte. Hyperlinks to the published OS. No constitution copy. |
+| Plugin 0.2.0 bundle + thin skills | `plugin.json`, `plugin/plugin.json`, `plugin/.cursor-plugin/plugin.json`, `.cursor-plugin/marketplace.json`, `skills/*/SKILL.md`, `tests/test_day0.sh` | One manifest story: name, version, repository, homepage, and description agree across every manifest (Day-0 r2 lock). Day-0 lock: SKILL.md ≤ 500 lines and ≤ 5,000 approx tokens (ceil(chars/4)); references/*.md ≤ 100 lines each, mirrored byte for byte. Hyperlinks to the published OS. No constitution copy. |
 | Standing rule | `plugin/skills/query-os-first/SKILL.md` | 0-1 / GTM / spoken yes / empty-context / optimal price / automate the playbook / new landing page as bottleneck. Query this plugin first. Do not invent stage, a price, or an LTV number. Exit without fences+proof — refuse, two clocks. Cite OS. |
 | After-proof efficiency page | `company-os/after-proof-efficiency.md` | Dated 2026-08-24. Five instruments. Open only if fences + proof + they asked. Not a house rule. Not a version bump. |
 | After-proof efficiency gate | `plugin/skills/after-proof-efficiency/SKILL.md` + `mcp/src/after-proof-efficiency.ts` | Plugin opens the page only if ALL three. Otherwise two clocks. |

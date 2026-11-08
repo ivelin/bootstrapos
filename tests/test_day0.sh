@@ -568,7 +568,7 @@ else
   not_ok "2.8.7 must live in the OS section with first-hour and ai-instructions pointers"
 fi
 
-# --- r) preview plugin 0.1.1: marketplace doc pointer + hyperlink-only skills ---
+# --- r) plugin bundle 0.2.0: marketplace doc pointer + hyperlink-only skills ---
 if [ -f plugin/plugin.json ] && [ -f plugin/mcp.json ] \
   && [ -f plugin/.cursor-plugin/plugin.json ] \
   && [ -f .cursor-plugin/marketplace.json ] \
@@ -613,10 +613,10 @@ import json, pathlib, sys
 root = pathlib.Path("plugin")
 plugin = json.loads((root / "plugin.json").read_text())
 assert plugin["name"] == "bootstrap-os"
-assert plugin["version"] == "0.1.1"
+assert plugin["version"] == "0.2.0"
 assert plugin["$schema"] == "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json"
 cursor_plugin = json.loads((root / ".cursor-plugin/plugin.json").read_text())
-assert cursor_plugin["version"] == "0.1.1"
+assert cursor_plugin["version"] == "0.2.0"
 default_url = cursor_plugin["variables"]["properties"]["BOOTSTRAP_MCP_URL"]["default"]
 assert default_url == "https://mcp.bootstrap.pirin.ai/mcp"
 mcp = json.loads((root / "mcp.json").read_text())
@@ -638,7 +638,7 @@ assert len(market["plugins"]) == 1
 assert market["plugins"][0]["source"] == "plugin"
 assert market["plugins"][0]["name"] == "bootstrap-os"
 readme = (root / "README.md").read_text()
-assert "0.1.1" in readme
+assert "0.2.0" in readme
 assert "Import from Repo" in readme
 assert "https://github.com/ivelin/bootstrap" in readme
 assert "https://mcp.bootstrap.pirin.ai/mcp" in readme
@@ -854,6 +854,44 @@ if ! grep -REq 'pirin\.ai/member|pirin\.ai/api/member|/member-download' \
   ok "skills reference no member-only asset or download URLs"
 else
   not_ok "skills must not reference member-only asset/download URLs (member assets never enter this public repo)"
+fi
+
+# --- r3) plugin bundle 0.2.0: one manifest story (name/version/repository/homepage/description agree) ---
+if python3 - <<'PY'
+import json, pathlib, re
+old_repo = re.compile(r"ivelin/bootstrap(?!os)")
+man = {
+    "plugin.json": json.loads(pathlib.Path("plugin.json").read_text()),
+    "plugin/plugin.json": json.loads(pathlib.Path("plugin/plugin.json").read_text()),
+    "plugin/.cursor-plugin/plugin.json": json.loads(
+        pathlib.Path("plugin/.cursor-plugin/plugin.json").read_text()
+    ),
+}
+descriptions = set()
+for label, m in man.items():
+    assert m["name"] == "bootstrap-os", label
+    assert m["version"] == "0.2.0", label
+    assert m["repository"] == "https://github.com/ivelin/bootstrapos", label
+    assert m["homepage"] == "https://pirin.ai/bootstrap-os", label
+    assert not old_repo.search(json.dumps(m)), label
+    assert "Preview" not in m["description"], label
+    assert "pointer" not in m["description"].lower(), label
+    descriptions.add(m["description"])
+assert len(descriptions) == 1, descriptions
+market = json.loads(pathlib.Path(".cursor-plugin/marketplace.json").read_text())
+assert market["name"] == "bootstrap-os"
+assert market["metadata"]["version"] == "0.2.0"
+assert market["plugins"][0]["version"] == "0.2.0"
+for pin_file in ["mcp.json", ".mcp.json", "plugin/mcp.json"]:
+    raw = pathlib.Path(pin_file).read_text()
+    mcp = json.loads(raw)
+    assert mcp["mcpServers"]["bootstrap-os"]["url"] == "https://mcp.bootstrap.pirin.ai/mcp", pin_file
+print("manifest agreement lock ok")
+PY
+then
+  ok "all plugin manifests tell one story: bootstrap-os 0.2.0, canonical repo, hosted MCP pin"
+else
+  not_ok "plugin manifests must agree on name/version/repository/homepage/description; no old repo name, no Preview copy; MCP pin unchanged"
 fi
 
 # --- s) OS 2.8.8: no-optimal-price house rule + Day 0 lifestyle/fences (do not mix) ---

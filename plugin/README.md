@@ -1,6 +1,6 @@
-# Bootstrap OS plugin (preview 0.1.1)
+# Bootstrap OS plugin (0.2.0)
 
-Preview package. Skills hyperlink the published OS. See [mcp/docs/MARKETPLACE.md](../mcp/docs/MARKETPLACE.md). **Not** the way onto the bet board.
+The plugin bundle: Bootstrap Bill's method skills plus the hosted Bootstrap OS MCP connector in one install. Skills hyperlink the published OS. See [mcp/docs/MARKETPLACE.md](../mcp/docs/MARKETPLACE.md).
 
 Free GitHub docs are the alternative. Point an AI at https://github.com/ivelin/bootstrap
 

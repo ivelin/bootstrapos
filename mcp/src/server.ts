@@ -206,8 +206,8 @@ function registerReadTools(server: McpServer, surface: McpSurface, hosted?: Host
         support: SUPPORT_HOWTO,
         pluginPreview: {
           path: "plugin/",
-          version: "0.1.1",
-          note: "Preview Agent Plugin 0.1.1. Skills hyperlink the published OS. See mcp/docs/MARKETPLACE.md. Free GitHub docs are the alternative.",
+          version: "0.2.0",
+          note: "Agent Plugin bundle 0.2.0: Bootstrap Bill's method skills plus the hosted Bootstrap OS MCP connector in one install. Skills hyperlink the published OS. See mcp/docs/MARKETPLACE.md. Free GitHub docs are the alternative.",
         },
         commit: process.env.VERCEL_GIT_COMMIT_SHA?.trim() || null,
       };
@@ -222,8 +222,8 @@ function registerReadTools(server: McpServer, surface: McpSurface, hosted?: Host
           adoptionOrder: adoptionOrder(surface),
           pluginPreview: {
             path: "plugin/",
-            version: "0.1.1",
-            note: "Preview.",
+            version: "0.2.0",
+            note: "Plugin bundle 0.2.0.",
           },
           connectorModel: NOTE_OS_INFO_HOSTED,
           docsSource: resolveDocsSource(),
