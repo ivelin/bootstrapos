@@ -829,6 +829,20 @@ else
   not_ok "plugin must stay thin hyperlinks; one hosted MCP connector; team marketplace.json at plugin/"
 fi
 
+# --- r2) skills carry method only: no member-only asset or download URLs ---
+# Access policy (2026-11-07): member assets (fleet bot templates, Agent Skills
+# library downloads) live in member distribution, never in this public repo —
+# anything committed here is free forever. A skill file that links a member
+# download path leaks the shelf into the free layer. Denylist: member-area and
+# member-download URL shapes on pirin.ai. The hosted connector pin
+# (mcp.bootstrap.pirin.ai) and public pirin.ai pages are not member URLs.
+if ! grep -REq 'pirin\.ai/member|pirin\.ai/api/member|/member-download' \
+    skills/*/SKILL.md plugin/skills/*/SKILL.md; then
+  ok "skills reference no member-only asset or download URLs"
+else
+  not_ok "skills must not reference member-only asset/download URLs (member assets never enter this public repo)"
+fi
+
 # --- s) OS 2.8.8: no-optimal-price house rule + Day 0 lifestyle/fences (do not mix) ---
 # Full house rule and full Day 0 question live once in the OS. Pointers elsewhere.
 # Path 1 / first-hour must not carry house-rule metrics or CAC/LTV targets.
