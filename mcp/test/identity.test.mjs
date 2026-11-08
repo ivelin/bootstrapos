@@ -19,7 +19,9 @@ import {
   parseBearerToken,
   setIdentityStoreForTests,
   SupabaseIdentityStore,
+  membershipFromStored,
   whoamiFromLabelsRpc,
+  whoamiFromMentee,
 } from "../dist/identity.js";
 import { syntheticAccessToken } from "../dist/journey-auth.js";
 import {
@@ -834,5 +836,89 @@ describe("hosted identity (resource server, gated)", () => {
     assert.equal(res.status, 204);
     assert.match(res.headers.get("Access-Control-Allow-Headers") ?? "", /Authorization/i);
     assert.match(res.headers.get("Access-Control-Expose-Headers") ?? "", /WWW-Authenticate/i);
+  });
+});
+
+describe("hosted identity membership (entitlement read)", () => {
+  const rpcWho = (fields) =>
+    whoamiFromLabelsRpc(
+      IVELIN_SEED_EMAIL,
+      { authenticated: true, email: IVELIN_SEED_EMAIL, labels: [...IVELIN_SEED_LABELS], ...fields },
+      true,
+    );
+
+  it("maps stored rows: elite stays elite, ground stays ground", () => {
+    assert.deepEqual(rpcWho({ membership_level: "elite", membership_status: "active" }).membership, {
+      level: "elite",
+      status: "active",
+    });
+    assert.deepEqual(rpcWho({ membership_level: "ground", membership_status: "active" }).membership, {
+      level: "ground",
+      status: "active",
+    });
+    assert.deepEqual(rpcWho({ membership_level: "next", membership_status: "active" }).membership, {
+      level: "next",
+      status: "active",
+    });
+  });
+
+  it("ride-out and grace keep the level: cancel_pending and past_due still confer it", () => {
+    assert.deepEqual(rpcWho({ membership_level: "next", membership_status: "cancel_pending" }).membership, {
+      level: "next",
+      status: "cancel_pending",
+    });
+    assert.deepEqual(rpcWho({ membership_level: "ground", membership_status: "past_due" }).membership, {
+      level: "ground",
+      status: "past_due",
+    });
+  });
+
+  it("lapsed next with no other entitlement lands on board", () => {
+    assert.deepEqual(rpcWho({ membership_level: "next", membership_status: "ended" }).membership, {
+      level: "board",
+      status: "ended",
+    });
+    assert.deepEqual(membershipFromStored("elite", "ended"), { level: "board", status: "ended" });
+  });
+
+  it("no row, unknown level, or a pre-membership RPC all read as board — never an error", () => {
+    assert.deepEqual(rpcWho({ membership_level: null, membership_status: null }).membership, {
+      level: "board",
+      status: null,
+    });
+    assert.deepEqual(rpcWho({ membership_level: "platinum", membership_status: "active" }).membership, {
+      level: "board",
+      status: "active",
+    });
+    // Older RPC deployments return no membership keys at all.
+    assert.deepEqual(rpcWho({}).membership, { level: "board", status: null });
+  });
+
+  it("unauthenticated results carry no membership field", () => {
+    const uninvited = whoamiFromLabelsRpc(
+      "stranger@example.test",
+      { authenticated: false, email: "stranger@example.test", labels: [], reason: "not_invited" },
+      true,
+    );
+    assert.equal(uninvited.authenticated, false);
+    assert.equal("membership" in uninvited, false);
+    const failed = whoamiFromLabelsRpc("x@y.test", null, false);
+    assert.equal("membership" in failed, false);
+    assert.equal(whoamiFromMentee(undefined, "memory").membership, undefined);
+  });
+
+  it("memory store normalizes the same stored shapes", () => {
+    const base = {
+      id: "mentee-x",
+      email: "x@example.test",
+      authUserId: "auth-x",
+      labels: ["alpha"],
+      tokenHashes: [],
+    };
+    assert.deepEqual(whoamiFromMentee({ ...base, membership: { level: "elite", status: "active" } }, "memory").membership, {
+      level: "elite",
+      status: "active",
+    });
+    assert.deepEqual(whoamiFromMentee({ ...base }, "memory").membership, { level: "board", status: null });
   });
 });

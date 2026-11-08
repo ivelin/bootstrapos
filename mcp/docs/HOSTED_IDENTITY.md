@@ -36,6 +36,8 @@ WWW-Authenticate: Bearer realm="bootstrap-os-mcp", resource_metadata="https://mc
 
 The 401 JSON also includes `identityStore` (`supabase` | `memory` | `unset`) and `reason` (`missing_or_short_token` | `invalid_or_revoked_token` | `not_a_pirin_access_token` | …) plus `error: invalid_token`. Those are not session claims. A verified session with zero bet boards is not that 401: it is HTTP **200** `reason: no_membership` and `setupSteps`. A membership tool in that state is the same HTTP **200** `setupSteps` payload (no `WWW-Authenticate`). SQL `not_invited` is the store fact the handler upgrades. JWT `labels` / `role` claims are ignored; membership is read from the database on the call.
 
+An authenticated `bootstrap_whoami` also returns `membership: { level, status }` — the caller's Pirin membership entitlement (`board` | `ground` | `next` | `elite`), read on the call from `public.memberships` (owned by the pirin-ai migration stream) through the labels RPC. No stored row — including the table not existing yet — reads as `level: "board"`, and an `ended` row reads as `board` with its stored status; `cancel_pending` and `past_due` still confer their level. Unauthenticated results carry no `membership` field. Company sets: `whoami` lists every label the login can open, including the caller's own private starter-board sandbox; `bootstrap_list_companies` hides exactly that sandbox slug (it is not a company). That filter is the one deliberate difference between the two tools' company sets.
+
 Preview (this Hold — Cos lock) challenge — `resource` is this preview MCP URL, `resource_metadata` is **this preview origin** well-known (not live pirin.ai, not the dead #143 git preview):
 
 ```http

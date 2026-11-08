@@ -13,11 +13,38 @@ export function parseHostedRole(raw: unknown): HostedRole {
   return raw === "member" || raw === "super_admin" || raw === "unset" ? raw : "unset";
 }
 
+export type MembershipLevel = "board" | "ground" | "next" | "elite";
+
+export type HostedMembership = {
+  level: MembershipLevel;
+  status: string | null;
+};
+
+export function parseMembershipLevel(raw: unknown): MembershipLevel | null {
+  return raw === "board" || raw === "ground" || raw === "next" || raw === "elite" ? raw : null;
+}
+
+/**
+ * Effective entitlement from a stored membership row (pirin-ai owns the
+ * memberships table; the labels RPC surfaces its level/status verbatim).
+ * No row (null/unknown level) is board. An ended row is board: a lapsed
+ * Next Level member keeps only whatever live row the writer left behind.
+ * cancel_pending (ride-out to period end) and past_due (payment grace)
+ * still confer their level — the writer owns the clock, not this read.
+ */
+export function membershipFromStored(levelRaw: unknown, statusRaw: unknown): HostedMembership {
+  const status = typeof statusRaw === "string" && statusRaw ? statusRaw : null;
+  const level = parseMembershipLevel(levelRaw);
+  if (!level || status === "ended") return { level: "board", status };
+  return { level, status };
+}
+
 export type HostedWhoami = {
   authenticated: boolean;
   email?: string;
   labels: string[];
   role?: HostedRole;
+  membership?: HostedMembership;
   reason?: string;
   note?: string;
   identityStore?: "supabase" | "memory" | "unset";
@@ -30,6 +57,8 @@ export type MenteeRecord = {
   labels: string[];
   tokenHashes: string[];
   role?: HostedRole;
+  /** Stored membership row shape (level/status), normalized on read. */
+  membership?: { level?: unknown; status?: unknown } | null;
 };
 
 export interface IdentityStore {
@@ -89,6 +118,7 @@ export function whoamiFromMentee(mentee: MenteeRecord | undefined, store: Hosted
     email: mentee.email,
     labels: [...mentee.labels].sort(),
     role: mentee.role ?? "unset",
+    membership: membershipFromStored(mentee.membership?.level ?? null, mentee.membership?.status ?? null),
     note: "Companies this login can open. A company may have several ideas; each idea is its own 0-1 board.",
     identityStore: store,
   };
@@ -99,6 +129,8 @@ export type LabelsRpcBody = {
   email?: unknown;
   labels?: unknown;
   role?: unknown;
+  membership_level?: unknown;
+  membership_status?: unknown;
   reason?: unknown;
   note?: unknown;
 };
@@ -136,6 +168,8 @@ export function whoamiFromLabelsRpc(
     email,
     labels,
     role: parseHostedRole(raw.role),
+    // Older RPC deployments return no membership keys: board, never an error.
+    membership: membershipFromStored(raw.membership_level ?? null, raw.membership_status ?? null),
     note:
       typeof raw.note === "string" && raw.note
         ? raw.note

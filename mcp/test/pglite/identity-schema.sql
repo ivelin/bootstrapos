@@ -46,6 +46,44 @@ INSERT INTO bootstrap_company_labels (id, mentee_id, label) VALUES
   ('li3', 'mentee-ivelin', 'bravo'),
   ('lf', 'mentee-first', 'beachhead');
 
+-- Mirrors prod bootstrap_os_membership_for (20261108 migration): pirin-ai owns
+-- the memberships table; it is absent from this fixture unless a test creates
+-- it. NULL means no row, which the TS read maps to level "board". Never errors.
+CREATE OR REPLACE FUNCTION bootstrap_os_membership_for(p_auth_user_id text, p_email text)
+RETURNS jsonb
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  result jsonb;
+BEGIN
+  IF to_regclass('public.memberships') IS NULL THEN
+    RETURN NULL;
+  END IF;
+
+  SELECT jsonb_build_object('level', m.level::text, 'status', m.status::text)
+  INTO result
+  FROM public.memberships m
+  WHERE (p_auth_user_id IS NOT NULL AND p_auth_user_id <> '' AND m.auth_user_id = p_auth_user_id)
+     OR (
+       p_email IS NOT NULL AND p_email <> ''
+       AND m.email IS NOT NULL AND lower(m.email) = lower(p_email)
+     )
+  ORDER BY CASE
+    WHEN p_auth_user_id IS NOT NULL AND m.auth_user_id = p_auth_user_id THEN 0
+    ELSE 1
+  END
+  LIMIT 1;
+
+  RETURN result;
+EXCEPTION
+  WHEN undefined_table OR undefined_column THEN
+    RETURN NULL;
+END;
+$$;
+
 -- Mirrors SQL bootstrap_mcp_my_labels: fail-closed unless a mentee row exists.
 -- SECURITY DEFINER so email-only first-user inserts are visible (owner bypass).
 CREATE OR REPLACE FUNCTION bootstrap_mcp_my_labels()
@@ -59,6 +97,7 @@ DECLARE
   user_email text := lower(nullif(current_setting('app.auth_email', true), ''));
   found_id text;
   labels jsonb;
+  membership jsonb;
 BEGIN
   IF uid IS NULL OR uid = '' THEN
     RAISE EXCEPTION 'not_authenticated';
@@ -90,10 +129,14 @@ BEGIN
   FROM bootstrap_company_labels l
   WHERE l.mentee_id = found_id;
 
+  membership := bootstrap_os_membership_for(uid, user_email);
+
   RETURN jsonb_build_object(
     'authenticated', true,
     'email', COALESCE(user_email, (SELECT email FROM bootstrap_mcp_mentees WHERE id = found_id)),
     'labels', labels,
+    'membership_level', membership ->> 'level',
+    'membership_status', membership ->> 'status',
     'note', 'Labels only. Not boards. Not company-state.'
   );
 END;
