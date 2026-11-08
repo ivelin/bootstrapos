@@ -12,7 +12,7 @@ Mentee CoS and specialists query this plugin first when the ask is where current
 
 ## Merge-gate visitor matrix (CoS smell-test)
 
-Seven cases this package must support. Thin links, not essays. The hosted connector uses sign-in. See [mcp/docs/MARKETPLACE.md](../mcp/docs/MARKETPLACE.md). Optional identity (whoami + labels) is a separate matrix in [`COVERAGE.md`](COVERAGE.md). It does not change these seven.
+Seven cases this package must support. Skills follow progressive disclosure — metadata first, body on match, references on demand. The hosted connector uses sign-in. See [mcp/docs/MARKETPLACE.md](../mcp/docs/MARKETPLACE.md). Optional identity (whoami + labels) is a separate matrix in [`COVERAGE.md`](COVERAGE.md). It does not change these seven.
 
 **Human**
 
@@ -126,7 +126,7 @@ Portable Agent Plugin: `plugin.json` + `mcp.json` + `skills/`. Cursor may also r
 
 ## Skills
 
-Thin when-to-use + links to the published OS. They do not copy the constitution.
+Progressive disclosure, per the Agent Skills standard: name + description metadata loads first; the SKILL.md body loads only when a task matches (≤ 500 lines, ≤ 5,000 tokens); deeper detail goes in `references/*.md` beside the SKILL.md, loaded on demand (≤ 100 lines each). Skills link to the published OS. They do not copy the constitution.
 
 | Skill | Points at |
 |-------|-----------|
