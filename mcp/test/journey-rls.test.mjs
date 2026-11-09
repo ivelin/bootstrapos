@@ -12,6 +12,7 @@ import {
 } from "../dist/journey-auth.js";
 import {
   JOURNEY_FIXTURE,
+  MemoryJourneyStore,
   canPostComment,
   canReadCompany,
   canWriteJourney,
@@ -145,5 +146,98 @@ describe("journey RLS file lock + memory replica", () => {
       companySlug: "dyeconverter",
       ideaSlug: undefined,
     });
+  });
+
+  it("commenter and mentor can comment; commenter cannot put_journey", async () => {
+    const store = new MemoryJourneyStore(
+      [{ id: "co-1", slug: "alpha", label: "alpha" }],
+      [
+        {
+          companyId: "co-1",
+          principal: "commenter@example.invalid",
+          principalKind: "email",
+          role: "commenter",
+        },
+        {
+          companyId: "co-1",
+          principal: "mentor@example.invalid",
+          principalKind: "email",
+          role: "mentor",
+        },
+      ],
+      [
+        {
+          id: "id-1",
+          companyId: "co-1",
+          slug: "default",
+          name: "alpha",
+          journeyPhase: 1,
+          loopStage: 1,
+          currentGate: "hold",
+          scoreboard: { schema_version: 1, constraint_this_week: "" },
+        },
+      ],
+      [],
+      [],
+    );
+    const commenter = {
+      authenticated: true,
+      email: "commenter@example.invalid",
+      principal: "commenter@example.invalid",
+    };
+    const mentor = {
+      authenticated: true,
+      email: "mentor@example.invalid",
+      principal: "mentor@example.invalid",
+    };
+    assert.equal(canPostComment(store.acl, commenter, "co-1"), true);
+    assert.equal(canWriteJourney(store.acl, commenter, "co-1"), false);
+    assert.equal((await store.postComment(commenter, { companySlug: "alpha", body: "note" })).ok, true);
+    assert.equal(
+      (await store.putJourney(commenter, { companySlug: "alpha", why: "no", founderYes: true })).ok,
+      false,
+    );
+    assert.equal(canPostComment(store.acl, mentor, "co-1"), true);
+    assert.equal((await store.postComment(mentor, { companySlug: "alpha", body: "mentor note" })).ok, true);
+  });
+
+  it("memory first create seeds founder and commenter; existing first touch stays founder_authorized", () => {
+    const store = new MemoryJourneyStore([], [], [], [], []);
+    const admin = {
+      authenticated: true,
+      email: "admin@example.invalid",
+      principal: "admin@example.invalid",
+    };
+    store.ensureCompanyForMember("newco", admin, { founderEmail: "founder@example.invalid" });
+    assert.deepEqual(
+      store.acl.map((row) => ({ principal: row.principal, role: row.role })).sort((a, b) => a.role.localeCompare(b.role)),
+      [
+        { principal: "admin@example.invalid", role: "commenter" },
+        { principal: "founder@example.invalid", role: "founder" },
+      ],
+    );
+    const caller = {
+      authenticated: true,
+      email: "solo@example.invalid",
+      principal: "solo@example.invalid",
+    };
+    store.ensureCompanyForMember("solo", caller);
+    assert.equal(store.acl.find((row) => row.principal === "solo@example.invalid").role, "founder");
+    store.ensureCompanyForMember("solo", {
+      authenticated: true,
+      email: "late@example.invalid",
+      principal: "late@example.invalid",
+    }, { founderEmail: "other@example.invalid" });
+    assert.equal(store.acl.find((row) => row.principal === "late@example.invalid").role, "founder_authorized");
+    assert.equal(store.acl.find((row) => row.principal === "solo@example.invalid").role, "founder");
+    assert.equal(store.acl.some((row) => row.principal === "other@example.invalid"), false);
+    assert.throws(
+      () => store.ensureCompanyForMember("billco", admin, { superAdmin: true }),
+      /founder_email_required/,
+    );
+    assert.throws(
+      () => store.ensureCompanyForMember("bad", caller, { founderEmail: "not-an-email" }),
+      /invalid_founder_email/,
+    );
   });
 });

@@ -50,6 +50,15 @@ describe("hosted membership journey store", () => {
         founder: "",
       });
       assert.equal(puts()[2].p_founder, "");
+      await store.putJourney(who, {
+        companySlug: "alpha",
+        why: "seed a founder",
+        founderYes: true,
+        client: "bootstrap-bill",
+        founderEmail: "founder@example.invalid",
+      });
+      assert.equal(puts()[3].p_founder_email, "founder@example.invalid");
+      assert.equal(Object.hasOwn(puts()[0], "p_founder_email"), false);
     } finally {
       globalThis.fetch = orig;
     }

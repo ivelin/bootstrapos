@@ -1233,11 +1233,12 @@ export class MemoryJourneyStore implements JourneyStore {
         throw new Error("founder_email_required: pass founderEmail");
       }
       company = { id: this.nextId("co"), slug: want, label: want };
-      this.companies.push(company);
+      const created = company;
+      this.companies.push(created);
       if (seedIdea) {
         this.ideas.push({
           id: this.nextId("id"),
-          companyId: company.id,
+          companyId: created.id,
           slug: "default",
           name: want,
           journeyPhase: 1,
@@ -1251,13 +1252,13 @@ export class MemoryJourneyStore implements JourneyStore {
         if (!email) return;
         const exists = this.acl.some(
           (row) =>
-            row.companyId === company!.id &&
+            row.companyId === created.id &&
             row.principalKind === "email" &&
             row.principal === email,
         );
         if (exists) return;
         this.acl.push({
-          companyId: company!.id,
+          companyId: created.id,
           principal: email,
           principalKind: "email",
           role,
@@ -1269,17 +1270,18 @@ export class MemoryJourneyStore implements JourneyStore {
         grant(founderEmail, "founder");
         grant(caller, "commenter");
       }
-    } else if (actor.email) {
+    } else if (actor.email && company) {
+      const existing = company;
       const caller = actor.email.trim().toLowerCase();
       const exists = this.acl.some(
         (row) =>
-          row.companyId === company.id &&
+          row.companyId === existing.id &&
           row.principalKind === "email" &&
           row.principal === caller,
       );
       if (!exists) {
         this.acl.push({
-          companyId: company.id,
+          companyId: existing.id,
           principal: caller,
           principalKind: "email",
           role: "founder_authorized",
