@@ -1,8 +1,9 @@
 /**
  * Isolated Postgres (PGlite). Never supabase-pirin-ai. Never prod.
  * Membership entitlement on the labels RPC (Bill Access rollout, Phase 2):
- * bootstrap_mcp_my_labels surfaces the caller's stored membership level/status
+ * bootstrap_mcp_my_labels surfaces the caller's membership level/status
  * from public.memberships — a table owned by the pirin-ai migration stream.
+ * A non-null effective_to in the past lapses level to board; status stays stored.
  * The read must degrade to "no row" (TS maps that to board) when the table is
  * absent or the caller has no row, and must never break authentication.
  */

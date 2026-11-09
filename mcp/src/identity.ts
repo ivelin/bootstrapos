@@ -26,7 +26,9 @@ export function parseMembershipLevel(raw: unknown): MembershipLevel | null {
 
 /**
  * Effective entitlement from a stored membership row (pirin-ai owns the
- * memberships table; the labels RPC surfaces its level/status verbatim).
+ * memberships table). The labels SQL helper already rewrites level to board
+ * when effective_to is non-null and in the past; this function only sees that
+ * level plus the stored status (manual trials stay status active).
  * No row (null/unknown level) is board. An ended row is board: a lapsed
  * Next Level member keeps only whatever live row the writer left behind.
  * cancel_pending (ride-out to period end) and past_due (payment grace)
