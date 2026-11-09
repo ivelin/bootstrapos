@@ -190,7 +190,10 @@ export class HostedMembershipJourneyStore implements JourneyStore {
   ): Promise<unknown> {
     const denied = this.denyUnlessHeld(actor, input.companySlug);
     if (denied) return denied;
-    this.ensureHeld(input.companySlug, actor);
+    this.inner.ensureCompanyForMember(normalizeSlug(input.companySlug), actor, {
+      seedIdea: !this.isSandbox(normalizeSlug(input.companySlug)),
+      founderEmail: input.founderEmail,
+    });
     return this.inner.putJourney(actor, {
       ...input,
       ideaSlug: input.ideaSlug || "default",
@@ -382,6 +385,7 @@ export class SupabaseJourneyStore implements JourneyStore {
       founderYes: boolean;
       founderWrittenDecision?: string;
       founder?: string;
+      founderEmail?: string;
       client?: string;
       gateEnrichment?: GateEnrichment;
       killPostmortem?: Omit<KillPostmortem, "why"> & { why?: string };
@@ -441,6 +445,7 @@ export class SupabaseJourneyStore implements JourneyStore {
       p_founder_written_decision: input.founderWrittenDecision ?? null,
     };
     if (input.founder !== undefined) rpcBody.p_founder = input.founder;
+    if (input.founderEmail !== undefined) rpcBody.p_founder_email = input.founderEmail;
     const hit = await this.rpc("bootstrap_os_put_journey", rpcBody);
     if ("error" in hit) return { ok: false, error: hit.error };
     await this.fireWebhooksAfterWrite(hit.raw, {

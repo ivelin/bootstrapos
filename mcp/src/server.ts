@@ -1310,6 +1310,14 @@ function registerJourneyTools(server: McpServer, ctx: HostedRequestContext) {
         .max(80)
         .optional()
         .describe("Company founder name. Stored on the company. Not an admin role."),
+      founderEmail: z
+        .string()
+        .trim()
+        .regex(/^[^@\s]+@[^@\s]+\.[^@\s]+$/)
+        .optional()
+        .describe(
+          "On a new board, seeds this email as founder (owner tier). The caller becomes commenter when the address differs. Super admins must pass it.",
+        ),
       client: z.string().optional().describe("Which client wrote. Stored on the audit row."),
       gateEnrichment: z
         .object({
@@ -1411,6 +1419,7 @@ function registerJourneyTools(server: McpServer, ctx: HostedRequestContext) {
             founderYes: input.founderYes,
             founderWrittenDecision: input.founderWrittenDecision,
             founder: input.founder,
+            founderEmail: input.founderEmail,
             client: input.client,
             gateEnrichment: input.gateEnrichment,
             killPostmortem: input.killPostmortem,
