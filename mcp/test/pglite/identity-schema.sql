@@ -46,9 +46,11 @@ INSERT INTO bootstrap_company_labels (id, mentee_id, label) VALUES
   ('li3', 'mentee-ivelin', 'bravo'),
   ('lf', 'mentee-first', 'beachhead');
 
--- Mirrors prod bootstrap_os_membership_for (20261108 migration): pirin-ai owns
+-- Mirrors prod bootstrap_os_membership_for (20261109 migration): pirin-ai owns
 -- the memberships table; it is absent from this fixture unless a test creates
--- it. NULL means no row, which the TS read maps to level "board". Never errors.
+-- it. NULL means no row, which the TS read maps to level "board". A past
+-- effective_to lapses level to board and leaves status stored. No effective_to
+-- column: level/status verbatim, and that branch does not name the column.
 CREATE OR REPLACE FUNCTION bootstrap_os_membership_for(p_auth_user_id text, p_email text)
 RETURNS jsonb
 LANGUAGE plpgsql
@@ -58,24 +60,56 @@ SET search_path = public
 AS $$
 DECLARE
   result jsonb;
+  has_effective_to boolean;
 BEGIN
   IF to_regclass('public.memberships') IS NULL THEN
     RETURN NULL;
   END IF;
 
-  SELECT jsonb_build_object('level', m.level::text, 'status', m.status::text)
-  INTO result
-  FROM public.memberships m
-  WHERE (p_auth_user_id IS NOT NULL AND p_auth_user_id <> '' AND m.auth_user_id = p_auth_user_id)
-     OR (
-       p_email IS NOT NULL AND p_email <> ''
-       AND m.email IS NOT NULL AND lower(m.email) = lower(p_email)
-     )
-  ORDER BY CASE
-    WHEN p_auth_user_id IS NOT NULL AND m.auth_user_id = p_auth_user_id THEN 0
-    ELSE 1
-  END
-  LIMIT 1;
+  SELECT EXISTS (
+    SELECT 1
+    FROM information_schema.columns
+    WHERE table_schema = 'public'
+      AND table_name = 'memberships'
+      AND column_name = 'effective_to'
+  )
+  INTO has_effective_to;
+
+  IF has_effective_to THEN
+    SELECT jsonb_build_object(
+      'level', CASE
+        WHEN m.effective_to IS NOT NULL AND (m.effective_to)::timestamptz < now() THEN 'board'
+        ELSE m.level::text
+      END,
+      'status', m.status::text
+    )
+    INTO result
+    FROM public.memberships m
+    WHERE (p_auth_user_id IS NOT NULL AND p_auth_user_id <> '' AND m.auth_user_id = p_auth_user_id)
+       OR (
+         p_email IS NOT NULL AND p_email <> ''
+         AND m.email IS NOT NULL AND lower(m.email) = lower(p_email)
+       )
+    ORDER BY CASE
+      WHEN p_auth_user_id IS NOT NULL AND m.auth_user_id = p_auth_user_id THEN 0
+      ELSE 1
+    END
+    LIMIT 1;
+  ELSE
+    SELECT jsonb_build_object('level', m.level::text, 'status', m.status::text)
+    INTO result
+    FROM public.memberships m
+    WHERE (p_auth_user_id IS NOT NULL AND p_auth_user_id <> '' AND m.auth_user_id = p_auth_user_id)
+       OR (
+         p_email IS NOT NULL AND p_email <> ''
+         AND m.email IS NOT NULL AND lower(m.email) = lower(p_email)
+       )
+    ORDER BY CASE
+      WHEN p_auth_user_id IS NOT NULL AND m.auth_user_id = p_auth_user_id THEN 0
+      ELSE 1
+    END
+    LIMIT 1;
+  END IF;
 
   RETURN result;
 EXCEPTION
