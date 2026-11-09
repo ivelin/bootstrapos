@@ -1,8 +1,9 @@
 /**
  * Isolated Postgres (PGlite). Never supabase-pirin-ai. Never prod.
  * Membership entitlement on the labels RPC (Bill Access rollout, Phase 2):
- * bootstrap_mcp_my_labels surfaces the caller's stored membership level/status
+ * bootstrap_mcp_my_labels surfaces the caller's membership level/status
  * from public.memberships — a table owned by the pirin-ai migration stream.
+ * A non-null effective_to in the past lapses level to board; status stays stored.
  * The read must degrade to "no row" (TS maps that to board) when the table is
  * absent or the caller has no row, and must never break authentication.
  */
@@ -61,13 +62,14 @@ describe("PGlite membership on the labels RPC (isolated, never prod)", () => {
         auth_user_id text,
         email text,
         level text,
-        status text
+        status text,
+        effective_to timestamptz
       );
-      INSERT INTO memberships (auth_user_id, email, level, status) VALUES
-        ('${FOUNDER_UID}', 'founder@example.test', 'elite', 'active'),
-        ('${A_UID}', 'mentee-a@example.test', 'ground', 'active'),
-        ('${B_UID}', 'mentee-b@example.test', 'next', 'ended'),
-        (NULL, 'first@example.test', 'ground', 'active');
+      INSERT INTO memberships (auth_user_id, email, level, status, effective_to) VALUES
+        ('${FOUNDER_UID}', 'founder@example.test', 'elite', 'active', NULL),
+        ('${A_UID}', 'mentee-a@example.test', 'ground', 'active', NULL),
+        ('${B_UID}', 'mentee-b@example.test', 'next', 'ended', NULL),
+        (NULL, 'first@example.test', 'ground', 'active', NULL);
     `);
 
     const founder = await labelsBody(FOUNDER_UID, "founder@example.test");
@@ -90,5 +92,50 @@ describe("PGlite membership on the labels RPC (isolated, never prod)", () => {
     assert.equal(first.authenticated, true);
     assert.equal(first.membership_level, "ground");
     assert.equal(first.membership_status, "active");
+  });
+
+  it("null effective_to keeps an active ground membership", async () => {
+    const a = await labelsBody(A_UID, "mentee-a@example.test");
+    assert.equal(a.membership_level, "ground");
+    assert.equal(a.membership_status, "active");
+  });
+
+  it("future effective_to keeps an active ground membership", async () => {
+    await db.exec(`
+      UPDATE memberships
+      SET effective_to = now() + interval '30 days'
+      WHERE auth_user_id = '${A_UID}';
+    `);
+    const a = await labelsBody(A_UID, "mentee-a@example.test");
+    assert.equal(a.membership_level, "ground");
+    assert.equal(a.membership_status, "active");
+  });
+
+  it("past effective_to lapses an active ground membership to board and keeps status", async () => {
+    await db.exec(`
+      UPDATE memberships
+      SET level = 'ground', status = 'active', effective_to = now() - interval '1 day'
+      WHERE auth_user_id = '${A_UID}';
+    `);
+    const a = await labelsBody(A_UID, "mentee-a@example.test");
+    assert.equal(a.membership_level, "board");
+    assert.equal(a.membership_status, "active");
+  });
+
+  it("table without effective_to still returns stored level and status", async () => {
+    await db.exec(`
+      DROP TABLE memberships;
+      CREATE TABLE memberships (
+        auth_user_id text,
+        email text,
+        level text,
+        status text
+      );
+      INSERT INTO memberships (auth_user_id, email, level, status) VALUES
+        ('${A_UID}', 'mentee-a@example.test', 'ground', 'active');
+    `);
+    const a = await labelsBody(A_UID, "mentee-a@example.test");
+    assert.equal(a.membership_level, "ground");
+    assert.equal(a.membership_status, "active");
   });
 });
