@@ -433,6 +433,7 @@ export const REDACT_ALLOW_KEYS = new Set([
   "customerConversations",
   "days",
   "denied",
+  "details",
   "digest",
   "displayName",
   "display_name",
