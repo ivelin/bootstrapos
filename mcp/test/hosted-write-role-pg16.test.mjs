@@ -176,13 +176,15 @@ describe("PostgreSQL 16 hosted write-role round trip", { concurrency: false }, (
     const upRank = psql("SELECT to_regprocedure('bootstrap_os.has_rank(uuid,int)')::text;").trim();
     assert.equal(upRank, "bootstrap_os.has_rank(uuid,integer)");
     const seeded = psql(`
-      SELECT set_config('app.actor_email', 'admin@example.invalid', false);
-      SELECT public.bootstrap_os_put_journey('q3co', 'default', 'seed clocks', true, 2, NULL, NULL, 'week', NULL, NULL, NULL, 'founder@example.invalid')::text;
+      WITH cfg AS (SELECT set_config('app.actor_email', 'admin@example.invalid', false) AS email)
+      SELECT public.bootstrap_os_put_journey('q3co', 'default', 'seed clocks', true, 2, NULL, NULL, 'week', NULL, NULL, NULL, 'founder@example.invalid')::text
+      FROM cfg;
     `);
     assert.match(seeded, /"ok": true/);
     const second = psql(`
-      SELECT set_config('app.actor_email', 'admin@example.invalid', false);
-      SELECT public.bootstrap_os_put_journey('q3co', 'default', 'again', false, 4, NULL, NULL, 'no', NULL, NULL, NULL, NULL) ->> 'error';
+      WITH cfg AS (SELECT set_config('app.actor_email', 'admin@example.invalid', false) AS email)
+      SELECT public.bootstrap_os_put_journey('q3co', 'default', 'again', false, 4, NULL, NULL, 'no', NULL, NULL, NULL, NULL) ->> 'error'
+      FROM cfg;
     `).trim();
     assert.equal(second, "forbidden_role");
     psqlFile(DOWN);
