@@ -8,7 +8,8 @@ BEGIN;
 CREATE FUNCTION public.bootstrap_os_grant_acl_internal(
   p_company_id uuid,
   p_email text,
-  p_role text
+  p_role text,
+  p_write_label boolean DEFAULT true
 ) RETURNS void
 LANGUAGE plpgsql
 SECURITY DEFINER
@@ -35,9 +36,11 @@ BEGIN
   SELECT id INTO v_mentee
   FROM public.bootstrap_mcp_mentees
   WHERE email = v_email;
-  INSERT INTO public.bootstrap_company_labels (mentee_id, label)
-  VALUES (v_mentee, v_slug)
-  ON CONFLICT (mentee_id, label) DO NOTHING;
+  IF p_write_label IS NOT FALSE THEN
+    INSERT INTO public.bootstrap_company_labels (mentee_id, label)
+    VALUES (v_mentee, v_slug)
+    ON CONFLICT (mentee_id, label) DO NOTHING;
+  END IF;
   -- principal_kind is always email. Display name is never bound.
   INSERT INTO bootstrap_os.company_acl (company_id, principal, principal_kind, role)
   VALUES (p_company_id, v_email, 'email', v_role)
@@ -45,7 +48,7 @@ BEGIN
 END;
 $$;
 
-REVOKE ALL ON FUNCTION public.bootstrap_os_grant_acl_internal(uuid, text, text) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.bootstrap_os_grant_acl_internal(uuid, text, text, boolean) FROM PUBLIC, anon, authenticated;
 
 CREATE OR REPLACE FUNCTION public.bootstrap_os_change_acl(
   p_company text,
@@ -92,7 +95,7 @@ BEGIN
   WHERE company_id = cid AND principal = v_principal AND principal_kind = v_kind;
   IF v_op = 'grant' THEN
     IF v_kind = 'email' THEN
-      PERFORM public.bootstrap_os_grant_acl_internal(cid, v_principal, v_role);
+      PERFORM public.bootstrap_os_grant_acl_internal(cid, v_principal, v_role, false);
     ELSE
       -- Helper is email-only. Sub grants stay a direct ACL insert.
       INSERT INTO bootstrap_os.company_acl (company_id, principal, principal_kind, role)
@@ -140,7 +143,11 @@ GRANT EXECUTE ON FUNCTION public.bootstrap_os_change_acl(text, text, text, text,
 
 DROP FUNCTION public.bootstrap_os_ensure_company(text);
 
-CREATE FUNCTION public.bootstrap_os_ensure_company(p_company text, p_founder_email text DEFAULT NULL)
+CREATE FUNCTION public.bootstrap_os_ensure_company(
+  p_company text,
+  p_founder_email text DEFAULT NULL,
+  p_create boolean DEFAULT false
+)
 RETURNS uuid
 LANGUAGE plpgsql
 SECURITY DEFINER
@@ -153,21 +160,24 @@ DECLARE
   v_founder text := nullif(lower(trim(p_founder_email)), '');
   v_super boolean := false;
 BEGIN
-  IF v_founder IS NOT NULL AND v_founder !~ '^[^@[:space:]]+@[^@[:space:]]+\.[^@[:space:]]+$' THEN
-    RAISE EXCEPTION 'invalid_founder_email';
-  END IF;
-  IF caller_email IS NOT NULL THEN
-    SELECT EXISTS (
-      SELECT 1
-      FROM public.bootstrap_os_roles r
-      JOIN public.bootstrap_mcp_mentees m ON m.id = r.mentee_id
-      WHERE m.email = caller_email
-        AND r.role = 'super_admin'
-        AND r.revoked_at IS NULL
-    ) INTO v_super;
-  END IF;
   SELECT c.id INTO cid FROM bootstrap_os.companies c WHERE c.slug = v_slug;
+  IF cid IS NULL AND p_create IS NOT TRUE THEN
+    RAISE EXCEPTION 'not_found' USING ERRCODE = 'P0002';
+  END IF;
   IF cid IS NULL THEN
+    IF v_founder IS NOT NULL AND v_founder !~ '^[^@[:space:]]+@[^@[:space:]]+\.[^@[:space:]]+$' THEN
+      RAISE EXCEPTION 'invalid_founder_email';
+    END IF;
+    IF caller_email IS NOT NULL THEN
+      SELECT EXISTS (
+        SELECT 1
+        FROM public.bootstrap_os_roles r
+        JOIN public.bootstrap_mcp_mentees m ON m.id = r.mentee_id
+        WHERE m.email = caller_email
+          AND r.role = 'super_admin'
+          AND r.revoked_at IS NULL
+      ) INTO v_super;
+    END IF;
     IF v_founder IS NULL AND v_super THEN
       RAISE EXCEPTION 'founder_email_required: pass founderEmail';
     END IF;
@@ -202,7 +212,266 @@ BEGIN
 END;
 $$;
 
-REVOKE ALL ON FUNCTION public.bootstrap_os_ensure_company(text, text) FROM PUBLIC, anon;
+REVOKE ALL ON FUNCTION public.bootstrap_os_ensure_company(text, text, boolean) FROM PUBLIC, anon;
+
+CREATE OR REPLACE FUNCTION public.bootstrap_os_get_journey(p_company text, p_idea text DEFAULT NULL)
+RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, bootstrap_os AS $$
+DECLARE cid uuid; company_row bootstrap_os.companies%ROWTYPE; ideas jsonb; audit jsonb; owners jsonb;
+BEGIN
+  BEGIN
+    cid := public.bootstrap_os_ensure_company(p_company);
+  EXCEPTION WHEN SQLSTATE 'P0002' THEN
+    RETURN jsonb_build_object('ok', false, 'error', 'not_found');
+  END;
+  SELECT * INTO company_row FROM bootstrap_os.companies WHERE id = cid;
+  SELECT coalesce(jsonb_agg(jsonb_build_object(
+    'slug', i.slug, 'name', i.name,
+    'clocks', jsonb_build_object('journeyPhase', i.journey_phase, 'loopStage', i.loop_stage, 'currentGate', i.current_gate),
+    'constraintThisWeek', coalesce(i.scoreboard->>'constraint_this_week', ''),
+    'scoreboard', i.scoreboard,
+    'portfolioScore', bootstrap_os.read_portfolio_score(i.scoreboard->'portfolioScore'),
+    'gateEnrichment', i.scoreboard->'gateEnrichment',
+    'killed', i.current_gate = 'kill',
+    'killPostmortem', i.scoreboard->'killPostmortem',
+    'killedCard', CASE
+      WHEN i.current_gate = 'kill' THEN concat(
+        '☠ Killed',
+        CASE
+          WHEN nullif(trim(coalesce(i.scoreboard #>> '{killPostmortem,lessonsLearned}', '')), '') IS NOT NULL
+          THEN concat(' — ', i.scoreboard #>> '{killPostmortem,lessonsLearned}')
+          ELSE ''
+        END
+      )
+      ELSE NULL
+    END,
+    'killedDecision', CASE
+      WHEN i.current_gate = 'kill' THEN (
+        SELECT jsonb_build_object('who', e.who, 'at', e.at, 'why', e.why)
+        FROM bootstrap_os.gate_events e
+        WHERE e.idea_id = i.id AND e.action = 'kill'
+        ORDER BY e.at DESC LIMIT 1
+      )
+      ELSE NULL
+    END,
+    'snapshot', concat(company_row.label, ' / ', i.name, ' is at journey phase ', i.journey_phase::text,
+      ', loop stage ', i.loop_stage::text, ', gate ', i.current_gate::text,
+      CASE WHEN i.current_gate = 'kill' THEN concat(
+        '. ☠ Killed',
+        CASE
+          WHEN nullif(trim(coalesce(i.scoreboard #>> '{killPostmortem,lessonsLearned}', '')), '') IS NOT NULL
+          THEN concat(' — ', i.scoreboard #>> '{killPostmortem,lessonsLearned}')
+          ELSE ''
+        END
+      ) ELSE '' END,
+      '. Bottleneck this week: ',
+      coalesce(nullif(i.scoreboard->>'constraint_this_week', ''), 'none yet'), '.'),
+    'lastTransitions', coalesce((
+      SELECT jsonb_agg(jsonb_build_object('at', e.at, 'who', e.who, 'action', e.action, 'why', e.why) ORDER BY e.at)
+      FROM bootstrap_os.gate_events e WHERE e.idea_id = i.id
+    ), '[]'::jsonb),
+    'comments', coalesce((
+      SELECT jsonb_agg(jsonb_build_object('at', c.at, 'who', c.who, 'body', c.body) ORDER BY c.at)
+      FROM bootstrap_os.comments c WHERE c.idea_id = i.id
+    ), '[]'::jsonb)
+  ) ORDER BY i.slug), '[]'::jsonb)
+  INTO ideas FROM bootstrap_os.ideas i
+  WHERE i.company_id = cid AND (p_idea IS NULL OR i.slug = lower(p_idea));
+  SELECT coalesce(jsonb_agg(jsonb_build_object(
+    'at', a.at, 'who', a.who, 'client', a.client, 'whatChanged', a.what_changed
+  ) ORDER BY a.at), '[]'::jsonb)
+  INTO audit FROM bootstrap_os.audit_events a WHERE a.company_id = cid;
+  SELECT coalesce(jsonb_agg(jsonb_build_object('principal', acl.principal, 'role', acl.role) ORDER BY acl.principal), '[]'::jsonb)
+  INTO owners FROM bootstrap_os.company_acl acl WHERE acl.company_id = cid AND acl.principal_kind = 'email';
+  RETURN jsonb_build_object(
+    'ok', true,
+    'company', jsonb_strip_nulls(jsonb_build_object(
+      'slug', company_row.slug,
+      'label', company_row.label,
+      'founder', nullif(btrim(coalesce(company_row.founder, '')), '')
+    )),
+    'ideas', ideas,
+    'owners', owners,
+    'audit', audit,
+    'portfolio', bootstrap_os.portfolio_view(cid),
+    'note', 'Shared 0-1 board. Company is the team; each idea has its own clocks. Decision log is lastTransitions, comments, and audit. Owners are who is on the company. Do not invent entries. Do not invent missing portfolio scores. Scores cannot Advance or Kill. Do not paste GitHub as the board. Killed ideas stay on the board with stored enrichment.'
+  );
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.bootstrap_os_get_journey(text, text) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.bootstrap_os_get_journey(text, text) TO authenticated;
+
+CREATE OR REPLACE FUNCTION public.bootstrap_os_create_idea(
+  p_company text,
+  p_idea text,
+  p_name text DEFAULT NULL,
+  p_founder_yes boolean DEFAULT FALSE,
+  p_why text DEFAULT NULL
+) RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, bootstrap_os AS $$
+DECLARE
+  cid uuid;
+  v_slug text := lower(trim(coalesce(p_idea, '')));
+  v_label text := nullif(trim(coalesce(p_name, '')), '');
+  email text := NULLIF(lower(auth.jwt() ->> 'email'), '');
+  iid uuid;
+  idea_row bootstrap_os.ideas%ROWTYPE;
+  v_rate jsonb;
+BEGIN
+  IF p_founder_yes IS NOT TRUE THEN
+    RETURN jsonb_build_object('ok', false, 'error', 'founder yes required in the agent chat');
+  END IF;
+  IF v_slug IS NULL OR v_slug = '' OR v_slug !~ '^[a-z0-9][a-z0-9_-]{0,31}$' THEN
+    RETURN jsonb_build_object('ok', false, 'error', 'invalid idea slug');
+  END IF;
+  BEGIN
+    cid := public.bootstrap_os_ensure_company(p_company, NULL, true);
+  EXCEPTION WHEN SQLSTATE 'P0002' THEN
+    RETURN jsonb_build_object('ok', false, 'error', 'not_found');
+  END;
+  IF EXISTS (SELECT 1 FROM bootstrap_os.ideas i WHERE i.company_id = cid AND i.slug = v_slug) THEN
+    RETURN jsonb_build_object('ok', false, 'error', 'idea already exists');
+  END IF;
+  BEGIN
+    v_rate := public.bootstrap_hosted_take('create_idea');
+  EXCEPTION WHEN OTHERS THEN
+    RETURN jsonb_build_object('ok', false, 'error', 'rate_limiter_unavailable', 'reason', 'rate_limiter_unavailable', 'message', 'The limiter could not be reached. This action was refused.');
+  END;
+  IF coalesce((v_rate ->> 'ok')::boolean, false) IS DISTINCT FROM true THEN
+    IF coalesce(v_rate ->> 'error', v_rate ->> 'reason', '') = '' THEN
+      RETURN jsonb_build_object('ok', false, 'error', 'rate_limiter_unavailable', 'reason', 'rate_limiter_unavailable', 'message', 'The limiter could not be reached. This action was refused.');
+    END IF;
+    RETURN v_rate;
+  END IF;
+  INSERT INTO bootstrap_os.ideas (company_id, slug, name, journey_phase, loop_stage, current_gate, scoreboard)
+  VALUES (
+    cid,
+    v_slug,
+    coalesce(v_label, v_slug),
+    1,
+    1,
+    'hold',
+    jsonb_build_object(
+      'schema_version', 1,
+      'readyForHumanEyes', jsonb_build_object('status', 'unknown'),
+      'autonomyPosture', 'strict',
+      'openQuestions', '[]'::jsonb,
+      'constraint_this_week', ''
+    )
+  )
+  RETURNING * INTO idea_row;
+  iid := idea_row.id;
+  PERFORM bootstrap_os.emit_audit(
+    cid,
+    iid,
+    coalesce(email, 'unknown'),
+    'mcp',
+    jsonb_build_object(
+      'op', 'create_idea',
+      'via', 'create_idea',
+      'idea', v_slug,
+      'why', coalesce(nullif(p_why, ''), 'new 0-1 board'),
+      'before', NULL,
+      'after', bootstrap_os.idea_board_snapshot(
+        idea_row.journey_phase, idea_row.loop_stage, idea_row.current_gate, idea_row.scoreboard
+      )
+    )
+  );
+  RETURN public.bootstrap_os_get_journey(p_company, v_slug);
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.bootstrap_os_create_idea(text, text, text, boolean, text) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.bootstrap_os_create_idea(text, text, text, boolean, text) TO authenticated;
+
+CREATE OR REPLACE FUNCTION public.bootstrap_os_list_subscribers(p_company text)
+RETURNS jsonb
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, bootstrap_os
+AS $$
+DECLARE
+  cid uuid;
+  company_row bootstrap_os.companies%ROWTYPE;
+  subs jsonb;
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM bootstrap_os.companies c WHERE c.slug = lower(p_company)) THEN
+    RETURN jsonb_build_object('ok', false, 'error', 'not_found');
+  END IF;
+  IF NOT public.bootstrap_os_held_label(p_company) THEN
+    RETURN jsonb_build_object('ok', false, 'error', 'company not visible');
+  END IF;
+  BEGIN
+    cid := public.bootstrap_os_ensure_company(p_company);
+  EXCEPTION WHEN SQLSTATE 'P0002' THEN
+    RETURN jsonb_build_object('ok', false, 'error', 'not_found');
+  END;
+  SELECT * INTO company_row FROM bootstrap_os.companies WHERE id = cid;
+  SELECT coalesce(jsonb_agg(jsonb_build_object(
+    'principal', s.principal,
+    'principalKind', s.principal_kind,
+    'emailOptIn', s.email_opt_in,
+    'ideaId', s.idea_id,
+    'webhookUrl', s.webhook_url
+  ) ORDER BY s.principal), '[]'::jsonb)
+  INTO subs
+  FROM bootstrap_os.board_subscribers s
+  WHERE s.company_id = cid;
+  RETURN jsonb_build_object(
+    'ok', true,
+    'company', jsonb_build_object('slug', company_row.slug, 'label', company_row.label),
+    'subscribers', subs
+  );
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.bootstrap_os_list_subscribers(text) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.bootstrap_os_list_subscribers(text) TO authenticated;
+
+CREATE OR REPLACE FUNCTION public.bootstrap_os_list_killed_ideas(p_company text)
+RETURNS jsonb
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, bootstrap_os
+AS $$
+DECLARE
+  cid uuid;
+  company_row bootstrap_os.companies%ROWTYPE;
+  ideas jsonb;
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM bootstrap_os.companies c WHERE c.slug = lower(p_company)) THEN
+    RETURN jsonb_build_object('ok', false, 'error', 'not_found');
+  END IF;
+  IF NOT public.bootstrap_os_held_label(p_company) THEN
+    RETURN jsonb_build_object('ok', false, 'error', 'company not visible');
+  END IF;
+  BEGIN
+    cid := public.bootstrap_os_ensure_company(p_company);
+  EXCEPTION WHEN SQLSTATE 'P0002' THEN
+    RETURN jsonb_build_object('ok', false, 'error', 'not_found');
+  END;
+  SELECT * INTO company_row FROM bootstrap_os.companies WHERE id = cid;
+  SELECT coalesce(jsonb_agg(jsonb_build_object(
+    'slug', i.slug,
+    'name', i.name,
+    'clocks', jsonb_build_object(
+      'journeyPhase', i.journey_phase,
+      'loopStage', i.loop_stage,
+      'currentGate', i.current_gate
+    )
+  ) ORDER BY i.slug), '[]'::jsonb)
+  INTO ideas
+  FROM bootstrap_os.ideas i
+  WHERE i.company_id = cid AND i.current_gate = 'kill';
+  RETURN jsonb_build_object(
+    'ok', true,
+    'company', jsonb_build_object('slug', company_row.slug, 'label', company_row.label),
+    'ideas', ideas
+  );
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.bootstrap_os_list_killed_ideas(text) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.bootstrap_os_list_killed_ideas(text) TO authenticated;
 
 DROP FUNCTION IF EXISTS public.bootstrap_os_put_journey(text, text, text, boolean, int, int, text, text, text, jsonb, text);
 
@@ -233,7 +502,7 @@ BEGIN
   IF nullif(trim(coalesce(p_why, '')), '') IS NULL THEN
     RETURN jsonb_build_object('ok', false, 'error', 'why required');
   END IF;
-  cid := public.bootstrap_os_ensure_company(p_company, p_founder_email);
+  cid := public.bootstrap_os_ensure_company(p_company, p_founder_email, true);
   SELECT * INTO idea_row FROM bootstrap_os.ideas
   WHERE company_id = cid AND slug = lower(coalesce(nullif(p_idea, ''), 'default'));
   IF idea_row.id IS NULL THEN

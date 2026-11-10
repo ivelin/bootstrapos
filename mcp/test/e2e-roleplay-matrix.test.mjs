@@ -721,6 +721,11 @@ describe("E2E role-play matrix (PGlite, never prod)", { concurrency: false }, ()
     });
     const session = { "MCP-Session-Id": "e2e-p7-alpha" };
     await callTool("bootstrap_use_company", { company: "alpha" }, ivelin, session);
+    const seeded = parseTool(
+      (await callTool("put_journey", { company: "alpha", why: "seed alpha", founderYes: true }, ivelin, session))
+        .body,
+    );
+    assert.equal(seeded.ok, true);
     const listed = await rawRpc("tools/list", {}, ivelin, session);
     const names = JSON.parse(await listed.text()).result.tools.map((t) => t.name);
     assert.ok(names.includes("get_journey"));

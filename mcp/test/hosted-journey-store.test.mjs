@@ -82,6 +82,18 @@ describe("hosted membership journey store", () => {
     const ivelin = actor("founder@example.test");
     const bill = actor("bill@example.test");
     assert.equal((await store.getJourney(bill, { companySlug: "alpha" })).ok, false);
+    assert.equal((await store.getJourney(ivelin, { companySlug: "alpha" })).error, "not_found");
+    assert.equal(
+      (
+        await store.putJourney(ivelin, {
+          companySlug: "alpha",
+          why: "seed the board",
+          founderYes: true,
+          constraintThisWeek: "talk",
+        })
+      ).ok,
+      true,
+    );
     const board = await store.getJourney(ivelin, { companySlug: "alpha" });
     assert.equal(board.ok, true);
     assert.equal(board.ideas[0].slug, "default");

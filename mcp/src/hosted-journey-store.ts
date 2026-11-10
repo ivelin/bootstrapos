@@ -116,10 +116,15 @@ export class HostedMembershipJourneyStore implements JourneyStore {
     this.isSandbox = options?.isSandbox ?? (() => false);
   }
 
-  private ensureHeld(slug: string, actor: JourneyActor): void {
-    this.inner.ensureCompanyForMember(slug, actor, {
-      seedIdea: !this.isSandbox(normalizeSlug(slug)),
-    });
+  /** Write path for create_starter_board. Company row only; no default idea. */
+  ensureSandboxBoard(actor: JourneyActor, slug: string): void {
+    this.inner.ensureCompanyForMember(slug, actor, { create: true, seedIdea: false });
+  }
+
+  private requireExisting(slug: string, actor: JourneyActor): { ok: false; error: "not_found" } | null {
+    const company = this.inner.ensureCompanyForMember(slug, actor, { create: false });
+    if (!company) return { ok: false, error: "not_found" };
+    return null;
   }
 
   actorOnAllowlist(actor: JourneyActor): boolean {
@@ -154,7 +159,8 @@ export class HostedMembershipJourneyStore implements JourneyStore {
     const denied = this.denyUnlessHeld(actor, query.companySlug);
     if (denied) return denied;
     const slug = normalizeSlug(query.companySlug!);
-    this.ensureHeld(slug, actor);
+    const missing = this.requireExisting(slug, actor);
+    if (missing) return missing;
     const result = (await this.inner.getJourney(actor, { ...query, companySlug: slug })) as {
       ok?: boolean;
       acl?: Array<{ principal: string; role: string }>;
@@ -180,7 +186,10 @@ export class HostedMembershipJourneyStore implements JourneyStore {
   ): Promise<unknown> {
     const denied = this.denyUnlessHeld(actor, input.companySlug);
     if (denied) return denied;
-    this.ensureHeld(input.companySlug, actor);
+    this.inner.ensureCompanyForMember(normalizeSlug(input.companySlug), actor, {
+      seedIdea: !this.isSandbox(normalizeSlug(input.companySlug)),
+      create: true,
+    });
     return this.inner.createIdea(actor, input);
   }
 
@@ -193,6 +202,7 @@ export class HostedMembershipJourneyStore implements JourneyStore {
     this.inner.ensureCompanyForMember(normalizeSlug(input.companySlug), actor, {
       seedIdea: !this.isSandbox(normalizeSlug(input.companySlug)),
       founderEmail: input.founderEmail,
+      create: true,
     });
     return this.inner.putJourney(actor, {
       ...input,
@@ -206,7 +216,8 @@ export class HostedMembershipJourneyStore implements JourneyStore {
   ): Promise<unknown> {
     const denied = this.denyUnlessHeld(actor, input.companySlug);
     if (denied) return denied;
-    this.ensureHeld(input.companySlug, actor);
+    const missingComment = this.requireExisting(input.companySlug, actor);
+    if (missingComment) return missingComment;
     return this.inner.postComment(actor, { ...input, ideaSlug: input.ideaSlug || "default" });
   }
 
@@ -216,7 +227,8 @@ export class HostedMembershipJourneyStore implements JourneyStore {
     if (this.isSandbox(normalizeSlug(input.companySlug))) {
       return { ok: false, error: "sandbox_cannot_share" };
     }
-    this.ensureHeld(input.companySlug, actor);
+    const missingAcl = this.requireExisting(input.companySlug, actor);
+    if (missingAcl) return missingAcl;
     return this.inner.changeAcl(actor, input);
   }
 
@@ -226,7 +238,8 @@ export class HostedMembershipJourneyStore implements JourneyStore {
     if (this.isSandbox(normalizeSlug(input.companySlug))) {
       return { ok: false, error: "starter bet board cannot send webhooks" };
     }
-    this.ensureHeld(input.companySlug, actor);
+    const missingSub = this.requireExisting(input.companySlug, actor);
+    if (missingSub) return missingSub;
     return this.inner.subscribeBoard(actor, input);
   }
 
@@ -245,7 +258,8 @@ export class HostedMembershipJourneyStore implements JourneyStore {
   ) {
     const denied = this.denyUnlessHeld(actor, input.companySlug);
     if (denied) return denied;
-    this.ensureHeld(input.companySlug, actor);
+    const missingList = this.requireExisting(input.companySlug, actor);
+    if (missingList) return missingList;
     return this.inner.listSubscribers(actor, input);
   }
 
@@ -258,7 +272,8 @@ export class HostedMembershipJourneyStore implements JourneyStore {
     if (this.isSandbox(normalizeSlug(input.companySlug))) {
       return { ok: false, error: "a starter bet board is not in the portfolio" };
     }
-    this.ensureHeld(input.companySlug, actor);
+    const missingScore = this.requireExisting(input.companySlug, actor);
+    if (missingScore) return missingScore;
     return this.inner.putPortfolioScore(actor, {
       ...input,
       ideaSlug: input.ideaSlug || "default",
@@ -271,7 +286,8 @@ export class HostedMembershipJourneyStore implements JourneyStore {
   ) {
     const denied = this.denyUnlessHeld(actor, query.companySlug);
     if (denied) return denied;
-    this.ensureHeld(query.companySlug, actor);
+    const missingProv = this.requireExisting(query.companySlug, actor);
+    if (missingProv) return missingProv;
     return this.inner.listProvenance(actor, query);
   }
 
@@ -281,7 +297,8 @@ export class HostedMembershipJourneyStore implements JourneyStore {
   ) {
     const denied = this.denyUnlessHeld(actor, query.companySlug);
     if (denied) return denied;
-    this.ensureHeld(query.companySlug, actor);
+    const missingKilled = this.requireExisting(query.companySlug, actor);
+    if (missingKilled) return missingKilled;
     return this.inner.listKilledIdeas(actor, query);
   }
 }

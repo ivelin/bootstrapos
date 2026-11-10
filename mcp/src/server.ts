@@ -531,6 +531,21 @@ function registerGatedIdentityTools(server: McpServer, ctx: HostedRequestContext
       try {
         const created = await store.create(email);
         if (!created.ok) return err(created.error);
+        const journey = resolveJourneyStore(ctx.accessToken);
+        const actor =
+          ("actor" in ctx && ctx.actor?.email ? ctx.actor : undefined) ?? {
+            authenticated: true,
+            email,
+            principal: email,
+            identityStore: "memory" as const,
+          };
+        if (journey && typeof (journey as { ensureSandboxBoard?: unknown }).ensureSandboxBoard === "function") {
+          (
+            journey as unknown as {
+              ensureSandboxBoard: (a: typeof actor, slug: string) => void;
+            }
+          ).ensureSandboxBoard(actor, created.board.slug);
+        }
         return text({
           ok: true,
           created: created.created,

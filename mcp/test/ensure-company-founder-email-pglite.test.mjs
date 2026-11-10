@@ -188,14 +188,14 @@ describe("ensure_company founderEmail (PGlite, never prod)", { concurrency: fals
        WHERE n.nspname = 'public' AND p.proname = 'bootstrap_os_ensure_company'`,
     );
     assert.deepEqual(sigs.rows.map((row) => row.sig), [
-      "bootstrap_os_ensure_company(text,text)",
+      "bootstrap_os_ensure_company(text,text,boolean)",
     ]);
     const priv = await db.query(
       `SELECT
-         has_function_privilege('anon', 'public.bootstrap_os_ensure_company(text,text)', 'execute') AS anon_ensure,
-         has_function_privilege('authenticated', 'public.bootstrap_os_ensure_company(text,text)', 'execute') AS auth_ensure,
-         has_function_privilege('anon', 'public.bootstrap_os_grant_acl_internal(uuid,text,text)', 'execute') AS anon_help,
-         has_function_privilege('authenticated', 'public.bootstrap_os_grant_acl_internal(uuid,text,text)', 'execute') AS auth_help`,
+         has_function_privilege('anon', 'public.bootstrap_os_ensure_company(text,text,boolean)', 'execute') AS anon_ensure,
+         has_function_privilege('authenticated', 'public.bootstrap_os_ensure_company(text,text,boolean)', 'execute') AS auth_ensure,
+         has_function_privilege('anon', 'public.bootstrap_os_grant_acl_internal(uuid,text,text,boolean)', 'execute') AS anon_help,
+         has_function_privilege('authenticated', 'public.bootstrap_os_grant_acl_internal(uuid,text,text,boolean)', 'execute') AS auth_help`,
     );
     assert.equal(priv.rows[0].anon_ensure, false);
     assert.equal(priv.rows[0].auth_ensure, false);
@@ -203,9 +203,16 @@ describe("ensure_company founderEmail (PGlite, never prod)", { concurrency: fals
     assert.equal(priv.rows[0].auth_help, false);
   });
 
-  it("one-arg ensure_company still resolves and a non-admin caller becomes founder", async () => {
+  it("one-arg ensure_company does not create; create flag seeds the caller as founder", async () => {
     await asEmail("solo@example.invalid");
-    const created = await db.query("SELECT public.bootstrap_os_ensure_company($1) AS id", ["soloco"]);
+    await assert.rejects(
+      db.query("SELECT public.bootstrap_os_ensure_company($1)", ["soloco"]),
+      /not_found/,
+    );
+    const created = await db.query(
+      "SELECT public.bootstrap_os_ensure_company($1, NULL, true) AS id",
+      ["soloco"],
+    );
     assert.ok(created.rows[0].id);
     assert.deepEqual(await roles("soloco"), [{ principal: "solo@example.invalid", role: "founder" }]);
     assert.equal(await labeled("solo@example.invalid", "soloco"), true);
@@ -213,7 +220,7 @@ describe("ensure_company founderEmail (PGlite, never prod)", { concurrency: fals
 
   it("seeds founder and commenter when founderEmail differs from the caller", async () => {
     await asEmail("admin@example.invalid");
-    await db.query("SELECT public.bootstrap_os_ensure_company($1, $2)", [
+    await db.query("SELECT public.bootstrap_os_ensure_company($1, $2, true)", [
       "dualco",
       "Founder@example.invalid",
     ]);
@@ -234,15 +241,15 @@ describe("ensure_company founderEmail (PGlite, never prod)", { concurrency: fals
       SELECT id, 'super_admin' FROM public.bootstrap_mcp_mentees WHERE email = 'bill@example.invalid';
     `);
     await assert.rejects(
-      db.query("SELECT public.bootstrap_os_ensure_company('billco')"),
+      db.query("SELECT public.bootstrap_os_ensure_company('billco', NULL, true)"),
       /founder_email_required/,
     );
     await assert.rejects(
-      db.query("SELECT public.bootstrap_os_ensure_company('billco', 'not-an-email')"),
+      db.query("SELECT public.bootstrap_os_ensure_company('billco', 'not-an-email', true)"),
       /invalid_founder_email/,
     );
     const seeded = await db.query(
-      "SELECT public.bootstrap_os_ensure_company('billco', 'founder@example.invalid') AS id",
+      "SELECT public.bootstrap_os_ensure_company('billco', 'founder@example.invalid', true) AS id",
     );
     assert.ok(seeded.rows[0].id);
     assert.deepEqual(await roles("billco"), [
@@ -287,6 +294,41 @@ describe("ensure_company founderEmail (PGlite, never prod)", { concurrency: fals
       (await roles("soloco")).some((row) => row.principal === "advisor@example.invalid"),
       false,
     );
+  });
+
+  it("change_acl writes no label row", async () => {
+    await asEmail("solo@example.invalid");
+    const granted = await db.query(
+      "SELECT public.bootstrap_os_change_acl('soloco', 'nolabel@example.invalid', 'email', 'advisor', 'grant') AS body",
+    );
+    assert.equal(granted.rows[0].body.ok, true);
+    assert.equal(await labeled("nolabel@example.invalid", "soloco"), false);
+  });
+
+  it("read RPCs on an unknown slug return not_found and write nothing", async () => {
+    await asEmail("reader@example.invalid");
+    const before = await db.query(
+      `SELECT
+         (SELECT count(*)::int FROM bootstrap_os.companies) AS companies,
+         (SELECT count(*)::int FROM bootstrap_os.company_acl) AS acl,
+         (SELECT count(*)::int FROM public.bootstrap_company_labels) AS labels`,
+    );
+    for (const sql of [
+      "SELECT public.bootstrap_os_get_journey('missingco', NULL) AS body",
+      "SELECT public.bootstrap_os_list_subscribers('missingco') AS body",
+      "SELECT public.bootstrap_os_list_killed_ideas('missingco') AS body",
+    ]) {
+      const hit = await db.query(sql);
+      assert.equal(hit.rows[0].body.ok, false);
+      assert.equal(hit.rows[0].body.error, "not_found");
+    }
+    const after = await db.query(
+      `SELECT
+         (SELECT count(*)::int FROM bootstrap_os.companies) AS companies,
+         (SELECT count(*)::int FROM bootstrap_os.company_acl) AS acl,
+         (SELECT count(*)::int FROM public.bootstrap_company_labels) AS labels`,
+    );
+    assert.deepEqual(after.rows[0], before.rows[0]);
   });
 
   it("documents that held_label ignores auth.users.email_confirmed_at", async () => {
@@ -390,7 +432,7 @@ describe("founder ceiling vs commenter invite (PGlite)", { concurrency: false },
     await inviteDb.query("SELECT set_config('request.jwt.claims', $1, false)", [
       JSON.stringify({ email: "owner@example.invalid" }),
     ]);
-    await inviteDb.query("SELECT public.bootstrap_os_ensure_company('ownco')");
+    await inviteDb.query("SELECT public.bootstrap_os_ensure_company('ownco', NULL, true)");
     const ok = await invite("owner@example.invalid", "editor@example.invalid", "ownco", "editor");
     assert.equal(ok.ok, true);
     assert.deepEqual(ok.companies, [{ slug: "ownco", role: "editor" }]);
@@ -399,7 +441,7 @@ describe("founder ceiling vs commenter invite (PGlite)", { concurrency: false },
       JSON.stringify({ email: "admin@example.invalid" }),
     ]);
     await inviteDb.query(
-      "SELECT public.bootstrap_os_ensure_company('commentco', 'founder@example.invalid')",
+      "SELECT public.bootstrap_os_ensure_company('commentco', 'founder@example.invalid', true)",
     );
     const denied = await invite("admin@example.invalid", "editor@example.invalid", "commentco", "editor");
     assert.equal(denied.ok, false);

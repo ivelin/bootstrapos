@@ -427,6 +427,14 @@ describe("journey token must be usable before the tool runs", () => {
       sub: "auth-alpha",
       extra: { exp: futureExp() },
     });
+    const seeded = await handleHostedReadFetch(
+      toolRequest(
+        "put_journey",
+        { company: "alpha", why: "seed alpha", founderYes: true, constraintThisWeek: "talk" },
+        token,
+      ),
+    );
+    assert.equal(seeded.status, 200, await seeded.clone().text());
     const res = await handleHostedReadFetch(toolRequest("get_journey", { company: "alpha" }, token));
     const raw = await res.text();
     assert.equal(res.status, 200, raw);
@@ -765,6 +773,10 @@ describe("journey token must be usable before the tool runs", () => {
         sub: "auth-alpha",
         extra: { exp: futureExp() },
       });
+      const seeded = await handleHostedReadFetch(
+        toolRequest("put_journey", { company: "alpha", why: "seed alpha", founderYes: true }, token),
+      );
+      assert.equal(seeded.status, 200, await seeded.clone().text());
       const res = await handleHostedReadFetch(
         toolRequest("get_journey", { company: "alpha" }, token),
       );

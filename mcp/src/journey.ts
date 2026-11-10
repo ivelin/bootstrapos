@@ -1218,8 +1218,8 @@ export class MemoryJourneyStore implements JourneyStore {
   ensureCompanyForMember(
     slug: string,
     actor: JourneyActor,
-    options?: { seedIdea?: boolean; founderEmail?: string; superAdmin?: boolean },
-  ): CompanyRow {
+    options?: { seedIdea?: boolean; founderEmail?: string; superAdmin?: boolean; create?: boolean },
+  ): CompanyRow | undefined {
     const want = normalizeSlug(slug);
     const seedIdea = options?.seedIdea !== false;
     const founderRaw = options?.founderEmail?.trim().toLowerCase() ?? "";
@@ -1228,6 +1228,7 @@ export class MemoryJourneyStore implements JourneyStore {
       throw new Error("invalid_founder_email");
     }
     let company = this.companyBySlug(want);
+    if (!company && !options?.create) return undefined;
     if (!company) {
       if (!founderEmail && options?.superAdmin) {
         throw new Error("founder_email_required: pass founderEmail");
@@ -1270,7 +1271,7 @@ export class MemoryJourneyStore implements JourneyStore {
         grant(founderEmail, "founder");
         grant(caller, "commenter");
       }
-    } else if (actor.email && company) {
+    } else if (options?.create && actor.email && company) {
       const existing = company;
       const caller = actor.email.trim().toLowerCase();
       const exists = this.acl.some(

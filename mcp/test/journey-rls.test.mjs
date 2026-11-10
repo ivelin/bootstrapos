@@ -208,7 +208,7 @@ describe("journey RLS file lock + memory replica", () => {
       email: "admin@example.invalid",
       principal: "admin@example.invalid",
     };
-    store.ensureCompanyForMember("newco", admin, { founderEmail: "founder@example.invalid" });
+    store.ensureCompanyForMember("newco", admin, { founderEmail: "founder@example.invalid", create: true });
     assert.deepEqual(
       store.acl.map((row) => ({ principal: row.principal, role: row.role })).sort((a, b) => a.role.localeCompare(b.role)),
       [
@@ -221,22 +221,22 @@ describe("journey RLS file lock + memory replica", () => {
       email: "solo@example.invalid",
       principal: "solo@example.invalid",
     };
-    store.ensureCompanyForMember("solo", caller);
+    store.ensureCompanyForMember("solo", caller, { create: true });
     assert.equal(store.acl.find((row) => row.principal === "solo@example.invalid").role, "founder");
     store.ensureCompanyForMember("solo", {
       authenticated: true,
       email: "late@example.invalid",
       principal: "late@example.invalid",
-    }, { founderEmail: "other@example.invalid" });
+    }, { founderEmail: "other@example.invalid", create: true });
     assert.equal(store.acl.find((row) => row.principal === "late@example.invalid").role, "founder_authorized");
     assert.equal(store.acl.find((row) => row.principal === "solo@example.invalid").role, "founder");
     assert.equal(store.acl.some((row) => row.principal === "other@example.invalid"), false);
     assert.throws(
-      () => store.ensureCompanyForMember("billco", admin, { superAdmin: true }),
+      () => store.ensureCompanyForMember("billco", admin, { superAdmin: true, create: true }),
       /founder_email_required/,
     );
     assert.throws(
-      () => store.ensureCompanyForMember("bad", caller, { founderEmail: "not-an-email" }),
+      () => store.ensureCompanyForMember("bad", caller, { founderEmail: "not-an-email", create: true }),
       /invalid_founder_email/,
     );
   });

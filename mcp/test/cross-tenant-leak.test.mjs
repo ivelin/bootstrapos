@@ -201,7 +201,7 @@ async function callTool(name, args, token, extraHeaders = {}) {
 
 async function seedBravo(store) {
   const b = bearer(EMAIL_B);
-  assert.equal((await store.getJourney(b, { companySlug: "bravo" })).ok, true);
+  assert.equal((await store.getJourney(b, { companySlug: "bravo" })).error, "not_found");
   const put = await store.putJourney(b, {
     companySlug: "bravo",
     why: "seed bravo",
@@ -420,6 +420,10 @@ describe("cross-tenant invite-only CI gate (HTTP + hosted membership)", () => {
     await seedBravo(store);
     const a = jwt(EMAIL_A);
     const actorA = bearer(EMAIL_A);
+    assert.equal(
+      (await store.putJourney(actorA, { companySlug: "alpha", why: "seed alpha", founderYes: true })).ok,
+      true,
+    );
 
     const own = await callTool("get_journey", { company: "alpha" }, a);
     assert.equal(own.res.status, 200, own.text);
@@ -527,6 +531,20 @@ describe("cross-tenant invite-only CI gate (HTTP + hosted membership)", () => {
     setJourneyStoreForTests(store);
     setIdentityStoreForTests(identityStore());
     await seedBravo(store);
+    assert.equal(
+      (await store.putJourney(bearer(EMAIL_A), { companySlug: "alpha", why: "seed alpha", founderYes: true })).ok,
+      true,
+    );
+    assert.equal(
+      (
+        await store.putJourney(bearer(EMAIL_MULTI), {
+          companySlug: "charlie",
+          why: "seed charlie",
+          founderYes: true,
+        })
+      ).ok,
+      true,
+    );
 
     const listedA = parseTool(
       (await callTool("bootstrap_list_companies", {}, TOKEN_A)).body,

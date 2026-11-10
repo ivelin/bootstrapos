@@ -145,8 +145,8 @@ describe("PostgreSQL 16 ensure_company founderEmail round trip", { concurrency: 
     const upSig = psql(
       "SELECT p.oid::regprocedure::text FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace WHERE p.proname = 'bootstrap_os_ensure_company';",
     ).trim();
-    assert.equal(upSig, "bootstrap_os_ensure_company(text,text)");
-    psql("SELECT set_config('app.actor_email', 'solo@example.invalid', false); SELECT public.bootstrap_os_ensure_company('roundco');");
+    assert.equal(upSig, "bootstrap_os_ensure_company(text,text,boolean)");
+    psql("SELECT set_config('app.actor_email', 'solo@example.invalid', false); SELECT public.bootstrap_os_ensure_company('roundco', NULL, true);");
     psqlFile(DOWN);
     const downSig = psql(
       "SELECT p.oid::regprocedure::text FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace WHERE p.proname = 'bootstrap_os_ensure_company';",
@@ -160,6 +160,6 @@ describe("PostgreSQL 16 ensure_company founderEmail round trip", { concurrency: 
     const again = psql(
       "SELECT p.oid::regprocedure::text FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace WHERE p.proname = 'bootstrap_os_ensure_company';",
     ).trim();
-    assert.equal(again, "bootstrap_os_ensure_company(text,text)");
+    assert.equal(again, "bootstrap_os_ensure_company(text,text,boolean)");
   });
 });
