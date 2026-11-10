@@ -1271,23 +1271,6 @@ export class MemoryJourneyStore implements JourneyStore {
         grant(founderEmail, "founder");
         grant(caller, "commenter");
       }
-    } else if (options?.create && actor.email && company) {
-      const existing = company;
-      const caller = actor.email.trim().toLowerCase();
-      const exists = this.acl.some(
-        (row) =>
-          row.companyId === existing.id &&
-          row.principalKind === "email" &&
-          row.principal === caller,
-      );
-      if (!exists) {
-        this.acl.push({
-          companyId: existing.id,
-          principal: caller,
-          principalKind: "email",
-          role: "founder_authorized",
-        });
-      }
     }
     return company;
   }

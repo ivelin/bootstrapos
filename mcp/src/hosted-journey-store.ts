@@ -322,13 +322,44 @@ const BOARD_NOT_FOUND = {
   error: "not_found",
   message: "Board not found.",
 };
+const FORBIDDEN_ROLE_MESSAGE =
+  "Your role on this board can comment, but not edit. Ask the founder to invite you to edit.";
+
+function serverMessage(raw: unknown): string {
+  if (!raw || typeof raw !== "object" || !("message" in raw)) return "";
+  const message = (raw as { message: unknown }).message;
+  return typeof message === "string" ? message.trim() : "";
+}
+
+/** SQL is the source of truth. A 200 jsonb error is passed through with a human message. */
+function surfaceRpcBody(raw: unknown): unknown {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return raw;
+  const body = raw as { error?: unknown; message?: unknown };
+  if (body.error === "forbidden_role") {
+    const message = serverMessage(raw) || FORBIDDEN_ROLE_MESSAGE;
+    return { ...body, error: "forbidden_role", message };
+  }
+  if (body.error === "not_found" && !serverMessage(raw)) {
+    return { ...body, error: "not_found", message: BOARD_NOT_FOUND.message };
+  }
+  return raw;
+}
+
+function forbiddenRoleFailure(raw: unknown): { error: string; message: string } {
+  const message = serverMessage(raw);
+  const human = message.replace(/^forbidden_role:?\s*/i, "").trim();
+  return {
+    error: "forbidden_role",
+    message: human && !/^forbidden_role$/i.test(human) ? human : FORBIDDEN_ROLE_MESSAGE,
+  };
+}
 
 function mappedRpcFailure(status: number, raw: unknown): { error: string; message?: string } {
   if (status === 401) return { error: JOURNEY_RPC_UNAUTHORIZED };
   const blob = typeof raw === "string" ? raw : JSON.stringify(raw ?? "");
-  const messageField =
-    raw && typeof raw === "object" && "message" in raw ? String((raw as { message: unknown }).message) : "";
+  const messageField = serverMessage(raw);
   const hay = `${messageField}\n${blob}`;
+  if (/forbidden_role/i.test(hay)) return forbiddenRoleFailure(raw);
   if (/founder_email_required/i.test(hay)) return FOUNDER_EMAIL_REQUIRED;
   if (/invalid_founder_email/i.test(hay)) return INVALID_FOUNDER_EMAIL;
   if (/company not visible|not_found|\bP0002\b/i.test(hay)) return BOARD_NOT_FOUND;
@@ -376,7 +407,7 @@ export class SupabaseJourneyStore implements JourneyStore {
       raw = text;
     }
     if (!res.ok) return mappedRpcFailure(res.status, raw);
-    return { raw };
+    return { raw: surfaceRpcBody(raw) };
   }
 
   async getJourney(
