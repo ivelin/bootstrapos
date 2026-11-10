@@ -116,10 +116,15 @@ export class HostedMembershipJourneyStore implements JourneyStore {
     this.isSandbox = options?.isSandbox ?? (() => false);
   }
 
-  private ensureHeld(slug: string, actor: JourneyActor): void {
-    this.inner.ensureCompanyForMember(slug, actor, {
-      seedIdea: !this.isSandbox(normalizeSlug(slug)),
-    });
+  /** Write path for create_starter_board. Company row only; no default idea. */
+  ensureSandboxBoard(actor: JourneyActor, slug: string): void {
+    this.inner.ensureCompanyForMember(slug, actor, { create: true, seedIdea: false });
+  }
+
+  private requireExisting(slug: string, actor: JourneyActor): { ok: false; error: "not_found" } | null {
+    const company = this.inner.ensureCompanyForMember(slug, actor, { create: false });
+    if (!company) return { ok: false, error: "not_found" };
+    return null;
   }
 
   actorOnAllowlist(actor: JourneyActor): boolean {
@@ -154,7 +159,8 @@ export class HostedMembershipJourneyStore implements JourneyStore {
     const denied = this.denyUnlessHeld(actor, query.companySlug);
     if (denied) return denied;
     const slug = normalizeSlug(query.companySlug!);
-    this.ensureHeld(slug, actor);
+    const missing = this.requireExisting(slug, actor);
+    if (missing) return missing;
     const result = (await this.inner.getJourney(actor, { ...query, companySlug: slug })) as {
       ok?: boolean;
       acl?: Array<{ principal: string; role: string }>;
@@ -180,7 +186,10 @@ export class HostedMembershipJourneyStore implements JourneyStore {
   ): Promise<unknown> {
     const denied = this.denyUnlessHeld(actor, input.companySlug);
     if (denied) return denied;
-    this.ensureHeld(input.companySlug, actor);
+    this.inner.ensureCompanyForMember(normalizeSlug(input.companySlug), actor, {
+      seedIdea: !this.isSandbox(normalizeSlug(input.companySlug)),
+      create: true,
+    });
     return this.inner.createIdea(actor, input);
   }
 
@@ -190,7 +199,11 @@ export class HostedMembershipJourneyStore implements JourneyStore {
   ): Promise<unknown> {
     const denied = this.denyUnlessHeld(actor, input.companySlug);
     if (denied) return denied;
-    this.ensureHeld(input.companySlug, actor);
+    this.inner.ensureCompanyForMember(normalizeSlug(input.companySlug), actor, {
+      seedIdea: !this.isSandbox(normalizeSlug(input.companySlug)),
+      founderEmail: input.founderEmail,
+      create: true,
+    });
     return this.inner.putJourney(actor, {
       ...input,
       ideaSlug: input.ideaSlug || "default",
@@ -203,7 +216,8 @@ export class HostedMembershipJourneyStore implements JourneyStore {
   ): Promise<unknown> {
     const denied = this.denyUnlessHeld(actor, input.companySlug);
     if (denied) return denied;
-    this.ensureHeld(input.companySlug, actor);
+    const missingComment = this.requireExisting(input.companySlug, actor);
+    if (missingComment) return missingComment;
     return this.inner.postComment(actor, { ...input, ideaSlug: input.ideaSlug || "default" });
   }
 
@@ -213,7 +227,8 @@ export class HostedMembershipJourneyStore implements JourneyStore {
     if (this.isSandbox(normalizeSlug(input.companySlug))) {
       return { ok: false, error: "sandbox_cannot_share" };
     }
-    this.ensureHeld(input.companySlug, actor);
+    const missingAcl = this.requireExisting(input.companySlug, actor);
+    if (missingAcl) return missingAcl;
     return this.inner.changeAcl(actor, input);
   }
 
@@ -223,7 +238,8 @@ export class HostedMembershipJourneyStore implements JourneyStore {
     if (this.isSandbox(normalizeSlug(input.companySlug))) {
       return { ok: false, error: "starter bet board cannot send webhooks" };
     }
-    this.ensureHeld(input.companySlug, actor);
+    const missingSub = this.requireExisting(input.companySlug, actor);
+    if (missingSub) return missingSub;
     return this.inner.subscribeBoard(actor, input);
   }
 
@@ -242,7 +258,8 @@ export class HostedMembershipJourneyStore implements JourneyStore {
   ) {
     const denied = this.denyUnlessHeld(actor, input.companySlug);
     if (denied) return denied;
-    this.ensureHeld(input.companySlug, actor);
+    const missingList = this.requireExisting(input.companySlug, actor);
+    if (missingList) return missingList;
     return this.inner.listSubscribers(actor, input);
   }
 
@@ -255,7 +272,8 @@ export class HostedMembershipJourneyStore implements JourneyStore {
     if (this.isSandbox(normalizeSlug(input.companySlug))) {
       return { ok: false, error: "a starter bet board is not in the portfolio" };
     }
-    this.ensureHeld(input.companySlug, actor);
+    const missingScore = this.requireExisting(input.companySlug, actor);
+    if (missingScore) return missingScore;
     return this.inner.putPortfolioScore(actor, {
       ...input,
       ideaSlug: input.ideaSlug || "default",
@@ -268,7 +286,8 @@ export class HostedMembershipJourneyStore implements JourneyStore {
   ) {
     const denied = this.denyUnlessHeld(actor, query.companySlug);
     if (denied) return denied;
-    this.ensureHeld(query.companySlug, actor);
+    const missingProv = this.requireExisting(query.companySlug, actor);
+    if (missingProv) return missingProv;
     return this.inner.listProvenance(actor, query);
   }
 
@@ -278,7 +297,8 @@ export class HostedMembershipJourneyStore implements JourneyStore {
   ) {
     const denied = this.denyUnlessHeld(actor, query.companySlug);
     if (denied) return denied;
-    this.ensureHeld(query.companySlug, actor);
+    const missingKilled = this.requireExisting(query.companySlug, actor);
+    if (missingKilled) return missingKilled;
     return this.inner.listKilledIdeas(actor, query);
   }
 }
@@ -288,6 +308,35 @@ export const JOURNEY_RPC_UNAUTHORIZED = "journey_rpc_failed:401";
 
 function journeyRpcError(status: number): string {
   return `journey_rpc_failed:${status}`;
+}
+
+const FOUNDER_EMAIL_REQUIRED = {
+  error: "founder_email_required",
+  message: "This board needs its founder's email. Pass founderEmail.",
+};
+const INVALID_FOUNDER_EMAIL = {
+  error: "invalid_founder_email",
+  message: "founderEmail isn't a valid email address.",
+};
+const BOARD_NOT_FOUND = {
+  error: "not_found",
+  message: "Board not found.",
+};
+
+function mappedRpcFailure(status: number, raw: unknown): { error: string; message?: string } {
+  if (status === 401) return { error: JOURNEY_RPC_UNAUTHORIZED };
+  const blob = typeof raw === "string" ? raw : JSON.stringify(raw ?? "");
+  const messageField =
+    raw && typeof raw === "object" && "message" in raw ? String((raw as { message: unknown }).message) : "";
+  const hay = `${messageField}\n${blob}`;
+  if (/founder_email_required/i.test(hay)) return FOUNDER_EMAIL_REQUIRED;
+  if (/invalid_founder_email/i.test(hay)) return INVALID_FOUNDER_EMAIL;
+  if (/company not visible|not_found|\bP0002\b/i.test(hay)) return BOARD_NOT_FOUND;
+  return { error: journeyRpcError(status) };
+}
+
+function rpcMiss(hit: { error: string; message?: string }): { ok: false; error: string; message?: string } {
+  return hit.message ? { ok: false, error: hit.error, message: hit.message } : { ok: false, error: hit.error };
 }
 
 export class SupabaseJourneyStore implements JourneyStore {
@@ -303,7 +352,10 @@ export class SupabaseJourneyStore implements JourneyStore {
     return Boolean(actor.authenticated && (actor.email || actor.sub));
   }
 
-  private async rpc(name: string, body: Record<string, unknown>): Promise<{ raw: unknown } | { error: string }> {
+  private async rpc(
+    name: string,
+    body: Record<string, unknown>,
+  ): Promise<{ raw: unknown } | { error: string; message?: string }> {
     const base = this.url.replace(/\/+$/, "");
     const res = await fetch(`${base}/rest/v1/rpc/${name}`, {
       method: "POST",
@@ -323,7 +375,7 @@ export class SupabaseJourneyStore implements JourneyStore {
     } catch {
       raw = text;
     }
-    if (!res.ok) return { error: journeyRpcError(res.status) };
+    if (!res.ok) return mappedRpcFailure(res.status, raw);
     return { raw };
   }
 
@@ -336,7 +388,7 @@ export class SupabaseJourneyStore implements JourneyStore {
       p_company: query.companySlug,
       p_idea: query.ideaSlug ?? null,
     });
-    if ("error" in hit) return { ok: false, error: hit.error };
+    if ("error" in hit) return rpcMiss(hit);
     return compactJourneyPayload(attachCardFromScoreboard(hit.raw), {
       expandAudit: Boolean(query.expandMeetingDoc),
     });
@@ -364,7 +416,7 @@ export class SupabaseJourneyStore implements JourneyStore {
       p_founder_yes: input.founderYes,
       p_why: input.why ?? null,
     });
-    if ("error" in hit) return { ok: false, error: hit.error };
+    if ("error" in hit) return rpcMiss(hit);
     return hit.raw;
   }
 
@@ -382,6 +434,7 @@ export class SupabaseJourneyStore implements JourneyStore {
       founderYes: boolean;
       founderWrittenDecision?: string;
       founder?: string;
+      founderEmail?: string;
       client?: string;
       gateEnrichment?: GateEnrichment;
       killPostmortem?: Omit<KillPostmortem, "why"> & { why?: string };
@@ -441,8 +494,9 @@ export class SupabaseJourneyStore implements JourneyStore {
       p_founder_written_decision: input.founderWrittenDecision ?? null,
     };
     if (input.founder !== undefined) rpcBody.p_founder = input.founder;
+    if (input.founderEmail !== undefined) rpcBody.p_founder_email = input.founderEmail;
     const hit = await this.rpc("bootstrap_os_put_journey", rpcBody);
-    if ("error" in hit) return { ok: false, error: hit.error };
+    if ("error" in hit) return rpcMiss(hit);
     await this.fireWebhooksAfterWrite(hit.raw, {
       company: input.companySlug,
       idea,
@@ -461,7 +515,7 @@ export class SupabaseJourneyStore implements JourneyStore {
       p_idea: idea,
       p_body: input.body,
     });
-    if ("error" in hit) return { ok: false, error: hit.error };
+    if ("error" in hit) return rpcMiss(hit);
     await this.fireWebhooksAfterWrite(hit.raw, {
       company: input.companySlug,
       idea,
@@ -488,7 +542,7 @@ export class SupabaseJourneyStore implements JourneyStore {
       p_role: input.role,
       p_op: input.op,
     });
-    if ("error" in hit) return { ok: false, error: hit.error };
+    if ("error" in hit) return rpcMiss(hit);
     return hit.raw;
   }
 
@@ -511,7 +565,7 @@ export class SupabaseJourneyStore implements JourneyStore {
       p_webhook_url: input.webhookUrl,
       p_email_opt_in: Boolean(input.emailOptIn),
     });
-    if ("error" in hit) return { ok: false, error: hit.error };
+    if ("error" in hit) return rpcMiss(hit);
     return hit.raw;
   }
 
@@ -530,7 +584,7 @@ export class SupabaseJourneyStore implements JourneyStore {
       p_principal: input.principal,
       p_principal_kind: input.principalKind,
     });
-    if ("error" in hit) return { ok: false, error: hit.error };
+    if ("error" in hit) return rpcMiss(hit);
     return hit.raw;
   }
 
@@ -541,7 +595,7 @@ export class SupabaseJourneyStore implements JourneyStore {
     const hit = await this.rpc("bootstrap_os_list_subscribers", {
       p_company: input.companySlug,
     });
-    if ("error" in hit) return { ok: false, error: hit.error };
+    if ("error" in hit) return rpcMiss(hit);
     return hit.raw;
   }
 
@@ -567,7 +621,7 @@ export class SupabaseJourneyStore implements JourneyStore {
       p_why: input.why,
       p_founder_yes: input.founderYes,
     });
-    if ("error" in hit) return { ok: false, error: hit.error };
+    if ("error" in hit) return rpcMiss(hit);
     return hit.raw;
   }
 
@@ -582,7 +636,7 @@ export class SupabaseJourneyStore implements JourneyStore {
       p_to: query.to ?? null,
       p_before: query.before ?? null,
     });
-    if ("error" in hit) return { ok: false, error: hit.error };
+    if ("error" in hit) return rpcMiss(hit);
     return hit.raw;
   }
 
@@ -593,7 +647,7 @@ export class SupabaseJourneyStore implements JourneyStore {
     const hit = await this.rpc("bootstrap_os_list_killed_ideas", {
       p_company: query.companySlug,
     });
-    if ("error" in hit) return { ok: false, error: hit.error };
+    if ("error" in hit) return rpcMiss(hit);
     return hit.raw;
   }
 

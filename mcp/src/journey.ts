@@ -668,7 +668,7 @@ export function roleOnCompany(
   companyId: string,
 ): JourneyAclRole | undefined {
   const hits = rlsVisibleAcl(acl, actor).filter((row) => row.companyId === companyId);
-  const order: JourneyAclRole[] = ["founder", "founder_authorized", "advisor"];
+  const order: JourneyAclRole[] = ["founder", "founder_authorized", "advisor", "mentor", "commenter"];
   for (const role of order) {
     if (hits.some((row) => row.role === role)) return role;
   }
@@ -684,9 +684,10 @@ export function canWriteJourney(acl: AclRow[], actor: JourneyActor, companyId: s
   return role === "founder" || role === "founder_authorized";
 }
 
-/** Advisors post comments. Side table only. Comments never mutate phase/gate. */
+/** Advisors, mentors, and commenters post comments. Side table only. Comments never mutate phase/gate. */
 export function canPostComment(acl: AclRow[], actor: JourneyActor, companyId: string): boolean {
-  return roleOnCompany(acl, actor, companyId) === "advisor";
+  const role = roleOnCompany(acl, actor, companyId);
+  return role === "advisor" || role === "mentor" || role === "commenter";
 }
 
 export function commentsMayMutateGate(): boolean {
@@ -1094,6 +1095,7 @@ export type JourneyStore = {
       founderYes: boolean;
       founderWrittenDecision?: string;
       founder?: string;
+      founderEmail?: string;
       client?: string;
       gateEnrichment?: GateEnrichment;
       killPostmortem?: Omit<KillPostmortem, "why"> & { why?: string };
@@ -1216,18 +1218,28 @@ export class MemoryJourneyStore implements JourneyStore {
   ensureCompanyForMember(
     slug: string,
     actor: JourneyActor,
-    options?: { seedIdea?: boolean },
-  ): CompanyRow {
+    options?: { seedIdea?: boolean; founderEmail?: string; superAdmin?: boolean; create?: boolean },
+  ): CompanyRow | undefined {
     const want = normalizeSlug(slug);
     const seedIdea = options?.seedIdea !== false;
+    const founderRaw = options?.founderEmail?.trim().toLowerCase() ?? "";
+    const founderEmail = founderRaw || undefined;
+    if (founderEmail && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(founderEmail)) {
+      throw new Error("invalid_founder_email");
+    }
     let company = this.companyBySlug(want);
+    if (!company && !options?.create) return undefined;
     if (!company) {
+      if (!founderEmail && options?.superAdmin) {
+        throw new Error("founder_email_required: pass founderEmail");
+      }
       company = { id: this.nextId("co"), slug: want, label: want };
-      this.companies.push(company);
+      const created = company;
+      this.companies.push(created);
       if (seedIdea) {
         this.ideas.push({
           id: this.nextId("id"),
-          companyId: company.id,
+          companyId: created.id,
           slug: "default",
           name: want,
           journeyPhase: 1,
@@ -1236,18 +1248,42 @@ export class MemoryJourneyStore implements JourneyStore {
           scoreboard: defaultScoreboard(),
         });
       }
-    }
-    if (actor.email) {
+      const caller = actor.email?.trim().toLowerCase() || undefined;
+      const grant = (email: string | undefined, role: AclRow["role"]) => {
+        if (!email) return;
+        const exists = this.acl.some(
+          (row) =>
+            row.companyId === created.id &&
+            row.principalKind === "email" &&
+            row.principal === email,
+        );
+        if (exists) return;
+        this.acl.push({
+          companyId: created.id,
+          principal: email,
+          principalKind: "email",
+          role,
+        });
+      };
+      if (!founderEmail || founderEmail === caller) {
+        grant(caller, "founder");
+      } else {
+        grant(founderEmail, "founder");
+        grant(caller, "commenter");
+      }
+    } else if (options?.create && actor.email && company) {
+      const existing = company;
+      const caller = actor.email.trim().toLowerCase();
       const exists = this.acl.some(
         (row) =>
-          row.companyId === company.id &&
+          row.companyId === existing.id &&
           row.principalKind === "email" &&
-          row.principal === actor.email,
+          row.principal === caller,
       );
       if (!exists) {
         this.acl.push({
-          companyId: company.id,
-          principal: actor.email,
+          companyId: existing.id,
+          principal: caller,
           principalKind: "email",
           role: "founder_authorized",
         });
@@ -1449,6 +1485,7 @@ export class MemoryJourneyStore implements JourneyStore {
       founderYes: boolean;
       founderWrittenDecision?: string;
       founder?: string;
+      founderEmail?: string;
       client?: string;
       gateEnrichment?: GateEnrichment;
       killPostmortem?: Omit<KillPostmortem, "why"> & { why?: string };

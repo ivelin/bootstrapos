@@ -531,6 +531,21 @@ function registerGatedIdentityTools(server: McpServer, ctx: HostedRequestContext
       try {
         const created = await store.create(email);
         if (!created.ok) return err(created.error);
+        const journey = resolveJourneyStore(ctx.accessToken);
+        const actor =
+          ("actor" in ctx && ctx.actor?.email ? ctx.actor : undefined) ?? {
+            authenticated: true,
+            email,
+            principal: email,
+            identityStore: "memory" as const,
+          };
+        if (journey && typeof (journey as { ensureSandboxBoard?: unknown }).ensureSandboxBoard === "function") {
+          (
+            journey as unknown as {
+              ensureSandboxBoard: (a: typeof actor, slug: string) => void;
+            }
+          ).ensureSandboxBoard(actor, created.board.slug);
+        }
         return text({
           ok: true,
           created: created.created,
@@ -1310,6 +1325,13 @@ function registerJourneyTools(server: McpServer, ctx: HostedRequestContext) {
         .max(80)
         .optional()
         .describe("Company founder name. Stored on the company. Not an admin role."),
+      founderEmail: z
+        .string()
+        .trim()
+        .optional()
+        .describe(
+          "On a new board, seeds this email as founder (owner tier). The caller becomes commenter when the address differs. Super admins must pass it.",
+        ),
       client: z.string().optional().describe("Which client wrote. Stored on the audit row."),
       gateEnrichment: z
         .object({
@@ -1394,6 +1416,16 @@ function registerJourneyTools(server: McpServer, ctx: HostedRequestContext) {
         return err("Gated. Founder or founder-authorized token required.");
       }
       try {
+        if (
+          input.founderEmail !== undefined &&
+          !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(input.founderEmail)
+        ) {
+          return text({
+            ok: false,
+            error: "invalid_founder_email",
+            message: "founderEmail isn't a valid email address.",
+          });
+        }
         return text(
           await store.putJourney(actor, {
             companySlug: input.company,
@@ -1411,6 +1443,7 @@ function registerJourneyTools(server: McpServer, ctx: HostedRequestContext) {
             founderYes: input.founderYes,
             founderWrittenDecision: input.founderWrittenDecision,
             founder: input.founder,
+            founderEmail: input.founderEmail,
             client: input.client,
             gateEnrichment: input.gateEnrichment,
             killPostmortem: input.killPostmortem,

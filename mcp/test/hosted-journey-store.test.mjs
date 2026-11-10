@@ -50,6 +50,15 @@ describe("hosted membership journey store", () => {
         founder: "",
       });
       assert.equal(puts()[2].p_founder, "");
+      await store.putJourney(who, {
+        companySlug: "alpha",
+        why: "seed a founder",
+        founderYes: true,
+        client: "bootstrap-bill",
+        founderEmail: "founder@example.invalid",
+      });
+      assert.equal(puts()[3].p_founder_email, "founder@example.invalid");
+      assert.equal(Object.hasOwn(puts()[0], "p_founder_email"), false);
     } finally {
       globalThis.fetch = orig;
     }
@@ -73,6 +82,18 @@ describe("hosted membership journey store", () => {
     const ivelin = actor("founder@example.test");
     const bill = actor("bill@example.test");
     assert.equal((await store.getJourney(bill, { companySlug: "alpha" })).ok, false);
+    assert.equal((await store.getJourney(ivelin, { companySlug: "alpha" })).error, "not_found");
+    assert.equal(
+      (
+        await store.putJourney(ivelin, {
+          companySlug: "alpha",
+          why: "seed the board",
+          founderYes: true,
+          constraintThisWeek: "talk",
+        })
+      ).ok,
+      true,
+    );
     const board = await store.getJourney(ivelin, { companySlug: "alpha" });
     assert.equal(board.ok, true);
     assert.equal(board.ideas[0].slug, "default");
@@ -389,6 +410,50 @@ describe("hosted membership journey store", () => {
       delete process.env.VERCEL_ENV;
       delete process.env.BOOTSTRAP_SUPABASE_URL;
       delete process.env.BOOTSTRAP_SUPABASE_ANON_KEY;
+    }
+  });
+
+  it("maps founder_email_required and company not visible PostgREST bodies", async () => {
+    const store = new SupabaseJourneyStore("https://example.supabase.co", "anon-test-key", "token");
+    const ivelin = actor("founder@example.test");
+    const orig = globalThis.fetch;
+    globalThis.fetch = async () =>
+      Response.json(
+        { code: "P0001", message: "founder_email_required: pass founderEmail" },
+        { status: 400 },
+      );
+    try {
+      const put = await store.putJourney(ivelin, { companySlug: "newco", why: "seed", founderYes: true });
+      assert.equal(put.ok, false);
+      assert.equal(put.error, "founder_email_required");
+      assert.equal(put.message, "This board needs its founder's email. Pass founderEmail.");
+    } finally {
+      globalThis.fetch = orig;
+    }
+    globalThis.fetch = async () =>
+      Response.json({ code: "P0001", message: "company not visible" }, { status: 400 });
+    try {
+      const got = await store.getJourney(ivelin, { companySlug: "other-team" });
+      assert.equal(got.ok, false);
+      assert.equal(got.error, "not_found");
+      assert.equal(got.message, "Board not found.");
+    } finally {
+      globalThis.fetch = orig;
+    }
+    globalThis.fetch = async () =>
+      Response.json({ code: "P0001", message: "invalid_founder_email" }, { status: 400 });
+    try {
+      const bad = await store.putJourney(ivelin, {
+        companySlug: "newco",
+        why: "seed",
+        founderYes: true,
+        founderEmail: "not-an-email",
+      });
+      assert.equal(bad.ok, false);
+      assert.equal(bad.error, "invalid_founder_email");
+      assert.equal(bad.message, "founderEmail isn't a valid email address.");
+    } finally {
+      globalThis.fetch = orig;
     }
   });
 });

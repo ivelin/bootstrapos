@@ -427,6 +427,14 @@ describe("journey token must be usable before the tool runs", () => {
       sub: "auth-alpha",
       extra: { exp: futureExp() },
     });
+    const seeded = await handleHostedReadFetch(
+      toolRequest(
+        "put_journey",
+        { company: "alpha", why: "seed alpha", founderYes: true, constraintThisWeek: "talk" },
+        token,
+      ),
+    );
+    assert.equal(seeded.status, 200, await seeded.clone().text());
     const res = await handleHostedReadFetch(toolRequest("get_journey", { company: "alpha" }, token));
     const raw = await res.text();
     assert.equal(res.status, 200, raw);
@@ -503,6 +511,29 @@ describe("journey token must be usable before the tool runs", () => {
     } finally {
       globalThis.fetch = origFetch;
     }
+  });
+
+  it("put_journey rejects a bad founderEmail with invalid_founder_email", async () => {
+    setJourneyStoreForTests(alphaMembershipStore());
+    const token = syntheticAccessToken({
+      email: ALPHA_EMAIL,
+      sub: "auth-alpha",
+      extra: { exp: futureExp() },
+    });
+    const res = await handleHostedReadFetch(
+      toolRequest(
+        "put_journey",
+        { company: "alpha", why: "seed", founderYes: true, founderEmail: "not-an-email" },
+        token,
+      ),
+    );
+    const raw = await res.text();
+    assert.equal(res.status, 200, raw);
+    const parsed = JSON.parse(toolText(JSON.parse(raw)));
+    assert.equal(parsed.ok, false);
+    assert.equal(parsed.error, "invalid_founder_email");
+    assert.equal(parsed.message, "founderEmail isn't a valid email address.");
+    assert.equal(raw.includes("Invalid at founderEmail"), false);
   });
 
   it("non-journey tools ignore journey expiry and still use whoami", async () => {
@@ -765,6 +796,10 @@ describe("journey token must be usable before the tool runs", () => {
         sub: "auth-alpha",
         extra: { exp: futureExp() },
       });
+      const seeded = await handleHostedReadFetch(
+        toolRequest("put_journey", { company: "alpha", why: "seed alpha", founderYes: true }, token),
+      );
+      assert.equal(seeded.status, 200, await seeded.clone().text());
       const res = await handleHostedReadFetch(
         toolRequest("get_journey", { company: "alpha" }, token),
       );
