@@ -978,11 +978,32 @@ export function resolveInviteStore(accessToken?: string): InviteStore | null {
 export type InviteFailMessageInput =
   | InviteFailReason
   | AcceptFailReason
-  | { reason: InviteFailReason | AcceptFailReason; status?: number; body?: string };
+  | {
+      reason?: InviteFailReason | AcceptFailReason | string;
+      error?: string;
+      message?: string;
+      status?: number;
+      body?: string;
+    };
+
+const ROLE_CAN_COMMENT_NOT_EDIT =
+  "Your role on this board can comment, but not edit. Ask the founder to invite you to edit.";
+
+function spokenOr(message: unknown, fallback: string): string {
+  return typeof message === "string" && message.trim() ? message : fallback;
+}
 
 export function inviteFailMessage(input: InviteFailMessageInput): string {
   const fail = typeof input === "string" ? { reason: input } : input;
-  switch (fail.reason) {
+  const reason = typeof fail.reason === "string" ? fail.reason : undefined;
+  const error = "error" in fail && typeof fail.error === "string" ? fail.error : undefined;
+  const code =
+    reason === "forbidden_role" || error === "forbidden_role"
+      ? "forbidden_role"
+      : reason === "not_found" || error === "not_found"
+        ? "not_found"
+        : reason;
+  switch (code) {
     case "inviter_not_on_allowlist":
       return "Only an allowlisted founder or authorized mentee may invite.";
     case "invalid_email":
@@ -1016,6 +1037,10 @@ export function inviteFailMessage(input: InviteFailMessageInput): string {
       return "Invite rejected.";
     case "email_required":
       return "Accept needs a pirin.ai access token whose email matches the invite.";
+    case "forbidden_role":
+      return spokenOr("message" in fail ? fail.message : undefined, ROLE_CAN_COMMENT_NOT_EDIT);
+    case "not_found":
+      return spokenOr("message" in fail ? fail.message : undefined, "Board not found.");
     default:
       return "Invite rejected.";
   }
