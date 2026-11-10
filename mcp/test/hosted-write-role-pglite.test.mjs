@@ -161,6 +161,10 @@ CREATE OR REPLACE FUNCTION bootstrap_os.portfolio_view(uuid)
 RETURNS jsonb LANGUAGE sql AS $$ SELECT '{}'::jsonb $$;
 CREATE OR REPLACE FUNCTION bootstrap_os.read_portfolio_score(jsonb)
 RETURNS jsonb LANGUAGE sql AS $$ SELECT NULL::jsonb $$;
+CREATE OR REPLACE FUNCTION bootstrap_os.normalize_gate_enrichment(jsonb)
+RETURNS jsonb LANGUAGE sql AS $$ SELECT '{"whatChanged":"seed","whatWereNotDoing":"scope"}'::jsonb $$;
+CREATE OR REPLACE FUNCTION bootstrap_os.normalize_kill_postmortem(jsonb, text)
+RETURNS jsonb LANGUAGE sql AS $$ SELECT '{}'::jsonb $$;
 CREATE OR REPLACE FUNCTION public.bootstrap_hosted_take(text)
 RETURNS jsonb LANGUAGE sql AS $$ SELECT '{"ok":true}'::jsonb $$;
 CREATE OR REPLACE FUNCTION public.bootstrap_os_starter_is_sandbox(text)
