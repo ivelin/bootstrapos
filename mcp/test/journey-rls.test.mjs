@@ -228,7 +228,7 @@ describe("journey RLS file lock + memory replica", () => {
       email: "late@example.invalid",
       principal: "late@example.invalid",
     }, { founderEmail: "other@example.invalid", create: true });
-    assert.equal(store.acl.find((row) => row.principal === "late@example.invalid").role, "founder_authorized");
+    assert.equal(store.acl.find((row) => row.principal === "late@example.invalid"), undefined);
     assert.equal(store.acl.find((row) => row.principal === "solo@example.invalid").role, "founder");
     assert.equal(store.acl.some((row) => row.principal === "other@example.invalid"), false);
     assert.throws(
