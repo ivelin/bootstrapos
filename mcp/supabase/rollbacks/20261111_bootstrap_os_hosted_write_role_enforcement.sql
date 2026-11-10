@@ -997,4 +997,6 @@ BEGIN
 END;
 $$;
 
+DROP FUNCTION IF EXISTS bootstrap_os.ensure_company_for_actor(text, text, boolean);
+
 COMMIT;

@@ -32,28 +32,31 @@ $$;
 
 REVOKE ALL ON FUNCTION bootstrap_os.has_rank(uuid, int) FROM PUBLIC, anon, authenticated;
 
-CREATE OR REPLACE FUNCTION public.bootstrap_os_ensure_company(
+-- created is true only when this call inserted the companies row.
+CREATE OR REPLACE FUNCTION bootstrap_os.ensure_company_for_actor(
   p_company text,
   p_founder_email text DEFAULT NULL,
-  p_create boolean DEFAULT false
+  p_create boolean DEFAULT false,
+  OUT company_id uuid,
+  OUT created boolean
 )
-RETURNS uuid
 LANGUAGE plpgsql
 SECURITY DEFINER
-SET search_path = public, bootstrap_os
+SET search_path = pg_catalog, bootstrap_os, public
 AS $$
 DECLARE
   v_slug text := lower(p_company);
-  cid uuid;
   caller_email text := NULLIF(lower(auth.jwt() ->> 'email'), '');
   v_founder text := nullif(lower(trim(p_founder_email)), '');
   v_super boolean := false;
 BEGIN
-  SELECT c.id INTO cid FROM bootstrap_os.companies c WHERE c.slug = v_slug;
-  IF cid IS NULL AND p_create IS NOT TRUE THEN
+  created := false;
+  PERFORM pg_advisory_xact_lock(hashtext('bootstrap_os.company:' || v_slug));
+  SELECT c.id INTO company_id FROM bootstrap_os.companies c WHERE c.slug = v_slug;
+  IF company_id IS NULL AND p_create IS NOT TRUE THEN
     RAISE EXCEPTION 'not_found' USING ERRCODE = 'P0002';
   END IF;
-  IF cid IS NULL THEN
+  IF company_id IS NULL THEN
     IF v_founder IS NOT NULL AND v_founder !~ '^[^@[:space:]]+@[^@[:space:]]+\.[^@[:space:]]+$' THEN
       RAISE EXCEPTION 'invalid_founder_email';
     END IF;
@@ -70,22 +73,52 @@ BEGIN
     IF v_founder IS NULL AND v_super THEN
       RAISE EXCEPTION 'founder_email_required: pass founderEmail';
     END IF;
-    INSERT INTO bootstrap_os.companies (slug, label) VALUES (v_slug, v_slug) RETURNING id INTO cid;
-    INSERT INTO bootstrap_os.ideas (company_id, slug, name, journey_phase, loop_stage, current_gate, scoreboard)
-    VALUES (cid, 'default', v_slug, 1, 1, 'hold',
-      jsonb_build_object('schema_version', 1, 'readyForHumanEyes', jsonb_build_object('status', 'unknown'),
-        'autonomyPosture', 'strict', 'openQuestions', '[]'::jsonb, 'constraint_this_week', ''));
-    IF v_founder IS NULL OR v_founder = caller_email THEN
-      PERFORM public.bootstrap_os_grant_acl_internal(cid, caller_email, 'founder');
+    INSERT INTO bootstrap_os.companies (slug, label) VALUES (v_slug, v_slug)
+    ON CONFLICT (slug) DO NOTHING
+    RETURNING id INTO company_id;
+    IF company_id IS NOT NULL THEN
+      created := true;
+      INSERT INTO bootstrap_os.ideas (company_id, slug, name, journey_phase, loop_stage, current_gate, scoreboard)
+      VALUES (company_id, 'default', v_slug, 1, 1, 'hold',
+        jsonb_build_object('schema_version', 1, 'readyForHumanEyes', jsonb_build_object('status', 'unknown'),
+          'autonomyPosture', 'strict', 'openQuestions', '[]'::jsonb, 'constraint_this_week', ''));
+      IF v_founder IS NULL OR v_founder = caller_email THEN
+        PERFORM public.bootstrap_os_grant_acl_internal(company_id, caller_email, 'founder');
+      ELSE
+        PERFORM public.bootstrap_os_grant_acl_internal(company_id, v_founder, 'founder');
+        PERFORM public.bootstrap_os_grant_acl_internal(company_id, caller_email, 'commenter');
+      END IF;
     ELSE
-      PERFORM public.bootstrap_os_grant_acl_internal(cid, v_founder, 'founder');
-      PERFORM public.bootstrap_os_grant_acl_internal(cid, caller_email, 'commenter');
+      SELECT c.id INTO company_id FROM bootstrap_os.companies c WHERE c.slug = v_slug;
+      IF NOT public.bootstrap_os_held_label(v_slug) THEN
+        RAISE EXCEPTION 'company not visible';
+      END IF;
     END IF;
   ELSE
     IF NOT public.bootstrap_os_held_label(v_slug) THEN
       RAISE EXCEPTION 'company not visible';
     END IF;
   END IF;
+END;
+$$;
+
+REVOKE ALL ON FUNCTION bootstrap_os.ensure_company_for_actor(text, text, boolean) FROM PUBLIC, anon, authenticated;
+
+CREATE OR REPLACE FUNCTION public.bootstrap_os_ensure_company(
+  p_company text,
+  p_founder_email text DEFAULT NULL,
+  p_create boolean DEFAULT false
+)
+RETURNS uuid
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = pg_catalog, bootstrap_os, public
+AS $$
+DECLARE
+  cid uuid;
+BEGIN
+  SELECT r.company_id INTO cid
+  FROM bootstrap_os.ensure_company_for_actor(p_company, p_founder_email, p_create) AS r;
   RETURN cid;
 END;
 $$;
@@ -190,6 +223,7 @@ DECLARE
   v_role text := lower(trim(coalesce(p_role, '')));
   v_op text := lower(trim(coalesce(p_op, '')));
   before_row bootstrap_os.company_acl%ROWTYPE;
+  v_self int;
 BEGIN
   IF NOT public.bootstrap_os_held_label(p_company) THEN
     RETURN jsonb_build_object('ok', false, 'error', 'company not visible');
@@ -203,7 +237,7 @@ BEGIN
   IF v_kind = 'email' THEN
     v_principal := lower(v_principal);
   END IF;
-  IF v_role NOT IN ('founder', 'founder_authorized', 'advisor') THEN
+  IF v_role NOT IN ('founder', 'owner', 'founder_authorized', 'editor', 'advisor', 'commenter') THEN
     RETURN jsonb_build_object('ok', false, 'error', 'invalid role');
   END IF;
   IF v_op NOT IN ('grant', 'revoke') THEN
@@ -213,8 +247,26 @@ BEGIN
   IF NOT bootstrap_os.has_rank(cid, 3) THEN
     RETURN jsonb_build_object('ok', false, 'error', 'forbidden_role', 'message', 'Your role on this board can comment, but not edit. Ask the founder to invite you to edit.');
   END IF;
+  SELECT COALESCE(
+    (
+      SELECT MAX(bootstrap_os.rank_of(a.role))
+      FROM bootstrap_os.company_acl a
+      WHERE a.company_id = cid
+        AND (
+          (a.principal_kind = 'email' AND a.principal = bootstrap_os.actor_email())
+          OR (a.principal_kind = 'sub' AND a.principal = bootstrap_os.actor_sub())
+        )
+    ),
+    CASE WHEN public.bootstrap_os_held_label(p_company) THEN 2 ELSE 0 END
+  ) INTO v_self;
   SELECT * INTO before_row FROM bootstrap_os.company_acl
   WHERE company_id = cid AND principal = v_principal AND principal_kind = v_kind;
+  IF v_op = 'grant' AND bootstrap_os.rank_of(v_role) > v_self THEN
+    RETURN jsonb_build_object('ok', false, 'error', 'forbidden_role', 'message', 'Your role on this board can comment, but not edit. Ask the founder to invite you to edit.');
+  END IF;
+  IF v_op = 'revoke' AND before_row.id IS NOT NULL AND bootstrap_os.rank_of(before_row.role) >= v_self THEN
+    RETURN jsonb_build_object('ok', false, 'error', 'forbidden_role', 'message', 'Your role on this board can comment, but not edit. Ask the founder to invite you to edit.');
+  END IF;
   IF v_op = 'grant' THEN
     IF v_kind = 'email' THEN
       PERFORM public.bootstrap_os_grant_acl_internal(cid, v_principal, v_role, false);
@@ -363,16 +415,14 @@ DECLARE
   incoming_score jsonb;
   stamped jsonb;
   journey_or_gate boolean;
-  v_existed boolean;
+  v_created boolean := false;
 BEGIN
   IF nullif(trim(coalesce(p_why, '')), '') IS NULL THEN
     RETURN jsonb_build_object('ok', false, 'error', 'why required');
   END IF;
-  SELECT EXISTS (
-    SELECT 1 FROM bootstrap_os.companies c WHERE c.slug = lower(p_company)
-  ) INTO v_existed;
-  cid := public.bootstrap_os_ensure_company(p_company, p_founder_email, true);
-  IF v_existed AND NOT bootstrap_os.has_rank(cid, 3) THEN
+  SELECT r.company_id, r.created INTO cid, v_created
+  FROM bootstrap_os.ensure_company_for_actor(p_company, p_founder_email, true) AS r;
+  IF NOT v_created AND NOT bootstrap_os.has_rank(cid, 3) THEN
     RETURN jsonb_build_object('ok', false, 'error', 'forbidden_role', 'message', 'Your role on this board can comment, but not edit. Ask the founder to invite you to edit.');
   END IF;
   SELECT * INTO idea_row FROM bootstrap_os.ideas
@@ -698,6 +748,7 @@ DECLARE
   denied jsonb := '[]'::jsonb;
   allowed jsonb := '[]'::jsonb;
   seen text[] := ARRAY[]::text[];
+  v_rank_fails int := 0;
 BEGIN
   PERFORM bootstrap_os.require_actor();
   actor_email := bootstrap_os.resolved_actor_email();
@@ -739,6 +790,9 @@ BEGIN
       AND bootstrap_os.has_rank(company_uuid, 3)
       AND (requested <> 'editor' OR bootstrap_os.has_rank(company_uuid, 4));
     IF NOT ceiling_ok THEN
+      IF company_uuid IS NOT NULL AND NOT bootstrap_os.has_rank(company_uuid, 3) THEN
+        v_rank_fails := v_rank_fails + 1;
+      END IF;
       denied := denied || jsonb_build_array(jsonb_build_object(
         'slug', v_slug,
         'reason', CASE WHEN rank IS NULL THEN 'not_held' ELSE 'tier_forbidden' END
@@ -768,6 +822,15 @@ BEGIN
     ));
   END LOOP;
 
+  IF jsonb_array_length(p_companies) > 0 AND v_rank_fails = jsonb_array_length(p_companies) THEN
+    RETURN jsonb_build_object(
+      'ok', false,
+      'error', 'forbidden_role',
+      'reason', 'forbidden_role',
+      'message', 'Your role on this board can comment, but not edit. Ask the founder to invite you to edit.',
+      'details', denied
+    );
+  END IF;
   IF jsonb_array_length(denied) > 0 THEN
     RETURN jsonb_build_object(
       'ok', false,
@@ -866,7 +929,10 @@ BEGIN
   END IF;
 
   SELECT c.id INTO cid FROM bootstrap_os.companies c WHERE c.slug = workspace;
-  IF cid IS NULL OR NOT bootstrap_os.has_rank(cid, 3) THEN
+  IF cid IS NULL THEN
+    RETURN jsonb_build_object('ok', false, 'error', 'not_found', 'message', 'Board not found.');
+  END IF;
+  IF NOT bootstrap_os.has_rank(cid, 3) THEN
     RETURN jsonb_build_object('ok', false, 'error', 'forbidden_role', 'message', 'Your role on this board can comment, but not edit. Ask the founder to invite you to edit.');
   END IF;
 

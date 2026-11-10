@@ -74,9 +74,10 @@ function grantedToAuthenticated(files) {
   return [...granted.entries()].filter(([, on]) => on).map(([name]) => name);
 }
 
-export function compileCatalog() {
+export function compileCatalog(extraFiles = []) {
   const files = fs.readdirSync(migrationsDir).filter((name) => name.endsWith(".sql")).sort()
-    .map((name) => path.join(migrationsDir, name));
+    .map((name) => path.join(migrationsDir, name))
+    .concat(extraFiles);
   const bodies = latestBodies(files);
   const rows = [];
   for (const name of grantedToAuthenticated(files).sort()) {
@@ -115,10 +116,11 @@ describe("hosted write-role catalog", () => {
   });
 
   it("rejects a new authenticated write RPC with no has_rank and no class", () => {
-    const compiled = compileCatalog();
-    const extra = compiled.concat([{ name: "bootstrap_os_future_write", class: "UNCLASSIFIED" }]);
-    assert.equal(extra.some((row) => row.class === "UNCLASSIFIED"), true);
-    assert.equal(compiled.some((row) => row.class === "UNCLASSIFIED"), false);
+    const fixture = path.join(__dirname, "fixtures", "unclassified-write-rpc.sql");
+    const compiled = compileCatalog([fixture]);
+    const extra = compiled.find((row) => row.name === "bootstrap_os_future_write");
+    assert.equal(extra.class, "UNCLASSIFIED");
+    assert.equal(compileCatalog().some((row) => row.class === "UNCLASSIFIED"), false);
   });
 
   it("lints 20261111 for backfill, anon grants, and role current_setting", () => {

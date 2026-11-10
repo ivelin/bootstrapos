@@ -392,8 +392,8 @@ describe("hosted write-role gates (PGlite)", { concurrency: false }, () => {
       const body = hit.rows[0].body;
       if (sql.includes("invite_create")) {
         assert.equal(body.ok, false);
-        assert.equal(body.reason, "invite_partial_authority");
-        assert.equal(body.denied[0].reason, "tier_forbidden");
+        assert.equal(body.error, "forbidden_role");
+        assert.equal(body.details[0].reason, "tier_forbidden");
       } else {
         assert.equal(body.error, "forbidden_role", sql);
       }
@@ -417,6 +417,53 @@ describe("hosted write-role gates (PGlite)", { concurrency: false }, () => {
     );
     assert.equal(comment.rows[0].body.error, "forbidden_role");
     assert.equal(comment.rows[0].body.message, COMMENT);
+  });
+
+  it("stops an editor from granting or revoking founder and allows a lower grant", async () => {
+    await asEmail("editor@example.invalid");
+    const grantFounder = await db.query(
+      "SELECT public.bootstrap_os_change_acl('alpha', 'newfounder@example.invalid', 'email', 'founder', 'grant') AS body",
+    );
+    assert.equal(grantFounder.rows[0].body.error, "forbidden_role");
+    const revokeFounder = await db.query(
+      "SELECT public.bootstrap_os_change_acl('alpha', 'founder@example.invalid', 'email', 'founder', 'revoke') AS body",
+    );
+    assert.equal(revokeFounder.rows[0].body.error, "forbidden_role");
+    const still = await db.query(
+      `SELECT a.role FROM bootstrap_os.company_acl a
+       JOIN bootstrap_os.companies c ON c.id = a.company_id
+       WHERE c.slug = 'alpha' AND a.principal = 'founder@example.invalid'`,
+    );
+    assert.equal(still.rows[0].role, "founder");
+    const grantCommenter = await db.query(
+      "SELECT public.bootstrap_os_change_acl('alpha', 'note@example.invalid', 'email', 'commenter', 'grant') AS body",
+    );
+    assert.equal(grantCommenter.rows[0].body.ok, true);
+    await asEmail("founder@example.invalid");
+    const grantEditor = await db.query(
+      "SELECT public.bootstrap_os_change_acl('alpha', 'pen@example.invalid', 'email', 'editor', 'grant') AS body",
+    );
+    assert.equal(grantEditor.rows[0].body.ok, true);
+  });
+
+  it("returns not_found when invite_member has a label but no board", async () => {
+    await db.exec(`
+      INSERT INTO public.bootstrap_mcp_mentees (email, auth_user_id)
+      VALUES ('ghost@example.invalid', '22222222-2222-2222-2222-222222222222');
+      INSERT INTO public.bootstrap_company_labels (mentee_id, label)
+      SELECT id, 'ghostco' FROM public.bootstrap_mcp_mentees WHERE email = 'ghost@example.invalid';
+      INSERT INTO auth.users (id, email)
+      VALUES ('22222222-2222-2222-2222-222222222222', 'ghost@example.invalid');
+    `);
+    await asEmail("ghost@example.invalid", "22222222-2222-2222-2222-222222222222");
+    const before = await db.query("SELECT count(*)::int AS n FROM bootstrap_os.companies");
+    const hit = await db.query(
+      "SELECT public.bootstrap_mcp_invite_member('person@example.invalid', 'ghostco') AS body",
+    );
+    assert.equal(hit.rows[0].body.error, "not_found");
+    assert.equal(hit.rows[0].body.message, "Board not found.");
+    const after = await db.query("SELECT count(*)::int AS n FROM bootstrap_os.companies");
+    assert.equal(after.rows[0].n, before.rows[0].n);
   });
 
   it("drops the ensure_company auto-grant", async () => {
