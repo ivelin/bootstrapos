@@ -1328,7 +1328,6 @@ function registerJourneyTools(server: McpServer, ctx: HostedRequestContext) {
       founderEmail: z
         .string()
         .trim()
-        .regex(/^[^@\s]+@[^@\s]+\.[^@\s]+$/)
         .optional()
         .describe(
           "On a new board, seeds this email as founder (owner tier). The caller becomes commenter when the address differs. Super admins must pass it.",
@@ -1417,6 +1416,16 @@ function registerJourneyTools(server: McpServer, ctx: HostedRequestContext) {
         return err("Gated. Founder or founder-authorized token required.");
       }
       try {
+        if (
+          input.founderEmail !== undefined &&
+          !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(input.founderEmail)
+        ) {
+          return text({
+            ok: false,
+            error: "invalid_founder_email",
+            message: "founderEmail isn't a valid email address.",
+          });
+        }
         return text(
           await store.putJourney(actor, {
             companySlug: input.company,

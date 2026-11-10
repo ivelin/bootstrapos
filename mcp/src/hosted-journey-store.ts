@@ -310,6 +310,35 @@ function journeyRpcError(status: number): string {
   return `journey_rpc_failed:${status}`;
 }
 
+const FOUNDER_EMAIL_REQUIRED = {
+  error: "founder_email_required",
+  message: "This board needs its founder's email. Pass founderEmail.",
+};
+const INVALID_FOUNDER_EMAIL = {
+  error: "invalid_founder_email",
+  message: "founderEmail isn't a valid email address.",
+};
+const BOARD_NOT_FOUND = {
+  error: "not_found",
+  message: "Board not found.",
+};
+
+function mappedRpcFailure(status: number, raw: unknown): { error: string; message?: string } {
+  if (status === 401) return { error: JOURNEY_RPC_UNAUTHORIZED };
+  const blob = typeof raw === "string" ? raw : JSON.stringify(raw ?? "");
+  const messageField =
+    raw && typeof raw === "object" && "message" in raw ? String((raw as { message: unknown }).message) : "";
+  const hay = `${messageField}\n${blob}`;
+  if (/founder_email_required/i.test(hay)) return FOUNDER_EMAIL_REQUIRED;
+  if (/invalid_founder_email/i.test(hay)) return INVALID_FOUNDER_EMAIL;
+  if (/company not visible|not_found|\bP0002\b/i.test(hay)) return BOARD_NOT_FOUND;
+  return { error: journeyRpcError(status) };
+}
+
+function rpcMiss(hit: { error: string; message?: string }): { ok: false; error: string; message?: string } {
+  return hit.message ? { ok: false, error: hit.error, message: hit.message } : { ok: false, error: hit.error };
+}
+
 export class SupabaseJourneyStore implements JourneyStore {
   readonly kind = "supabase" as const;
 
@@ -323,7 +352,10 @@ export class SupabaseJourneyStore implements JourneyStore {
     return Boolean(actor.authenticated && (actor.email || actor.sub));
   }
 
-  private async rpc(name: string, body: Record<string, unknown>): Promise<{ raw: unknown } | { error: string }> {
+  private async rpc(
+    name: string,
+    body: Record<string, unknown>,
+  ): Promise<{ raw: unknown } | { error: string; message?: string }> {
     const base = this.url.replace(/\/+$/, "");
     const res = await fetch(`${base}/rest/v1/rpc/${name}`, {
       method: "POST",
@@ -343,7 +375,7 @@ export class SupabaseJourneyStore implements JourneyStore {
     } catch {
       raw = text;
     }
-    if (!res.ok) return { error: journeyRpcError(res.status) };
+    if (!res.ok) return mappedRpcFailure(res.status, raw);
     return { raw };
   }
 
@@ -356,7 +388,7 @@ export class SupabaseJourneyStore implements JourneyStore {
       p_company: query.companySlug,
       p_idea: query.ideaSlug ?? null,
     });
-    if ("error" in hit) return { ok: false, error: hit.error };
+    if ("error" in hit) return rpcMiss(hit);
     return compactJourneyPayload(attachCardFromScoreboard(hit.raw), {
       expandAudit: Boolean(query.expandMeetingDoc),
     });
@@ -384,7 +416,7 @@ export class SupabaseJourneyStore implements JourneyStore {
       p_founder_yes: input.founderYes,
       p_why: input.why ?? null,
     });
-    if ("error" in hit) return { ok: false, error: hit.error };
+    if ("error" in hit) return rpcMiss(hit);
     return hit.raw;
   }
 
@@ -464,7 +496,7 @@ export class SupabaseJourneyStore implements JourneyStore {
     if (input.founder !== undefined) rpcBody.p_founder = input.founder;
     if (input.founderEmail !== undefined) rpcBody.p_founder_email = input.founderEmail;
     const hit = await this.rpc("bootstrap_os_put_journey", rpcBody);
-    if ("error" in hit) return { ok: false, error: hit.error };
+    if ("error" in hit) return rpcMiss(hit);
     await this.fireWebhooksAfterWrite(hit.raw, {
       company: input.companySlug,
       idea,
@@ -483,7 +515,7 @@ export class SupabaseJourneyStore implements JourneyStore {
       p_idea: idea,
       p_body: input.body,
     });
-    if ("error" in hit) return { ok: false, error: hit.error };
+    if ("error" in hit) return rpcMiss(hit);
     await this.fireWebhooksAfterWrite(hit.raw, {
       company: input.companySlug,
       idea,
@@ -510,7 +542,7 @@ export class SupabaseJourneyStore implements JourneyStore {
       p_role: input.role,
       p_op: input.op,
     });
-    if ("error" in hit) return { ok: false, error: hit.error };
+    if ("error" in hit) return rpcMiss(hit);
     return hit.raw;
   }
 
@@ -533,7 +565,7 @@ export class SupabaseJourneyStore implements JourneyStore {
       p_webhook_url: input.webhookUrl,
       p_email_opt_in: Boolean(input.emailOptIn),
     });
-    if ("error" in hit) return { ok: false, error: hit.error };
+    if ("error" in hit) return rpcMiss(hit);
     return hit.raw;
   }
 
@@ -552,7 +584,7 @@ export class SupabaseJourneyStore implements JourneyStore {
       p_principal: input.principal,
       p_principal_kind: input.principalKind,
     });
-    if ("error" in hit) return { ok: false, error: hit.error };
+    if ("error" in hit) return rpcMiss(hit);
     return hit.raw;
   }
 
@@ -563,7 +595,7 @@ export class SupabaseJourneyStore implements JourneyStore {
     const hit = await this.rpc("bootstrap_os_list_subscribers", {
       p_company: input.companySlug,
     });
-    if ("error" in hit) return { ok: false, error: hit.error };
+    if ("error" in hit) return rpcMiss(hit);
     return hit.raw;
   }
 
@@ -589,7 +621,7 @@ export class SupabaseJourneyStore implements JourneyStore {
       p_why: input.why,
       p_founder_yes: input.founderYes,
     });
-    if ("error" in hit) return { ok: false, error: hit.error };
+    if ("error" in hit) return rpcMiss(hit);
     return hit.raw;
   }
 
@@ -604,7 +636,7 @@ export class SupabaseJourneyStore implements JourneyStore {
       p_to: query.to ?? null,
       p_before: query.before ?? null,
     });
-    if ("error" in hit) return { ok: false, error: hit.error };
+    if ("error" in hit) return rpcMiss(hit);
     return hit.raw;
   }
 
@@ -615,7 +647,7 @@ export class SupabaseJourneyStore implements JourneyStore {
     const hit = await this.rpc("bootstrap_os_list_killed_ideas", {
       p_company: query.companySlug,
     });
-    if ("error" in hit) return { ok: false, error: hit.error };
+    if ("error" in hit) return rpcMiss(hit);
     return hit.raw;
   }
 
