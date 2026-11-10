@@ -557,4 +557,56 @@ describe("invite + accept (memory, never prod)", { concurrency: false }, () => {
       globalThis.fetch = origFetch;
     }
   });
+
+  it("surfaces forbidden_role and not_found messages from invite RPCs", async () => {
+    const roleMessage =
+      "Your role on this board can comment, but not edit. Ask the founder to invite you to edit.";
+    const forbidden = {
+      ok: false,
+      error: "forbidden_role",
+      message: roleMessage,
+    };
+    const missing = { ok: false, error: "not_found", message: "Board not found." };
+    assert.equal(inviteFailMessage(forbidden), roleMessage);
+    assert.notEqual(inviteFailMessage(forbidden), "Invite rejected.");
+    assert.equal(inviteFailMessage(missing), "Board not found.");
+    assert.notEqual(inviteFailMessage(missing), "Invite rejected.");
+    assert.equal(inviteFailMessage({ ok: false, reason: "forbidden_role" }), roleMessage);
+    assert.equal(inviteFailMessage({ ok: false, error: "not_found" }), "Board not found.");
+
+    const origFetch = globalThis.fetch;
+    const store = new SupabaseInviteStore(
+      "https://rpc-role.example",
+      "anon-key-fixture-xx",
+      "access-token-fixture",
+    );
+    try {
+      globalThis.fetch = async (url) => {
+        const u = String(url);
+        assert.equal(u, "https://rpc-role.example/rest/v1/rpc/bootstrap_os_invite_create");
+        return new Response(JSON.stringify(forbidden), { status: 200 });
+      };
+      const created = await store.inviteMember(
+        { email: "founder@example.invalid" },
+        {
+          email: "commenter@example.invalid",
+          companies: [{ slug: "alpha", role: "commenter" }],
+        },
+      );
+      assert.equal(inviteFailMessage(created), roleMessage);
+
+      globalThis.fetch = async (url) => {
+        const u = String(url);
+        assert.equal(u, "https://rpc-role.example/rest/v1/rpc/bootstrap_mcp_invite_member");
+        return new Response(JSON.stringify(missing), { status: 200 });
+      };
+      const member = await store.inviteMember(
+        { email: "label@example.invalid" },
+        { email: "person@example.invalid", companyLabel: "ghostco" },
+      );
+      assert.equal(inviteFailMessage(member), "Board not found.");
+    } finally {
+      globalThis.fetch = origFetch;
+    }
+  });
 });
