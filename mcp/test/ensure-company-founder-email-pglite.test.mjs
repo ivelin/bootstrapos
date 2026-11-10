@@ -192,6 +192,41 @@ describe("ensure_company founderEmail (PGlite, never prod)", { concurrency: fals
     db = new PGlite();
     await db.exec(HARNESS);
     await db.exec(UP);
+    await db.exec(`
+      ALTER TABLE bootstrap_os.audit_events ADD COLUMN at timestamptz NOT NULL DEFAULT now();
+      CREATE TABLE bootstrap_os.comments (
+        id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        idea_id uuid,
+        at timestamptz NOT NULL DEFAULT now(),
+        who text,
+        body text
+      );
+      CREATE TABLE bootstrap_os.gate_events (
+        id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        idea_id uuid,
+        at timestamptz NOT NULL DEFAULT now(),
+        action text,
+        why text,
+        who text
+      );
+      CREATE TABLE bootstrap_os.board_subscribers (
+        id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        company_id uuid,
+        idea_id uuid,
+        principal text,
+        principal_kind text,
+        webhook_url text,
+        email_opt_in boolean,
+        created_by text
+      );
+      CREATE TABLE public.bootstrap_request_cap (name text PRIMARY KEY, max_value int);
+      CREATE OR REPLACE FUNCTION bootstrap_os.portfolio_view(uuid) RETURNS jsonb LANGUAGE sql AS $$ SELECT '{}'::jsonb $$;
+      CREATE OR REPLACE FUNCTION bootstrap_os.read_portfolio_score(jsonb) RETURNS jsonb LANGUAGE sql AS $$ SELECT NULL::jsonb $$;
+      CREATE OR REPLACE FUNCTION bootstrap_os.notify_bundle(uuid, uuid, text) RETURNS jsonb LANGUAGE sql AS $$ SELECT '{}'::jsonb $$;
+      CREATE OR REPLACE FUNCTION bootstrap_os.require_actor() RETURNS void LANGUAGE plpgsql AS $$ BEGIN RETURN; END $$;
+      CREATE OR REPLACE FUNCTION bootstrap_os.resolved_actor_email() RETURNS text LANGUAGE sql AS $$ SELECT bootstrap_os.actor_email() $$;
+      CREATE OR REPLACE FUNCTION bootstrap_os.resolved_actor_sub() RETURNS text LANGUAGE sql AS $$ SELECT bootstrap_os.actor_sub() $$;
+    `);
     await db.exec(WRITE_ROLE);
   });
 
