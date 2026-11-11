@@ -1617,14 +1617,14 @@ function registerJourneyTools(server: McpServer, ctx: HostedRequestContext) {
 
   server.tool(
     "change_board_role",
-    "Hand a role on this bet board to someone, or take it back. Owner only. They sign in with the email you pass.",
+    "Hand a role on this bet board to someone. Revoke removes that person from the board, whatever role they hold. Owner only. They sign in with the email you pass.",
     {
       company: z.string().describe("Company slug"),
       principalEmail: z.string().describe("Email they will sign in with"),
       role: z
         .enum(["founder", "owner", "founder_authorized", "editor", "advisor", "commenter"])
         .describe("Role on this board"),
-      op: z.enum(["grant", "revoke"]).describe("Grant the role, or revoke it"),
+      op: z.enum(["grant", "revoke"]).describe("grant adds the role. revoke removes this person from the board."),
     },
     async (input) => {
       const store = storeOf();

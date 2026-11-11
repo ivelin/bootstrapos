@@ -2,7 +2,7 @@
  * PostgreSQL 16: email grant writes the company label; revoke removes it.
  * Never supabase-pirin-ai. Never prod. Fictional fixtures only.
  */
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawn } from "node:child_process";
 import { after, before, describe, it } from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
@@ -263,6 +263,12 @@ describe("PostgreSQL 16 change_acl writes the company label", { concurrency: fal
       FROM cfg;
     `).trim();
     assert.equal(editor, "forbidden_role");
+    const editorMessage = psql(`
+      WITH cfg AS (SELECT set_config('app.actor_email', 'editor@example.test', false) AS email)
+      SELECT public.bootstrap_os_change_acl('alpha', 'extra@example.test', 'email', 'commenter', 'grant') ->> 'message'
+      FROM cfg;
+    `).trim();
+    assert.equal(editorMessage, "Only board owners can change roles.");
     const commenter = psql(`
       WITH cfg AS (SELECT set_config('app.actor_email', 'commenter@example.test', false) AS email)
       SELECT public.bootstrap_os_change_acl('alpha', 'extra@example.test', 'email', 'commenter', 'grant') ->> 'error'
@@ -315,6 +321,107 @@ describe("PostgreSQL 16 change_acl writes the company label", { concurrency: fal
     assert.match(closed, /company not visible/);
     assert.equal(closed.includes("\"ok\": true"), false);
 
+    psql(`
+      INSERT INTO bootstrap_os.companies (id, slug, label)
+      VALUES ('66666666-6666-4666-8666-666666666666', 'solo', 'Solo');
+      INSERT INTO public.bootstrap_company_labels (mentee_id, label)
+      VALUES ('33333333-3333-4333-8333-333333333333', 'solo');
+      INSERT INTO bootstrap_os.company_acl (company_id, principal, principal_kind, role)
+      VALUES ('66666666-6666-4666-8666-666666666666', 'owner@example.test', 'email', 'owner');
+    `);
+    const selfRevoke = psql(`
+      WITH cfg AS (SELECT set_config('app.actor_email', 'owner@example.test', false) AS email)
+      SELECT public.bootstrap_os_change_acl('solo', 'owner@example.test', 'email', 'owner', 'revoke')::text
+      FROM cfg;
+    `);
+    assert.match(selfRevoke, /last_owner/);
+    assert.equal(
+      psql("SELECT count(*)::text FROM bootstrap_os.company_acl WHERE company_id = '66666666-6666-4666-8666-666666666666';").trim(),
+      "1",
+    );
+
+    psql(`
+      INSERT INTO public.bootstrap_mcp_mentees (email) VALUES ('keeper@example.test') ON CONFLICT (email) DO NOTHING;
+      INSERT INTO public.bootstrap_company_labels (mentee_id, label)
+      SELECT id, 'alpha' FROM public.bootstrap_mcp_mentees WHERE email = 'keeper@example.test';
+    `);
+    const labelBefore = psql(`
+      SELECT count(*)::text FROM public.bootstrap_company_labels l
+      JOIN public.bootstrap_mcp_mentees m ON m.id = l.mentee_id
+      WHERE m.email = 'keeper@example.test' AND l.label = 'alpha';
+    `).trim();
+    const noop = psql(`
+      WITH cfg AS (SELECT set_config('app.actor_email', 'owner@example.test', false) AS email)
+      SELECT public.bootstrap_os_change_acl('alpha', 'keeper@example.test', 'email', 'commenter', 'revoke')::text
+      FROM cfg;
+    `);
+    assert.match(noop, /"ok": true/);
+    const labelAfter = psql(`
+      SELECT count(*)::text FROM public.bootstrap_company_labels l
+      JOIN public.bootstrap_mcp_mentees m ON m.id = l.mentee_id
+      WHERE m.email = 'keeper@example.test' AND l.label = 'alpha';
+    `).trim();
+    assert.equal(labelAfter, labelBefore);
+
+    const clashAudits = psql(`
+      SELECT count(*)::text FROM bootstrap_os.audit_events WHERE what_changed->>'via' = 'acl';
+    `).trim();
+    const clash = psql(`
+      WITH cfg AS (SELECT set_config('app.actor_email', 'owner@example.test', false) AS email)
+      SELECT public.bootstrap_os_change_acl('alpha', 'editor@example.test', 'email', 'advisor', 'grant')::text
+      FROM cfg;
+    `);
+    assert.match(clash, /already has role editor; revoke first/);
+    const clashAuditsAfter = psql(`
+      SELECT count(*)::text FROM bootstrap_os.audit_events WHERE what_changed->>'via' = 'acl';
+    `).trim();
+    assert.equal(clashAuditsAfter, clashAudits);
+    const sameRole = psql(`
+      WITH cfg AS (SELECT set_config('app.actor_email', 'owner@example.test', false) AS email)
+      SELECT public.bootstrap_os_change_acl('alpha', 'editor@example.test', 'email', 'editor', 'grant') ->> 'ok'
+      FROM cfg;
+    `).trim();
+    assert.equal(sameRole, "true");
+
+    psql(`
+      INSERT INTO bootstrap_os.companies (id, slug, label)
+      VALUES ('77777777-7777-4777-8777-777777777777', 'pair', 'Pair');
+      INSERT INTO public.bootstrap_mcp_mentees (email) VALUES
+        ('owner-a@example.test'), ('owner-b@example.test')
+      ON CONFLICT (email) DO NOTHING;
+      INSERT INTO public.bootstrap_company_labels (mentee_id, label)
+      SELECT id, 'pair' FROM public.bootstrap_mcp_mentees
+      WHERE email IN ('owner-a@example.test', 'owner-b@example.test');
+      INSERT INTO bootstrap_os.company_acl (company_id, principal, principal_kind, role)
+      SELECT '77777777-7777-4777-8777-777777777777', email, 'email', 'owner'
+      FROM (VALUES ('owner-a@example.test'), ('owner-b@example.test')) AS v(email);
+    `);
+    const pairRevoke = psql(`
+      WITH cfg AS (SELECT set_config('app.actor_email', 'owner-a@example.test', false) AS email)
+      SELECT public.bootstrap_os_change_acl('pair', 'owner-b@example.test', 'email', 'owner', 'revoke') ->> 'ok'
+      FROM cfg;
+    `).trim();
+    assert.equal(pairRevoke, "true");
+    assert.equal(
+      psql("SELECT count(*)::text FROM bootstrap_os.company_acl WHERE company_id = '77777777-7777-4777-8777-777777777777';").trim(),
+      "1",
+    );
+
+    psql(`
+      CREATE OR REPLACE FUNCTION bootstrap_os.rank_of(p_role text) RETURNS int LANGUAGE sql AS $$
+        SELECT CASE p_role
+          WHEN 'founder' THEN 5 WHEN 'owner' THEN 4
+          WHEN 'founder_authorized' THEN 3 WHEN 'editor' THEN 3
+          ELSE 2 END;
+      $$;
+    `);
+    const above = psql(`
+      WITH cfg AS (SELECT set_config('app.actor_email', 'owner@example.test', false) AS email)
+      SELECT public.bootstrap_os_change_acl('alpha', 'above@example.test', 'email', 'founder', 'grant') ->> 'message'
+      FROM cfg;
+    `).trim();
+    assert.equal(above, "You cannot grant a role above your own.");
+
     const audits = psql(`
       SELECT string_agg(what_changed->>'op', ',' ORDER BY at)
       FROM bootstrap_os.audit_events
@@ -323,5 +430,81 @@ describe("PostgreSQL 16 change_acl writes the company label", { concurrency: fal
         AND what_changed->>'role' = 'founder';
     `).trim();
     assert.equal(audits, "grant,revoke");
+  });
+
+  it("two sessions revoking each other leave exactly one owner", async () => {
+    if (!fs.existsSync(path.join(BIN, "initdb"))) return;
+    psql(`
+      CREATE OR REPLACE FUNCTION bootstrap_os.rank_of(p_role text) RETURNS int LANGUAGE sql AS $$
+        SELECT CASE p_role
+          WHEN 'founder' THEN 4 WHEN 'owner' THEN 4
+          WHEN 'founder_authorized' THEN 3 WHEN 'editor' THEN 3
+          ELSE 2 END;
+      $$;
+      INSERT INTO public.bootstrap_mcp_mentees (email) VALUES
+        ('race-a@example.test'), ('race-b@example.test')
+      ON CONFLICT (email) DO NOTHING;
+      INSERT INTO public.bootstrap_company_labels (mentee_id, label)
+      SELECT id, 'alpha' FROM public.bootstrap_mcp_mentees
+      WHERE email IN ('race-a@example.test', 'race-b@example.test')
+      ON CONFLICT DO NOTHING;
+      INSERT INTO bootstrap_os.company_acl (company_id, principal, principal_kind, role)
+      SELECT '11111111-1111-4111-8111-111111111111', email, 'email', 'owner'
+      FROM (VALUES ('race-a@example.test'), ('race-b@example.test')) AS v(email);
+    `);
+    const probe = psql(`
+      WITH cfg AS (SELECT set_config('app.actor_email', 'race-a@example.test', false) AS email)
+      SELECT public.bootstrap_os_held_label('alpha')::text || ' ' ||
+        (SELECT count(*)::text FROM bootstrap_os.company_acl
+          WHERE company_id = '11111111-1111-4111-8111-111111111111'
+            AND principal IN ('race-a@example.test', 'race-b@example.test'))
+      FROM cfg;
+    `).trim();
+    assert.equal(probe, "true 2", probe);
+    const sqlFor = (actor, other) => `
+      WITH cfg AS (SELECT set_config('app.actor_email', '${actor}', false) AS email)
+      SELECT public.bootstrap_os_change_acl('alpha', '${other}', 'email', 'owner', 'revoke')::text
+      FROM cfg;
+    `;
+    const run = (sql) =>
+      new Promise((resolve) => {
+        const file = path.join(dataDir, `race-${process.hrtime.bigint()}.sql`);
+        fs.writeFileSync(file, sql);
+        const child = spawn(
+          psqlBin,
+          ["-h", dataDir, "-p", port, "-d", "postgres", "-v", "ON_ERROR_STOP=1", "-t", "-A", "-f", file],
+          { stdio: ["ignore", "pipe", "pipe"] },
+        );
+        let stdout = "";
+        let stderr = "";
+        child.stdout.on("data", (chunk) => {
+          stdout += chunk;
+        });
+        child.stderr.on("data", (chunk) => {
+          stderr += chunk;
+        });
+        child.on("close", (code) => resolve({ code, stdout, stderr }));
+      });
+    const [left, right] = await Promise.all([
+      run(sqlFor("race-a@example.test", "race-b@example.test")),
+      run(sqlFor("race-b@example.test", "race-a@example.test")),
+    ]);
+    const combined = `${left.stdout}\n${left.stderr}\n${right.stdout}\n${right.stderr}`;
+    const oks = (combined.match(/"ok": true/g) || []).length;
+    assert.equal(oks, 1, combined);
+    assert.equal(
+      psql("SELECT count(*)::text FROM bootstrap_os.company_acl WHERE company_id = '11111111-1111-4111-8111-111111111111' AND principal IN ('race-a@example.test', 'race-b@example.test');").trim(),
+      "1",
+    );
+    psqlFile(path.join(__dirname, "..", "supabase", "rollbacks", "20261114_bootstrap_os_change_acl_label.sql"));
+    const restored = psql("SELECT pg_get_functiondef('public.bootstrap_os_change_acl(text,text,text,text,text)'::regprocedure);");
+    assert.match(restored, /bootstrap_os_grant_acl_internal\(cid, v_principal, v_role, false\)/);
+    assert.match(restored, /has_rank\(cid, 3\)/);
+    const priv = psql(`
+      SELECT has_function_privilege('anon', 'public.bootstrap_os_change_acl(text,text,text,text,text)', 'execute')::text
+        || ' ' ||
+        has_function_privilege('authenticated', 'public.bootstrap_os_change_acl(text,text,text,text,text)', 'execute')::text;
+    `).trim();
+    assert.equal(priv, "false true");
   });
 });

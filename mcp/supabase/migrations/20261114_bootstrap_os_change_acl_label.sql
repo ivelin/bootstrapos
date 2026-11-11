@@ -23,6 +23,8 @@ DECLARE
   v_op text := lower(trim(coalesce(p_op, '')));
   before_row bootstrap_os.company_acl%ROWTYPE;
   v_self int;
+  v_deleted int := 0;
+  v_rank4 int := 0;
 BEGIN
   IF NOT public.bootstrap_os_held_label(p_company) THEN
     RETURN jsonb_build_object('ok', false, 'error', 'company not visible');
@@ -45,7 +47,7 @@ BEGIN
   cid := public.bootstrap_os_ensure_company(p_company);
   -- Owner tier only (founder or owner). Editor and commenter stay refused.
   IF NOT bootstrap_os.has_rank(cid, 4) THEN
-    RETURN jsonb_build_object('ok', false, 'error', 'forbidden_role', 'message', 'Your role on this board can comment, but not edit. Ask the founder to invite you to edit.');
+    RETURN jsonb_build_object('ok', false, 'error', 'forbidden_role', 'message', 'Only board owners can change roles.');
   END IF;
   SELECT COALESCE(
     (
@@ -62,24 +64,45 @@ BEGIN
   SELECT * INTO before_row FROM bootstrap_os.company_acl
   WHERE company_id = cid AND principal = v_principal AND principal_kind = v_kind;
   IF v_op = 'grant' AND bootstrap_os.rank_of(v_role) > v_self THEN
-    RETURN jsonb_build_object('ok', false, 'error', 'forbidden_role', 'message', 'Your role on this board can comment, but not edit. Ask the founder to invite you to edit.');
+    RETURN jsonb_build_object('ok', false, 'error', 'forbidden_role', 'message', 'You cannot grant a role above your own.');
   END IF;
   IF v_op = 'revoke' AND before_row.id IS NOT NULL AND bootstrap_os.rank_of(before_row.role) > v_self THEN
-    RETURN jsonb_build_object('ok', false, 'error', 'forbidden_role', 'message', 'Your role on this board can comment, but not edit. Ask the founder to invite you to edit.');
+    RETURN jsonb_build_object('ok', false, 'error', 'forbidden_role', 'message', 'You cannot remove a role above your own.');
+  END IF;
+  IF v_op = 'grant' AND before_row.id IS NOT NULL AND before_row.role IS DISTINCT FROM v_role THEN
+    RETURN jsonb_build_object(
+      'ok', false,
+      'error', 'role_conflict',
+      'message', format('already has role %s; revoke first', before_row.role)
+    );
   END IF;
   IF v_op = 'grant' THEN
-    IF v_kind = 'email' THEN
-      PERFORM public.bootstrap_os_grant_acl_internal(cid, v_principal, v_role, true);
-    ELSE
-      -- Helper is email-only. Sub grants stay a direct ACL insert.
-      INSERT INTO bootstrap_os.company_acl (company_id, principal, principal_kind, role)
-      VALUES (cid, v_principal, v_kind, v_role)
-      ON CONFLICT (company_id, principal, principal_kind) DO NOTHING;
+    IF before_row.id IS NULL THEN
+      IF v_kind = 'email' THEN
+        PERFORM public.bootstrap_os_grant_acl_internal(cid, v_principal, v_role, true);
+      ELSE
+        -- Helper is email-only. Sub grants stay a direct ACL insert.
+        INSERT INTO bootstrap_os.company_acl (company_id, principal, principal_kind, role)
+        VALUES (cid, v_principal, v_kind, v_role)
+        ON CONFLICT (company_id, principal, principal_kind) DO NOTHING;
+      END IF;
     END IF;
   ELSE
+    PERFORM pg_advisory_xact_lock(hashtextextended(cid::text, 0));
+    SELECT count(*) INTO v_rank4
+    FROM bootstrap_os.company_acl a
+    WHERE a.company_id = cid AND bootstrap_os.rank_of(a.role) >= 4;
+    IF before_row.id IS NOT NULL AND bootstrap_os.rank_of(before_row.role) >= 4 AND v_rank4 <= 1 THEN
+      RETURN jsonb_build_object(
+        'ok', false,
+        'error', 'last_owner',
+        'message', 'This board must keep an owner.'
+      );
+    END IF;
     DELETE FROM bootstrap_os.company_acl
     WHERE company_id = cid AND principal = v_principal AND principal_kind = v_kind;
-    IF v_kind = 'email' THEN
+    GET DIAGNOSTICS v_deleted = ROW_COUNT;
+    IF v_kind = 'email' AND v_deleted > 0 THEN
       DELETE FROM public.bootstrap_company_labels AS lab
       USING public.bootstrap_mcp_mentees AS men, bootstrap_os.companies AS co
       WHERE lab.mentee_id = men.id

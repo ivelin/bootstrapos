@@ -2080,7 +2080,20 @@ export class MemoryJourneyStore implements JourneyStore {
     const company = this.companyBySlug(input.companySlug);
     const self = company ? roleOnCompany(this.acl, actor, company.id) : undefined;
     if (!company || (self !== "founder" && self !== "owner")) {
-      return forbidden("forbidden_role");
+      return {
+        ok: false,
+        error: "forbidden_role",
+        message: "Only board owners can change roles.",
+      };
+    }
+    const rankOf = (role: string) =>
+      role === "founder" || role === "owner" ? 4 : role === "founder_authorized" || role === "editor" ? 3 : 2;
+    if (input.op === "grant" && rankOf(input.role) > rankOf(self)) {
+      return {
+        ok: false,
+        error: "forbidden_role",
+        message: "You cannot grant a role above your own.",
+      };
     }
     const principal =
       input.principalKind === "email" ? input.principal.trim().toLowerCase() : input.principal.trim();
@@ -2093,14 +2106,15 @@ export class MemoryJourneyStore implements JourneyStore {
     const beforeAcl = existing
       ? { principal: existing.principal, principalKind: existing.principalKind, role: existing.role }
       : null;
+    if (input.op === "grant" && existing && existing.role !== input.role) {
+      return {
+        ok: false,
+        error: "role_conflict",
+        message: `already has role ${existing.role}; revoke first`,
+      };
+    }
     if (input.op === "grant") {
-      const exists = this.acl.some(
-        (row) =>
-          row.companyId === company.id &&
-          row.principal === principal &&
-          row.principalKind === input.principalKind,
-      );
-      if (!exists) {
+      if (!existing) {
         this.acl.push({
           companyId: company.id,
           principal,
@@ -2108,7 +2122,17 @@ export class MemoryJourneyStore implements JourneyStore {
           role: input.role,
         });
       }
-    } else {
+    } else if (existing) {
+      const owners = this.acl.filter(
+        (row) => row.companyId === company.id && rankOf(row.role) >= 4,
+      );
+      if (rankOf(existing.role) >= 4 && owners.length <= 1) {
+        return {
+          ok: false,
+          error: "last_owner",
+          message: "This board must keep an owner.",
+        };
+      }
       this.acl = this.acl.filter(
         (row) =>
           !(
