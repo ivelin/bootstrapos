@@ -367,9 +367,6 @@ export async function handleHostedReadFetch(req: Request): Promise<Response> {
     }
   }
   const calledToolName = toolNameFromRpc(rpcBody);
-  if (toolScopeCallRefusal(calledToolName, parseBearerToken(authorization)) === "insufficient_scope") {
-    return insufficientScopeToolResponse(req);
-  }
   const gatedName = gatedToolNameFromRpc(rpcBody);
   // Expired journey tokens stop here: no whoami fetch and no PostgREST RPC.
   if (isHostedGatedJourneyToolName(gatedName) && accessTokenExpired(parseBearerToken(authorization))) {
@@ -427,6 +424,10 @@ export async function handleHostedReadFetch(req: Request): Promise<Response> {
         }
       } else if (!whoami.authenticated) {
         return unauthorizedGatedToolResponse(whoami, req);
+      }
+      // Scope/aud only after today's auth path verified the token (RFC 6750: no token → 401).
+      if (toolScopeCallRefusal(calledToolName, parseBearerToken(authorization)) === "insufficient_scope") {
+        return insufficientScopeToolResponse(req);
       }
     }
   }

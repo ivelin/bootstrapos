@@ -15,7 +15,11 @@ import { HostedMembershipJourneyStore } from "../dist/hosted-journey-store.js";
 import { MemoryIdentityStore, hashMcpToken, setIdentityStoreForTests } from "../dist/identity.js";
 import { setJourneyStoreForTests } from "../dist/journey.js";
 import { syntheticAccessToken } from "../dist/journey-auth.js";
-import { HOSTED_MCP_RESOURCE, insufficientScopeChallenge } from "../dist/oauth.js";
+import {
+  HOSTED_MCP_RESOURCE,
+  insufficientScopeChallenge,
+  wwwAuthenticateChallenge,
+} from "../dist/oauth.js";
 import {
   ACCEPT_SESSION_JWT_ENV,
   PUBLIC_TOOL_NAMES,
@@ -168,7 +172,31 @@ describe("ACCEPT_SESSION_JWT flag", () => {
     assert.equal(toolScopeCallRefusal("bootstrap_whoami", unscopedToken()), "insufficient_scope");
     assert.equal(toolScopeCallRefusal("put_journey", scopedToken()), null);
     assert.equal(toolScopeCallRefusal("bootstrap_os_info", unscopedToken()), null);
+    assert.equal(toolScopeCallRefusal("bootstrap_whoami", undefined), null);
+    assert.equal(toolScopeCallRefusal("put_journey", undefined), null);
   });
+});
+
+describe("no token stays 401 (ACCEPT_SESSION_JWT=false)", () => {
+  for (const name of ["bootstrap_whoami", "put_journey"]) {
+    it(`${name}: missing Bearer → 401 with resource_metadata challenge`, async () => {
+      process.env[ACCEPT_SESSION_JWT_ENV] = "false";
+      setJourneyStoreForTests(
+        new HostedMembershipJourneyStore((actor) =>
+          actor.email === FOUNDER_EMAIL ? ["alpha"] : [],
+        ),
+      );
+      const req = toolRequest(name, TOOL_ARGS[name], undefined);
+      const res = await handleHostedReadFetch(req);
+      assert.equal(res.status, 401, name);
+      const www = res.headers.get("WWW-Authenticate") || "";
+      assert.equal(www, wwwAuthenticateChallenge(req));
+      assert.match(www, /resource_metadata=/);
+      assert.doesNotMatch(www, /error="insufficient_scope"/);
+      const body = JSON.parse(await res.text());
+      assert.equal(body.error, "invalid_token");
+    });
+  }
 });
 
 describe("deny-by-default missing table entry", () => {

@@ -7,6 +7,7 @@ import {
   HOSTED_GATED_TOOL_NAMES,
   HOSTED_READ_TOOL_NAMES,
 } from "./constants.js";
+import { accessTokenExpired } from "./journey-auth.js";
 import { isJwtAccessToken, HOSTED_MCP_RESOURCE } from "./oauth.js";
 
 /** OAuth scope required for authenticated Bootstrap OS tools (issuer also advertises this). */
@@ -154,6 +155,8 @@ export function accessTokenSatisfiesBootstrapOsGate(token: string | undefined): 
 
 /**
  * OAuth aud/scope check for authenticated tools.
+ * Missing / non-JWT / expired tokens return null so the caller keeps today's 401
+ * path (RFC 6750). Call only after the token has verified.
  * Unknown names are left to MCP "not found"; registered-without-entry is a
  * separate check against the live registry (see registeredToolMissingScopeEntry).
  */
@@ -166,6 +169,7 @@ export function toolScopeCallRefusal(
   const entry = toolScopeEntry(toolName);
   if (!entry || entry.kind !== "authenticated") return null;
   if (acceptSessionJwt(env)) return null;
+  if (!token || !isJwtAccessToken(token) || accessTokenExpired(token)) return null;
   if (accessTokenSatisfiesBootstrapOsGate(token)) return null;
   return "insufficient_scope";
 }
