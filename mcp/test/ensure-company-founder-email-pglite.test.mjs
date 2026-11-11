@@ -14,6 +14,10 @@ const UP = fs.readFileSync(
   path.join(migrations, "20261110_bootstrap_os_ensure_company_founder_email.sql"),
   "utf8",
 );
+const WRITE_ROLE = fs.readFileSync(
+  path.join(migrations, "20261111_bootstrap_os_hosted_write_role_enforcement.sql"),
+  "utf8",
+);
 
 const HARNESS = `
 DO $$ BEGIN CREATE ROLE anon; EXCEPTION WHEN duplicate_object THEN NULL; END $$;
@@ -119,6 +123,20 @@ CREATE OR REPLACE FUNCTION bootstrap_os.actor_principal()
 RETURNS text LANGUAGE sql STABLE AS $$
   SELECT COALESCE(bootstrap_os.actor_email(), bootstrap_os.actor_sub());
 $$;
+CREATE OR REPLACE FUNCTION bootstrap_os.rank_of(p_role text)
+RETURNS int LANGUAGE sql IMMUTABLE AS $$
+  SELECT CASE p_role
+    WHEN 'founder' THEN 4
+    WHEN 'owner' THEN 4
+    WHEN 'founder_authorized' THEN 3
+    WHEN 'editor' THEN 3
+    WHEN 'advisor' THEN 2
+    WHEN 'mentor' THEN 2
+    WHEN 'commenter' THEN 2
+    WHEN 'viewer' THEN 1
+    ELSE 0
+  END;
+$$;
 CREATE OR REPLACE FUNCTION bootstrap_os.has_role(p_company_id uuid, VARIADIC p_roles text[])
 RETURNS boolean LANGUAGE sql STABLE AS $$
   SELECT EXISTS (
@@ -174,6 +192,42 @@ describe("ensure_company founderEmail (PGlite, never prod)", { concurrency: fals
     db = new PGlite();
     await db.exec(HARNESS);
     await db.exec(UP);
+    await db.exec(`
+      ALTER TABLE bootstrap_os.audit_events ADD COLUMN at timestamptz NOT NULL DEFAULT now();
+      CREATE TABLE bootstrap_os.comments (
+        id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        idea_id uuid,
+        at timestamptz NOT NULL DEFAULT now(),
+        who text,
+        body text
+      );
+      CREATE TABLE bootstrap_os.gate_events (
+        id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        idea_id uuid,
+        at timestamptz NOT NULL DEFAULT now(),
+        action text,
+        why text,
+        who text
+      );
+      CREATE TABLE bootstrap_os.board_subscribers (
+        id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+        company_id uuid,
+        idea_id uuid,
+        principal text,
+        principal_kind text,
+        webhook_url text,
+        email_opt_in boolean,
+        created_by text
+      );
+      CREATE TABLE public.bootstrap_request_cap (name text PRIMARY KEY, max_value int);
+      CREATE OR REPLACE FUNCTION bootstrap_os.portfolio_view(uuid) RETURNS jsonb LANGUAGE sql AS $$ SELECT '{}'::jsonb $$;
+      CREATE OR REPLACE FUNCTION bootstrap_os.read_portfolio_score(jsonb) RETURNS jsonb LANGUAGE sql AS $$ SELECT NULL::jsonb $$;
+      CREATE OR REPLACE FUNCTION bootstrap_os.notify_bundle(uuid, uuid, text) RETURNS jsonb LANGUAGE sql AS $$ SELECT '{}'::jsonb $$;
+      CREATE OR REPLACE FUNCTION bootstrap_os.require_actor() RETURNS void LANGUAGE plpgsql AS $$ BEGIN RETURN; END $$;
+      CREATE OR REPLACE FUNCTION bootstrap_os.resolved_actor_email() RETURNS text LANGUAGE sql AS $$ SELECT bootstrap_os.actor_email() $$;
+      CREATE OR REPLACE FUNCTION bootstrap_os.resolved_actor_sub() RETURNS text LANGUAGE sql AS $$ SELECT bootstrap_os.actor_sub() $$;
+    `);
+    await db.exec(WRITE_ROLE);
   });
 
   after(async () => {
@@ -258,7 +312,7 @@ describe("ensure_company founderEmail (PGlite, never prod)", { concurrency: fals
     ]);
   });
 
-  it("existing company first touch is founder_authorized and does not demote", async () => {
+  it("label-only first touch does not insert founder_authorized and does not demote", async () => {
     await db.exec(`
       INSERT INTO bootstrap_os.companies (slug, label) VALUES ('heldco', 'heldco');
       INSERT INTO public.bootstrap_mcp_mentees (email) VALUES ('late@example.invalid');
@@ -272,7 +326,16 @@ describe("ensure_company founderEmail (PGlite, never prod)", { concurrency: fals
     await db.query("SELECT public.bootstrap_os_ensure_company('heldco', 'other@example.invalid')");
     assert.deepEqual(await roles("heldco"), [
       { principal: "founder@example.invalid", role: "founder" },
-      { principal: "late@example.invalid", role: "founder_authorized" },
+    ]);
+    await db.exec(`
+      INSERT INTO bootstrap_os.company_acl (company_id, principal, principal_kind, role)
+      SELECT id, 'late@example.invalid', 'email', 'commenter'
+      FROM bootstrap_os.companies WHERE slug = 'heldco';
+    `);
+    await db.query("SELECT public.bootstrap_os_ensure_company('heldco')");
+    assert.deepEqual(await roles("heldco"), [
+      { principal: "founder@example.invalid", role: "founder" },
+      { principal: "late@example.invalid", role: "commenter" },
     ]);
   });
 
@@ -321,6 +384,9 @@ describe("ensure_company founderEmail (PGlite, never prod)", { concurrency: fals
       const hit = await db.query(sql);
       assert.equal(hit.rows[0].body.ok, false);
       assert.equal(hit.rows[0].body.error, "not_found");
+      if (sql.includes("get_journey")) {
+        assert.equal(hit.rows[0].body.message, "Board not found.");
+      }
     }
     const after = await db.query(
       `SELECT

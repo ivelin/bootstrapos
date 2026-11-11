@@ -456,4 +456,51 @@ describe("hosted membership journey store", () => {
       globalThis.fetch = orig;
     }
   });
+
+  it("maps forbidden_role from a PostgREST 400 and a 200 jsonb body", async () => {
+    const store = new SupabaseJourneyStore("https://example.supabase.co", "anon-test-key", "token");
+    const ivelin = actor("commenter@example.invalid");
+    const plain = "Your role on this board can comment, but not edit. Ask the founder to invite you to edit.";
+    const orig = globalThis.fetch;
+    globalThis.fetch = async () =>
+      Response.json(
+        { code: "P0001", message: "forbidden_role" },
+        { status: 400 },
+      );
+    try {
+      const put = await store.putJourney(ivelin, { companySlug: "alpha", why: "no", founderYes: true });
+      assert.equal(put.ok, false);
+      assert.equal(put.error, "forbidden_role");
+      assert.equal(put.message, plain);
+    } finally {
+      globalThis.fetch = orig;
+    }
+    globalThis.fetch = async () =>
+      Response.json(
+        { ok: false, error: "forbidden_role", message: "Ask the founder." },
+        { status: 200 },
+      );
+    try {
+      const put = await store.putJourney(ivelin, { companySlug: "alpha", why: "no", founderYes: true });
+      assert.equal(put.ok, false);
+      assert.equal(put.error, "forbidden_role");
+      assert.equal(put.message, "Ask the founder.");
+    } finally {
+      globalThis.fetch = orig;
+    }
+  });
+
+  it("attaches Board not found when get_journey returns not_found without a message", async () => {
+    const store = new SupabaseJourneyStore("https://example.supabase.co", "anon-test-key", "token");
+    const ivelin = actor("reader@example.invalid");
+    const orig = globalThis.fetch;
+    globalThis.fetch = async () =>
+      Response.json({ ok: false, error: "not_found" }, { status: 200 });
+    try {
+      const got = await store.getJourney(ivelin, { companySlug: "missing" });
+      assert.deepEqual(got, { ok: false, error: "not_found", message: "Board not found." });
+    } finally {
+      globalThis.fetch = orig;
+    }
+  });
 });
