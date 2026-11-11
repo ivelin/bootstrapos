@@ -2115,12 +2115,27 @@ export class MemoryJourneyStore implements JourneyStore {
     }
     if (input.op === "grant") {
       if (!existing) {
-        this.acl.push({
-          companyId: company.id,
-          principal,
-          principalKind: input.principalKind,
-          role: input.role,
-        });
+        const lost = this.acl.find(
+          (row) =>
+            row.companyId === company.id &&
+            row.principal === principal &&
+            row.principalKind === input.principalKind,
+        );
+        if (lost && lost.role !== input.role) {
+          return {
+            ok: false,
+            error: "role_conflict",
+            message: `already has role ${lost.role}; revoke first`,
+          };
+        }
+        if (!lost) {
+          this.acl.push({
+            companyId: company.id,
+            principal,
+            principalKind: input.principalKind,
+            role: input.role,
+          });
+        }
       }
     } else if (existing) {
       const owners = this.acl.filter(

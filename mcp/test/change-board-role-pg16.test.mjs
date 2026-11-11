@@ -384,6 +384,47 @@ describe("PostgreSQL 16 change_acl writes the company label", { concurrency: fal
     assert.equal(sameRole, "true");
 
     psql(`
+      INSERT INTO bootstrap_os.company_acl (company_id, principal, principal_kind, role)
+      VALUES ('11111111-1111-4111-8111-111111111111', 'bare@example.test', 'email', 'editor');
+    `);
+    const filled = psql(`
+      WITH cfg AS (SELECT set_config('app.actor_email', 'owner@example.test', false) AS email)
+      SELECT public.bootstrap_os_change_acl('alpha', 'bare@example.test', 'email', 'editor', 'grant')::text
+      FROM cfg;
+    `);
+    assert.match(filled, /"ok": true/);
+    assert.equal(psql(`
+      SELECT what_changed->>'labelBackfill'
+      FROM bootstrap_os.audit_events
+      WHERE what_changed->>'via' = 'acl'
+        AND what_changed->'after'->>'principal' = 'bare@example.test'
+      ORDER BY at DESC LIMIT 1;
+    `).trim(), "true");
+    assert.equal(psql(`
+      SELECT count(*)::text FROM public.bootstrap_company_labels l
+      JOIN public.bootstrap_mcp_mentees m ON m.id = l.mentee_id
+      WHERE m.email = 'bare@example.test' AND l.label = 'alpha';
+    `).trim(), "1");
+    const again = psql(`
+      WITH cfg AS (SELECT set_config('app.actor_email', 'owner@example.test', false) AS email)
+      SELECT public.bootstrap_os_change_acl('alpha', 'bare@example.test', 'email', 'editor', 'grant')::text
+      FROM cfg;
+    `);
+    assert.match(again, /"ok": true/);
+    assert.equal(psql(`
+      SELECT what_changed->>'labelBackfill'
+      FROM bootstrap_os.audit_events
+      WHERE what_changed->>'via' = 'acl'
+        AND what_changed->'after'->>'principal' = 'bare@example.test'
+      ORDER BY at DESC LIMIT 1;
+    `).trim(), "false");
+    assert.equal(psql(`
+      SELECT count(*)::text FROM public.bootstrap_company_labels l
+      JOIN public.bootstrap_mcp_mentees m ON m.id = l.mentee_id
+      WHERE m.email = 'bare@example.test' AND l.label = 'alpha';
+    `).trim(), "1");
+
+    psql(`
       INSERT INTO bootstrap_os.companies (id, slug, label)
       VALUES ('77777777-7777-4777-8777-777777777777', 'pair', 'Pair');
       INSERT INTO public.bootstrap_mcp_mentees (email) VALUES
@@ -432,6 +473,129 @@ describe("PostgreSQL 16 change_acl writes the company label", { concurrency: fal
     assert.equal(audits, "grant,revoke");
   });
 
+  function runFile(sql) {
+    return new Promise((resolve) => {
+      const file = path.join(dataDir, `race-${process.hrtime.bigint()}.sql`);
+      fs.writeFileSync(file, sql);
+      const child = spawn(
+        psqlBin,
+        ["-h", dataDir, "-p", port, "-d", "postgres", "-v", "ON_ERROR_STOP=1", "-t", "-A", "-f", file],
+        { stdio: ["ignore", "pipe", "pipe"] },
+      );
+      let stdout = "";
+      let stderr = "";
+      child.stdout.on("data", (chunk) => {
+        stdout += chunk;
+      });
+      child.stderr.on("data", (chunk) => {
+        stderr += chunk;
+      });
+      child.on("close", (code) => resolve({ code, stdout, stderr }));
+    });
+  }
+
+  function openHolder() {
+    const child = spawn(
+      psqlBin,
+      ["-h", dataDir, "-p", port, "-d", "postgres", "-v", "ON_ERROR_STOP=1", "-t", "-A"],
+      { stdio: ["pipe", "pipe", "pipe"] },
+    );
+    let pending = "";
+    child.stdout.on("data", (chunk) => {
+      pending += chunk;
+    });
+    child.stderr.on("data", (chunk) => {
+      pending += chunk;
+    });
+    return {
+      child,
+      send(sql, marker) {
+        pending = "";
+        child.stdin.write(`${sql}\n`);
+        return new Promise((resolve, reject) => {
+          const started = Date.now();
+          const tick = () => {
+            if (pending.includes(marker)) resolve(pending);
+            else if (Date.now() - started > 8000) reject(new Error(pending || "holder timed out"));
+            else setTimeout(tick, 20);
+          };
+          tick();
+        });
+      },
+    };
+  }
+
+  async function overlap(companyId, leftSql, rightSql) {
+    const holder = openHolder();
+    await holder.send("SET application_name = 'acl-holder'; SELECT 'NAMED';", "NAMED");
+    await holder.send(
+      `SELECT pg_advisory_lock(hashtextextended('${companyId}'::text, 0)); SELECT 'LOCK_HELD';`,
+      "LOCK_HELD",
+    );
+    const left = runFile(leftSql);
+    const right = runFile(rightSql);
+    const waitingOn = () =>
+      psql(`
+        SELECT count(*)::text FROM pg_stat_activity
+        WHERE wait_event_type = 'Lock' AND wait_event = 'advisory';
+      `).trim();
+    const started = Date.now();
+    let waiting = waitingOn();
+    while (waiting !== "2" && Date.now() - started < 8000) {
+      await new Promise((resolve) => setTimeout(resolve, 30));
+      waiting = waitingOn();
+    }
+    await holder.send(
+      `SELECT pg_advisory_unlock(hashtextextended('${companyId}'::text, 0)); SELECT 'LOCK_FREE';`,
+      "LOCK_FREE",
+    );
+    const [a, b] = await Promise.all([left, right]);
+    childEnd(holder.child);
+    assert.equal(waiting, "2", `sessions did not overlap (${waiting})`);
+    return [a, b];
+  }
+
+  function childEnd(child) {
+    child.stdin.end();
+    child.kill();
+  }
+
+  it("two sessions granting one new email: one wins, the other conflicts, one audit", async () => {
+    if (!fs.existsSync(path.join(BIN, "initdb"))) return;
+    const companyId = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
+    psql(`
+      INSERT INTO bootstrap_os.companies (id, slug, label)
+      VALUES ('${companyId}', 'grantco', 'Grant Co');
+      INSERT INTO public.bootstrap_mcp_mentees (email) VALUES ('grant-owner@example.test')
+      ON CONFLICT (email) DO NOTHING;
+      INSERT INTO public.bootstrap_company_labels (mentee_id, label)
+      SELECT id, 'grantco' FROM public.bootstrap_mcp_mentees WHERE email = 'grant-owner@example.test';
+      INSERT INTO bootstrap_os.company_acl (company_id, principal, principal_kind, role)
+      VALUES ('${companyId}', 'grant-owner@example.test', 'email', 'owner');
+    `);
+    const sqlFor = (role) => `
+      WITH cfg AS (SELECT set_config('app.actor_email', 'grant-owner@example.test', false) AS email)
+      SELECT public.bootstrap_os_change_acl('grantco', 'newcomer@example.test', 'email', '${role}', 'grant')::text
+      FROM cfg;
+    `;
+    const [a, b] = await overlap(companyId, sqlFor("editor"), sqlFor("advisor"));
+    const combined = `${a.stdout}\n${a.stderr}\n${b.stdout}\n${b.stderr}`;
+    assert.equal(a.code, 0, combined);
+    assert.equal(b.code, 0, combined);
+    assert.equal((combined.match(/"ok": true/g) || []).length, 1, combined);
+    assert.match(combined, /role_conflict/);
+    assert.equal(psql(`
+      SELECT count(*)::text FROM bootstrap_os.company_acl
+      WHERE company_id = '${companyId}' AND principal = 'newcomer@example.test';
+    `).trim(), "1");
+    assert.equal(psql(`
+      SELECT count(*)::text FROM bootstrap_os.audit_events
+      WHERE company_id = '${companyId}'
+        AND what_changed->>'via' = 'acl'
+        AND what_changed->'after'->>'principal' = 'newcomer@example.test';
+    `).trim(), "1");
+  });
+
   it("two sessions revoking each other leave exactly one owner", async () => {
     if (!fs.existsSync(path.join(BIN, "initdb"))) return;
     psql(`
@@ -441,59 +605,39 @@ describe("PostgreSQL 16 change_acl writes the company label", { concurrency: fal
           WHEN 'founder_authorized' THEN 3 WHEN 'editor' THEN 3
           ELSE 2 END;
       $$;
+      INSERT INTO bootstrap_os.companies (id, slug, label)
+      VALUES ('bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', 'duo', 'Duo');
       INSERT INTO public.bootstrap_mcp_mentees (email) VALUES
-        ('race-a@example.test'), ('race-b@example.test')
+        ('duo-a@example.test'), ('duo-b@example.test')
       ON CONFLICT (email) DO NOTHING;
       INSERT INTO public.bootstrap_company_labels (mentee_id, label)
-      SELECT id, 'alpha' FROM public.bootstrap_mcp_mentees
-      WHERE email IN ('race-a@example.test', 'race-b@example.test')
-      ON CONFLICT DO NOTHING;
+      SELECT id, 'duo' FROM public.bootstrap_mcp_mentees
+      WHERE email IN ('duo-a@example.test', 'duo-b@example.test');
       INSERT INTO bootstrap_os.company_acl (company_id, principal, principal_kind, role)
-      SELECT '11111111-1111-4111-8111-111111111111', email, 'email', 'owner'
-      FROM (VALUES ('race-a@example.test'), ('race-b@example.test')) AS v(email);
+      SELECT 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', email, 'email', 'owner'
+      FROM (VALUES ('duo-a@example.test'), ('duo-b@example.test')) AS v(email);
     `);
-    const probe = psql(`
-      WITH cfg AS (SELECT set_config('app.actor_email', 'race-a@example.test', false) AS email)
-      SELECT public.bootstrap_os_held_label('alpha')::text || ' ' ||
-        (SELECT count(*)::text FROM bootstrap_os.company_acl
-          WHERE company_id = '11111111-1111-4111-8111-111111111111'
-            AND principal IN ('race-a@example.test', 'race-b@example.test'))
-      FROM cfg;
-    `).trim();
-    assert.equal(probe, "true 2", probe);
     const sqlFor = (actor, other) => `
       WITH cfg AS (SELECT set_config('app.actor_email', '${actor}', false) AS email)
-      SELECT public.bootstrap_os_change_acl('alpha', '${other}', 'email', 'owner', 'revoke')::text
+      SELECT public.bootstrap_os_change_acl('duo', '${other}', 'email', 'owner', 'revoke')::text
       FROM cfg;
     `;
-    const run = (sql) =>
-      new Promise((resolve) => {
-        const file = path.join(dataDir, `race-${process.hrtime.bigint()}.sql`);
-        fs.writeFileSync(file, sql);
-        const child = spawn(
-          psqlBin,
-          ["-h", dataDir, "-p", port, "-d", "postgres", "-v", "ON_ERROR_STOP=1", "-t", "-A", "-f", file],
-          { stdio: ["ignore", "pipe", "pipe"] },
-        );
-        let stdout = "";
-        let stderr = "";
-        child.stdout.on("data", (chunk) => {
-          stdout += chunk;
-        });
-        child.stderr.on("data", (chunk) => {
-          stderr += chunk;
-        });
-        child.on("close", (code) => resolve({ code, stdout, stderr }));
-      });
-    const [left, right] = await Promise.all([
-      run(sqlFor("race-a@example.test", "race-b@example.test")),
-      run(sqlFor("race-b@example.test", "race-a@example.test")),
-    ]);
+    const [left, right] = await overlap(
+      "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+      sqlFor("duo-a@example.test", "duo-b@example.test"),
+      sqlFor("duo-b@example.test", "duo-a@example.test"),
+    );
     const combined = `${left.stdout}\n${left.stderr}\n${right.stdout}\n${right.stderr}`;
-    const oks = (combined.match(/"ok": true/g) || []).length;
-    assert.equal(oks, 1, combined);
+    assert.equal(left.code, 0, combined);
+    assert.equal(right.code, 0, combined);
+    assert.equal((combined.match(/"ok": true/g) || []).length, 1, combined);
+    assert.match(combined, /last_owner/);
     assert.equal(
-      psql("SELECT count(*)::text FROM bootstrap_os.company_acl WHERE company_id = '11111111-1111-4111-8111-111111111111' AND principal IN ('race-a@example.test', 'race-b@example.test');").trim(),
+      psql(`
+        SELECT count(*)::text FROM bootstrap_os.company_acl a
+        WHERE a.company_id = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb'
+          AND bootstrap_os.rank_of(a.role) >= 4;
+      `).trim(),
       "1",
     );
     psqlFile(path.join(__dirname, "..", "supabase", "rollbacks", "20261114_bootstrap_os_change_acl_label.sql"));

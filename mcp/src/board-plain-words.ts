@@ -483,6 +483,7 @@ export const REDACT_ALLOW_KEYS = new Set([
   "killedCard",
   "killedDecision",
   "label",
+  "labelBackfill",
   "last",
   "lastAction",
   "lastObservedFact",
