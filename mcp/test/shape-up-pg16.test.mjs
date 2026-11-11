@@ -162,6 +162,8 @@ describe("PostgreSQL 16 shape-up put", { concurrency: false }, () => {
       ON CONFLICT (mentee_id, label) DO NOTHING;
       INSERT INTO bootstrap_os.companies (id, slug, label)
       VALUES ('bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', 'harbor', 'Harbor');
+      INSERT INTO bootstrap_os.company_acl (company_id, principal, principal_kind, role)
+      VALUES ('bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', 'founder@example.test', 'email', 'founder');
       INSERT INTO bootstrap_os.ideas (company_id, slug, name, journey_phase, loop_stage, current_gate, scoreboard)
       VALUES (
         'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
