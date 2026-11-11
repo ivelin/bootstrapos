@@ -390,7 +390,7 @@ describe("PGlite accept_invite mentee_id (isolated, never prod)", () => {
     assert.match(latest.fn, /RETURNS jsonb/);
     assert.match(latest.fn, /LANGUAGE plpgsql/);
     assert.match(latest.fn, /SECURITY DEFINER/);
-    assert.match(latest.fn, /SET search_path = public/);
+    assert.match(latest.fn, /SET search_path = pg_catalog, public/);
     assert.match(
       latest.sql,
       /REVOKE ALL ON FUNCTION public\.bootstrap_mcp_accept_invite\(text\) FROM PUBLIC, anon/,

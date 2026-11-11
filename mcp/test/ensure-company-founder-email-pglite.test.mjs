@@ -397,15 +397,42 @@ describe("ensure_company founderEmail (PGlite, never prod)", { concurrency: fals
     assert.deepEqual(after.rows[0], before.rows[0]);
   });
 
-  it("documents that held_label ignores auth.users.email_confirmed_at", async () => {
+  it("held_label requires auth.users.email_confirmed_at", async () => {
+    await db.exec(`
+      CREATE OR REPLACE FUNCTION auth.uid() RETURNS uuid LANGUAGE sql STABLE AS $$
+        SELECT NULLIF(current_setting('request.jwt.claim.sub', true), '')::uuid;
+      $$;
+      CREATE OR REPLACE FUNCTION public.bootstrap_os_held_label(p_company text)
+      RETURNS boolean
+      LANGUAGE sql
+      STABLE
+      SECURITY DEFINER
+      SET search_path = pg_catalog, bootstrap_os, public
+      AS $$
+        SELECT EXISTS (
+          SELECT 1
+          FROM public.bootstrap_mcp_mentees AS m
+          JOIN public.bootstrap_company_labels AS l ON l.mentee_id = m.id
+          JOIN auth.users AS u ON u.id = auth.uid() AND u.email_confirmed_at IS NOT NULL
+          WHERE l.label = lower(p_company)
+            AND (
+              m.email = NULLIF(lower(auth.jwt() ->> 'email'), '')
+              OR m.auth_user_id::text = NULLIF(auth.jwt() ->> 'sub', '')
+            )
+        );
+      $$;
+    `);
     const def = await db.query(
       "SELECT pg_get_functiondef('public.bootstrap_os_held_label(text)'::regprocedure) AS body",
     );
-    assert.equal(def.rows[0].body.includes("email_confirmed_at"), false);
+    assert.equal(def.rows[0].body.includes("email_confirmed_at"), true);
     await db.query(
       "INSERT INTO auth.users (id, email, email_confirmed_at) VALUES ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'unconfirmed@example.invalid', NULL)",
     );
     await asEmail("unconfirmed@example.invalid");
+    await db.query("SELECT set_config('request.jwt.claim.sub', $1, false)", [
+      "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+    ]);
     const unbound = await db.query("SELECT public.bootstrap_os_held_label('soloco') AS ok");
     assert.equal(unbound.rows[0].ok, false);
     await db.exec(`
@@ -413,8 +440,8 @@ describe("ensure_company founderEmail (PGlite, never prod)", { concurrency: fals
       INSERT INTO public.bootstrap_company_labels (mentee_id, label)
       SELECT id, 'soloco' FROM public.bootstrap_mcp_mentees WHERE email = 'unconfirmed@example.invalid';
     `);
-    const bound = await db.query("SELECT public.bootstrap_os_held_label('soloco') AS ok");
-    assert.equal(bound.rows[0].ok, true);
+    const stillDenied = await db.query("SELECT public.bootstrap_os_held_label('soloco') AS ok");
+    assert.equal(stillDenied.rows[0].ok, false);
   });
 });
 

@@ -1,4 +1,5 @@
 [
+  { "name": "actor_email", "class": "read" },
   { "name": "bootstrap_mcp_accept_invite", "class": "accept-invite" },
   { "name": "bootstrap_mcp_accept_pending_invites", "class": "accept-invite" },
   { "name": "bootstrap_mcp_invite_member", "class": "has_rank" },

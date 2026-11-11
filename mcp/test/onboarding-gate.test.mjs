@@ -350,13 +350,11 @@ describe("onboarding gate (PGlite, same commit, never prod)", { concurrency: fal
 
   it("unconfirmed email cannot claim an invite", async () => {
     const migration = fs.readFileSync(
-      path.join(__dirname, "..", "supabase", "migrations", "20261015_bootstrap_mcp_accept_on_verified_signin.sql"),
+      path.join(__dirname, "..", "supabase", "migrations", "20261113_bootstrap_os_invite_ratelimit_confirmed_email.sql"),
       "utf8",
     );
-    const queries = migration.match(
-      /SELECT lower\(email\) INTO user_email\s+FROM auth\.users\s+WHERE id = uid\s+AND email_confirmed_at IS NOT NULL;/g,
-    );
-    assert.equal(queries?.length, 2);
+    assert.match(migration, /error',\s*'email_unconfirmed'/);
+    assert.match(migration, /email_confirmed_at IS NOT NULL/);
 
     await db.exec("RESET ROLE");
     const token = "inv_unconfirmed_email_token_xx";
@@ -371,9 +369,9 @@ describe("onboarding gate (PGlite, same commit, never prod)", { concurrency: fal
     await db.query("SELECT set_config('app.email_confirmed_at', '', false)");
 
     const pending = (await db.query("SELECT bootstrap_mcp_accept_pending_invites($1) AS body", [token])).rows[0].body;
-    assert.deepEqual(pending, { ok: false, reason: "email_required" });
+    assert.deepEqual(pending, { ok: false, error: "email_unconfirmed" });
     const explicit = (await db.query("SELECT bootstrap_mcp_accept_invite($1) AS body", [token])).rows[0].body;
-    assert.deepEqual(explicit, { ok: false, reason: "email_required" });
+    assert.deepEqual(explicit, { ok: false, error: "email_unconfirmed" });
 
     const row = (
       await db.query(
@@ -398,7 +396,7 @@ describe("onboarding gate (PGlite, same commit, never prod)", { concurrency: fal
       { email: "unconfirmed-memory@example.test", sub: "unconfirmed-sub", emailConfirmedAt: null },
       tokenFor("unconfirmed-memory@example.test", "21212121-2121-4212-8212-212121212121"),
     );
-    assert.deepEqual(denied, { ok: false, reason: "email_required" });
+    assert.deepEqual(denied, { ok: false, reason: "email_unconfirmed", error: "email_unconfirmed" });
     assert.equal(memory.mentees.some((row) => row.email === "unconfirmed-memory@example.test"), false);
   });
 

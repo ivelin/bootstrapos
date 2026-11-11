@@ -127,6 +127,8 @@ export function whoamiFromMentee(mentee: MenteeRecord | undefined, store: Hosted
 }
 
 export type LabelsRpcBody = {
+  ok?: unknown;
+  error?: unknown;
   authenticated?: unknown;
   email?: unknown;
   labels?: unknown;
@@ -155,6 +157,15 @@ export function whoamiFromLabelsRpc(
     };
   }
   const email = typeof raw.email === "string" ? raw.email : userEmail;
+  if (raw.error === "email_unconfirmed" || raw.reason === "email_unconfirmed") {
+    return {
+      authenticated: false,
+      email,
+      labels: [],
+      reason: "email_unconfirmed",
+      identityStore: "supabase",
+    };
+  }
   if (raw.authenticated !== true) {
     return {
       authenticated: false,

@@ -362,8 +362,20 @@ export class SupabaseCompanyAdminStore implements CompanyAdminStore {
     if (!res.ok) {
       const code = rpcErrorCode(text);
       if (code === "slug_taken") return { ok: false, status: 409, error: "slug_taken" };
-      if (code === "company_limit_reached" || code === "email_unconfirmed" || code === "invalid_name") {
-        return { ok: false, status: 403, error: code };
+      if (
+        code === "company_limit_reached" ||
+        code === "email_unconfirmed" ||
+        code === "invalid_name" ||
+        code === "rate_limited" ||
+        code === "rate_limiter_unavailable"
+      ) {
+        const refused: AdminResult = { ok: false, error: code };
+        if (code === "rate_limited" || code === "rate_limiter_unavailable") {
+          refused.message = refusalMessage({ ok: false, error: code, reason: code }) ?? undefined;
+        } else {
+          refused.status = 403;
+        }
+        return refused;
       }
       return closed();
     }

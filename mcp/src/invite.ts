@@ -106,6 +106,7 @@ export type AcceptFailReason =
   | "email_mismatch"
   | "already_accepted"
   | "email_required"
+  | "email_unconfirmed"
   | "invite_store_unset"
   | "invite_rpc_failed";
 
@@ -145,7 +146,13 @@ export type AcceptPendingOk = {
 
 export type AcceptPendingResult =
   | AcceptPendingOk
-  | { ok: false; reason: "email_required" | "invalid_token" | "invite_store_unset" | "invite_rpc_failed"; status?: number; body?: string };
+  | {
+      ok: false;
+      reason: "email_required" | "email_unconfirmed" | "invalid_token" | "invite_store_unset" | "invite_rpc_failed";
+      error?: "email_unconfirmed";
+      status?: number;
+      body?: string;
+    };
 
 export const INVITE_RPC_BODY_CLIP = 800;
 
@@ -181,13 +188,25 @@ function isInviteRpcFail(raw: unknown): raw is InviteRpcFail {
 }
 
 function coercePending(raw: unknown): AcceptPendingResult {
-  if (raw && typeof raw === "object" && "ok" in raw) return raw as AcceptPendingResult;
+  if (raw && typeof raw === "object" && "ok" in raw) {
+    const body = raw as { ok?: unknown; error?: unknown; reason?: unknown };
+    if (body.ok === false && (body.error === "email_unconfirmed" || body.reason === "email_unconfirmed")) {
+      return { ok: false, reason: "email_unconfirmed", error: "email_unconfirmed" };
+    }
+    return raw as AcceptPendingResult;
+  }
   return { ok: false, reason: "invite_rpc_failed" };
 }
 
 function coerceRpcResult<T extends { ok: boolean }>(raw: unknown, status: number): T | InviteRpcFail {
   if (isInviteRpcFail(raw)) return raw;
-  if (raw && typeof raw === "object" && "ok" in raw) return raw as T;
+  if (raw && typeof raw === "object" && "ok" in raw) {
+    const body = raw as { ok?: unknown; error?: unknown; reason?: unknown };
+    if (body.ok === false && body.error === "email_unconfirmed" && body.reason !== "email_unconfirmed") {
+      return { ...body, reason: "email_unconfirmed" } as unknown as T;
+    }
+    return raw as T;
+  }
   const body = typeof raw === "string" ? raw : raw == null ? "" : JSON.stringify(raw);
   return inviteRpcFailed(status, body);
 }
@@ -669,7 +688,7 @@ export class MemoryInviteStore implements InviteStore {
 
   async acceptInvite(actor: InviteActor, token: string): Promise<AcceptResult> {
     if (actor.emailConfirmedAt === null || actor.emailConfirmedAt === "") {
-      return { ok: false, reason: "email_required" };
+      return { ok: false, reason: "email_unconfirmed" };
     }
     const actorEmail = normalizeInviteEmail(actor.email ?? "");
     const digest = token?.length >= 16 ? hashMcpToken(token) : "";
@@ -717,7 +736,7 @@ export class MemoryInviteStore implements InviteStore {
 
   async acceptPending(actor: InviteActor, accessToken?: string): Promise<AcceptPendingResult> {
     if (actor.emailConfirmedAt === null || actor.emailConfirmedAt === "") {
-      return { ok: false, reason: "email_required" };
+      return { ok: false, reason: "email_unconfirmed", error: "email_unconfirmed" };
     }
     const email = normalizeInviteEmail(actor.email ?? "");
     if (!email) return { ok: false, reason: "email_required" };
@@ -1037,6 +1056,8 @@ export function inviteFailMessage(input: InviteFailMessageInput): string {
       return "Invite rejected.";
     case "email_required":
       return "Accept needs a pirin.ai access token whose email matches the invite.";
+    case "email_unconfirmed":
+      return "Confirm your email before you accept an invite.";
     case "forbidden_role":
       return spokenOr("message" in fail ? fail.message : undefined, ROLE_CAN_COMMENT_NOT_EDIT);
     case "not_found":

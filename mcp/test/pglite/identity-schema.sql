@@ -431,7 +431,10 @@ BEGIN
     RETURN jsonb_build_object('ok', false, 'reason', 'email_required');
   END IF;
 
-  IF user_email IS NULL OR user_email = '' OR confirmed_at IS NULL THEN
+  IF confirmed_at IS NULL THEN
+    RETURN jsonb_build_object('ok', false, 'error', 'email_unconfirmed');
+  END IF;
+  IF user_email IS NULL OR user_email = '' THEN
     RETURN jsonb_build_object('ok', false, 'reason', 'email_required');
   END IF;
 
@@ -625,7 +628,13 @@ DECLARE
   accepted jsonb := '[]'::jsonb;
   token_state text;
 BEGIN
-  IF uid IS NULL OR uid = '' OR user_email IS NULL OR user_email = '' OR confirmed_at IS NULL THEN
+  IF uid IS NULL OR uid = '' THEN
+    RETURN jsonb_build_object('ok', false, 'reason', 'email_required');
+  END IF;
+  IF confirmed_at IS NULL THEN
+    RETURN jsonb_build_object('ok', false, 'error', 'email_unconfirmed');
+  END IF;
+  IF user_email IS NULL OR user_email = '' THEN
     RETURN jsonb_build_object('ok', false, 'reason', 'email_required');
   END IF;
 
