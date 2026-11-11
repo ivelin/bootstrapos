@@ -137,6 +137,7 @@ function board(extra = {}) {
 
 const SECRET_KEYS_STAY_OFF = [
   "authCard",
+  "founderInvite",
   "inviteToken",
   "invitee_email",
   "inviterEmail",

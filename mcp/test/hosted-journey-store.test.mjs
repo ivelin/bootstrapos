@@ -4,6 +4,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { HostedMembershipJourneyStore, SupabaseJourneyStore, createJourneyStore } from "../dist/hosted-journey-store.js";
+import { kickFounderInviteIfNeeded } from "../dist/server.js";
 import { setJourneyStoreForTests } from "../dist/journey.js";
 import {
   parseWebhookDeliveries,
@@ -501,6 +502,206 @@ describe("hosted membership journey store", () => {
       assert.deepEqual(got, { ok: false, error: "not_found", message: "Board not found." });
     } finally {
       globalThis.fetch = orig;
+    }
+  });
+
+  it("kicks founder invite mail on create and not on self-create or a later put", async () => {
+    const calls = [];
+    const orig = globalThis.fetch;
+    const prevEnv = process.env.VERCEL_ENV;
+    const prevSecret = process.env.BOOTSTRAP_INVITE_MAIL_SECRET;
+    process.env.VERCEL_ENV = "production";
+    process.env.BOOTSTRAP_INVITE_MAIL_SECRET = "test-secret";
+    delete process.env.BOOTSTRAP_INVITE_MAIL_URL;
+    let puts = 0;
+    globalThis.fetch = async (url, init) => {
+      const target = String(url);
+      calls.push(target);
+      if (target.includes("/api/bootstrap-os/invite-mail")) return new Response("ok", { status: 202 });
+      const body = JSON.parse(String(init?.body || "{}"));
+      if (target.includes("bootstrap_os_put_journey")) {
+        puts += 1;
+        const differ = body.p_founder_email === "founder@example.test";
+        return Response.json({
+          ok: true,
+          notify: { webhook: 0, emailQueued: 0 },
+          company: { slug: body.p_company, label: body.p_company },
+          ideas: [{ clocks: { journeyPhase: 1, currentGate: "hold" }, scoreboard: {} }],
+          ...(puts === 1 && differ
+            ? {
+                founderInvite: {
+                  inviteeEmail: "founder@example.test",
+                  invitedByEmail: "admin@example.invalid",
+                  companyLabel: body.p_company,
+                  inviteToken: "inv_fixture",
+                },
+              }
+            : {}),
+        });
+      }
+      return Response.json({ ok: true });
+    };
+    try {
+      const store = new SupabaseJourneyStore("https://example.supabase.co", "anon-test-key", "token");
+      const who = actor("admin@example.invalid");
+      const created = await store.putJourney(who, {
+        companySlug: "alpha",
+        why: "open alpha",
+        founderYes: true,
+        founderEmail: "founder@example.test",
+      });
+      assert.equal(created.founderInvite, undefined);
+      assert.equal(created.notify.emailQueued, 0);
+      await store.putJourney(who, {
+        companySlug: "bravo",
+        why: "self board",
+        founderYes: true,
+        founderEmail: "admin@example.invalid",
+      });
+      await store.putJourney(who, {
+        companySlug: "alpha",
+        why: "later write",
+        founderYes: true,
+        founderEmail: "founder@example.test",
+      });
+      assert.equal(calls.filter((url) => url.includes("/api/bootstrap-os/invite-mail")).length, 1);
+    } finally {
+      globalThis.fetch = orig;
+      if (prevEnv === undefined) delete process.env.VERCEL_ENV;
+      else process.env.VERCEL_ENV = prevEnv;
+      if (prevSecret === undefined) delete process.env.BOOTSTRAP_INVITE_MAIL_SECRET;
+      else process.env.BOOTSTRAP_INVITE_MAIL_SECRET = prevSecret;
+    }
+  });
+
+  it("memory mirror mails a different founder once", async () => {
+    const calls = [];
+    const orig = globalThis.fetch;
+    const prevEnv = process.env.VERCEL_ENV;
+    const prevSecret = process.env.BOOTSTRAP_INVITE_MAIL_SECRET;
+    process.env.VERCEL_ENV = "production";
+    process.env.BOOTSTRAP_INVITE_MAIL_SECRET = "test-secret";
+    delete process.env.BOOTSTRAP_INVITE_MAIL_URL;
+    globalThis.fetch = async (url) => {
+      calls.push(String(url));
+      return new Response("ok", { status: 202 });
+    };
+    try {
+      const store = new HostedMembershipJourneyStore((a) =>
+        a.email === "admin@example.invalid" ? ["alpha", "bravo"] : [],
+      );
+      const who = actor("admin@example.invalid");
+      const created = await store.putJourney(who, {
+        companySlug: "alpha",
+        why: "open alpha",
+        founderYes: true,
+        founderEmail: "founder@example.test",
+      });
+      assert.equal(created.founderInvite, undefined);
+      assert.equal(JSON.stringify(created).includes("inv_"), false);
+      await store.putJourney(who, {
+        companySlug: "bravo",
+        why: "self board",
+        founderYes: true,
+        founderEmail: "admin@example.invalid",
+      });
+      await store.putJourney(who, {
+        companySlug: "alpha",
+        why: "later write",
+        founderYes: true,
+      });
+      assert.equal(calls.filter((url) => url.includes("/api/bootstrap-os/invite-mail")).length, 1);
+    } finally {
+      globalThis.fetch = orig;
+      if (prevEnv === undefined) delete process.env.VERCEL_ENV;
+      else process.env.VERCEL_ENV = prevEnv;
+      if (prevSecret === undefined) delete process.env.BOOTSTRAP_INVITE_MAIL_SECRET;
+      else process.env.BOOTSTRAP_INVITE_MAIL_SECRET = prevSecret;
+    }
+  });
+
+  it("a failed mail kick still returns the created board", async () => {
+    const orig = globalThis.fetch;
+    const prevEnv = process.env.VERCEL_ENV;
+    const prevSecret = process.env.BOOTSTRAP_INVITE_MAIL_SECRET;
+    process.env.VERCEL_ENV = "production";
+    process.env.BOOTSTRAP_INVITE_MAIL_SECRET = "test-secret";
+    delete process.env.BOOTSTRAP_INVITE_MAIL_URL;
+    globalThis.fetch = async (url, init) => {
+      const target = String(url);
+      if (target.includes("/api/bootstrap-os/invite-mail")) throw new Error("mail down");
+      const body = JSON.parse(String(init?.body || "{}"));
+      if (target.includes("bootstrap_os_put_journey")) {
+        return Response.json({
+          ok: true,
+          notify: { webhook: 0, emailQueued: 0 },
+          company: { slug: body.p_company, label: body.p_company },
+          ideas: [{ clocks: { journeyPhase: 1, currentGate: "hold" }, scoreboard: {} }],
+          founderInvite: {
+            inviteeEmail: "founder@example.test",
+            inviterEmail: "admin@example.invalid",
+            companyWorkspace: body.p_company,
+            inviteToken: "inv_fixture",
+          },
+        });
+      }
+      return Response.json({ ok: true });
+    };
+    try {
+      const store = new SupabaseJourneyStore("https://example.supabase.co", "anon-test-key", "token");
+      const wrote = await store.putJourney(actor("admin@example.invalid"), {
+        companySlug: "alpha",
+        why: "open alpha",
+        founderYes: true,
+        founderEmail: "founder@example.test",
+      });
+      assert.equal(wrote.ok, true);
+      assert.equal(wrote.founderInvite, undefined);
+      assert.equal(wrote.notify.emailQueued, 0);
+    } finally {
+      globalThis.fetch = orig;
+      if (prevEnv === undefined) delete process.env.VERCEL_ENV;
+      else process.env.VERCEL_ENV = prevEnv;
+      if (prevSecret === undefined) delete process.env.BOOTSTRAP_INVITE_MAIL_SECRET;
+      else process.env.BOOTSTRAP_INVITE_MAIL_SECRET = prevSecret;
+    }
+  });
+
+  it("server strips a leftover founder invite and kicks mail once", async () => {
+    const calls = [];
+    const orig = globalThis.fetch;
+    const prevEnv = process.env.VERCEL_ENV;
+    const prevSecret = process.env.BOOTSTRAP_INVITE_MAIL_SECRET;
+    process.env.VERCEL_ENV = "production";
+    process.env.BOOTSTRAP_INVITE_MAIL_SECRET = "test-secret";
+    delete process.env.BOOTSTRAP_INVITE_MAIL_URL;
+    globalThis.fetch = async (url) => {
+      calls.push(String(url));
+      return new Response("ok", { status: 202 });
+    };
+    try {
+      const cleaned = kickFounderInviteIfNeeded({
+        ok: true,
+        notify: { emailQueued: 2 },
+        founderInvite: {
+          inviteeEmail: "founder@example.test",
+          invitedByEmail: "admin@example.invalid",
+          companyLabel: "charlie",
+          inviteToken: "inv_fixture",
+        },
+      });
+      assert.equal(cleaned.founderInvite, undefined);
+      assert.equal(cleaned.notify.emailQueued, 2);
+      assert.equal(calls.length, 1);
+      const plain = kickFounderInviteIfNeeded({ ok: true, notify: { emailQueued: 0 } });
+      assert.equal(plain.notify.emailQueued, 0);
+      assert.equal(calls.length, 1);
+    } finally {
+      globalThis.fetch = orig;
+      if (prevEnv === undefined) delete process.env.VERCEL_ENV;
+      else process.env.VERCEL_ENV = prevEnv;
+      if (prevSecret === undefined) delete process.env.BOOTSTRAP_INVITE_MAIL_SECRET;
+      else process.env.BOOTSTRAP_INVITE_MAIL_SECRET = prevSecret;
     }
   });
 });
