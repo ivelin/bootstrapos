@@ -15,6 +15,8 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const BASE = path.join(__dirname, "..", "supabase", "migrations", "20261110_bootstrap_os_ensure_company_founder_email.sql");
 const UP = path.join(__dirname, "..", "supabase", "migrations", "20261111_bootstrap_os_hosted_write_role_enforcement.sql");
 const DOWN = path.join(__dirname, "..", "supabase", "rollbacks", "20261111_bootstrap_os_hosted_write_role_enforcement.sql");
+const FOUNDER_INVITE = path.join(__dirname, "..", "supabase", "migrations", "20261112_bootstrap_os_founder_invite_on_create.sql");
+const FOUNDER_INVITE_DOWN = path.join(__dirname, "..", "supabase", "rollbacks", "20261112_bootstrap_os_founder_invite_on_create.sql");
 
 let dataDir;
 let psqlBin;
@@ -201,5 +203,69 @@ describe("PostgreSQL 16 hosted write-role round trip", { concurrency: false }, (
     assert.equal(again, "bootstrap_os.has_rank(uuid,integer)");
     const cleared = psql("SELECT pg_get_functiondef('public.bootstrap_os_ensure_company(text,text,boolean)'::regprocedure);");
     assert.equal(/founder_authorized/.test(cleared), false);
+  });
+
+  it("mints one founder invite on a new board only when the email differs", () => {
+    if (!fs.existsSync(path.join(BIN, "initdb"))) return;
+    psql(`
+      CREATE SCHEMA IF NOT EXISTS extensions;
+      CREATE EXTENSION IF NOT EXISTS pgcrypto SCHEMA extensions;
+      CREATE OR REPLACE FUNCTION public.bootstrap_mcp_hash_token(p_token text)
+      RETURNS text LANGUAGE sql IMMUTABLE AS $$
+        SELECT encode(extensions.digest(convert_to(p_token, 'UTF8'), 'sha256'), 'hex');
+      $$;
+      CREATE TABLE public.bootstrap_mcp_invites (
+        id uuid PRIMARY KEY,
+        invitee_email text NOT NULL,
+        company_label text NOT NULL,
+        invited_by_mentee_id uuid NOT NULL REFERENCES public.bootstrap_mcp_mentees (id),
+        invited_by_email text NOT NULL,
+        token_hash text NOT NULL UNIQUE,
+        expires_at timestamptz NOT NULL,
+        accepted_at timestamptz,
+        created_at timestamptz NOT NULL DEFAULT now()
+      );
+      CREATE TABLE public.bootstrap_mcp_invite_outbox (
+        id uuid PRIMARY KEY,
+        invite_id uuid NOT NULL REFERENCES public.bootstrap_mcp_invites (id),
+        channel text NOT NULL,
+        payload jsonb NOT NULL,
+        created_at timestamptz NOT NULL DEFAULT now()
+      );
+    `);
+    psqlFile(FOUNDER_INVITE);
+    const created = psql(`
+      WITH cfg AS (SELECT set_config('app.actor_email', 'admin@example.invalid', false) AS email)
+      SELECT public.bootstrap_os_put_journey('charlie', 'default', 'open charlie', false, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'founder@example.test')::text
+      FROM cfg;
+    `);
+    assert.match(created, /"inviteeEmail": "founder@example.test"/);
+    const counts = psql(`
+      SELECT (SELECT count(*) FROM public.bootstrap_mcp_invites WHERE company_label = 'charlie')::text
+        || ' ' ||
+        (SELECT count(*) FROM public.bootstrap_mcp_invite_outbox o
+          JOIN public.bootstrap_mcp_invites i ON i.id = o.invite_id
+          WHERE i.company_label = 'charlie' AND o.channel = 'email')::text;
+    `).trim();
+    assert.equal(counts, "1 1");
+    const self = psql(`
+      WITH cfg AS (SELECT set_config('app.actor_email', 'founder@example.test', false) AS email)
+      SELECT public.bootstrap_os_put_journey('bravo', 'default', 'self board', false, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'founder@example.test')::text
+      FROM cfg;
+    `);
+    assert.equal(self.includes("founderInvite"), false);
+    const bravo = psql("SELECT count(*)::text FROM public.bootstrap_mcp_invites WHERE company_label = 'bravo';").trim();
+    assert.equal(bravo, "0");
+    psql(`
+      WITH cfg AS (SELECT set_config('app.actor_email', 'admin@example.invalid', false) AS email)
+      SELECT public.bootstrap_os_put_journey('charlie', 'default', 'later write', false, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'founder@example.test')::text
+      FROM cfg;
+    `);
+    const still = psql("SELECT count(*)::text FROM public.bootstrap_mcp_invites WHERE company_label = 'charlie';").trim();
+    assert.equal(still, "1");
+    psqlFile(FOUNDER_INVITE_DOWN);
+    const restored = psql("SELECT pg_get_functiondef('bootstrap_os.ensure_company_for_actor(text,text,boolean)'::regprocedure);");
+    assert.equal(restored.includes("bootstrap_mcp_invites"), false);
+    psqlFile(FOUNDER_INVITE);
   });
 });

@@ -18,6 +18,10 @@ const WRITE_ROLE = fs.readFileSync(
   path.join(migrations, "20261111_bootstrap_os_hosted_write_role_enforcement.sql"),
   "utf8",
 );
+const FOUNDER_INVITE = fs.readFileSync(
+  path.join(migrations, "20261112_bootstrap_os_founder_invite_on_create.sql"),
+  "utf8",
+);
 
 const HARNESS = `
 DO $$ BEGIN CREATE ROLE anon; EXCEPTION WHEN duplicate_object THEN NULL; END $$;
@@ -226,8 +230,36 @@ describe("ensure_company founderEmail (PGlite, never prod)", { concurrency: fals
       CREATE OR REPLACE FUNCTION bootstrap_os.require_actor() RETURNS void LANGUAGE plpgsql AS $$ BEGIN RETURN; END $$;
       CREATE OR REPLACE FUNCTION bootstrap_os.resolved_actor_email() RETURNS text LANGUAGE sql AS $$ SELECT bootstrap_os.actor_email() $$;
       CREATE OR REPLACE FUNCTION bootstrap_os.resolved_actor_sub() RETURNS text LANGUAGE sql AS $$ SELECT bootstrap_os.actor_sub() $$;
+      CREATE SCHEMA IF NOT EXISTS extensions;
+      CREATE OR REPLACE FUNCTION extensions.gen_random_bytes(p_len integer)
+      RETURNS bytea LANGUAGE sql AS $$
+        SELECT substring(sha256(convert_to(gen_random_uuid()::text || clock_timestamp()::text, 'UTF8')) FROM 1 FOR p_len);
+      $$;
+      CREATE OR REPLACE FUNCTION public.bootstrap_mcp_hash_token(p_token text)
+      RETURNS text LANGUAGE sql IMMUTABLE AS $$
+        SELECT encode(sha256(convert_to(p_token, 'UTF8')), 'hex');
+      $$;
+      CREATE TABLE public.bootstrap_mcp_invites (
+        id uuid PRIMARY KEY,
+        invitee_email text NOT NULL,
+        company_label text NOT NULL,
+        invited_by_mentee_id uuid NOT NULL REFERENCES public.bootstrap_mcp_mentees (id),
+        invited_by_email text NOT NULL,
+        token_hash text NOT NULL UNIQUE,
+        expires_at timestamptz NOT NULL,
+        accepted_at timestamptz,
+        created_at timestamptz NOT NULL DEFAULT now()
+      );
+      CREATE TABLE public.bootstrap_mcp_invite_outbox (
+        id uuid PRIMARY KEY,
+        invite_id uuid NOT NULL REFERENCES public.bootstrap_mcp_invites (id),
+        channel text NOT NULL,
+        payload jsonb NOT NULL,
+        created_at timestamptz NOT NULL DEFAULT now()
+      );
     `);
     await db.exec(WRITE_ROLE);
+    await db.exec(FOUNDER_INVITE);
   });
 
   after(async () => {
@@ -270,6 +302,73 @@ describe("ensure_company founderEmail (PGlite, never prod)", { concurrency: fals
     assert.ok(created.rows[0].id);
     assert.deepEqual(await roles("soloco"), [{ principal: "solo@example.invalid", role: "founder" }]);
     assert.equal(await labeled("solo@example.invalid", "soloco"), true);
+  });
+
+  it("new board for a different founder mints one hashed invite and one email outbox row", async () => {
+    await asEmail("admin@example.invalid");
+    const created = await db.query(
+      `SELECT public.bootstrap_os_put_journey(
+         'alpha', 'default', 'open alpha', false,
+         NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'founder@example.test'
+       ) AS body`,
+    );
+    assert.equal(created.rows[0].body.ok, true, JSON.stringify(created.rows[0].body));
+    assert.equal(created.rows[0].body.founderInvite.inviteeEmail, "founder@example.test");
+    assert.equal(created.rows[0].body.founderInvite.companyWorkspace, "alpha");
+    assert.equal(created.rows[0].body.notify, undefined);
+    const token = created.rows[0].body.founderInvite.inviteToken;
+    assert.match(token, /^inv_[0-9a-f]+$/);
+    const invites = await db.query(
+      "SELECT invitee_email, token_hash, company_label FROM public.bootstrap_mcp_invites WHERE company_label = 'alpha'",
+    );
+    assert.equal(invites.rows.length, 1);
+    assert.equal(invites.rows[0].invitee_email, "founder@example.test");
+    assert.notEqual(invites.rows[0].token_hash, token);
+    const hashed = await db.query("SELECT public.bootstrap_mcp_hash_token($1) AS hash", [token]);
+    assert.equal(invites.rows[0].token_hash, hashed.rows[0].hash);
+    const outbox = await db.query(
+      `SELECT o.channel, o.payload->>'inviteToken' AS token
+       FROM public.bootstrap_mcp_invite_outbox o
+       JOIN public.bootstrap_mcp_invites i ON i.id = o.invite_id
+       WHERE i.company_label = 'alpha'
+       ORDER BY o.channel`,
+    );
+    assert.deepEqual(
+      outbox.rows.map((row) => row.channel),
+      ["email", "in_chat"],
+    );
+    const email = outbox.rows.find((row) => row.channel === "email");
+    const chat = outbox.rows.find((row) => row.channel === "in_chat");
+    assert.equal(email.token, token);
+    assert.equal(chat.token, null);
+    const again = await db.query(
+      `SELECT public.bootstrap_os_put_journey(
+         'alpha', 'default', 'later write', false,
+         NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'founder@example.test'
+       ) AS body`,
+    );
+    assert.equal(again.rows[0].body.founderInvite, undefined);
+    assert.notEqual(again.rows[0].body.founderInvite?.inviteToken, token);
+    const still = await db.query(
+      "SELECT count(*)::int AS n FROM public.bootstrap_mcp_invites WHERE company_label = 'alpha'",
+    );
+    assert.equal(still.rows[0].n, 1);
+  });
+
+  it("self-create does not mint an invite", async () => {
+    await asEmail("founder@example.test");
+    const created = await db.query(
+      `SELECT public.bootstrap_os_put_journey(
+         'bravo', 'default', 'self board', false,
+         NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'founder@example.test'
+       ) AS body`,
+    );
+    assert.equal(created.rows[0].body.ok, true);
+    assert.equal(created.rows[0].body.founderInvite, undefined);
+    const invites = await db.query(
+      "SELECT count(*)::int AS n FROM public.bootstrap_mcp_invites WHERE company_label = 'bravo'",
+    );
+    assert.equal(invites.rows[0].n, 0);
   });
 
   it("seeds founder and commenter when founderEmail differs from the caller", async () => {

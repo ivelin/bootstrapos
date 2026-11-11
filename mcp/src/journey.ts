@@ -3,6 +3,8 @@
  * Clocks are enums. Scoreboard is versioned jsonb. Views are generated, not stored.
  * Research/traces stay local — do not lift ~/.bootstrap-os.
  */
+import { randomBytes } from "node:crypto";
+import type { PirinInviteMailKick } from "./invite-mail.js";
 import {
   JOURNEY_PHASES,
   JOURNEY_SPOKEN,
@@ -1193,6 +1195,7 @@ function forbidden(message: string) {
 export class MemoryJourneyStore implements JourneyStore {
   readonly kind = "memory" as const;
   private seq = 0;
+  private pendingFounderInvite: PirinInviteMailKick | undefined;
   allowMemberComments = false;
   private readonly limiter: RateLimiter;
 
@@ -1270,9 +1273,24 @@ export class MemoryJourneyStore implements JourneyStore {
       } else {
         grant(founderEmail, "founder");
         grant(caller, "commenter");
+        if (caller) {
+          this.pendingFounderInvite = {
+            inviteeEmail: founderEmail,
+            invitedByEmail: caller,
+            companyLabel: want,
+            inviteToken: `inv_${randomBytes(24).toString("hex")}`,
+          };
+        }
       }
     }
     return company;
+  }
+
+  /** One-time founder sign-in kick. Cleared on read so a later put does not mail again. */
+  takeFounderInviteKick(): PirinInviteMailKick | undefined {
+    const kick = this.pendingFounderInvite;
+    this.pendingFounderInvite = undefined;
+    return kick;
   }
 
   private nextId(prefix: string): string {
