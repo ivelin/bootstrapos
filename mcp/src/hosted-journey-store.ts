@@ -266,7 +266,8 @@ export class HostedMembershipJourneyStore implements JourneyStore {
   ): Promise<unknown> {
     const denied = this.denyUnlessHeld(actor, input.companySlug);
     if (denied) return denied;
-    this.ensureHeld(input.companySlug, actor);
+    const missing = this.requireExisting(input.companySlug, actor);
+    if (missing) return missing;
     return this.inner.checkBreakers(actor, input);
   }
 

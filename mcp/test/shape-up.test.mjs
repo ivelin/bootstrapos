@@ -8,6 +8,7 @@ import { handleHostedReadFetch } from "../dist/hosted-handler.js";
 import { SupabaseJourneyStore } from "../dist/hosted-journey-store.js";
 import { MemoryIdentityStore, hashMcpToken, setIdentityStoreForTests } from "../dist/identity.js";
 import { MemoryJourneyStore, defaultScoreboard, setJourneyStoreForTests } from "../dist/journey.js";
+import { syntheticAccessToken } from "../dist/journey-auth.js";
 import {
   SHAPE_UP_COMPANY_SLUGS,
   SHAPE_UP_FIXTURE_SLUG,
@@ -631,7 +632,11 @@ describe("supabase check_breakers", () => {
 
 describe("check_breakers handler", () => {
   it("calls the store for an allowlisted label and returns the read-only result", async () => {
-    const token = "bos_shapeup_handler_token";
+    const token = syntheticAccessToken({
+      email: "founder@example.test",
+      sub: "auth-shape",
+      extra: { exp: Math.floor(Date.now() / 1000) + 3600 },
+    });
     setIdentityStoreForTests(
       new MemoryIdentityStore([
         {
