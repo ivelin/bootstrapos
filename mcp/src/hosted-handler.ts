@@ -31,11 +31,12 @@ import { createJourneyStore, JOURNEY_RPC_UNAUTHORIZED } from "./hosted-journey-s
 import {
   authorizationServerMetadataDocument,
   hostedMcpResource,
+  insufficientScopeChallenge,
   protectedResourceMetadataDocument,
   requiresHandshakeAuth,
   wwwAuthenticateChallenge,
 } from "./oauth.js";
-import { createBootstrapServer } from "./server.js";
+import { createBootstrapServer, listRegisteredToolNames } from "./server.js";
 import { hostedSessionKey } from "./hosted-company-context.js";
 import { resolveInviteStore } from "./invite.js";
 import {
@@ -44,6 +45,10 @@ import {
   presentVerifiedWhoami,
   sessionGrantBody,
 } from "./onboarding.js";
+import {
+  registeredToolMissingScopeEntry,
+  toolScopeCallRefusal,
+} from "./tool-scopes.js";
 
 setLiveJourneyStoreFactory(createJourneyStore);
 
@@ -70,9 +75,14 @@ function rpcMethodOf(body: unknown): string | undefined {
   return typeof method === "string" ? method : undefined;
 }
 
-function gatedToolNameFromRpc(body: unknown): string | undefined {
+function toolNameFromRpc(body: unknown): string | undefined {
   if (rpcMethodOf(body) !== "tools/call") return undefined;
   const name = (body as { params?: { name?: unknown } }).params?.name;
+  return typeof name === "string" ? name : undefined;
+}
+
+function gatedToolNameFromRpc(body: unknown): string | undefined {
+  const name = toolNameFromRpc(body);
   return typeof name === "string" && isHostedGatedToolName(name) ? name : undefined;
 }
 
@@ -120,6 +130,42 @@ export function unauthorizedGatedToolResponse(
       reason: reason ?? null,
     }),
     { status: 401, headers },
+  );
+}
+
+/** OAuth insufficient_scope — one clean 403; do not emit invalid_token (avoids refresh loops). */
+export function insufficientScopeToolResponse(req?: Request): Response {
+  return new Response(
+    JSON.stringify({
+      error: "insufficient_scope",
+      error_description:
+        "This tool requires an access token with aud for the hosted MCP resource and scope bootstrap-os.",
+    }),
+    {
+      status: 403,
+      headers: {
+        ...corsHeaders(),
+        "WWW-Authenticate": insufficientScopeChallenge(req),
+        "Content-Type": "application/json; charset=utf-8",
+      },
+    },
+  );
+}
+
+/** Deny-by-default: registered tools missing from TOOL_SCOPE_TABLE are refused. */
+export function missingToolScopeTableResponse(): Response {
+  return new Response(
+    JSON.stringify({
+      error: "insufficient_scope",
+      error_description: "This tool has no scope table entry and is refused.",
+    }),
+    {
+      status: 403,
+      headers: {
+        ...corsHeaders(),
+        "Content-Type": "application/json; charset=utf-8",
+      },
+    },
   );
 }
 
@@ -320,6 +366,10 @@ export async function handleHostedReadFetch(req: Request): Promise<Response> {
       rpcBody = null;
     }
   }
+  const calledToolName = toolNameFromRpc(rpcBody);
+  if (toolScopeCallRefusal(calledToolName, parseBearerToken(authorization)) === "insufficient_scope") {
+    return insufficientScopeToolResponse(req);
+  }
   const gatedName = gatedToolNameFromRpc(rpcBody);
   // Expired journey tokens stop here: no whoami fetch and no PostgREST RPC.
   if (isHostedGatedJourneyToolName(gatedName) && accessTokenExpired(parseBearerToken(authorization))) {
@@ -394,6 +444,9 @@ export async function handleHostedReadFetch(req: Request): Promise<Response> {
     clientHint: clientHintFromInitialize(req, rpcBody),
     protocolVersion: req.headers.get("mcp-protocol-version"),
   });
+  if (registeredToolMissingScopeEntry(listRegisteredToolNames(server), calledToolName)) {
+    return missingToolScopeTableResponse();
+  }
   const transport = new WebStandardStreamableHTTPServerTransport({
     sessionIdGenerator: undefined,
     enableJsonResponse: true,
