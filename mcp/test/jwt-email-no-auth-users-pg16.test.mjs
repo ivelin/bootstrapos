@@ -134,6 +134,10 @@ describe("PostgreSQL 16 JWT email without an auth.users row", { concurrency: fal
         revoked_at timestamptz
       );
     `);
+    psql(`
+      DO $$ BEGIN CREATE ROLE anon NOLOGIN; EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+      DO $$ BEGIN CREATE ROLE authenticated NOLOGIN; EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+    `);
     psqlFile(UP);
     const actor = "11111111-1111-4111-8111-111111111111";
     psql(`
