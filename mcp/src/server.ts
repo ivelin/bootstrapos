@@ -13,6 +13,7 @@ import {
   PUBLISHED_REPO,
   type DocKey,
 } from "./constants.js";
+import { TOOL_SCOPE_TABLE } from "./tool-scopes.js";
 import { enableBoardWatch } from "./board-watch.js";
 import {
   prepareFeedback,
@@ -1775,3 +1776,12 @@ export function createBootstrapServer(
   }
   return server;
 }
+
+/** Registered tool names on a live McpServer (for scope-table CI coverage). */
+export function listRegisteredToolNames(server: McpServer): string[] {
+  const tools = (server as unknown as { _registeredTools: Record<string, unknown> })._registeredTools;
+  return Object.keys(tools).sort();
+}
+
+/** Re-export so the scope table stays coupled to the tool registry module. */
+export { TOOL_SCOPE_TABLE };

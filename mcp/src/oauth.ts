@@ -23,7 +23,7 @@ export const PIRIN_AUTHORIZATION_SERVER_METADATA = {
   grant_types_supported: ["authorization_code", "refresh_token"],
   code_challenge_methods_supported: ["S256"],
   token_endpoint_auth_methods_supported: ["none"],
-  scopes_supported: ["bootstrap-os", "openid", "profile", "email"],
+  scopes_supported: ["bootstrap-os", "office-receptionist", "openid", "profile", "email"],
   service_documentation: PIRIN_AUTHORIZATION_SERVER,
 } as const;
 
@@ -208,13 +208,25 @@ export function authorizationServerMetadataDocument(_req?: Request): typeof PIRI
 export function wwwAuthenticateChallengeFor(
   metadataUrl: string,
   resourceUrl: string = HOSTED_MCP_RESOURCE,
-  error?: "invalid_token",
+  error?: "invalid_token" | "insufficient_scope",
 ): string {
+  if (error === "insufficient_scope") {
+    return `Bearer error="insufficient_scope", scope="bootstrap-os", resource_metadata="${metadataUrl}"`;
+  }
   const base = `Bearer realm="bootstrap-os-mcp", resource_metadata="${metadataUrl}", resource="${resourceUrl}", scope="bootstrap-os"`;
   if (error === "invalid_token") {
     return `${base}, error="invalid_token", error_description="The access token expired or is invalid"`;
   }
   return base;
+}
+
+/** Single clean 403 challenge — clients reconnect once; do not treat as invalid_token. */
+export function insufficientScopeChallenge(req?: Request): string {
+  return wwwAuthenticateChallengeFor(
+    protectedResourceMetadataUrl(req),
+    hostedMcpResource(req),
+    "insufficient_scope",
+  );
 }
 
 /** Production / main default challenge (no env, not a Vercel preview). */
