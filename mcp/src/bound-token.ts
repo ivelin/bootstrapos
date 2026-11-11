@@ -10,7 +10,10 @@
  * accept it. There is no service-role RPC that takes an actor argument, and
  * calling as service_role would skip RLS. When BOOTSTRAP_SUPABASE_JWT_SECRET
  * is set, a verified token is exchanged for a short-lived role=authenticated
- * JWT carrying the same email and sub. Stores keep sending that bearer.
+ * JWT carrying the same email and sub. Stores send only that bearer.
+ * An unset or empty secret does not mint and must not fall through to the
+ * at+jwt. Callers return HTTP 401 identity_lookup_failed (same closed result
+ * as a labels RPC that is not ok). 503 stays for identity_upstream_unavailable.
  * No new GRANT to anon. No migration.
  */
 import {
@@ -38,6 +41,11 @@ export const DEFAULT_BOUND_TOKEN_JWKS_URL = "https://www.pirin.ai/.well-known/jw
 export const BOUND_TOKEN_CLOCK_SKEW_SECONDS = 60;
 
 const ALGORITHMS = ["ES256"] as const;
+
+/** Pinned jose remote-JWKS cache. cooldownDuration matches the library default (30s). */
+const JWKS_CACHE_MAX_AGE_MS = 600_000;
+const JWKS_COOLDOWN_MS = 30_000;
+const JWKS_TIMEOUT_MS = 5_000;
 
 export type BoundTokenClaims = {
   email: string;
@@ -73,7 +81,11 @@ export function boundTokenJwksUrl(env: NodeJS.ProcessEnv = process.env): string 
 function remoteJwks(url: string): RemoteJwks {
   let hit = remoteJwksByUrl.get(url);
   if (!hit) {
-    hit = createRemoteJWKSet(new URL(url));
+    hit = createRemoteJWKSet(new URL(url), {
+      cacheMaxAge: JWKS_CACHE_MAX_AGE_MS,
+      cooldownDuration: JWKS_COOLDOWN_MS,
+      timeoutDuration: JWKS_TIMEOUT_MS,
+    });
     remoteJwksByUrl.set(url, hit);
   }
   return hit;
@@ -141,9 +153,12 @@ function jwtSecret(env: NodeJS.ProcessEnv): Uint8Array | null {
 }
 
 /**
- * PostgREST bearer for a verified at+jwt. Undefined when the token is not a
- * valid bound token, or when the Supabase JWT secret is unset (callers then
- * keep today's session-JWT forwarding).
+ * PostgREST bearer for a verified at+jwt.
+ * Undefined when the token is not an at+jwt (session JWTs stay as presented),
+ * when verification fails, or when BOOTSTRAP_SUPABASE_JWT_SECRET is unset or
+ * empty. Callers must not send the at+jwt in that last case.
+ * Minted exp is always in the future, including a token kept alive only by
+ * the 60s skew, and never more than 3600s from iat.
  */
 export async function databaseBearerForPresentedToken(
   token: string | undefined,
@@ -156,7 +171,10 @@ export async function databaseBearerForPresentedToken(
   const claims = await verifyBoundAccessToken(token, env, now);
   if (!claims) return undefined;
   const iat = Math.floor(now.getTime() / 1000);
-  const exp = Math.min(claims.exp, iat + 3600);
+  const exp = Math.min(
+    iat + 3600,
+    Math.max(iat + BOUND_TOKEN_CLOCK_SKEW_SECONDS, Math.min(claims.exp + BOUND_TOKEN_CLOCK_SKEW_SECONDS, iat + 3600)),
+  );
   return new SignJWT({
     role: "authenticated",
     email: claims.email,

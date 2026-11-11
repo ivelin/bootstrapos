@@ -5,6 +5,7 @@
 import { afterEach, describe, it } from "node:test";
 import assert from "node:assert/strict";
 import { createLocalJWKSet, exportJWK, generateKeyPair, SignJWT } from "jose";
+import { clearHostedCompanyContextForTests } from "../dist/hosted-company-context.js";
 import { handleHostedReadFetch } from "../dist/hosted-handler.js";
 import {
   setIdentityStoreForTests,
@@ -62,17 +63,18 @@ async function mint(overrides = {}) {
     email = EMAIL,
     sub = SUB,
     exp = now + 3600,
+    iat = now,
     key = privateKey,
     extra = {},
   } = overrides;
   const claims = { scope, email, ...extra };
-  const jwt = new SignJWT(claims).setProtectedHeader({ alg, typ, kid }).setIssuer(iss).setSubject(sub).setIssuedAt(now).setExpirationTime(exp);
+  const jwt = new SignJWT(claims).setProtectedHeader({ alg, typ, kid }).setIssuer(iss).setSubject(sub).setIssuedAt(iat).setExpirationTime(exp);
   if (Array.isArray(aud)) jwt.setAudience(aud);
   else if (aud !== undefined) jwt.setAudience(aud);
   return jwt.sign(key);
 }
 
-function mcpRequest(token) {
+function mcpRequest(token, tool = "bootstrap_whoami", args = {}) {
   return new Request(`${RESOURCE}`, {
     method: "POST",
     headers: {
@@ -84,7 +86,7 @@ function mcpRequest(token) {
       jsonrpc: "2.0",
       id: 1,
       method: "tools/call",
-      params: { name: "bootstrap_whoami", arguments: {} },
+      params: { name: tool, arguments: args },
     }),
   });
 }
@@ -98,6 +100,7 @@ function toolJson(res, text) {
 afterEach(() => {
   setIdentityStoreForTests(undefined);
   setBoundTokenJwksForTests(undefined);
+  clearHostedCompanyContextForTests();
   delete process.env[ACCEPT_SESSION_JWT_ENV];
   delete process.env[BOUND_TOKEN_ISSUER_ENV];
   delete process.env[BOUND_TOKEN_AUDIENCE_ENV];
@@ -109,11 +112,15 @@ describe("bound at+jwt", () => {
   it("accepts a valid token and whoami returns the claims identity", async () => {
     await keys();
     installJwks();
+    process.env[BOUND_TOKEN_JWT_SECRET_ENV] = "test-only-supabase-jwt-secret";
     const calls = [];
     const prev = globalThis.fetch;
-    globalThis.fetch = async (url) => {
-      calls.push(String(url));
-      return new Response("nope", { status: 500 });
+    globalThis.fetch = async (url, init) => {
+      calls.push({ url: String(url), authorization: init?.headers?.Authorization });
+      return new Response(
+        JSON.stringify({ authenticated: true, email: EMAIL, labels: ["alpha"], role: "member" }),
+        { status: 200, headers: { "content-type": "application/json" } },
+      );
     };
     setIdentityStoreForTests(new SupabaseIdentityStore("https://db.example.test", "anon-key-fixture"));
     try {
@@ -126,8 +133,10 @@ describe("bound at+jwt", () => {
       assert.equal(who.authenticated, true);
       assert.equal(who.email, EMAIL);
       assert.equal(who.sub, SUB);
-      assert.equal(calls.length, 0);
       assert.equal(toolScopeCallRefusal("bootstrap_whoami", token), null);
+      assert.ok(calls.length >= 1);
+      assert.ok(calls.every((call) => !call.url.includes("/auth/v1/user")));
+      assert.ok(calls.every((call) => call.authorization !== `Bearer ${token}`));
     } finally {
       globalThis.fetch = prev;
     }
@@ -216,9 +225,15 @@ describe("bound at+jwt", () => {
     await assertRejected(await mint({ key: otherPrivateKey }));
     await assertRejected(await mint({ aud: [DEFAULT_BOUND_TOKEN_AUDIENCE, "https://other.example.test/mcp"] }));
     installJwks();
-    const skewed = await verifyBoundAccessToken(await mint({ exp: now - 30 }));
+    const skewed = await verifyBoundAccessToken(await mint({ exp: now - 30, iat: now - 120 }));
     assert.equal(skewed?.email, EMAIL);
-    assert.equal(await verifyBoundAccessToken(await mint({ exp: now - 90 })), null);
+    assert.equal(await verifyBoundAccessToken(await mint({ exp: now - 90, iat: now - 200 })), null);
+    process.env[BOUND_TOKEN_JWT_SECRET_ENV] = "test-only-supabase-jwt-secret";
+    const skewToken = await mint({ exp: now - 30, iat: now - 120 });
+    const minted = await databaseBearerForPresentedToken(skewToken, process.env, new Date(now * 1000));
+    assert.ok(minted);
+    const mintedExp = JSON.parse(Buffer.from(minted.split(".")[1], "base64url").toString("utf8")).exp;
+    assert.ok(mintedExp > now);
   });
 
   it("mints an authenticated PostgREST bearer and does not forward the at+jwt", async () => {
@@ -269,6 +284,122 @@ describe("bound at+jwt", () => {
       assert.equal(sentPayload.role, "authenticated");
       assert.equal(sentPayload.email, EMAIL);
       assert.equal(sentPayload.sub, SUB);
+    } finally {
+      globalThis.fetch = prev;
+    }
+  });
+});
+
+function assertClosedTraffic(calls, presented) {
+  assert.ok(calls.every((call) => !call.url.includes("/auth/v1/user")));
+  for (const call of calls) {
+    const header = call.authorization ?? "";
+    assert.notEqual(header, `Bearer ${presented}`);
+    if (!header.startsWith("Bearer ")) continue;
+    const payload = JSON.parse(Buffer.from(header.slice("Bearer ".length).split(".")[1], "base64url").toString("utf8"));
+    assert.notEqual(payload.role, "service_role");
+    if (call.url.includes("/rest/")) {
+      assert.equal(payload.role, "authenticated");
+    }
+  }
+}
+
+async function assertClosed(secret) {
+  await keys();
+  installJwks();
+  if (secret === undefined) delete process.env[BOUND_TOKEN_JWT_SECRET_ENV];
+  else process.env[BOUND_TOKEN_JWT_SECRET_ENV] = secret;
+  const calls = [];
+  const prev = globalThis.fetch;
+  globalThis.fetch = async (url, init) => {
+    calls.push({ url: String(url), authorization: init?.headers?.Authorization });
+    return new Response("nope", { status: 500 });
+  };
+  setIdentityStoreForTests(new SupabaseIdentityStore("https://db.example.test", "anon-key-fixture"));
+  try {
+    const token = await mint();
+    assert.equal(await databaseBearerForPresentedToken(token), undefined);
+    for (const tool of ["bootstrap_whoami", "get_journey"]) {
+      const res = await handleHostedReadFetch(
+        mcpRequest(tool === "get_journey" ? token : token, tool, tool === "get_journey" ? { company: "alpha" } : {}),
+      );
+      const text = await res.text();
+      assert.equal(res.status, 401, `${tool} ${text}`);
+      assert.equal(JSON.parse(text).reason, "identity_lookup_failed");
+      assert.equal(JSON.parse(text).error, "invalid_token");
+    }
+    assertClosedTraffic(calls, token);
+    assert.equal(calls.length, 0);
+  } finally {
+    globalThis.fetch = prev;
+  }
+}
+
+describe("bound token fail closed", () => {
+  it("unset JWT secret is 401 and forwards nothing", async () => {
+    await assertClosed(undefined);
+  });
+
+  it("empty JWT secret is 401 and forwards nothing", async () => {
+    await assertClosed("");
+  });
+
+  it("labels RPC failure is 401 and does not send the at+jwt or service_role", async () => {
+    await keys();
+    installJwks();
+    process.env[BOUND_TOKEN_JWT_SECRET_ENV] = "test-only-supabase-jwt-secret";
+    const calls = [];
+    const prev = globalThis.fetch;
+    globalThis.fetch = async (url, init) => {
+      calls.push({ url: String(url), authorization: init?.headers?.Authorization });
+      return new Response("nope", { status: 500 });
+    };
+    setIdentityStoreForTests(new SupabaseIdentityStore("https://db.example.test", "anon-key-fixture"));
+    try {
+      const token = await mint();
+      for (const tool of ["bootstrap_whoami", "get_journey"]) {
+        const res = await handleHostedReadFetch(
+          mcpRequest(token, tool, tool === "get_journey" ? { company: "alpha" } : {}),
+        );
+        const text = await res.text();
+        assert.equal(res.status, 401, `${tool} ${text}`);
+        assert.equal(JSON.parse(text).reason, "identity_lookup_failed");
+      }
+      assert.ok(calls.length >= 1);
+      assert.ok(calls.every((call) => call.url.includes("/rest/v1/rpc/bootstrap_mcp_my_labels")));
+      assertClosedTraffic(calls, token);
+    } finally {
+      globalThis.fetch = prev;
+    }
+  });
+
+  it("two mints a second apart keep the same company context", async () => {
+    await keys();
+    installJwks();
+    process.env[BOUND_TOKEN_JWT_SECRET_ENV] = "test-only-supabase-jwt-secret";
+    const prev = globalThis.fetch;
+    globalThis.fetch = async () =>
+      new Response(
+        JSON.stringify({ authenticated: true, email: EMAIL, labels: ["alpha"], role: "member" }),
+        { status: 200, headers: { "content-type": "application/json" } },
+      );
+    setIdentityStoreForTests(new SupabaseIdentityStore("https://db.example.test", "anon-key-fixture"));
+    try {
+      const token = await mint();
+      const firstNow = new Date();
+      const later = new Date(firstNow.getTime() + 2000);
+      const firstMint = await databaseBearerForPresentedToken(token, process.env, firstNow);
+      const secondMint = await databaseBearerForPresentedToken(token, process.env, later);
+      assert.notEqual(firstMint, secondMint);
+      const use = await handleHostedReadFetch(mcpRequest(token, "bootstrap_use_company", { company: "alpha" }));
+      const useText = await use.text();
+      assert.equal(use.status, 200, useText);
+      assert.equal(toolJson(use, useText).activeCompany, "alpha");
+      await new Promise((resolve) => setTimeout(resolve, 1100));
+      const listed = await handleHostedReadFetch(mcpRequest(token, "bootstrap_list_companies", {}));
+      const listedText = await listed.text();
+      assert.equal(listed.status, 200, listedText);
+      assert.equal(toolJson(listed, listedText).activeCompany, "alpha");
     } finally {
       globalThis.fetch = prev;
     }

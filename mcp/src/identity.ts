@@ -321,9 +321,10 @@ export class SupabaseIdentityStore implements IdentityStore {
   }
 
   /**
-   * Bound at+jwt never falls through to /auth/v1/user.
-   * Labels use the same RPC as GoTrue when a PostgREST bearer can be minted.
-   * Otherwise the verified email and sub are the identity (labels stay empty).
+   * Bound at+jwt never falls through to /auth/v1/user and is never forwarded.
+   * No JWT secret, or a labels RPC that is not ok, matches whoamiFromLabelsRpc:
+   * authenticated false, reason identity_lookup_failed. The handler turns that
+   * into HTTP 401. It does not admit the caller with empty labels.
    */
   private async whoamiFromBoundToken(token: string): Promise<HostedWhoami> {
     const claims = await verifyBoundAccessToken(token);
@@ -337,15 +338,7 @@ export class SupabaseIdentityStore implements IdentityStore {
     }
     const dbBearer = await databaseBearerForPresentedToken(token);
     if (!dbBearer) {
-      return {
-        authenticated: true,
-        email: claims.email,
-        sub: claims.sub,
-        labels: [],
-        role: "unset",
-        membership: membershipFromStored(null, null),
-        identityStore: "supabase",
-      };
+      return whoamiFromLabelsRpc(claims.email, null, false);
     }
     const base = this.url.replace(/\/+$/, "");
     let labelsRes: Response;
@@ -361,30 +354,12 @@ export class SupabaseIdentityStore implements IdentityStore {
         signal: AbortSignal.timeout(10_000),
       });
     } catch {
-      return {
-        authenticated: true,
-        email: claims.email,
-        sub: claims.sub,
-        labels: [],
-        role: "unset",
-        membership: membershipFromStored(null, null),
-        identityStore: "supabase",
-      };
+      return whoamiFromLabelsRpc(claims.email, null, false);
     }
     let raw: LabelsRpcBody | null = null;
     if (labelsRes.ok) raw = (await labelsRes.json()) as LabelsRpcBody;
     else await discardResponseBody(labelsRes);
-    if (!labelsRes.ok) {
-      return {
-        authenticated: true,
-        email: claims.email,
-        sub: claims.sub,
-        labels: [],
-        role: "unset",
-        membership: membershipFromStored(null, null),
-        identityStore: "supabase",
-      };
-    }
+    if (!labelsRes.ok) return whoamiFromLabelsRpc(claims.email, raw, false);
     const who = whoamiFromLabelsRpc(claims.email, raw, true);
     return { ...who, email: who.email ?? claims.email, sub: claims.sub };
   }
