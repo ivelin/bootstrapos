@@ -12,6 +12,7 @@ import {
   isHostedGatedToolName,
   isHostedPreAllowlistToolName,
 } from "./constants.js";
+import { isAtJwtBearer } from "./bound-token.js";
 import {
   parseBearerToken,
   resolveHostedWhoami,
@@ -369,8 +370,10 @@ export async function handleHostedReadFetch(req: Request): Promise<Response> {
   }
   const calledToolName = toolNameFromRpc(rpcBody);
   const gatedName = gatedToolNameFromRpc(rpcBody);
-  // Expired journey tokens stop here: no whoami fetch and no PostgREST RPC.
-  if (isHostedGatedJourneyToolName(gatedName) && accessTokenExpired(parseBearerToken(authorization))) {
+  const presented = parseBearerToken(authorization);
+  // Expired session JWTs stop here: no whoami fetch and no PostgREST RPC.
+  // An at+jwt uses verifyBoundAccessToken, which already allows BOUND_TOKEN_CLOCK_SKEW_SECONDS.
+  if (isHostedGatedJourneyToolName(gatedName) && !isAtJwtBearer(presented) && accessTokenExpired(presented)) {
     return unauthorizedGatedToolResponse(
       undefined,
       req,
@@ -409,7 +412,7 @@ export async function handleHostedReadFetch(req: Request): Promise<Response> {
         if (supabaseAccessTokenRejected(whoami)) {
           return unauthorizedGatedToolResponse(whoami, req);
         }
-        // Labels miss or no JWT secret. Do not trust the at+jwt claims as an actor.
+        // Labels miss. Do not trust the at+jwt claims as an actor.
         if (whoami.reason === "identity_lookup_failed") {
           return unauthorizedGatedToolResponse(whoami, req);
         }

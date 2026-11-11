@@ -64,9 +64,12 @@ async function mint(overrides = {}) {
     exp = now + 3600,
     iat = now,
     key = privateKey,
+    role = "authenticated",
+    omitRole = false,
     extra = {},
   } = overrides;
   const claims = { scope, email, ...extra };
+  if (!omitRole && claims.role === undefined) claims.role = role;
   const jwt = new SignJWT(claims).setProtectedHeader({ alg, typ, kid }).setIssuer(iss).setSubject(sub).setIssuedAt(iat).setExpirationTime(exp);
   if (Array.isArray(aud)) jwt.setAudience(aud);
   else if (aud !== undefined) jwt.setAudience(aud);
@@ -223,6 +226,8 @@ describe("bound at+jwt", () => {
     await assertRejected(
       await mint({ aud: ["authenticated", "https://other.example.test/mcp"], extra: { role: "authenticated" } }),
     );
+    await assertRejected(await mint({ omitRole: true }));
+    await assertRejected(await mint({ role: "anon" }));
     installJwks();
     const skewed = await verifyBoundAccessToken(await mint({ exp: now - 30, iat: now - 120 }));
     assert.equal(skewed?.email, EMAIL);
@@ -249,7 +254,7 @@ describe("bound at+jwt", () => {
     setIdentityStoreForTests(new SupabaseIdentityStore("https://db.example.test", "anon-key-fixture"));
     try {
       for (const token of [
-        await mint(),
+        await mint({ role: "authenticated" }),
         await mint({
           aud: ["authenticated", DEFAULT_BOUND_TOKEN_AUDIENCE],
           extra: { role: "authenticated" },
@@ -266,6 +271,32 @@ describe("bound at+jwt", () => {
         assert.match(seen[0].url, /\/rest\/v1\/rpc\/bootstrap_mcp_my_labels$/);
         assert.equal(seen[0].authorization, `Bearer ${token}`);
       }
+    } finally {
+      globalThis.fetch = prev;
+    }
+  });
+
+  it("does not reject an at+jwt early when exp is inside the clock skew", async () => {
+    await keys();
+    installJwks();
+    const now = Math.floor(Date.now() / 1000);
+    const calls = [];
+    const prev = globalThis.fetch;
+    globalThis.fetch = async (url, init) => {
+      calls.push({ url: String(url), authorization: init?.headers?.Authorization });
+      return new Response(
+        JSON.stringify({ authenticated: true, email: EMAIL, labels: ["alpha"], role: "member" }),
+        { status: 200, headers: { "content-type": "application/json" } },
+      );
+    };
+    setIdentityStoreForTests(new SupabaseIdentityStore("https://db.example.test", "anon-key-fixture"));
+    try {
+      const token = await mint({ exp: now - 30, iat: now - 120, role: "authenticated" });
+      const res = await handleHostedReadFetch(mcpRequest(token, "get_journey", { company: "alpha" }));
+      await res.text();
+      assert.ok(calls.some((call) => call.url.includes("/rest/v1/rpc/bootstrap_mcp_my_labels")));
+      assert.ok(calls.every((call) => call.authorization === `Bearer ${token}`));
+      assert.ok(calls.every((call) => !call.url.includes("/auth/v1/user")));
     } finally {
       globalThis.fetch = prev;
     }

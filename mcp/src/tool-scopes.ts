@@ -1,7 +1,8 @@
 /**
  * Deny-by-default per-tool OAuth scope table for the hosted MCP.
  * Every registered tool must have an entry. Missing entry → refuse at call time.
- * Aud/scope enforcement runs only when ACCEPT_SESSION_JWT=false.
+ * A session JWT is gated on aud and scope only when ACCEPT_SESSION_JWT=false.
+ * An at+jwt is always gated on aud and scope.
  */
 import {
   HOSTED_GATED_TOOL_NAMES,

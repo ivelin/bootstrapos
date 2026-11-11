@@ -9,7 +9,7 @@
  * third-party auth checks that token. This host does not mint a second JWT
  * and does not send service_role. A labels RPC that is not ok (including
  * PostgREST 401/403) is identity_lookup_failed, HTTP 401.
- * No new GRANT to anon. No migration.
+ * No new GRANT to anon.
  */
 import {
   createRemoteJWKSet,
@@ -134,6 +134,7 @@ export async function verifyBoundAccessToken(
     if (protectedHeader.alg !== "ES256") return null;
     if (payload.iss !== issuer) return null;
     if (!audienceContains(payload.aud, audience)) return null;
+    if (payload.role !== "authenticated") return null;
     if (!scopeIncludesBootstrapOs(payload.scope)) return null;
     const email = typeof payload.email === "string" ? payload.email.trim().toLowerCase() : "";
     const sub = typeof payload.sub === "string" ? payload.sub.trim() : "";
