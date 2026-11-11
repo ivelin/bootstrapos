@@ -445,6 +445,7 @@ function registerGatedIdentityTools(server: McpServer, ctx: HostedRequestContext
     return text({
       ...membershipPayload(who, ctx.sessionKey),
       membership: who.membership ?? { level: "board", status: null },
+      ...(who.sub ? { sub: who.sub } : {}),
       reason: who.reason ?? null,
       identityStore: who.identityStore ?? null,
     });

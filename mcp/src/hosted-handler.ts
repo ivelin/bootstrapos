@@ -19,6 +19,7 @@ import {
   supabaseIdentityUpstreamFailure,
   type HostedWhoami,
 } from "./identity.js";
+import { databaseBearerForPresentedToken } from "./bound-token.js";
 import {
   accessTokenExpired,
   actorClaimsFromAccessToken,
@@ -184,13 +185,14 @@ async function bindVerifiedSession(authorization: string | null): Promise<Hosted
   }
   let whoami = presentVerifiedWhoami(raw);
   if (!whoami.authenticated || !whoami.email || !accessToken) return whoami;
-  const store = resolveInviteStore(accessToken);
+  const storeToken = (await databaseBearerForPresentedToken(accessToken)) ?? accessToken;
+  const store = resolveInviteStore(storeToken);
   if (!store) return whoami;
   try {
     const claims = actorClaimsFromAccessToken(accessToken);
     const pending = await store.acceptPending(
-      { email: whoami.email, sub: claims?.sub, labels: whoami.labels },
-      accessToken,
+      { email: whoami.email, sub: claims?.sub ?? whoami.sub, labels: whoami.labels },
+      storeToken,
     );
     if (!pending.ok && pending.reason === "invalid_token") {
       return {
@@ -432,8 +434,10 @@ export async function handleHostedReadFetch(req: Request): Promise<Response> {
     }
   }
 
-  const accessToken = parseBearerToken(authorization);
-  const inviteClaims = accessToken ? actorClaimsFromAccessToken(accessToken) : null;
+  const presentedToken = parseBearerToken(authorization);
+  // at+jwt is not a PostgREST session. Swap in the authenticated JWT when we can mint one.
+  const accessToken = (await databaseBearerForPresentedToken(presentedToken)) ?? presentedToken;
+  const inviteClaims = presentedToken ? actorClaimsFromAccessToken(presentedToken) : null;
 
   const server = createBootstrapServer("hosted-read", {
     whoami,

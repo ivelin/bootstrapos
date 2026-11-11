@@ -7,6 +7,7 @@ import {
   HOSTED_GATED_TOOL_NAMES,
   HOSTED_READ_TOOL_NAMES,
 } from "./constants.js";
+import { isAtJwtBearer } from "./bound-token.js";
 import { accessTokenExpired } from "./journey-auth.js";
 import { isJwtAccessToken, HOSTED_MCP_RESOURCE } from "./oauth.js";
 
@@ -170,7 +171,8 @@ export function toolScopeCallRefusal(
   if (!toolName) return null;
   const entry = toolScopeEntry(toolName);
   if (!entry || entry.kind !== "authenticated") return null;
-  if (acceptSessionJwt(env)) return null;
+  // Session JWTs skip aud/scope while the flag is on. Bound at+jwt always runs this gate.
+  if (acceptSessionJwt(env) && !isAtJwtBearer(token)) return null;
   if (!token || !isJwtAccessToken(token) || accessTokenExpired(token)) return null;
   if (accessTokenSatisfiesBootstrapOsGate(token)) return null;
   return "insufficient_scope";
