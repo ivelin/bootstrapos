@@ -96,6 +96,8 @@ import {
   inviterNameForKick,
   notifyPirinInviteMail,
   resolveInviteMailMode,
+  shouldPostPirinInviteMail,
+  type PirinInviteMailKick,
 } from "./invite-mail.js";
 
 export type McpSurface = "full" | "hosted-read";
@@ -107,6 +109,26 @@ function withEmptyBet(payload: unknown): unknown {
   const ideas = (payload as { ideas?: unknown }).ideas;
   if (!Array.isArray(ideas) || ideas.length > 0) return payload;
   return { ...(payload as Record<string, unknown>), ...setupForEmptyCompany() };
+}
+
+/** Same production kick as invite_member. Strips the one-time token before the tool text. */
+export function kickFounderInviteIfNeeded(raw: unknown): unknown {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return raw;
+  const kick = (raw as { founderInvite?: Partial<PirinInviteMailKick> & { inviterEmail?: string; companyWorkspace?: string } }).founderInvite;
+  const invitedByEmail = kick?.invitedByEmail || kick?.inviterEmail;
+  const companyLabel = kick?.companyLabel || kick?.companyWorkspace;
+  if (!kick?.inviteeEmail || !invitedByEmail || !companyLabel || !kick.inviteToken) return raw;
+  const next = { ...(raw as Record<string, unknown>) };
+  delete next.founderInvite;
+  if (shouldPostPirinInviteMail()) {
+    void notifyPirinInviteMail({
+      inviteeEmail: kick.inviteeEmail,
+      invitedByEmail,
+      companyLabel,
+      inviteToken: kick.inviteToken,
+    }).catch(() => undefined);
+  }
+  return next;
 }
 
 function text(payload: unknown) {
@@ -1427,7 +1449,7 @@ function registerJourneyTools(server: McpServer, ctx: HostedRequestContext) {
           });
         }
         return text(
-          await store.putJourney(actor, {
+          kickFounderInviteIfNeeded(await store.putJourney(actor, {
             companySlug: input.company,
             ideaSlug: input.idea,
             journeyPhase: input.journeyPhase,
@@ -1454,7 +1476,7 @@ function registerJourneyTools(server: McpServer, ctx: HostedRequestContext) {
             })),
             engagements: input.engagements,
             initiatives: input.initiatives,
-          }),
+          })),
         );
       } catch (e) {
         return err(e instanceof Error ? e.message : String(e));

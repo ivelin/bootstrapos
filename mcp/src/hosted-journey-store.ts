@@ -38,6 +38,40 @@ import {
   admitPrimaryPhaseWhy,
   admitPrimaryWhy,
 } from "./control-plane.js";
+import { notifyPirinInviteMail, shouldPostPirinInviteMail, type PirinInviteMailKick } from "./invite-mail.js";
+
+function founderInviteKick(raw: unknown): PirinInviteMailKick | undefined {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return undefined;
+  const kick = (raw as { founderInvite?: unknown }).founderInvite;
+  if (!kick || typeof kick !== "object") return undefined;
+  const row = kick as Partial<PirinInviteMailKick> & { inviterEmail?: string; companyWorkspace?: string };
+  const invitedByEmail = row.invitedByEmail || row.inviterEmail;
+  const companyLabel = row.companyLabel || row.companyWorkspace;
+  if (!row.inviteeEmail || !invitedByEmail || !companyLabel || !row.inviteToken) return undefined;
+  return {
+    inviteeEmail: row.inviteeEmail,
+    invitedByEmail,
+    companyLabel,
+    inviteToken: row.inviteToken,
+  };
+}
+
+/** Drop the one-time founder invite before the tool result. Mail uses the same kick as invite_member. */
+export function deliverFounderInvite(raw: unknown): unknown {
+  const kick = founderInviteKick(raw);
+  if (!raw || typeof raw !== "object" || Array.isArray(raw) || !kick) return raw;
+  const next = { ...(raw as Record<string, unknown>) };
+  delete next.founderInvite;
+  if (shouldPostPirinInviteMail()) {
+    void notifyPirinInviteMail({
+      inviteeEmail: kick.inviteeEmail,
+      invitedByEmail: kick.invitedByEmail,
+      companyLabel: kick.companyLabel,
+      inviteToken: kick.inviteToken,
+    }).catch(() => undefined);
+  }
+  return next;
+}
 
 /** Scoreboard adapter: top-level card from initiatives[]. Dual-read dead for card lead when initiatives present. No prod SQL. */
 function attachCardFromScoreboard(raw: unknown): unknown {
@@ -204,10 +238,20 @@ export class HostedMembershipJourneyStore implements JourneyStore {
       founderEmail: input.founderEmail,
       create: true,
     });
-    return this.inner.putJourney(actor, {
+    const kick = this.inner.takeFounderInviteKick();
+    const wrote = await this.inner.putJourney(actor, {
       ...input,
       ideaSlug: input.ideaSlug || "default",
     });
+    if (kick && shouldPostPirinInviteMail()) {
+      void notifyPirinInviteMail({
+        inviteeEmail: kick.inviteeEmail,
+        invitedByEmail: kick.invitedByEmail,
+        companyLabel: kick.companyLabel,
+        inviteToken: kick.inviteToken,
+      }).catch(() => undefined);
+    }
+    return wrote;
   }
 
   async postComment(
@@ -528,12 +572,13 @@ export class SupabaseJourneyStore implements JourneyStore {
     if (input.founderEmail !== undefined) rpcBody.p_founder_email = input.founderEmail;
     const hit = await this.rpc("bootstrap_os_put_journey", rpcBody);
     if ("error" in hit) return rpcMiss(hit);
-    await this.fireWebhooksAfterWrite(hit.raw, {
+    const raw = deliverFounderInvite(hit.raw);
+    await this.fireWebhooksAfterWrite(raw, {
       company: input.companySlug,
       idea,
       event: "put_journey",
     });
-    return attachCardFromScoreboard(hit.raw);
+    return attachCardFromScoreboard(raw);
   }
 
   async postComment(
