@@ -378,6 +378,15 @@ describe("cross-tenant invite-only CI gate (HTTP + hosted membership)", () => {
                       name === "enable_board_watch" ||
                       name === "list_provenance"
                     ? { company: "bravo" }
+                    : name === "check_breakers"
+                      ? { company: "bravo" }
+                    : name === "change_board_role"
+                      ? {
+                          company: "bravo",
+                          principalEmail: "founder@example.test",
+                          role: "founder",
+                          op: "grant",
+                        }
                     : name === "put_portfolio_score"
                       ? {
                           company: "bravo",

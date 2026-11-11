@@ -66,6 +66,7 @@ export const TOOL_SCOPE_TABLE: Readonly<Record<string, ToolScopeEntry>> = {
   enable_board_watch: { kind: "authenticated" },
   list_provenance: { kind: "authenticated" },
   put_portfolio_score: { kind: "authenticated" },
+  change_board_role: { kind: "authenticated" },
 
   // Full (stdio / self-host) surface only — outside hosted OAuth
   bootstrap_init_company: { kind: "local" },

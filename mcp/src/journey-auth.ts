@@ -13,7 +13,14 @@ export type JourneyActor = {
   reason?: string;
 };
 
-export type JourneyAclRole = "founder" | "founder_authorized" | "advisor" | "mentor" | "commenter";
+export type JourneyAclRole =
+  | "founder"
+  | "owner"
+  | "founder_authorized"
+  | "editor"
+  | "advisor"
+  | "mentor"
+  | "commenter";
 
 export function parseBearerToken(header: string | null | undefined): string | undefined {
   if (!header) return undefined;
