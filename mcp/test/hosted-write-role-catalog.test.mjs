@@ -105,6 +105,7 @@ describe("hosted write-role catalog", () => {
     assert.deepEqual(ranked.sort(), [
       "bootstrap_mcp_invite_member",
       "bootstrap_os_change_acl",
+      "bootstrap_os_check_breakers",
       "bootstrap_os_create_idea",
       "bootstrap_os_invite_create",
       "bootstrap_os_post_comment",

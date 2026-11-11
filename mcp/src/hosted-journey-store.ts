@@ -39,6 +39,12 @@ import {
   admitPrimaryWhy,
 } from "./control-plane.js";
 import { notifyPirinInviteMail, shouldPostPirinInviteMail, type PirinInviteMailKick } from "./invite-mail.js";
+import {
+  cardsFromJourneyPayload,
+  confirmKillDenial,
+  validateShapeUpPut,
+  type ShapeUpBreach,
+} from "./shape-up.js";
 
 function founderInviteKick(raw: unknown): PirinInviteMailKick | undefined {
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) return undefined;
@@ -252,6 +258,17 @@ export class HostedMembershipJourneyStore implements JourneyStore {
       }).catch(() => undefined);
     }
     return wrote;
+  }
+
+  async checkBreakers(
+    actor: JourneyActor,
+    input: { companySlug: string; now?: Date },
+  ): Promise<unknown> {
+    const denied = this.denyUnlessHeld(actor, input.companySlug);
+    if (denied) return denied;
+    const missing = this.requireExisting(input.companySlug, actor);
+    if (missing) return missing;
+    return this.inner.checkBreakers(actor, input);
   }
 
   async postComment(
@@ -517,8 +534,36 @@ export class SupabaseJourneyStore implements JourneyStore {
       supporting?: SupportingRow[];
       engagements?: EngagementRow[];
       initiatives?: Initiative[];
+      shapeUpServerWrite?: boolean;
     },
   ): Promise<unknown> {
+    if (!input.shapeUpServerWrite) {
+      const shapeUpError = validateShapeUpPut(input.companySlug, input.scoreboard);
+      if (shapeUpError) return { ok: false, error: shapeUpError };
+    }
+    if (input.currentGate === "kill" && !input.shapeUpServerWrite) {
+      const current = await this.getJourney(_actor, {
+        companySlug: input.companySlug,
+        ideaSlug: input.ideaSlug,
+        expandMeetingDoc: true,
+      });
+      const card = cardsFromJourneyPayload(current)[0];
+      if (card?.scoreboard.breaker_state === "tripped") {
+        const owners = (current as { owners?: Array<{ principal?: string; role?: string }> }).owners ?? [];
+        const principal = _actor.principal ?? _actor.email;
+        const role = owners.find((row) => row.principal === principal)?.role;
+        const denial = confirmKillDenial({ client: input.client, role });
+        if (denial) {
+          await this.postComment(_actor, {
+            companySlug: input.companySlug,
+            ideaSlug: input.ideaSlug,
+            body: JSON.stringify({ op: "confirm_kill_denied", denied: denial, card_id: card.id }),
+            client: input.client,
+          });
+          return { ok: false, error: "confirm_kill_denied", denied: denial };
+        }
+      }
+    }
     if (spokenLoopWriteRejected(input) || spokenLoopWriteRejected(input.scoreboard)) {
       return { ok: false, error: SPOKEN_LOOP_WRITE_REJECTED };
     }
@@ -579,6 +624,48 @@ export class SupabaseJourneyStore implements JourneyStore {
       event: "put_journey",
     });
     return attachCardFromScoreboard(raw);
+  }
+
+  async checkBreakers(
+    actor: JourneyActor,
+    input: { companySlug: string; now?: Date },
+  ): Promise<unknown> {
+    const hit = await this.rpc("bootstrap_os_check_breakers", { p_slug: input.companySlug });
+    if ("error" in hit) return { ok: false, error: hit.error };
+    const raw = hit.raw;
+    if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
+      return { ok: false, error: "check_breakers failed" };
+    }
+    const body = raw as {
+      ok?: boolean;
+      error?: string;
+      readOnly?: boolean;
+      gateUnchanged?: boolean;
+      tripped?: Array<{ card_id?: unknown; breach?: unknown; slug?: unknown }>;
+    };
+    if (body.ok === false) return body;
+    const tripped: Array<{ card_id: string; breach: ShapeUpBreach }> = [];
+    for (const row of body.tripped ?? []) {
+      const breach = row?.breach;
+      const cardId = row?.card_id;
+      const slug = row?.slug;
+      if (typeof cardId !== "string" || typeof slug !== "string") continue;
+      if (breach !== "kill_on" && breach !== "spend") continue;
+      const comment = await this.postComment(actor, {
+        companySlug: input.companySlug,
+        ideaSlug: slug,
+        body: JSON.stringify({ card_id: cardId, breach }),
+        client: "check_breakers",
+      });
+      if (comment && typeof comment === "object" && (comment as { ok?: boolean }).ok === false) return comment;
+      tripped.push({ card_id: cardId, breach });
+    }
+    return {
+      ok: true,
+      readOnly: tripped.length === 0,
+      tripped,
+      gateUnchanged: true,
+    };
   }
 
   async postComment(

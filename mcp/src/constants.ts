@@ -46,6 +46,7 @@ export const HOSTED_GATED_JOURNEY_TOOL_NAMES = [
   "bootstrap_where_are_we",
   "create_idea",
   "put_journey",
+  "check_breakers",
   "post_comment",
   "subscribe_board",
   "unsubscribe_board",

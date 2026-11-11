@@ -61,6 +61,10 @@
       "readOnlyHint": true
     },
     {
+      "name": "check_breakers",
+      "readOnlyHint": false
+    },
+    {
       "name": "create_company",
       "readOnlyHint": false
     },
