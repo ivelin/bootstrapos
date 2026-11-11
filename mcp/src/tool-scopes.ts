@@ -1,12 +1,14 @@
 /**
  * Deny-by-default per-tool OAuth scope table for the hosted MCP.
  * Every registered tool must have an entry. Missing entry → refuse at call time.
- * Aud/scope enforcement runs only when ACCEPT_SESSION_JWT=false.
+ * A session JWT is gated on aud and scope only when ACCEPT_SESSION_JWT=false.
+ * An at+jwt is always gated on aud and scope.
  */
 import {
   HOSTED_GATED_TOOL_NAMES,
   HOSTED_READ_TOOL_NAMES,
 } from "./constants.js";
+import { isAtJwtBearer } from "./bound-token.js";
 import { accessTokenExpired } from "./journey-auth.js";
 import { isJwtAccessToken, HOSTED_MCP_RESOURCE } from "./oauth.js";
 
@@ -170,7 +172,8 @@ export function toolScopeCallRefusal(
   if (!toolName) return null;
   const entry = toolScopeEntry(toolName);
   if (!entry || entry.kind !== "authenticated") return null;
-  if (acceptSessionJwt(env)) return null;
+  // Session JWTs skip aud/scope while the flag is on. Bound at+jwt always runs this gate.
+  if (acceptSessionJwt(env) && !isAtJwtBearer(token)) return null;
   if (!token || !isJwtAccessToken(token) || accessTokenExpired(token)) return null;
   if (accessTokenSatisfiesBootstrapOsGate(token)) return null;
   return "insufficient_scope";

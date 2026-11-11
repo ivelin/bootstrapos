@@ -5,7 +5,9 @@
  * Product path is a JWT issued by pirin.ai login (authorization code + PKCE).
  */
 import { createHash, timingSafeEqual } from "node:crypto";
+import { isAtJwtBearer, verifyBoundAccessToken } from "./bound-token.js";
 import { isJwtAccessToken } from "./oauth.js";
+import { acceptSessionJwt } from "./tool-scopes.js";
 
 export type HostedRole = "member" | "super_admin" | "unset";
 
@@ -44,6 +46,8 @@ export function membershipFromStored(levelRaw: unknown, statusRaw: unknown): Hos
 export type HostedWhoami = {
   authenticated: boolean;
   email?: string;
+  /** Present for a verified at+jwt. Session whoami still takes sub from the JWT. */
+  sub?: string;
   labels: string[];
   role?: HostedRole;
   membership?: HostedMembership;
@@ -253,6 +257,17 @@ export class SupabaseIdentityStore implements IdentityStore {
         identityStore: "supabase",
       };
     }
+    if (isAtJwtBearer(token)) {
+      return this.whoamiFromBoundToken(token);
+    }
+    if (!acceptSessionJwt() && isJwtAccessToken(token)) {
+      return {
+        authenticated: false,
+        labels: [],
+        reason: "invalid_or_revoked_token",
+        identityStore: "supabase",
+      };
+    }
     if (!isJwtAccessToken(token)) {
       return {
         authenticated: false,
@@ -303,6 +318,46 @@ export class SupabaseIdentityStore implements IdentityStore {
       raw = (await labelsRes.json()) as LabelsRpcBody;
     }
     return whoamiFromLabelsRpc(user.email, raw, labelsRes.ok);
+  }
+
+  /**
+   * Bound at+jwt never falls through to /auth/v1/user.
+   * The verified token is forwarded unchanged to the labels RPC.
+   * A labels response that is not ok matches whoamiFromLabelsRpc:
+   * authenticated false, reason identity_lookup_failed (HTTP 401).
+   */
+  private async whoamiFromBoundToken(token: string): Promise<HostedWhoami> {
+    const claims = await verifyBoundAccessToken(token);
+    if (!claims) {
+      return {
+        authenticated: false,
+        labels: [],
+        reason: "invalid_or_revoked_token",
+        identityStore: "supabase",
+      };
+    }
+    const base = this.url.replace(/\/+$/, "");
+    let labelsRes: Response;
+    try {
+      labelsRes = await fetch(`${base}/rest/v1/rpc/bootstrap_mcp_my_labels`, {
+        method: "POST",
+        headers: {
+          apikey: this.anonKey,
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: "{}",
+        signal: AbortSignal.timeout(10_000),
+      });
+    } catch {
+      return whoamiFromLabelsRpc(claims.email, null, false);
+    }
+    let raw: LabelsRpcBody | null = null;
+    if (labelsRes.ok) raw = (await labelsRes.json()) as LabelsRpcBody;
+    else await discardResponseBody(labelsRes);
+    if (!labelsRes.ok) return whoamiFromLabelsRpc(claims.email, raw, false);
+    const who = whoamiFromLabelsRpc(claims.email, raw, true);
+    return { ...who, email: who.email ?? claims.email, sub: claims.sub };
   }
 }
 

@@ -12,6 +12,7 @@ import {
   isHostedGatedToolName,
   isHostedPreAllowlistToolName,
 } from "./constants.js";
+import { isAtJwtBearer } from "./bound-token.js";
 import {
   parseBearerToken,
   resolveHostedWhoami,
@@ -184,13 +185,14 @@ async function bindVerifiedSession(authorization: string | null): Promise<Hosted
   }
   let whoami = presentVerifiedWhoami(raw);
   if (!whoami.authenticated || !whoami.email || !accessToken) return whoami;
-  const store = resolveInviteStore(accessToken);
+  const storeToken = accessToken;
+  const store = resolveInviteStore(storeToken);
   if (!store) return whoami;
   try {
     const claims = actorClaimsFromAccessToken(accessToken);
     const pending = await store.acceptPending(
-      { email: whoami.email, sub: claims?.sub, labels: whoami.labels },
-      accessToken,
+      { email: whoami.email, sub: claims?.sub ?? whoami.sub, labels: whoami.labels },
+      storeToken,
     );
     if (!pending.ok && pending.reason === "invalid_token") {
       return {
@@ -368,8 +370,10 @@ export async function handleHostedReadFetch(req: Request): Promise<Response> {
   }
   const calledToolName = toolNameFromRpc(rpcBody);
   const gatedName = gatedToolNameFromRpc(rpcBody);
-  // Expired journey tokens stop here: no whoami fetch and no PostgREST RPC.
-  if (isHostedGatedJourneyToolName(gatedName) && accessTokenExpired(parseBearerToken(authorization))) {
+  const presented = parseBearerToken(authorization);
+  // Expired session JWTs stop here: no whoami fetch and no PostgREST RPC.
+  // An at+jwt uses verifyBoundAccessToken, which already allows BOUND_TOKEN_CLOCK_SKEW_SECONDS.
+  if (isHostedGatedJourneyToolName(gatedName) && !isAtJwtBearer(presented) && accessTokenExpired(presented)) {
     return unauthorizedGatedToolResponse(
       undefined,
       req,
@@ -408,6 +412,10 @@ export async function handleHostedReadFetch(req: Request): Promise<Response> {
         if (supabaseAccessTokenRejected(whoami)) {
           return unauthorizedGatedToolResponse(whoami, req);
         }
+        // Labels miss. Do not trust the at+jwt claims as an actor.
+        if (whoami.reason === "identity_lookup_failed") {
+          return unauthorizedGatedToolResponse(whoami, req);
+        }
         actor = resolveGatedActor(authorization);
         if (!actor.authenticated) {
           if (whoami.reason === "no_membership") {
@@ -432,8 +440,10 @@ export async function handleHostedReadFetch(req: Request): Promise<Response> {
     }
   }
 
-  const accessToken = parseBearerToken(authorization);
-  const inviteClaims = accessToken ? actorClaimsFromAccessToken(accessToken) : null;
+  const presentedToken = parseBearerToken(authorization);
+  // Verified at+jwt is forwarded unchanged. Supabase third-party auth checks it.
+  const accessToken = presentedToken;
+  const inviteClaims = presentedToken ? actorClaimsFromAccessToken(presentedToken) : null;
 
   const server = createBootstrapServer("hosted-read", {
     whoami,
@@ -441,7 +451,7 @@ export async function handleHostedReadFetch(req: Request): Promise<Response> {
     actor,
     inviteActor: inviteClaims ?? (whoami.email ? { email: whoami.email } : undefined),
     accessToken,
-    sessionKey: hostedSessionKey(req, accessToken),
+    sessionKey: hostedSessionKey(req, presentedToken),
     clientHint: clientHintFromInitialize(req, rpcBody),
     protocolVersion: req.headers.get("mcp-protocol-version"),
   });

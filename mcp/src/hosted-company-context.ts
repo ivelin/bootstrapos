@@ -1,6 +1,8 @@
 /**
  * In-memory active company for one hosted MCP session (AppFolio/QBO switcher).
- * Keyed by MCP-Session-Id, else token hash. Not persisted. Not Path 3 state.
+ * Keyed by MCP-Session-Id, else the presented bearer hash.
+ * Pass the caller's token, not a minted PostgREST JWT (that exp changes every call).
+ * Not persisted. Not Path 3 state.
  */
 import { createHash } from "node:crypto";
 
