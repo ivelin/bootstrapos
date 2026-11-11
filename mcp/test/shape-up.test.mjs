@@ -399,8 +399,8 @@ describe("confirm kill", () => {
 });
 
 describe("check_breakers tool visibility", () => {
-  it("hides the tool unless a label is on the allowlist", async () => {
-    const token = "bos_shapeup_fixture_token";
+  it("lists the tool with a store and refuses non-allowlisted companies at call time", async () => {
+    const listToken = "bos_shapeup_fixture_token";
     setIdentityStoreForTests(
       new MemoryIdentityStore([
         {
@@ -409,53 +409,66 @@ describe("check_breakers tool visibility", () => {
           authUserId: "auth-shape",
           labels: ["alpha"],
           role: "member",
-          tokenHashes: [hashMcpToken(token)],
+          tokenHashes: [hashMcpToken(listToken)],
         },
       ]),
     );
     setJourneyStoreForTests(board("alpha"));
-    const hidden = await handleHostedReadFetch(
+    const listed = await handleHostedReadFetch(
       new Request("https://preview.example/mcp", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           Accept: "application/json, text/event-stream",
-          Authorization: `Bearer ${token}`,
+          Authorization: `Bearer ${listToken}`,
         },
         body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "tools/list", params: {} }),
       }),
     );
-    const hiddenTools = JSON.parse(await hidden.text()).result.tools.map((tool) => tool.name);
-    assert.equal(hiddenTools.includes("check_breakers"), false);
+    const tools = JSON.parse(await listed.text()).result.tools;
+    const tool = tools.find((row) => row.name === "check_breakers");
+    assert.ok(tool);
+    assert.match(tool.description, /Internal/);
+    assert.equal(tool.description.includes("Where are we"), false);
 
+    const callToken = syntheticAccessToken({
+      email: "founder@example.test",
+      sub: "auth-shape",
+      extra: { exp: Math.floor(Date.now() / 1000) + 3600 },
+    });
     setIdentityStoreForTests(
       new MemoryIdentityStore([
         {
           id: "mentee-shape",
           email: "founder@example.test",
           authUserId: "auth-shape",
-          labels: [SHAPE_UP_FIXTURE_SLUG],
+          labels: ["alpha"],
           role: "member",
-          tokenHashes: [hashMcpToken(token)],
+          tokenHashes: [hashMcpToken(callToken)],
         },
       ]),
     );
-    const shown = await handleHostedReadFetch(
+    const refused = await handleHostedReadFetch(
       new Request("https://preview.example/mcp", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           Accept: "application/json, text/event-stream",
-          Authorization: `Bearer ${token}`,
+          Authorization: `Bearer ${callToken}`,
         },
-        body: JSON.stringify({ jsonrpc: "2.0", id: 2, method: "tools/list", params: {} }),
+        body: JSON.stringify({
+          jsonrpc: "2.0",
+          id: 2,
+          method: "tools/call",
+          params: { name: "check_breakers", arguments: { company: "alpha" } },
+        }),
       }),
     );
-    const shownTools = JSON.parse(await shown.text()).result.tools;
-    const tool = shownTools.find((row) => row.name === "check_breakers");
-    assert.ok(tool);
-    assert.match(tool.description, /Internal/);
-    assert.equal(tool.description.includes("Where are we"), false);
+    const refusedRaw = await refused.text();
+    assert.equal(refused.status, 200, refusedRaw);
+    const refusedPayload = JSON.parse(refusedRaw);
+    assert.equal(refusedPayload.result.isError, true);
+    assert.match(refusedPayload.result.content[0].text, /shape up is not enabled/i);
   });
 });
 

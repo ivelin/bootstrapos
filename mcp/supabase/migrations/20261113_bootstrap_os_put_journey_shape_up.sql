@@ -228,6 +228,9 @@ BEGIN
   IF v_company IS NULL THEN
     RETURN jsonb_build_object('ok', true, 'readOnly', true, 'tripped', '[]'::jsonb, 'gateUnchanged', true);
   END IF;
+  IF NOT bootstrap_os.has_rank(v_company, 3) THEN
+    RETURN jsonb_build_object('ok', false, 'error', 'forbidden_role', 'message', 'Your role on this board can comment, but not edit. Ask the founder to invite you to edit.');
+  END IF;
 
   v_local := bootstrap_os.shape_up_now() AT TIME ZONE 'America/Chicago';
   v_iso := to_char(v_local, 'YYYY-MM-DD');

@@ -23,6 +23,7 @@ export const MUTATING_TOOL_AUDIT = {
   submit_feedback: "feedback.submit",
   create_idea: "card.create",
   put_journey: "card.update",
+  check_breakers: "check_breakers",
   post_comment: "comment.create",
   subscribe_board: "board.subscribe",
   unsubscribe_board: "board.unsubscribe",

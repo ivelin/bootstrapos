@@ -30,8 +30,7 @@ function allRegisteredToolNames() {
     whoami: {
       authenticated: true,
       email: "founder@example.test",
-      // Include pirin so conditionally registered check_breakers is present for coverage.
-      labels: ["alpha", "pirin"],
+      labels: ["alpha"],
       role: "super_admin",
     },
     accessToken: "bos_scope_coverage_token_xx",

@@ -149,6 +149,7 @@ describe("0-1 journey visitor matrix (CoS smell-test)", () => {
       "bootstrap_where_are_we",
       "create_idea",
       "put_journey",
+      "check_breakers",
       "post_comment",
       "subscribe_board",
       "unsubscribe_board",
