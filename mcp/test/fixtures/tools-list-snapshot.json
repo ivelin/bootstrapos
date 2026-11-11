@@ -61,6 +61,10 @@
       "readOnlyHint": true
     },
     {
+      "name": "change_board_role",
+      "readOnlyHint": false
+    },
+    {
       "name": "check_breakers",
       "readOnlyHint": false
     },

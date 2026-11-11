@@ -71,6 +71,12 @@ const TOOL_ARGS = {
   list_subscribers: { company: "alpha" },
   enable_board_watch: { company: "alpha" },
   list_provenance: { company: "alpha" },
+  change_board_role: {
+    company: "alpha",
+    principalEmail: "founder@example.test",
+    role: "founder",
+    op: "grant",
+  },
   put_portfolio_score: {
     company: "alpha",
     idea: "alpha",

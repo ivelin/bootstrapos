@@ -687,7 +687,15 @@ export function roleOnCompany(
   companyId: string,
 ): JourneyAclRole | undefined {
   const hits = rlsVisibleAcl(acl, actor).filter((row) => row.companyId === companyId);
-  const order: JourneyAclRole[] = ["founder", "founder_authorized", "advisor", "mentor", "commenter"];
+  const order: JourneyAclRole[] = [
+    "founder",
+    "owner",
+    "founder_authorized",
+    "editor",
+    "advisor",
+    "mentor",
+    "commenter",
+  ];
   for (const role of order) {
     if (hits.some((row) => row.role === role)) return role;
   }
@@ -2070,8 +2078,9 @@ export class MemoryJourneyStore implements JourneyStore {
       return forbidden("unauthenticated");
     }
     const company = this.companyBySlug(input.companySlug);
-    if (!company || roleOnCompany(this.acl, actor, company.id) !== "founder") {
-      return forbidden("founder only");
+    const self = company ? roleOnCompany(this.acl, actor, company.id) : undefined;
+    if (!company || (self !== "founder" && self !== "owner")) {
+      return forbidden("forbidden_role");
     }
     const principal =
       input.principalKind === "email" ? input.principal.trim().toLowerCase() : input.principal.trim();

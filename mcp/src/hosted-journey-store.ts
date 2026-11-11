@@ -693,7 +693,7 @@ export class SupabaseJourneyStore implements JourneyStore {
       companySlug: string;
       principal: string;
       principalKind: "email" | "sub";
-      role: "founder" | "founder_authorized" | "advisor";
+      role: "founder" | "owner" | "founder_authorized" | "editor" | "advisor" | "commenter";
       op: "grant" | "revoke";
       client?: string;
     },

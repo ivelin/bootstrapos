@@ -29,6 +29,7 @@ export const MUTATING_TOOL_AUDIT = {
   unsubscribe_board: "board.unsubscribe",
   enable_board_watch: "board.watch",
   put_portfolio_score: "card.score",
+  change_board_role: "acl.change",
 } as const;
 
 export type MutatingTool = keyof typeof MUTATING_TOOL_AUDIT;

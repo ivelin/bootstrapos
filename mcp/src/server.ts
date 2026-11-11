@@ -1616,6 +1616,43 @@ function registerJourneyTools(server: McpServer, ctx: HostedRequestContext) {
   );
 
   server.tool(
+    "change_board_role",
+    "Hand a role on this bet board to someone, or take it back. Owner only. They sign in with the email you pass.",
+    {
+      company: z.string().describe("Company slug"),
+      principalEmail: z.string().describe("Email they will sign in with"),
+      role: z
+        .enum(["founder", "owner", "founder_authorized", "editor", "advisor", "commenter"])
+        .describe("Role on this board"),
+      op: z.enum(["grant", "revoke"]).describe("Grant the role, or revoke it"),
+    },
+    async (input) => {
+      const store = storeOf();
+      const actor = ctx.actor;
+      if (!store || !actor?.authenticated) {
+        return err("Gated. Owner token required.");
+      }
+      if (await starterRefusesLiveTools(input.company, ctx.accessToken)) {
+        return err("A starter bet board cannot be shared.");
+      }
+      try {
+        const raw = await store.changeAcl(actor, {
+          companySlug: input.company,
+          principal: input.principalEmail,
+          principalKind: "email",
+          role: input.role,
+          op: input.op,
+        });
+        const blocked = refusalMessage(raw);
+        if (blocked) return err(blocked);
+        return text(raw);
+      } catch (e) {
+        return err(e instanceof Error ? e.message : String(e));
+      }
+    },
+  );
+
+  server.tool(
     "put_portfolio_score",
     TOOL_PUT_PORTFOLIO_SCORE,
     {

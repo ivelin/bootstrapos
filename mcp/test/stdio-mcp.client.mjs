@@ -93,6 +93,8 @@ async function main() {
     assert.ok(!names.includes("enable_board_watch"));
     assert.ok(!names.includes("list_provenance"));
     assert.ok(!names.includes("put_portfolio_score"));
+    assert.ok(!names.includes("check_breakers"));
+    assert.ok(!names.includes("change_board_role"));
 
     const info = await call(client, "bootstrap_os_info");
     assert.equal(info.mcpVersion, "0.3.5");
