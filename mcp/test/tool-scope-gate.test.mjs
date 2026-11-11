@@ -61,6 +61,7 @@ const TOOL_ARGS = {
     founderYes: true,
     constraintThisWeek: "talk",
   },
+  check_breakers: { company: "pirin" },
   post_comment: { company: "alpha", body: "scope note" },
   unsubscribe_board: {
     company: "alpha",

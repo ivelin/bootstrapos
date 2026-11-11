@@ -58,6 +58,7 @@ export const TOOL_SCOPE_TABLE: Readonly<Record<string, ToolScopeEntry>> = {
   bootstrap_where_are_we: { kind: "authenticated" },
   create_idea: { kind: "authenticated" },
   put_journey: { kind: "authenticated" },
+  check_breakers: { kind: "authenticated" },
   post_comment: { kind: "authenticated" },
   subscribe_board: { kind: "authenticated" },
   unsubscribe_board: { kind: "authenticated" },

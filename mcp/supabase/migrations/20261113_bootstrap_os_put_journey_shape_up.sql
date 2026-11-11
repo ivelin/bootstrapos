@@ -1,5 +1,6 @@
 -- Function only. Reject server-written scoreboard keys from a user JWT.
 -- Shape Up keys stay on the fleet slug. No table or column changes.
+-- Rebuilt after main's 20261112 put_journey (has_rank + founder invite on create).
 -- Do not migrate or live-probe supabase-pirin-ai from a PR cloud agent.
 
 BEGIN;
@@ -10,7 +11,8 @@ CREATE OR REPLACE FUNCTION public.bootstrap_os_put_journey(
   p_current_gate text DEFAULT NULL, p_constraint text DEFAULT NULL,
   p_founder_written_decision text DEFAULT NULL,
   p_scoreboard jsonb DEFAULT NULL,
-  p_founder text DEFAULT NULL
+  p_founder text DEFAULT NULL,
+  p_founder_email text DEFAULT NULL
 ) RETURNS jsonb LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, bootstrap_os AS $$
 DECLARE
   cid uuid;
@@ -26,11 +28,18 @@ DECLARE
   incoming_score jsonb;
   stamped jsonb;
   journey_or_gate boolean;
+  v_created boolean := false;
+  v_invite jsonb;
+  v_skip text;
 BEGIN
   IF nullif(trim(coalesce(p_why, '')), '') IS NULL THEN
     RETURN jsonb_build_object('ok', false, 'error', 'why required');
   END IF;
-  cid := public.bootstrap_os_ensure_company(p_company);
+  SELECT r.company_id, r.created INTO cid, v_created
+  FROM bootstrap_os.ensure_company_for_actor(p_company, p_founder_email, true) AS r;
+  IF NOT v_created AND NOT bootstrap_os.has_rank(cid, 3) THEN
+    RETURN jsonb_build_object('ok', false, 'error', 'forbidden_role', 'message', 'Your role on this board can comment, but not edit. Ask the founder to invite you to edit.');
+  END IF;
   SELECT * INTO idea_row FROM bootstrap_os.ideas
   WHERE company_id = cid AND slug = lower(coalesce(nullif(p_idea, ''), 'default'));
   IF idea_row.id IS NULL THEN
@@ -127,14 +136,47 @@ BEGIN
   END IF;
   board := public.bootstrap_os_get_journey(p_company, idea_row.slug);
   bundle := bootstrap_os.notify_bundle(cid, idea_row.id, 'put_journey');
-  RETURN board || bundle;
+  IF v_created THEN
+    SELECT s.reason INTO v_skip
+    FROM bootstrap_os.founder_invite_skip s
+    WHERE s.board_id = cid;
+    DELETE FROM bootstrap_os.founder_invite_skip WHERE board_id = cid;
+    IF v_skip IS NOT NULL AND v_skip NOT IN ('inviter_not_on_allowlist', 'rate_limited', 'rate_limiter_unavailable') THEN
+      v_skip := NULL;
+    END IF;
+    SELECT jsonb_build_object(
+      'inviteeEmail', o.payload #>> '{to,email}',
+      'inviterEmail', o.payload #>> '{from,email}',
+      'companyWorkspace', o.payload ->> 'companyWorkspace',
+      'inviteToken', o.payload ->> 'inviteToken'
+    )
+    INTO v_invite
+    FROM public.bootstrap_mcp_invite_outbox o
+    JOIN public.bootstrap_mcp_invites i ON i.id = o.invite_id
+    WHERE i.company_label = lower(p_company)
+      AND o.channel = 'email'
+      AND o.id = (
+        SELECT o2.id
+        FROM public.bootstrap_mcp_invite_outbox o2
+        JOIN public.bootstrap_mcp_invites i2 ON i2.id = o2.invite_id
+        WHERE i2.company_label = lower(p_company)
+          AND o2.channel = 'email'
+        ORDER BY o2.created_at DESC
+        LIMIT 1
+      );
+  END IF;
+  RETURN board || bundle || CASE
+    WHEN v_invite IS NOT NULL AND v_invite ->> 'inviteToken' IS NOT NULL THEN jsonb_build_object('founderInvite', v_invite)
+    WHEN v_skip IS NOT NULL THEN jsonb_build_object('founderInvite', jsonb_build_object('skipped', true, 'reason', v_skip))
+    ELSE '{}'::jsonb
+  END;
 END;
 $$;
 
-REVOKE ALL ON FUNCTION public.bootstrap_os_put_journey(text, text, text, boolean, int, int, text, text, text, jsonb, text) FROM PUBLIC, anon;
-GRANT EXECUTE ON FUNCTION public.bootstrap_os_put_journey(text, text, text, boolean, int, int, text, text, text, jsonb, text) TO authenticated;
+REVOKE ALL ON FUNCTION public.bootstrap_os_put_journey(text, text, text, boolean, int, int, text, text, text, jsonb, text, text) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.bootstrap_os_put_journey(text, text, text, boolean, int, int, text, text, text, jsonb, text, text) TO authenticated;
 
-COMMENT ON FUNCTION public.bootstrap_os_put_journey(text, text, text, boolean, int, int, text, text, text, jsonb, text) IS
+COMMENT ON FUNCTION public.bootstrap_os_put_journey(text, text, text, boolean, int, int, text, text, text, jsonb, text, text) IS
   'User JWT cannot write breaker_state or shape_up_nudges. Shape Up keys require the fleet slug.';
 
 -- Clock for the breaker. Tests replace this function. Callers cannot.
