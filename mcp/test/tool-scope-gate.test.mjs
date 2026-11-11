@@ -1,8 +1,8 @@
 /**
- * Per-write-tool scope gate behind ACCEPT_SESSION_JWT.
- * Unscoped/no-aud → 403 insufficient_scope when flag is false.
+ * Per-authenticated-tool scope gate behind ACCEPT_SESSION_JWT.
+ * Unscoped/no-aud → 403 insufficient_scope when flag is false (reads + writes).
  * Scoped+aud → not refused by the scope gate.
- * Flag default true keeps plain session JWTs working.
+ * Flag default true keeps plain session JWTs working for every authenticated tool.
  * Fictional fixtures only. Never print secrets. Never prod.
  */
 import { afterEach, describe, it } from "node:test";
@@ -18,6 +18,7 @@ import { syntheticAccessToken } from "../dist/journey-auth.js";
 import { HOSTED_MCP_RESOURCE, insufficientScopeChallenge } from "../dist/oauth.js";
 import {
   ACCEPT_SESSION_JWT_ENV,
+  PUBLIC_TOOL_NAMES,
   SCOPE_GATED_TOOL_NAMES,
   acceptSessionJwt,
   registeredToolMissingScopeEntry,
@@ -28,6 +29,10 @@ const FOUNDER_EMAIL = "founder@example.test";
 const FOUNDER_SUB = "auth-founder-scope";
 
 const TOOL_ARGS = {
+  bootstrap_whoami: {},
+  bootstrap_list_companies: {},
+  bootstrap_list_company_labels: {},
+  bootstrap_use_company: { company: "alpha" },
   invite_member: { email: "invitee@example.test", company: "alpha" },
   accept_invite: { token: "inv_fictional_accept_token_xx" },
   create_company: { slug: "alpha-new", founderYes: true },
@@ -37,6 +42,9 @@ const TOOL_ARGS = {
     summary: "scope gate probe",
     user_consented: true,
   },
+  list_feedback: {},
+  get_journey: { company: "alpha" },
+  bootstrap_where_are_we: { company: "alpha" },
   create_idea: {
     company: "alpha",
     idea: "scope-bet",
@@ -55,7 +63,9 @@ const TOOL_ARGS = {
     principal: "advisor@example.test",
     principalKind: "email",
   },
+  list_subscribers: { company: "alpha" },
   enable_board_watch: { company: "alpha" },
+  list_provenance: { company: "alpha" },
   put_portfolio_score: {
     company: "alpha",
     idea: "alpha",
@@ -110,7 +120,7 @@ function toolRequest(name, args, token) {
       jsonrpc: "2.0",
       id: 1,
       method: "tools/call",
-      params: { name, arguments: args },
+      params: { name, arguments: args ?? {} },
     }),
   });
 }
@@ -146,14 +156,18 @@ describe("ACCEPT_SESSION_JWT flag", () => {
     delete process.env[ACCEPT_SESSION_JWT_ENV];
     assert.equal(acceptSessionJwt(), true);
     assert.equal(toolScopeCallRefusal("put_journey", unscopedToken()), null);
+    assert.equal(toolScopeCallRefusal("get_journey", unscopedToken()), null);
+    assert.equal(toolScopeCallRefusal("bootstrap_whoami", unscopedToken()), null);
   });
 
-  it("false turns on aud+scope enforcement for write tools", () => {
+  it("false turns on aud+scope enforcement for every authenticated tool", () => {
     process.env[ACCEPT_SESSION_JWT_ENV] = "false";
     assert.equal(acceptSessionJwt(), false);
     assert.equal(toolScopeCallRefusal("put_journey", unscopedToken()), "insufficient_scope");
+    assert.equal(toolScopeCallRefusal("get_journey", unscopedToken()), "insufficient_scope");
+    assert.equal(toolScopeCallRefusal("bootstrap_whoami", unscopedToken()), "insufficient_scope");
     assert.equal(toolScopeCallRefusal("put_journey", scopedToken()), null);
-    assert.equal(toolScopeCallRefusal("get_journey", unscopedToken()), null);
+    assert.equal(toolScopeCallRefusal("bootstrap_os_info", unscopedToken()), null);
   });
 });
 
@@ -176,12 +190,13 @@ describe("deny-by-default missing table entry", () => {
   });
 });
 
-describe("write-tool scope gate (ACCEPT_SESSION_JWT=false)", () => {
+describe("authenticated-tool scope gate (ACCEPT_SESSION_JWT=false)", () => {
   for (const name of SCOPE_GATED_TOOL_NAMES) {
     it(`${name}: unscoped/no-aud token → 403 insufficient_scope`, async () => {
       process.env[ACCEPT_SESSION_JWT_ENV] = "false";
       const token = unscopedToken();
       installFixtures(token);
+      assert.ok(Object.hasOwn(TOOL_ARGS, name), `missing TOOL_ARGS for ${name}`);
       const req = toolRequest(name, TOOL_ARGS[name], token);
       const res = await handleHostedReadFetch(req);
       assert.equal(res.status, 403, name);
@@ -211,7 +226,7 @@ describe("write-tool scope gate (ACCEPT_SESSION_JWT=false)", () => {
   }
 });
 
-describe("write-tool scope gate (ACCEPT_SESSION_JWT=true / default)", () => {
+describe("authenticated-tool scope gate (ACCEPT_SESSION_JWT=true / default)", () => {
   for (const name of SCOPE_GATED_TOOL_NAMES) {
     it(`${name}: unscoped session JWT is not insufficient_scope`, async () => {
       delete process.env[ACCEPT_SESSION_JWT_ENV];
@@ -222,6 +237,22 @@ describe("write-tool scope gate (ACCEPT_SESSION_JWT=true / default)", () => {
       const www = res.headers.get("WWW-Authenticate") || "";
       assert.doesNotMatch(www, /error="insufficient_scope"/);
       await res.arrayBuffer();
+    });
+  }
+});
+
+describe("public tools stay exempt", () => {
+  for (const name of PUBLIC_TOOL_NAMES) {
+    it(`${name}: unscoped call is not insufficient_scope when flag is false`, async () => {
+      process.env[ACCEPT_SESSION_JWT_ENV] = "false";
+      const res = await handleHostedReadFetch(toolRequest(name, {}, unscopedToken()));
+      assert.doesNotMatch(res.headers.get("WWW-Authenticate") || "", /error="insufficient_scope"/);
+      if (res.status === 403) {
+        const body = JSON.parse(await res.text());
+        assert.notEqual(body.error, "insufficient_scope", name);
+      } else {
+        await res.arrayBuffer();
+      }
     });
   }
 });

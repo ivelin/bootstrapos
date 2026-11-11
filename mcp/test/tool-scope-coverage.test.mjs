@@ -8,15 +8,16 @@ import { createBootstrapServer, listRegisteredToolNames } from "../dist/server.j
 import { HostedMembershipJourneyStore } from "../dist/hosted-journey-store.js";
 import { setJourneyStoreForTests } from "../dist/journey.js";
 import {
-  MUTATING_TOOL_AUDIT,
-  READ_ONLY_GATED_TOOLS,
-} from "../dist/audit-catalog.js";
+  HOSTED_GATED_TOOL_NAMES,
+  HOSTED_READ_TOOL_NAMES,
+} from "../dist/constants.js";
 import {
   TOOL_SCOPE_TABLE,
   SCOPE_GATED_TOOL_NAMES,
-  mutatingToolsMatchScopeGate,
-  publicToolsStayUngated,
-  readOnlyGatedStayUngated,
+  PUBLIC_TOOL_NAMES,
+  LOCAL_TOOL_NAMES,
+  authenticatedToolsMatchHostedGated,
+  publicToolsMatchHostedRead,
 } from "../dist/tool-scopes.js";
 
 afterEach(() => {
@@ -51,16 +52,24 @@ describe("tool scope table coverage", () => {
     assert.deepEqual(orphan, [], `orphan scope table keys: ${orphan.join(", ")}`);
   });
 
-  it("scope-gated tools are exactly the mutating audit catalog", () => {
-    assert.equal(mutatingToolsMatchScopeGate(), true);
-    assert.deepEqual([...SCOPE_GATED_TOOL_NAMES].sort(), Object.keys(MUTATING_TOOL_AUDIT).sort());
+  it("authenticated tools are exactly HOSTED_GATED_TOOL_NAMES", () => {
+    assert.equal(authenticatedToolsMatchHostedGated(), true);
+    assert.deepEqual([...SCOPE_GATED_TOOL_NAMES].sort(), [...HOSTED_GATED_TOOL_NAMES].sort());
   });
 
-  it("public and read-only gated tools stay ungated for OAuth scope", () => {
-    assert.equal(publicToolsStayUngated(), true);
-    assert.equal(readOnlyGatedStayUngated(), true);
-    for (const name of READ_ONLY_GATED_TOOLS) {
-      assert.equal(TOOL_SCOPE_TABLE[name].requireBootstrapOsScope, false, name);
+  it("public tools are exactly HOSTED_READ_TOOL_NAMES with kind public", () => {
+    assert.equal(publicToolsMatchHostedRead(), true);
+    assert.deepEqual([...PUBLIC_TOOL_NAMES].sort(), [...HOSTED_READ_TOOL_NAMES].sort());
+    for (const name of PUBLIC_TOOL_NAMES) {
+      assert.equal(TOOL_SCOPE_TABLE[name].kind, "public", name);
+    }
+  });
+
+  it("local tools are full/stdio-only and never authenticated/public", () => {
+    for (const name of LOCAL_TOOL_NAMES) {
+      assert.equal(TOOL_SCOPE_TABLE[name].kind, "local", name);
+      assert.equal(HOSTED_GATED_TOOL_NAMES.includes(name), false, name);
+      assert.equal(HOSTED_READ_TOOL_NAMES.includes(name), false, name);
     }
   });
 });
