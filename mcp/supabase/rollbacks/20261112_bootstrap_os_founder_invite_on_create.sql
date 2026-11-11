@@ -4,6 +4,8 @@
 
 BEGIN;
 
+DROP TABLE IF EXISTS bootstrap_os.founder_invite_skip;
+
 CREATE OR REPLACE FUNCTION bootstrap_os.ensure_company_for_actor(
   p_company text,
   p_founder_email text DEFAULT NULL,

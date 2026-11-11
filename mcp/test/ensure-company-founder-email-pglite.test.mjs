@@ -257,6 +257,11 @@ describe("ensure_company founderEmail (PGlite, never prod)", { concurrency: fals
         payload jsonb NOT NULL,
         created_at timestamptz NOT NULL DEFAULT now()
       );
+      CREATE UNIQUE INDEX bootstrap_mcp_invites_pending_email_label_idx
+        ON public.bootstrap_mcp_invites (invitee_email, company_label)
+        WHERE accepted_at IS NULL;
+      CREATE OR REPLACE FUNCTION public.bootstrap_hosted_take(text)
+      RETURNS jsonb LANGUAGE sql AS $$ SELECT '{"ok":true}'::jsonb $$;
     `);
     await db.exec(WRITE_ROLE);
     await db.exec(FOUNDER_INVITE);
@@ -305,6 +310,9 @@ describe("ensure_company founderEmail (PGlite, never prod)", { concurrency: fals
   });
 
   it("new board for a different founder mints one hashed invite and one email outbox row", async () => {
+    await db.query(
+      "INSERT INTO public.bootstrap_mcp_mentees (email) VALUES ('admin@example.invalid') ON CONFLICT (email) DO NOTHING",
+    );
     await asEmail("admin@example.invalid");
     const created = await db.query(
       `SELECT public.bootstrap_os_put_journey(
@@ -353,6 +361,110 @@ describe("ensure_company founderEmail (PGlite, never prod)", { concurrency: fals
       "SELECT count(*)::int AS n FROM public.bootstrap_mcp_invites WHERE company_label = 'alpha'",
     );
     assert.equal(still.rows[0].n, 1);
+  });
+
+  it("rotates one pending invite instead of failing the board create", async () => {
+    await db.query(
+      "INSERT INTO public.bootstrap_mcp_mentees (email) VALUES ('admin@example.invalid') ON CONFLICT (email) DO NOTHING",
+    );
+    const inviter = await db.query(
+      "SELECT id FROM public.bootstrap_mcp_mentees WHERE email = 'admin@example.invalid'",
+    );
+    await db.query(
+      `INSERT INTO public.bootstrap_mcp_invites (
+         id, invitee_email, company_label, invited_by_mentee_id, invited_by_email, token_hash, expires_at
+       ) VALUES (
+         gen_random_uuid(), 'founder@example.test', 'echo', $1, 'admin@example.invalid', 'old-hash', now() + interval '1 day'
+       )`,
+      [inviter.rows[0].id],
+    );
+    await asEmail("admin@example.invalid");
+    const created = await db.query(
+      `SELECT public.bootstrap_os_put_journey(
+         'echo', 'default', 'open echo', false,
+         NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'founder@example.test'
+       ) AS body`,
+    );
+    assert.equal(created.rows[0].body.ok, true, JSON.stringify(created.rows[0].body));
+    const pending = await db.query(
+      `SELECT token_hash FROM public.bootstrap_mcp_invites
+       WHERE company_label = 'echo' AND invitee_email = 'founder@example.test' AND accepted_at IS NULL`,
+    );
+    assert.equal(pending.rows.length, 1);
+    assert.notEqual(pending.rows[0].token_hash, "old-hash");
+    const company = await db.query("SELECT id FROM bootstrap_os.companies WHERE slug = 'echo'");
+    assert.equal(company.rows.length, 1);
+  });
+
+  it("skips the invite when the caller is over the limit or not on the allowlist", async () => {
+    await db.query(
+      "CREATE OR REPLACE FUNCTION public.bootstrap_hosted_take(text) RETURNS jsonb LANGUAGE sql AS $$ SELECT '{\"ok\":false,\"error\":\"rate_limited\",\"reason\":\"rate_limited\"}'::jsonb $$",
+    );
+    await db.query(
+      "INSERT INTO public.bootstrap_mcp_mentees (email) VALUES ('admin@example.invalid') ON CONFLICT (email) DO NOTHING",
+    );
+    await asEmail("admin@example.invalid");
+    const limited = await db.query(
+      `SELECT public.bootstrap_os_put_journey(
+         'foxtrot', 'default', 'over the limit', false,
+         NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'founder@example.test'
+       ) AS body`,
+    );
+    assert.equal(limited.rows[0].body.ok, true, JSON.stringify(limited.rows[0].body));
+    assert.equal(limited.rows[0].body.founderInvite.skipped, true);
+    assert.equal(limited.rows[0].body.founderInvite.reason, "rate_limited");
+    assert.equal(limited.rows[0].body.founderInvite.inviteToken, undefined);
+    assert.equal(JSON.stringify(limited.rows[0].body.founderInvite).includes("@"), false);
+    const limitedInvites = await db.query(
+      "SELECT count(*)::int AS n FROM public.bootstrap_mcp_invites WHERE company_label = 'foxtrot'",
+    );
+    assert.equal(limitedInvites.rows[0].n, 0);
+    await db.query(
+      "CREATE OR REPLACE FUNCTION public.bootstrap_hosted_take(text) RETURNS jsonb LANGUAGE sql AS $$ SELECT '{\"ok\":true}'::jsonb $$",
+    );
+    await asEmail("stranger@example.invalid");
+    const denied = await db.query(
+      `SELECT public.bootstrap_os_put_journey(
+         'golf', 'default', 'not on the allowlist', false,
+         NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'founder@example.test'
+       ) AS body`,
+    );
+    assert.equal(denied.rows[0].body.ok, true, JSON.stringify(denied.rows[0].body));
+    assert.equal(denied.rows[0].body.founderInvite.reason, "inviter_not_on_allowlist");
+    assert.equal(JSON.stringify(denied.rows[0].body.founderInvite).includes("@"), false);
+    const deniedInvites = await db.query(
+      "SELECT count(*)::int AS n FROM public.bootstrap_mcp_invites WHERE company_label = 'golf'",
+    );
+    assert.equal(deniedInvites.rows[0].n, 0);
+    const boards = await db.query(
+      "SELECT slug FROM bootstrap_os.companies WHERE slug IN ('foxtrot', 'golf') ORDER BY slug",
+    );
+    assert.deepEqual(boards.rows.map((row) => row.slug), ["foxtrot", "golf"]);
+  });
+
+  it("does not mint for a padded or case-different self email, or when founderEmail is missing", async () => {
+    await asEmail("founder@example.test");
+    const padded = await db.query(
+      `SELECT public.bootstrap_os_put_journey(
+         'hotel', 'default', 'padded self', false,
+         NULL, NULL, NULL, NULL, NULL, NULL, NULL, '  Founder@Example.Test '
+       ) AS body`,
+    );
+    assert.equal(padded.rows[0].body.ok, true, JSON.stringify(padded.rows[0].body));
+    assert.equal(padded.rows[0].body.founderInvite, undefined);
+    await asEmail("founder@example.test");
+    const missing = await db.query(
+      `SELECT public.bootstrap_os_put_journey(
+         'india', 'default', 'no founder email', false,
+         NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL
+       ) AS body`,
+    );
+    assert.equal(missing.rows[0].body.ok, true, JSON.stringify(missing.rows[0].body));
+    assert.equal(missing.rows[0].body.founderInvite, undefined);
+    const invites = await db.query(
+      "SELECT count(*)::int AS n FROM public.bootstrap_mcp_invites WHERE company_label IN ('hotel', 'india')",
+    );
+    assert.equal(invites.rows[0].n, 0);
   });
 
   it("self-create does not mint an invite", async () => {

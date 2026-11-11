@@ -13,6 +13,18 @@ ALTER TABLE public.bootstrap_mcp_invite_outbox FORCE ROW LEVEL SECURITY;
 REVOKE ALL ON TABLE public.bootstrap_mcp_invites FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON TABLE public.bootstrap_mcp_invite_outbox FROM PUBLIC, anon, authenticated;
 
+-- Reason code only. Never an email or a token. Read and deleted by put_journey.
+CREATE TABLE IF NOT EXISTS bootstrap_os.founder_invite_skip (
+  board_id uuid PRIMARY KEY,
+  reason text NOT NULL,
+  CONSTRAINT founder_invite_skip_reason CHECK (
+    reason IN ('inviter_not_on_allowlist', 'rate_limited', 'rate_limiter_unavailable')
+  )
+);
+ALTER TABLE bootstrap_os.founder_invite_skip ENABLE ROW LEVEL SECURITY;
+ALTER TABLE bootstrap_os.founder_invite_skip FORCE ROW LEVEL SECURITY;
+REVOKE ALL ON TABLE bootstrap_os.founder_invite_skip FROM PUBLIC, anon, authenticated;
+
 CREATE OR REPLACE FUNCTION bootstrap_os.ensure_company_for_actor(
   p_company text,
   p_founder_email text DEFAULT NULL,
@@ -26,12 +38,16 @@ SET search_path = pg_catalog, bootstrap_os, public
 AS $$
 DECLARE
   v_slug text := lower(p_company);
-  caller_email text := NULLIF(lower(auth.jwt() ->> 'email'), '');
+  caller_email text := NULLIF(lower(trim(auth.jwt() ->> 'email')), '');
   v_founder text := nullif(lower(trim(p_founder_email)), '');
   v_super boolean := false;
   inviter_id uuid;
+  pending_id uuid;
   raw_token text;
   invite_id uuid;
+  v_rate jsonb;
+  skip_reason text;
+  skip_company uuid;
   outbox_id uuid;
   mail_id uuid;
   expires timestamptz;
@@ -75,25 +91,67 @@ BEGIN
       IF v_founder IS NULL OR v_founder = caller_email THEN
         PERFORM public.bootstrap_os_grant_acl_internal(company_id, caller_email, 'founder');
       ELSE
-        PERFORM public.bootstrap_os_grant_acl_internal(company_id, v_founder, 'founder');
-        PERFORM public.bootstrap_os_grant_acl_internal(company_id, caller_email, 'commenter');
         IF caller_email IS NOT NULL AND v_founder IS DISTINCT FROM caller_email THEN
+          -- Allowlist is the mentee row, same gate as invite_member. Checked before grant_acl inserts one.
           SELECT m.id INTO inviter_id
           FROM public.bootstrap_mcp_mentees m
           WHERE m.email = caller_email
           LIMIT 1;
-          IF inviter_id IS NOT NULL THEN
+          IF inviter_id IS NULL THEN
+            skip_reason := 'inviter_not_on_allowlist';
+          ELSE
+            BEGIN
+              v_rate := public.bootstrap_hosted_take('invite_member');
+            EXCEPTION WHEN OTHERS THEN
+              skip_reason := 'rate_limiter_unavailable';
+            END;
+            IF skip_reason IS NULL AND coalesce((v_rate ->> 'ok')::boolean, false) IS DISTINCT FROM true THEN
+              skip_reason := CASE
+                WHEN coalesce(v_rate ->> 'error', v_rate ->> 'reason', '') IN ('rate_limited', 'rate_limiter_unavailable')
+                  THEN coalesce(v_rate ->> 'error', v_rate ->> 'reason')
+                ELSE 'rate_limiter_unavailable'
+              END;
+            END IF;
+          END IF;
+        END IF;
+        PERFORM public.bootstrap_os_grant_acl_internal(company_id, v_founder, 'founder');
+        PERFORM public.bootstrap_os_grant_acl_internal(company_id, caller_email, 'commenter');
+        IF caller_email IS NOT NULL AND v_founder IS DISTINCT FROM caller_email THEN
+        IF skip_reason IS NOT NULL THEN
+            skip_company := company_id;
+            INSERT INTO bootstrap_os.founder_invite_skip (board_id, reason)
+            VALUES (skip_company, skip_reason)
+            ON CONFLICT (board_id) DO UPDATE SET reason = EXCLUDED.reason;
+          ELSE
             raw_token := 'inv_' || encode(extensions.gen_random_bytes(24), 'hex');
             expires := now() + interval '7 days';
             outbox_id := gen_random_uuid();
             mail_id := gen_random_uuid();
-            invite_id := gen_random_uuid();
             signup_url := 'https://pirin.ai/bootstrap-os/login?invite=' || raw_token;
-            INSERT INTO public.bootstrap_mcp_invites (
-              id, invitee_email, company_label, invited_by_mentee_id, invited_by_email, token_hash, expires_at
-            ) VALUES (
-              invite_id, v_founder, v_slug, inviter_id, caller_email, public.bootstrap_mcp_hash_token(raw_token), expires
-            );
+            SELECT i.id INTO pending_id
+            FROM public.bootstrap_mcp_invites i
+            WHERE i.invitee_email = v_founder
+              AND i.company_label = v_slug
+              AND i.accepted_at IS NULL
+            ORDER BY i.created_at DESC
+            LIMIT 1;
+            IF pending_id IS NOT NULL THEN
+              invite_id := pending_id;
+              UPDATE public.bootstrap_mcp_invites
+              SET token_hash = public.bootstrap_mcp_hash_token(raw_token),
+                  expires_at = expires,
+                  invited_by_mentee_id = inviter_id,
+                  invited_by_email = caller_email
+              WHERE id = invite_id
+                AND accepted_at IS NULL;
+            ELSE
+              invite_id := gen_random_uuid();
+              INSERT INTO public.bootstrap_mcp_invites (
+                id, invitee_email, company_label, invited_by_mentee_id, invited_by_email, token_hash, expires_at
+              ) VALUES (
+                invite_id, v_founder, v_slug, inviter_id, caller_email, public.bootstrap_mcp_hash_token(raw_token), expires
+              );
+            END IF;
             card := jsonb_build_object(
               'card', 'accept_invite',
               'shape', 'DraftExternalMessage',
@@ -168,6 +226,7 @@ DECLARE
   journey_or_gate boolean;
   v_created boolean := false;
   v_invite jsonb;
+  v_skip text;
 BEGIN
   IF nullif(trim(coalesce(p_why, '')), '') IS NULL THEN
     RETURN jsonb_build_object('ok', false, 'error', 'why required');
@@ -265,6 +324,13 @@ BEGIN
   board := public.bootstrap_os_get_journey(p_company, idea_row.slug);
   bundle := bootstrap_os.notify_bundle(cid, idea_row.id, 'put_journey');
   IF v_created THEN
+    SELECT s.reason INTO v_skip
+    FROM bootstrap_os.founder_invite_skip s
+    WHERE s.board_id = cid;
+    DELETE FROM bootstrap_os.founder_invite_skip WHERE board_id = cid;
+    IF v_skip IS NOT NULL AND v_skip NOT IN ('inviter_not_on_allowlist', 'rate_limited', 'rate_limiter_unavailable') THEN
+      v_skip := NULL;
+    END IF;
     SELECT jsonb_build_object(
       'inviteeEmail', o.payload #>> '{to,email}',
       'inviterEmail', o.payload #>> '{from,email}',
@@ -287,8 +353,9 @@ BEGIN
       );
   END IF;
   RETURN board || bundle || CASE
-    WHEN v_invite IS NULL OR v_invite ->> 'inviteToken' IS NULL THEN '{}'::jsonb
-    ELSE jsonb_build_object('founderInvite', v_invite)
+    WHEN v_invite IS NOT NULL AND v_invite ->> 'inviteToken' IS NOT NULL THEN jsonb_build_object('founderInvite', v_invite)
+    WHEN v_skip IS NOT NULL THEN jsonb_build_object('founderInvite', jsonb_build_object('skipped', true, 'reason', v_skip))
+    ELSE '{}'::jsonb
   END;
 END;
 $$;

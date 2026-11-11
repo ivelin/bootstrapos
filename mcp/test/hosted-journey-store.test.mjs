@@ -620,6 +620,53 @@ describe("hosted membership journey store", () => {
     }
   });
 
+  it("a failed mail kick still returns the created board", async () => {
+    const orig = globalThis.fetch;
+    const prevEnv = process.env.VERCEL_ENV;
+    const prevSecret = process.env.BOOTSTRAP_INVITE_MAIL_SECRET;
+    process.env.VERCEL_ENV = "production";
+    process.env.BOOTSTRAP_INVITE_MAIL_SECRET = "test-secret";
+    delete process.env.BOOTSTRAP_INVITE_MAIL_URL;
+    globalThis.fetch = async (url, init) => {
+      const target = String(url);
+      if (target.includes("/api/bootstrap-os/invite-mail")) throw new Error("mail down");
+      const body = JSON.parse(String(init?.body || "{}"));
+      if (target.includes("bootstrap_os_put_journey")) {
+        return Response.json({
+          ok: true,
+          notify: { webhook: 0, emailQueued: 0 },
+          company: { slug: body.p_company, label: body.p_company },
+          ideas: [{ clocks: { journeyPhase: 1, currentGate: "hold" }, scoreboard: {} }],
+          founderInvite: {
+            inviteeEmail: "founder@example.test",
+            inviterEmail: "admin@example.invalid",
+            companyWorkspace: body.p_company,
+            inviteToken: "inv_fixture",
+          },
+        });
+      }
+      return Response.json({ ok: true });
+    };
+    try {
+      const store = new SupabaseJourneyStore("https://example.supabase.co", "anon-test-key", "token");
+      const wrote = await store.putJourney(actor("admin@example.invalid"), {
+        companySlug: "alpha",
+        why: "open alpha",
+        founderYes: true,
+        founderEmail: "founder@example.test",
+      });
+      assert.equal(wrote.ok, true);
+      assert.equal(wrote.founderInvite, undefined);
+      assert.equal(wrote.notify.emailQueued, 0);
+    } finally {
+      globalThis.fetch = orig;
+      if (prevEnv === undefined) delete process.env.VERCEL_ENV;
+      else process.env.VERCEL_ENV = prevEnv;
+      if (prevSecret === undefined) delete process.env.BOOTSTRAP_INVITE_MAIL_SECRET;
+      else process.env.BOOTSTRAP_INVITE_MAIL_SECRET = prevSecret;
+    }
+  });
+
   it("server strips a leftover founder invite and kicks mail once", async () => {
     const calls = [];
     const orig = globalThis.fetch;

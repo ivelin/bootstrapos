@@ -232,8 +232,12 @@ describe("PostgreSQL 16 hosted write-role round trip", { concurrency: false }, (
         payload jsonb NOT NULL,
         created_at timestamptz NOT NULL DEFAULT now()
       );
+      CREATE UNIQUE INDEX bootstrap_mcp_invites_pending_email_label_idx
+        ON public.bootstrap_mcp_invites (invitee_email, company_label)
+        WHERE accepted_at IS NULL;
     `);
     psqlFile(FOUNDER_INVITE);
+    psql("INSERT INTO public.bootstrap_mcp_mentees (email) VALUES ('admin@example.invalid') ON CONFLICT (email) DO NOTHING;");
     const created = psql(`
       WITH cfg AS (SELECT set_config('app.actor_email', 'admin@example.invalid', false) AS email)
       SELECT public.bootstrap_os_put_journey('charlie', 'default', 'open charlie', false, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'founder@example.test')::text
@@ -267,5 +271,42 @@ describe("PostgreSQL 16 hosted write-role round trip", { concurrency: false }, (
     const restored = psql("SELECT pg_get_functiondef('bootstrap_os.ensure_company_for_actor(text,text,boolean)'::regprocedure);");
     assert.equal(restored.includes("bootstrap_mcp_invites"), false);
     psqlFile(FOUNDER_INVITE);
+  });
+
+  it("rotates a pending invite and skips when allowlist or rate limit fails", () => {
+    if (!fs.existsSync(path.join(BIN, "initdb"))) return;
+    psql(`
+      INSERT INTO public.bootstrap_mcp_mentees (email) VALUES ('admin@example.invalid') ON CONFLICT (email) DO NOTHING;
+      INSERT INTO public.bootstrap_mcp_invites (
+        id, invitee_email, company_label, invited_by_mentee_id, invited_by_email, token_hash, expires_at
+      )
+      SELECT gen_random_uuid(), 'founder@example.test', 'echo', id, 'admin@example.invalid', 'old-hash', now() + interval '1 day'
+      FROM public.bootstrap_mcp_mentees WHERE email = 'admin@example.invalid';
+    `);
+    const rotated = psql(`
+      WITH cfg AS (SELECT set_config('app.actor_email', 'admin@example.invalid', false) AS email)
+      SELECT public.bootstrap_os_put_journey('echo', 'default', 'open echo', false, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'founder@example.test')::text
+      FROM cfg;
+    `);
+    assert.match(rotated, /"ok": true/);
+    const pending = psql(`
+      SELECT count(*)::text || ' ' || (token_hash <> 'old-hash')::text
+      FROM public.bootstrap_mcp_invites
+      WHERE company_label = 'echo' AND accepted_at IS NULL
+      GROUP BY token_hash;
+    `).trim();
+    assert.equal(pending, "1 true");
+    psql(`CREATE OR REPLACE FUNCTION public.bootstrap_hosted_take(text) RETURNS jsonb LANGUAGE sql AS $$
+      SELECT '{"ok":false,"error":"rate_limited","reason":"rate_limited"}'::jsonb $$;`);
+    const limited = psql(`
+      WITH cfg AS (SELECT set_config('app.actor_email', 'admin@example.invalid', false) AS email)
+      SELECT public.bootstrap_os_put_journey('foxtrot', 'default', 'over the limit', false, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'founder@example.test')::text
+      FROM cfg;
+    `);
+    assert.match(limited, /"reason": "rate_limited"/);
+    assert.match(limited, /"skipped": true/);
+    assert.equal(limited.includes("inviteToken"), false);
+    assert.equal(psql("SELECT count(*)::text FROM public.bootstrap_mcp_invites WHERE company_label = 'foxtrot';").trim(), "0");
+    assert.equal(psql("SELECT count(*)::text FROM bootstrap_os.companies WHERE slug = 'foxtrot';").trim(), "1");
   });
 });
