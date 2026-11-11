@@ -1913,6 +1913,13 @@ export class MemoryJourneyStore implements JourneyStore {
     if (!actor.authenticated || !actor.principal) return forbidden("unauthenticated");
     const company = this.companyBySlug(input.companySlug);
     if (!company || !canReadCompany(this.acl, actor, company.id)) return notFound("company not visible");
+    if (!canWriteJourney(this.acl, actor, company.id)) {
+      return {
+        ok: false,
+        error: "forbidden_role",
+        message: "Your role on this board can comment, but not edit. Ask the founder to invite you to edit.",
+      };
+    }
     if (!shapeUpEnabled(company.slug)) {
       return { ok: false, error: "shape up is not enabled for this company" };
     }

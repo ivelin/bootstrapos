@@ -44,10 +44,6 @@ export function shapeUpEnabled(companySlug: string | undefined): boolean {
   return SHAPE_UP_COMPANY_SLUGS.includes(slug) || testSlugs.has(slug);
 }
 
-export function shapeUpToolVisible(labels: readonly string[]): boolean {
-  return labels.some((label) => shapeUpEnabled(label));
-}
-
 export function isBotClient(client: string | undefined): boolean {
   return BOT_CLIENT.test(client ?? "");
 }

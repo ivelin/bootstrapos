@@ -220,6 +220,34 @@ describe("PostgreSQL 16 shape-up put", { concurrency: false }, () => {
     assert.throws(() => callCheck("missing-board", "stranger@example.test"), /company not visible/);
   });
 
+  it("returns forbidden_role for an advisor and a commenter on the fleet board", () => {
+    callPut("pirin", `'{"constraint_this_week":"talk"}'`);
+    psql(`
+      INSERT INTO public.bootstrap_mcp_mentees (email)
+      VALUES ('advisor@example.test'), ('commenter@example.test')
+      ON CONFLICT (email) DO NOTHING;
+      INSERT INTO public.bootstrap_company_labels (mentee_id, label)
+      SELECT id, 'pirin'
+      FROM public.bootstrap_mcp_mentees
+      WHERE email IN ('advisor@example.test', 'commenter@example.test')
+      ON CONFLICT (mentee_id, label) DO NOTHING;
+      INSERT INTO bootstrap_os.company_acl (company_id, principal, principal_kind, role)
+      SELECT c.id, actor.email, 'email', actor.role
+      FROM bootstrap_os.companies c
+      CROSS JOIN (VALUES
+        ('advisor@example.test', 'advisor'),
+        ('commenter@example.test', 'commenter')
+      ) AS actor(email, role)
+      WHERE c.slug = 'pirin'
+      ON CONFLICT (company_id, principal, principal_kind) DO NOTHING;
+    `);
+    for (const email of ["advisor@example.test", "commenter@example.test"]) {
+      const hit = callCheck("pirin", email);
+      assert.match(hit, /"error": "forbidden_role"/);
+      assert.doesNotMatch(hit, /"readOnly": false/);
+    }
+  });
+
   it("denies a member of a slug that is not the fleet", () => {
     const before = psql(`SELECT scoreboard::text FROM bootstrap_os.ideas i JOIN bootstrap_os.companies c ON c.id = i.company_id WHERE c.slug = 'harbor' AND i.slug = 'default';`).trim();
     assert.throws(() => callCheck("harbor"), /shape up is not enabled for this company/);

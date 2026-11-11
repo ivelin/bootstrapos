@@ -189,6 +189,44 @@ describe("shape up contract", () => {
 });
 
 describe("check_breakers", () => {
+  it("refuses an advisor and a commenter with forbidden_role", async () => {
+    const commenter = {
+      authenticated: true,
+      email: "commenter@example.test",
+      principal: "commenter@example.test",
+    };
+    const store = new MemoryJourneyStore(
+      [{ id: "co-pirin", slug: "pirin", label: "Fixture" }],
+      [
+        { companyId: "co-pirin", principal: FOUNDER.email, principalKind: "email", role: "founder" },
+        { companyId: "co-pirin", principal: ADVISOR.email, principalKind: "email", role: "advisor" },
+        { companyId: "co-pirin", principal: commenter.email, principalKind: "email", role: "commenter" },
+      ],
+      [
+        {
+          id: "card-pirin",
+          companyId: "co-pirin",
+          slug: "default",
+          name: "Fixture",
+          journeyPhase: 1,
+          loopStage: 1,
+          currentGate: "hold",
+          scoreboard: defaultScoreboard(),
+        },
+      ],
+      [],
+      [],
+    );
+    for (const actor of [ADVISOR, commenter]) {
+      const hit = await store.checkBreakers(actor, { companySlug: "pirin" });
+      assert.equal(hit.ok, false);
+      assert.equal(hit.error, "forbidden_role");
+    }
+    const founder = await store.checkBreakers(FOUNDER, { companySlug: "pirin" });
+    assert.equal(founder.ok, true);
+    assert.equal(founder.readOnly, true);
+  });
+
   it("trips on the date and on spend, then a repeat is read-only", async () => {
     const store = board(SHAPE_UP_FIXTURE_SLUG);
     await store.putJourney(FOUNDER, {
