@@ -5,7 +5,7 @@
  * Product path is a JWT issued by pirin.ai login (authorization code + PKCE).
  */
 import { createHash, timingSafeEqual } from "node:crypto";
-import { databaseBearerForPresentedToken, isAtJwtBearer, verifyBoundAccessToken } from "./bound-token.js";
+import { isAtJwtBearer, verifyBoundAccessToken } from "./bound-token.js";
 import { isJwtAccessToken } from "./oauth.js";
 import { acceptSessionJwt } from "./tool-scopes.js";
 
@@ -321,10 +321,10 @@ export class SupabaseIdentityStore implements IdentityStore {
   }
 
   /**
-   * Bound at+jwt never falls through to /auth/v1/user and is never forwarded.
-   * No JWT secret, or a labels RPC that is not ok, matches whoamiFromLabelsRpc:
-   * authenticated false, reason identity_lookup_failed. The handler turns that
-   * into HTTP 401. It does not admit the caller with empty labels.
+   * Bound at+jwt never falls through to /auth/v1/user.
+   * The verified token is forwarded unchanged to the labels RPC.
+   * A labels response that is not ok matches whoamiFromLabelsRpc:
+   * authenticated false, reason identity_lookup_failed (HTTP 401).
    */
   private async whoamiFromBoundToken(token: string): Promise<HostedWhoami> {
     const claims = await verifyBoundAccessToken(token);
@@ -336,10 +336,6 @@ export class SupabaseIdentityStore implements IdentityStore {
         identityStore: "supabase",
       };
     }
-    const dbBearer = await databaseBearerForPresentedToken(token);
-    if (!dbBearer) {
-      return whoamiFromLabelsRpc(claims.email, null, false);
-    }
     const base = this.url.replace(/\/+$/, "");
     let labelsRes: Response;
     try {
@@ -347,7 +343,7 @@ export class SupabaseIdentityStore implements IdentityStore {
         method: "POST",
         headers: {
           apikey: this.anonKey,
-          Authorization: `Bearer ${dbBearer}`,
+          Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
         },
         body: "{}",

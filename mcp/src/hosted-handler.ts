@@ -19,7 +19,6 @@ import {
   supabaseIdentityUpstreamFailure,
   type HostedWhoami,
 } from "./identity.js";
-import { databaseBearerForPresentedToken, isAtJwtBearer } from "./bound-token.js";
 import {
   accessTokenExpired,
   actorClaimsFromAccessToken,
@@ -185,19 +184,7 @@ async function bindVerifiedSession(authorization: string | null): Promise<Hosted
   }
   let whoami = presentVerifiedWhoami(raw);
   if (!whoami.authenticated || !whoami.email || !accessToken) return whoami;
-  let storeToken = accessToken;
-  if (isAtJwtBearer(accessToken)) {
-    const minted = await databaseBearerForPresentedToken(accessToken);
-    if (!minted) {
-      return {
-        authenticated: false,
-        labels: [],
-        reason: "identity_lookup_failed",
-        identityStore: raw.identityStore ?? "supabase",
-      };
-    }
-    storeToken = minted;
-  }
+  const storeToken = accessToken;
   const store = resolveInviteStore(storeToken);
   if (!store) return whoami;
   try {
@@ -451,27 +438,8 @@ export async function handleHostedReadFetch(req: Request): Promise<Response> {
   }
 
   const presentedToken = parseBearerToken(authorization);
-  // at+jwt is not a PostgREST session. Only a minted authenticated JWT is forwarded.
-  let accessToken = presentedToken;
-  if (presentedToken && isAtJwtBearer(presentedToken)) {
-    const minted = await databaseBearerForPresentedToken(presentedToken);
-    if (!minted) {
-      if (gatedName) {
-        return unauthorizedGatedToolResponse(
-          {
-            authenticated: false,
-            labels: [],
-            reason: "identity_lookup_failed",
-            identityStore: whoami.identityStore ?? "supabase",
-          },
-          req,
-        );
-      }
-      accessToken = undefined;
-    } else {
-      accessToken = minted;
-    }
-  }
+  // Verified at+jwt is forwarded unchanged. Supabase third-party auth checks it.
+  const accessToken = presentedToken;
   const inviteClaims = presentedToken ? actorClaimsFromAccessToken(presentedToken) : null;
 
   const server = createBootstrapServer("hosted-read", {

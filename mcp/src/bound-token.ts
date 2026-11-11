@@ -5,22 +5,16 @@
  * verified here against the authorization-server JWKS and is never sent to
  * GoTrue. Any failure is a hard 401.
  *
- * PostgREST reads auth.jwt() for actor_email(), actor_sub(), and has_rank.
- * The at+jwt is signed by the pirin.ai resource key, so PostgREST will not
- * accept it. There is no service-role RPC that takes an actor argument, and
- * calling as service_role would skip RLS. When BOOTSTRAP_SUPABASE_JWT_SECRET
- * is set, a verified token is exchanged for a short-lived role=authenticated
- * JWT carrying the same email and sub. Stores send only that bearer.
- * An unset or empty secret does not mint and must not fall through to the
- * at+jwt. Callers return HTTP 401 identity_lookup_failed (same closed result
- * as a labels RPC that is not ok). 503 stays for identity_upstream_unavailable.
+ * After verification the same at+jwt bytes are the PostgREST bearer. Supabase
+ * third-party auth checks that token. This host does not mint a second JWT
+ * and does not send service_role. A labels RPC that is not ok (including
+ * PostgREST 401/403) is identity_lookup_failed, HTTP 401.
  * No new GRANT to anon. No migration.
  */
 import {
   createRemoteJWKSet,
   decodeProtectedHeader,
   jwtVerify,
-  SignJWT,
   type JWTVerifyGetKey,
 } from "jose";
 import { HOSTED_MCP_RESOURCE, PIRIN_AUTHORIZATION_SERVER } from "./oauth.js";
@@ -31,7 +25,6 @@ export const BOUND_TOKEN_TYP = "at+jwt";
 export const BOUND_TOKEN_ISSUER_ENV = "BOUND_TOKEN_ISSUER";
 export const BOUND_TOKEN_AUDIENCE_ENV = "BOUND_TOKEN_AUDIENCE";
 export const BOUND_TOKEN_JWKS_URL_ENV = "BOUND_TOKEN_JWKS_URL";
-export const BOUND_TOKEN_JWT_SECRET_ENV = "BOOTSTRAP_SUPABASE_JWT_SECRET";
 
 export const DEFAULT_BOUND_TOKEN_ISSUER = PIRIN_AUTHORIZATION_SERVER;
 export const DEFAULT_BOUND_TOKEN_AUDIENCE = HOSTED_MCP_RESOURCE;
@@ -111,9 +104,15 @@ function scopeIncludesBootstrapOs(scope: unknown): boolean {
   return parts.some((part) => part.trim() === BOOTSTRAP_OS_SCOPE);
 }
 
+function audienceContains(aud: unknown, expected: string): boolean {
+  if (typeof aud === "string") return aud === expected;
+  if (!Array.isArray(aud)) return false;
+  return aud.some((part) => part === expected);
+}
+
 /**
  * Local ES256 check. Fail closed. Does not call GoTrue.
- * aud must be exactly the resource URL (a list of audiences does not match).
+ * aud may be a string or a list. It must contain the resource URL exactly.
  */
 export async function verifyBoundAccessToken(
   token: string,
@@ -134,7 +133,7 @@ export async function verifyBoundAccessToken(
     });
     if (protectedHeader.alg !== "ES256") return null;
     if (payload.iss !== issuer) return null;
-    if (payload.aud !== audience) return null;
+    if (!audienceContains(payload.aud, audience)) return null;
     if (!scopeIncludesBootstrapOs(payload.scope)) return null;
     const email = typeof payload.email === "string" ? payload.email.trim().toLowerCase() : "";
     const sub = typeof payload.sub === "string" ? payload.sub.trim() : "";
@@ -146,43 +145,3 @@ export async function verifyBoundAccessToken(
   }
 }
 
-function jwtSecret(env: NodeJS.ProcessEnv): Uint8Array | null {
-  const raw = env[BOUND_TOKEN_JWT_SECRET_ENV];
-  if (!raw || !raw.trim()) return null;
-  return new TextEncoder().encode(raw);
-}
-
-/**
- * PostgREST bearer for a verified at+jwt.
- * Undefined when the token is not an at+jwt (session JWTs stay as presented),
- * when verification fails, or when BOOTSTRAP_SUPABASE_JWT_SECRET is unset or
- * empty. Callers must not send the at+jwt in that last case.
- * Minted exp is always in the future, including a token kept alive only by
- * the 60s skew, and never more than 3600s from iat.
- */
-export async function databaseBearerForPresentedToken(
-  token: string | undefined,
-  env: NodeJS.ProcessEnv = process.env,
-  now = new Date(),
-): Promise<string | undefined> {
-  if (!token || !isAtJwtBearer(token)) return undefined;
-  const secret = jwtSecret(env);
-  if (!secret) return undefined;
-  const claims = await verifyBoundAccessToken(token, env, now);
-  if (!claims) return undefined;
-  const iat = Math.floor(now.getTime() / 1000);
-  const exp = Math.min(
-    iat + 3600,
-    Math.max(iat + BOUND_TOKEN_CLOCK_SKEW_SECONDS, Math.min(claims.exp + BOUND_TOKEN_CLOCK_SKEW_SECONDS, iat + 3600)),
-  );
-  return new SignJWT({
-    role: "authenticated",
-    email: claims.email,
-  })
-    .setProtectedHeader({ alg: "HS256", typ: "JWT" })
-    .setSubject(claims.sub)
-    .setAudience("authenticated")
-    .setIssuedAt(iat)
-    .setExpirationTime(exp)
-    .sign(secret);
-}

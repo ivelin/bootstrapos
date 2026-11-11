@@ -2,6 +2,7 @@
  * Audience-bound at+jwt (ES256) vs GoTrue session JWT.
  * Local keys and a mocked JWKS only. Fictional addresses. Never print secrets.
  */
+import { readFileSync } from "node:fs";
 import { afterEach, describe, it } from "node:test";
 import assert from "node:assert/strict";
 import { createLocalJWKSet, exportJWK, generateKeyPair, SignJWT } from "jose";
@@ -15,11 +16,9 @@ import {
   BOUND_TOKEN_AUDIENCE_ENV,
   BOUND_TOKEN_ISSUER_ENV,
   BOUND_TOKEN_JWKS_URL_ENV,
-  BOUND_TOKEN_JWT_SECRET_ENV,
   DEFAULT_BOUND_TOKEN_AUDIENCE,
   DEFAULT_BOUND_TOKEN_ISSUER,
   DEFAULT_BOUND_TOKEN_JWKS_URL,
-  databaseBearerForPresentedToken,
   setBoundTokenJwksForTests,
   verifyBoundAccessToken,
 } from "../dist/bound-token.js";
@@ -105,14 +104,12 @@ afterEach(() => {
   delete process.env[BOUND_TOKEN_ISSUER_ENV];
   delete process.env[BOUND_TOKEN_AUDIENCE_ENV];
   delete process.env[BOUND_TOKEN_JWKS_URL_ENV];
-  delete process.env[BOUND_TOKEN_JWT_SECRET_ENV];
 });
 
 describe("bound at+jwt", () => {
   it("accepts a valid token and whoami returns the claims identity", async () => {
     await keys();
     installJwks();
-    process.env[BOUND_TOKEN_JWT_SECRET_ENV] = "test-only-supabase-jwt-secret";
     const calls = [];
     const prev = globalThis.fetch;
     globalThis.fetch = async (url, init) => {
@@ -136,7 +133,7 @@ describe("bound at+jwt", () => {
       assert.equal(toolScopeCallRefusal("bootstrap_whoami", token), null);
       assert.ok(calls.length >= 1);
       assert.ok(calls.every((call) => !call.url.includes("/auth/v1/user")));
-      assert.ok(calls.every((call) => call.authorization !== `Bearer ${token}`));
+      assert.ok(calls.every((call) => call.authorization === `Bearer ${token}`));
     } finally {
       globalThis.fetch = prev;
     }
@@ -223,35 +220,18 @@ describe("bound at+jwt", () => {
     await assertRejected(`${noneHeader}.${nonePayload}.`);
     await assertRejected(await mint({ kid: "not-in-jwks" }));
     await assertRejected(await mint({ key: otherPrivateKey }));
-    await assertRejected(await mint({ aud: [DEFAULT_BOUND_TOKEN_AUDIENCE, "https://other.example.test/mcp"] }));
+    await assertRejected(
+      await mint({ aud: ["authenticated", "https://other.example.test/mcp"], extra: { role: "authenticated" } }),
+    );
     installJwks();
     const skewed = await verifyBoundAccessToken(await mint({ exp: now - 30, iat: now - 120 }));
     assert.equal(skewed?.email, EMAIL);
     assert.equal(await verifyBoundAccessToken(await mint({ exp: now - 90, iat: now - 200 })), null);
-    process.env[BOUND_TOKEN_JWT_SECRET_ENV] = "test-only-supabase-jwt-secret";
-    const skewToken = await mint({ exp: now - 30, iat: now - 120 });
-    const minted = await databaseBearerForPresentedToken(skewToken, process.env, new Date(now * 1000));
-    assert.ok(minted);
-    const mintedExp = JSON.parse(Buffer.from(minted.split(".")[1], "base64url").toString("utf8")).exp;
-    assert.ok(mintedExp > now);
   });
 
-  it("mints an authenticated PostgREST bearer and does not forward the at+jwt", async () => {
+  it("forwards the presented at+jwt unchanged for a string aud and an aud array", async () => {
     await keys();
     installJwks();
-    process.env[BOUND_TOKEN_JWT_SECRET_ENV] = "test-only-supabase-jwt-secret";
-    const token = await mint();
-    const db = await databaseBearerForPresentedToken(token);
-    assert.ok(db);
-    assert.notEqual(db, token);
-    const header = JSON.parse(Buffer.from(db.split(".")[0], "base64url").toString("utf8"));
-    const payload = JSON.parse(Buffer.from(db.split(".")[1], "base64url").toString("utf8"));
-    assert.equal(header.alg, "HS256");
-    assert.equal(payload.role, "authenticated");
-    assert.equal(payload.email, EMAIL);
-    assert.equal(payload.sub, SUB);
-    assert.equal(payload.aud, "authenticated");
-
     const seen = [];
     const prev = globalThis.fetch;
     globalThis.fetch = async (url, init) => {
@@ -268,91 +248,48 @@ describe("bound at+jwt", () => {
     };
     setIdentityStoreForTests(new SupabaseIdentityStore("https://db.example.test", "anon-key-fixture"));
     try {
-      const res = await handleHostedReadFetch(mcpRequest(token));
-      const text = await res.text();
-      assert.equal(res.status, 200, text);
-      const who = toolJson(res, text);
-      assert.equal(who.email, EMAIL);
-      assert.equal(who.sub, SUB);
-      assert.deepEqual(who.labels, ["alpha"]);
-      assert.equal(seen.length, 1);
-      assert.match(seen[0].url, /\/rest\/v1\/rpc\/bootstrap_mcp_my_labels$/);
-      assert.ok(seen[0].authorization?.startsWith("Bearer "));
-      const sent = seen[0].authorization.slice("Bearer ".length);
-      assert.notEqual(sent, token);
-      const sentPayload = JSON.parse(Buffer.from(sent.split(".")[1], "base64url").toString("utf8"));
-      assert.equal(sentPayload.role, "authenticated");
-      assert.equal(sentPayload.email, EMAIL);
-      assert.equal(sentPayload.sub, SUB);
+      for (const token of [
+        await mint(),
+        await mint({
+          aud: ["authenticated", DEFAULT_BOUND_TOKEN_AUDIENCE],
+          extra: { role: "authenticated" },
+        }),
+      ]) {
+        seen.length = 0;
+        const res = await handleHostedReadFetch(mcpRequest(token));
+        const text = await res.text();
+        assert.equal(res.status, 200, text);
+        const who = toolJson(res, text);
+        assert.equal(who.email, EMAIL);
+        assert.equal(who.sub, SUB);
+        assert.equal(seen.length, 1);
+        assert.match(seen[0].url, /\/rest\/v1\/rpc\/bootstrap_mcp_my_labels$/);
+        assert.equal(seen[0].authorization, `Bearer ${token}`);
+      }
     } finally {
       globalThis.fetch = prev;
     }
   });
+
+  it("does not read a JWT secret", () => {
+    const src = ["bound-token.ts", "identity.ts", "hosted-handler.ts"]
+      .map((name) => readFileSync(new URL(`../src/${name}`, import.meta.url), "utf8"))
+      .join("\n");
+    assert.equal(src.includes("BOOTSTRAP_SUPABASE_JWT_SECRET"), false);
+    assert.equal(src.includes("JWT_SECRET"), false);
+    assert.equal(src.includes("new SignJWT"), false);
+  });
 });
 
-function assertClosedTraffic(calls, presented) {
-  assert.ok(calls.every((call) => !call.url.includes("/auth/v1/user")));
-  for (const call of calls) {
-    const header = call.authorization ?? "";
-    assert.notEqual(header, `Bearer ${presented}`);
-    if (!header.startsWith("Bearer ")) continue;
-    const payload = JSON.parse(Buffer.from(header.slice("Bearer ".length).split(".")[1], "base64url").toString("utf8"));
-    assert.notEqual(payload.role, "service_role");
-    if (call.url.includes("/rest/")) {
-      assert.equal(payload.role, "authenticated");
-    }
-  }
-}
-
-async function assertClosed(secret) {
-  await keys();
-  installJwks();
-  if (secret === undefined) delete process.env[BOUND_TOKEN_JWT_SECRET_ENV];
-  else process.env[BOUND_TOKEN_JWT_SECRET_ENV] = secret;
-  const calls = [];
-  const prev = globalThis.fetch;
-  globalThis.fetch = async (url, init) => {
-    calls.push({ url: String(url), authorization: init?.headers?.Authorization });
-    return new Response("nope", { status: 500 });
-  };
-  setIdentityStoreForTests(new SupabaseIdentityStore("https://db.example.test", "anon-key-fixture"));
-  try {
-    const token = await mint();
-    assert.equal(await databaseBearerForPresentedToken(token), undefined);
-    for (const tool of ["bootstrap_whoami", "get_journey"]) {
-      const res = await handleHostedReadFetch(
-        mcpRequest(tool === "get_journey" ? token : token, tool, tool === "get_journey" ? { company: "alpha" } : {}),
-      );
-      const text = await res.text();
-      assert.equal(res.status, 401, `${tool} ${text}`);
-      assert.equal(JSON.parse(text).reason, "identity_lookup_failed");
-      assert.equal(JSON.parse(text).error, "invalid_token");
-    }
-    assertClosedTraffic(calls, token);
-    assert.equal(calls.length, 0);
-  } finally {
-    globalThis.fetch = prev;
-  }
-}
-
 describe("bound token fail closed", () => {
-  it("unset JWT secret is 401 and forwards nothing", async () => {
-    await assertClosed(undefined);
-  });
-
-  it("empty JWT secret is 401 and forwards nothing", async () => {
-    await assertClosed("");
-  });
-
-  it("labels RPC failure is 401 and does not send the at+jwt or service_role", async () => {
+  it("a PostgREST 401 is a closed 401 and the bearer is the at+jwt", async () => {
     await keys();
     installJwks();
-    process.env[BOUND_TOKEN_JWT_SECRET_ENV] = "test-only-supabase-jwt-secret";
     const calls = [];
     const prev = globalThis.fetch;
     globalThis.fetch = async (url, init) => {
       calls.push({ url: String(url), authorization: init?.headers?.Authorization });
-      return new Response("nope", { status: 500 });
+      return new Response("nope", { status: 401 });
     };
     setIdentityStoreForTests(new SupabaseIdentityStore("https://db.example.test", "anon-key-fixture"));
     try {
@@ -367,16 +304,16 @@ describe("bound token fail closed", () => {
       }
       assert.ok(calls.length >= 1);
       assert.ok(calls.every((call) => call.url.includes("/rest/v1/rpc/bootstrap_mcp_my_labels")));
-      assertClosedTraffic(calls, token);
+      assert.ok(calls.every((call) => !call.url.includes("/auth/v1/user")));
+      assert.ok(calls.every((call) => call.authorization === `Bearer ${token}`));
     } finally {
       globalThis.fetch = prev;
     }
   });
 
-  it("two mints a second apart keep the same company context", async () => {
+  it("two calls a second apart keep the same company context", async () => {
     await keys();
     installJwks();
-    process.env[BOUND_TOKEN_JWT_SECRET_ENV] = "test-only-supabase-jwt-secret";
     const prev = globalThis.fetch;
     globalThis.fetch = async () =>
       new Response(
@@ -386,11 +323,6 @@ describe("bound token fail closed", () => {
     setIdentityStoreForTests(new SupabaseIdentityStore("https://db.example.test", "anon-key-fixture"));
     try {
       const token = await mint();
-      const firstNow = new Date();
-      const later = new Date(firstNow.getTime() + 2000);
-      const firstMint = await databaseBearerForPresentedToken(token, process.env, firstNow);
-      const secondMint = await databaseBearerForPresentedToken(token, process.env, later);
-      assert.notEqual(firstMint, secondMint);
       const use = await handleHostedReadFetch(mcpRequest(token, "bootstrap_use_company", { company: "alpha" }));
       const useText = await use.text();
       assert.equal(use.status, 200, useText);
