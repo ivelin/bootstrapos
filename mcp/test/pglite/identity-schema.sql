@@ -118,6 +118,89 @@ EXCEPTION
 END;
 $$;
 
+-- Mirrors public.bootstrap_os_discount_class (20261116). Text ids in this
+-- fixture; prod takes uuid. Missing memberships table or columns is no row.
+CREATE OR REPLACE FUNCTION bootstrap_os_discount_class(p_auth_user_id text, p_email text)
+RETURNS text
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+DECLARE
+  has_columns boolean := false;
+  m_level text;
+  m_source text;
+  m_status text;
+  m_effective_to timestamptz;
+  has_row boolean := false;
+BEGIN
+  IF pg_catalog.to_regclass('public.memberships') IS NOT NULL THEN
+    SELECT count(*) = 6
+      INTO has_columns
+    FROM information_schema.columns
+    WHERE table_schema = 'public'
+      AND table_name = 'memberships'
+      AND column_name IN ('auth_user_id', 'email', 'level', 'source', 'status', 'effective_to');
+  END IF;
+
+  IF has_columns THEN
+    BEGIN
+      SELECT m.level::text, m.source::text, m.status::text, m.effective_to
+        INTO m_level, m_source, m_status, m_effective_to
+      FROM public.memberships m
+      WHERE (p_auth_user_id IS NOT NULL AND p_auth_user_id <> '' AND m.auth_user_id = p_auth_user_id)
+         OR (
+           p_email IS NOT NULL AND p_email <> ''
+           AND m.email IS NOT NULL AND pg_catalog.lower(m.email) = pg_catalog.lower(p_email)
+         )
+      ORDER BY CASE
+        WHEN p_auth_user_id IS NOT NULL AND p_auth_user_id <> '' AND m.auth_user_id = p_auth_user_id THEN 0
+        ELSE 1
+      END
+      LIMIT 1;
+      has_row := FOUND;
+    EXCEPTION
+      WHEN undefined_table OR undefined_column THEN
+        has_row := false;
+    END;
+  END IF;
+
+  IF has_row THEN
+    IF m_status = 'ended'
+       OR (m_effective_to IS NOT NULL AND m_effective_to <= pg_catalog.now()) THEN
+      NULL;
+    ELSIF m_level = 'ground'
+      AND m_source = 'manual'
+      AND m_effective_to IS NOT NULL
+      AND m_effective_to > pg_catalog.now() THEN
+      RETURN 'trial';
+    ELSIF m_level IN ('elite', 'next', 'ground')
+      AND m_status IN ('active', 'past_due', 'cancel_pending') THEN
+      RETURN m_level;
+    END IF;
+  END IF;
+
+  IF EXISTS (
+    SELECT 1
+    FROM public.bootstrap_mcp_mentees AS mentee
+    WHERE (p_auth_user_id IS NOT NULL AND p_auth_user_id <> '' AND mentee.auth_user_id = p_auth_user_id)
+       OR (
+         p_email IS NOT NULL AND p_email <> ''
+         AND mentee.email IS NOT NULL
+         AND pg_catalog.lower(mentee.email) = pg_catalog.lower(p_email)
+       )
+  ) THEN
+    RETURN 'bootstrap';
+  END IF;
+
+  RETURN 'none';
+EXCEPTION
+  WHEN undefined_table OR undefined_column THEN
+    RETURN 'none';
+END;
+$$;
+
 -- Mirrors SQL bootstrap_mcp_my_labels: fail-closed unless a mentee row exists.
 -- SECURITY DEFINER so email-only first-user inserts are visible (owner bypass).
 CREATE OR REPLACE FUNCTION bootstrap_mcp_my_labels()
@@ -171,6 +254,7 @@ BEGIN
     'labels', labels,
     'membership_level', membership ->> 'level',
     'membership_status', membership ->> 'status',
+    'discount_class', bootstrap_os_discount_class(uid, user_email),
     'note', 'Labels only. Not boards. Not company-state.'
   );
 END;

@@ -894,6 +894,22 @@ describe("hosted identity membership (entitlement read)", () => {
     assert.deepEqual(rpcWho({}).membership, { level: "board", status: null });
   });
 
+  it("older labels RPC without discount_class omits the field and never throws", () => {
+    const older = rpcWho({});
+    assert.equal(older.authenticated, true);
+    assert.equal("discountClass" in older, false);
+    const unknown = rpcWho({ discount_class: "platinum" });
+    assert.equal("discountClass" in unknown, false);
+    assert.equal(rpcWho({ discount_class: "elite" }).discountClass, "elite");
+    assert.equal(rpcWho({ discount_class: "none" }).discountClass, "none");
+    const uninvited = whoamiFromLabelsRpc(
+      "stranger@example.test",
+      { authenticated: false, email: "stranger@example.test", labels: [], discount_class: "elite" },
+      true,
+    );
+    assert.equal("discountClass" in uninvited, false);
+  });
+
   it("unauthenticated results carry no membership field", () => {
     const uninvited = whoamiFromLabelsRpc(
       "stranger@example.test",
@@ -905,6 +921,7 @@ describe("hosted identity membership (entitlement read)", () => {
     const failed = whoamiFromLabelsRpc("x@y.test", null, false);
     assert.equal("membership" in failed, false);
     assert.equal(whoamiFromMentee(undefined, "memory").membership, undefined);
+    assert.equal("discountClass" in whoamiFromMentee(undefined, "memory"), false);
   });
 
   it("memory store normalizes the same stored shapes", () => {
@@ -920,5 +937,6 @@ describe("hosted identity membership (entitlement read)", () => {
       status: "active",
     });
     assert.deepEqual(whoamiFromMentee({ ...base }, "memory").membership, { level: "board", status: null });
+    assert.equal(whoamiFromMentee({ ...base }, "memory").discountClass, "bootstrap");
   });
 });

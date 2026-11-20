@@ -444,6 +444,7 @@ export const REDACT_ALLOW_KEYS = new Set([
   "denied",
   "details",
   "digest",
+  "discount_class",
   "displayName",
   "display_name",
   "dropped",

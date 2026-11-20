@@ -43,6 +43,17 @@ export function membershipFromStored(levelRaw: unknown, statusRaw: unknown): Hos
   return { level, status };
 }
 
+export const DISCOUNT_CLASSES = ["elite", "next", "ground", "trial", "bootstrap", "none"] as const;
+
+export type DiscountClass = (typeof DISCOUNT_CLASSES)[number];
+
+/** Known class, or undefined when an older RPC omits the key or sends an unknown value. */
+export function parseDiscountClass(raw: unknown): DiscountClass | undefined {
+  return typeof raw === "string" && (DISCOUNT_CLASSES as readonly string[]).includes(raw)
+    ? (raw as DiscountClass)
+    : undefined;
+}
+
 export type HostedWhoami = {
   authenticated: boolean;
   email?: string;
@@ -51,6 +62,8 @@ export type HostedWhoami = {
   labels: string[];
   role?: HostedRole;
   membership?: HostedMembership;
+  /** Derived class from the labels RPC. Omitted when the RPC has no known value. */
+  discountClass?: DiscountClass;
   reason?: string;
   note?: string;
   identityStore?: "supabase" | "memory" | "unset";
@@ -65,6 +78,8 @@ export type MenteeRecord = {
   role?: HostedRole;
   /** Stored membership row shape (level/status), normalized on read. */
   membership?: { level?: unknown; status?: unknown } | null;
+  /** Memory has no memberships table. Set to override; otherwise an account is bootstrap. */
+  discountClass?: unknown;
 };
 
 export interface IdentityStore {
@@ -125,6 +140,7 @@ export function whoamiFromMentee(mentee: MenteeRecord | undefined, store: Hosted
     labels: [...mentee.labels].sort(),
     role: mentee.role ?? "unset",
     membership: membershipFromStored(mentee.membership?.level ?? null, mentee.membership?.status ?? null),
+    discountClass: parseDiscountClass(mentee.discountClass) ?? "bootstrap",
     note: "Companies this login can open. A company may have several ideas; each idea is its own 0-1 board.",
     identityStore: store,
   };
@@ -137,6 +153,7 @@ export type LabelsRpcBody = {
   role?: unknown;
   membership_level?: unknown;
   membership_status?: unknown;
+  discount_class?: unknown;
   reason?: unknown;
   note?: unknown;
 };
@@ -169,6 +186,7 @@ export function whoamiFromLabelsRpc(
     };
   }
   const labels = Array.isArray(raw.labels) ? raw.labels.map(String).sort() : [];
+  const discountClass = parseDiscountClass(raw.discount_class);
   return {
     authenticated: true,
     email,
@@ -176,6 +194,8 @@ export function whoamiFromLabelsRpc(
     role: parseHostedRole(raw.role),
     // Older RPC deployments return no membership keys: board, never an error.
     membership: membershipFromStored(raw.membership_level ?? null, raw.membership_status ?? null),
+    // Older RPC deployments omit discount_class. Unknown values are omitted too.
+    ...(discountClass ? { discountClass } : {}),
     note:
       typeof raw.note === "string" && raw.note
         ? raw.note
