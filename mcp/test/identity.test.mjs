@@ -207,6 +207,7 @@ describe("hosted identity (resource server, gated)", () => {
     assert.equal(who.authenticated, true);
     assert.equal(who.email, IVELIN_SEED_EMAIL);
     assert.equal(who.role, "member");
+    assert.equal(who.discountClass, "bootstrap");
     assert.deepEqual(who.companies, [...IVELIN_SEED_LABELS]);
     assert.deepEqual(who.labels, [...IVELIN_SEED_LABELS]);
     const blob = JSON.stringify(who);
@@ -894,6 +895,57 @@ describe("hosted identity membership (entitlement read)", () => {
     assert.deepEqual(rpcWho({}).membership, { level: "board", status: null });
   });
 
+  it("older labels RPC without discount_class omits the field and never throws", () => {
+    const older = rpcWho({});
+    assert.equal(older.authenticated, true);
+    assert.equal("discountClass" in older, false);
+    const unknown = rpcWho({ discount_class: "platinum" });
+    assert.equal("discountClass" in unknown, false);
+    assert.equal(rpcWho({ discount_class: "elite" }).discountClass, "elite");
+    assert.equal(rpcWho({ discount_class: "none" }).discountClass, "none");
+    const uninvited = whoamiFromLabelsRpc(
+      "stranger@example.test",
+      { authenticated: false, email: "stranger@example.test", labels: [], discount_class: "none", reason: "not_invited" },
+      true,
+    );
+    assert.equal(uninvited.authenticated, false);
+    assert.equal(uninvited.reason, "not_invited");
+    assert.equal(uninvited.discountClass, "none");
+    const omitted = whoamiFromLabelsRpc(
+      "stranger@example.test",
+      { authenticated: false, email: "stranger@example.test", labels: [], reason: "not_invited" },
+      true,
+    );
+    assert.equal("discountClass" in omitted, false);
+  });
+
+  it("whoami emits discountClass none for a verified token with no mentee row", async () => {
+    setIdentityStoreForTests({
+      kind: "supabase",
+      async whoami() {
+        return whoamiFromLabelsRpc(
+          "stranger@example.test",
+          {
+            authenticated: false,
+            email: "stranger@example.test",
+            labels: [],
+            role: "unset",
+            reason: "not_invited",
+            discount_class: "none",
+          },
+          true,
+        );
+      },
+    });
+    const who = parseTool(
+      await rpc("tools/call", { name: "bootstrap_whoami", arguments: {} }, 61, IVELIN_TOKEN),
+    );
+    assert.equal(who.authenticated, true);
+    assert.equal(who.reason, "no_membership");
+    assert.equal(who.discountClass, "none");
+    assert.deepEqual(who.companies, []);
+  });
+
   it("unauthenticated results carry no membership field", () => {
     const uninvited = whoamiFromLabelsRpc(
       "stranger@example.test",
@@ -905,6 +957,7 @@ describe("hosted identity membership (entitlement read)", () => {
     const failed = whoamiFromLabelsRpc("x@y.test", null, false);
     assert.equal("membership" in failed, false);
     assert.equal(whoamiFromMentee(undefined, "memory").membership, undefined);
+    assert.equal("discountClass" in whoamiFromMentee(undefined, "memory"), false);
   });
 
   it("memory store normalizes the same stored shapes", () => {
@@ -920,5 +973,6 @@ describe("hosted identity membership (entitlement read)", () => {
       status: "active",
     });
     assert.deepEqual(whoamiFromMentee({ ...base }, "memory").membership, { level: "board", status: null });
+    assert.equal(whoamiFromMentee({ ...base }, "memory").discountClass, "bootstrap");
   });
 });

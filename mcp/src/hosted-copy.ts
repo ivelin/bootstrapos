@@ -49,7 +49,7 @@ export function hostedInstructionsForClient(input: {
 }
 
 export const TOOL_WHOAMI =
-  "Who is signed in, and which companies they can open. When they ask which companies, say the names in one sentence. Do not print email, role, or a table."
+  "Who is signed in, and which companies they can open. When they ask which companies, say the names in one sentence. Do not print email, role, or a table. The discount class may be stated in plain words. discountClass is a discount class, not a price. Rates live outside this server. elite, next, and ground are paid levels. trial is a time-limited trial. bootstrap is a Bootstrap OS account with no paid level. none is neither a paid level nor a Bootstrap OS account. membership.level board is the Pirin entitlement when no paid level is stored. It is not the bootstrap discount class. reason no_membership means this verified sign-in has no bet boards. The store says not_invited when the allowlist row is missing. That wording is not an auth failure and it is not a price."
 
 export const TOOL_CREATE_COMPANY =
   "Open a bet board. A confirmed account can open up to 3. A super admin still uses the admin path. Needs founder yes in this chat. A short why is stored only on the admin path. Does not create an idea — call create_idea next. A duplicate name is refused. If this is refused, ask an admin or email bootstrap@pirin.ai."
