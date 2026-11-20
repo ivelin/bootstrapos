@@ -90,6 +90,15 @@ describe("setup catalog and tools/list snapshot", () => {
     }
     const whoami = tools.find((tool) => tool.name === "bootstrap_whoami");
     assert.equal(whoami.annotations.readOnlyHint, true);
+    assert.match(whoami.description, /discount class, not a price/);
+    assert.match(whoami.description, /Rates live outside this server/);
+    for (const label of ["elite", "next", "ground", "trial", "bootstrap", "none"]) {
+      assert.match(whoami.description, new RegExp(`\\b${label}\\b`));
+    }
+    assert.match(whoami.description, /discount class may be stated in plain words/);
+    assert.match(whoami.description, /Do not print email, role, or a table/);
+    assert.match(whoami.description, /membership\.level board/);
+    assert.match(whoami.description, /no_membership/);
     const snapshot = { tools: toolShape(tools), setup: SETUP_CATALOG };
     if (process.env.UPDATE_TOOLS_SNAPSHOT === "1") {
       fs.writeFileSync(SNAPSHOT, `${JSON.stringify(snapshot, null, 2)}\n`);

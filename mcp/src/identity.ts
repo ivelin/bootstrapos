@@ -78,7 +78,10 @@ export type MenteeRecord = {
   role?: HostedRole;
   /** Stored membership row shape (level/status), normalized on read. */
   membership?: { level?: unknown; status?: unknown } | null;
-  /** Memory has no memberships table. Set to override; otherwise an account is bootstrap. */
+  /**
+   * Dev-only memory store. It has no memberships table, so an account defaults
+   * to bootstrap unless a test sets this. Production reads the labels RPC.
+   */
   discountClass?: unknown;
 };
 
@@ -140,6 +143,7 @@ export function whoamiFromMentee(mentee: MenteeRecord | undefined, store: Hosted
     labels: [...mentee.labels].sort(),
     role: mentee.role ?? "unset",
     membership: membershipFromStored(mentee.membership?.level ?? null, mentee.membership?.status ?? null),
+    // Dev-only default: the memory store has no memberships table.
     discountClass: parseDiscountClass(mentee.discountClass) ?? "bootstrap",
     note: "Companies this login can open. A company may have several ideas; each idea is its own 0-1 board.",
     identityStore: store,
@@ -177,12 +181,15 @@ export function whoamiFromLabelsRpc(
   }
   const email = typeof raw.email === "string" ? raw.email : userEmail;
   if (raw.authenticated !== true) {
+    const earlyClass = parseDiscountClass(raw.discount_class);
     return {
       authenticated: false,
       email,
       labels: [],
       reason: typeof raw.reason === "string" && raw.reason ? raw.reason : "not_invited",
       identityStore: "supabase",
+      // not_invited still carries the caller's class. Older RPCs omit the key.
+      ...(earlyClass ? { discountClass: earlyClass } : {}),
     };
   }
   const labels = Array.isArray(raw.labels) ? raw.labels.map(String).sort() : [];

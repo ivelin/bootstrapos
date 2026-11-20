@@ -451,6 +451,18 @@ describe("onboarding gate (PGlite, same commit, never prod)", { concurrency: fal
     assert.equal(presented.authenticated, true);
     assert.equal(presented.reason, "no_membership");
     assert.equal(presented.email, "guest@example.test");
+    assert.equal("discountClass" in presented, false);
+    const withClass = presentVerifiedWhoami({
+      authenticated: false,
+      email: "stranger@example.test",
+      labels: [],
+      reason: "not_invited",
+      discountClass: "none",
+      identityStore: "supabase",
+    });
+    assert.equal(withClass.authenticated, true);
+    assert.equal(withClass.reason, "no_membership");
+    assert.equal(withClass.discountClass, "none");
     const authFail = presentVerifiedWhoami({
       authenticated: false,
       labels: [],

@@ -229,7 +229,8 @@ BEGIN
       'authenticated', false,
       'email', user_email,
       'labels', '[]'::jsonb,
-      'reason', 'not_invited'
+      'reason', 'not_invited',
+      'discount_class', bootstrap_os_discount_class(uid, user_email)
     );
   END IF;
 

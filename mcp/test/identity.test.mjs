@@ -207,6 +207,7 @@ describe("hosted identity (resource server, gated)", () => {
     assert.equal(who.authenticated, true);
     assert.equal(who.email, IVELIN_SEED_EMAIL);
     assert.equal(who.role, "member");
+    assert.equal(who.discountClass, "bootstrap");
     assert.deepEqual(who.companies, [...IVELIN_SEED_LABELS]);
     assert.deepEqual(who.labels, [...IVELIN_SEED_LABELS]);
     const blob = JSON.stringify(who);
@@ -904,10 +905,45 @@ describe("hosted identity membership (entitlement read)", () => {
     assert.equal(rpcWho({ discount_class: "none" }).discountClass, "none");
     const uninvited = whoamiFromLabelsRpc(
       "stranger@example.test",
-      { authenticated: false, email: "stranger@example.test", labels: [], discount_class: "elite" },
+      { authenticated: false, email: "stranger@example.test", labels: [], discount_class: "none", reason: "not_invited" },
       true,
     );
-    assert.equal("discountClass" in uninvited, false);
+    assert.equal(uninvited.authenticated, false);
+    assert.equal(uninvited.reason, "not_invited");
+    assert.equal(uninvited.discountClass, "none");
+    const omitted = whoamiFromLabelsRpc(
+      "stranger@example.test",
+      { authenticated: false, email: "stranger@example.test", labels: [], reason: "not_invited" },
+      true,
+    );
+    assert.equal("discountClass" in omitted, false);
+  });
+
+  it("whoami emits discountClass none for a verified token with no mentee row", async () => {
+    setIdentityStoreForTests({
+      kind: "supabase",
+      async whoami() {
+        return whoamiFromLabelsRpc(
+          "stranger@example.test",
+          {
+            authenticated: false,
+            email: "stranger@example.test",
+            labels: [],
+            role: "unset",
+            reason: "not_invited",
+            discount_class: "none",
+          },
+          true,
+        );
+      },
+    });
+    const who = parseTool(
+      await rpc("tools/call", { name: "bootstrap_whoami", arguments: {} }, 61, IVELIN_TOKEN),
+    );
+    assert.equal(who.authenticated, true);
+    assert.equal(who.reason, "no_membership");
+    assert.equal(who.discountClass, "none");
+    assert.deepEqual(who.companies, []);
   });
 
   it("unauthenticated results carry no membership field", () => {

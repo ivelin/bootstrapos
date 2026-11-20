@@ -39,6 +39,8 @@ export function presentVerifiedWhoami(who: HostedWhoami): HostedWhoami {
     reason: "no_membership",
     note: NO_BOARDS_HINT,
     identityStore: who.identityStore,
+    // SQL not_invited already computed the caller's class. Keep it on the way up.
+    ...(who.discountClass ? { discountClass: who.discountClass } : {}),
   };
 }
 

@@ -103,7 +103,7 @@ CREATE OR REPLACE FUNCTION public.bootstrap_mcp_my_labels()
 RETURNS jsonb
 LANGUAGE plpgsql
 SECURITY DEFINER
-SET search_path = public
+SET search_path = ''
 AS $$
 DECLARE
   uid uuid := auth.uid();
@@ -123,12 +123,14 @@ BEGIN
   WHERE auth_user_id = uid OR email = user_email;
 
   IF found_id IS NULL THEN
+    -- Class uses auth.uid() and actor_email() only. No caller-supplied id.
     RETURN jsonb_build_object(
       'authenticated', false,
       'email', user_email,
       'labels', '[]'::jsonb,
       'role', 'unset',
-      'reason', 'not_invited'
+      'reason', 'not_invited',
+      'discount_class', public.bootstrap_os_discount_class(uid, user_email)
     );
   END IF;
 

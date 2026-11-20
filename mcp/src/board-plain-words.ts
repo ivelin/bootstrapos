@@ -444,6 +444,8 @@ export const REDACT_ALLOW_KEYS = new Set([
   "denied",
   "details",
   "digest",
+  // Kept: the spoken-payload scan requires every jsonb_build_object key the
+  // migrations emit. whoami maps this snake key to discountClass before the tool reply.
   "discount_class",
   "displayName",
   "display_name",
