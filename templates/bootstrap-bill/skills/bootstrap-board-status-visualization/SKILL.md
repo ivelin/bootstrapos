@@ -1,10 +1,8 @@
 ---
-name: Bootstrap board status visualization
-description: >-
-  Use for every where-are-we / bet card: a bold #1 bottleneck
-  sentence, a bold company name, a founder line, one sentence on who buys,
-  then one table. Live get_journey first; never invent.
+name: bootstrap-board-status-visualization
+description: Use for every where-are-we / bet card: a bold #1 bottleneck sentence, a bold company name, a founder line, one sentence on who buys, then one table. Live get_journey first; never invent.
 ---
+
 Use for every “where are we with COMPANY” and every “bet card” request, for every founder. Locked 2026-10-02 at 4:55 PM CT. If a reader has to ask what a word means, rewrite it. Do not invent a second format.
 
 ## Source of truth

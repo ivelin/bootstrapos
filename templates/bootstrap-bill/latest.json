@@ -1,25 +1,33 @@
 {
-  "version": 17,
-  "published": "2026-09-25",
-  "whatsNew": "Bill now adapts to you: when you have to ask, clarify, or correct it about your board, it fixes the thing, remembers the lesson, and writes an approved idea's first customer bet right away so the card is never blank.",
+  "version": 18,
+  "published": "2026-11-20",
+  "whatsNew": "Bill now helps you onboard the pirin.ai portfolio bots from the members shelf: it picks the one or two that fit your bottleneck, preps each bot's first chat, and gets your CTO, builder and reviewer working together.",
   "skills": {
+    "bootstrap-bill-checkpoints-and-postmortems": {
+      "sha256": "6b7864900480c591daab6846ce83b23d5c64765a92b408eda71aed89c25e2d93",
+      "path": "templates/bootstrap-bill/skills/bootstrap-bill-checkpoints-and-postmortems/SKILL.md"
+    },
+    "bootstrap-bill-frictionless-founder": {
+      "sha256": "f5d65218c543b42943e364210131fd022f04309fa6f64729ed5167c6dfe1b36b",
+      "path": "templates/bootstrap-bill/skills/bootstrap-bill-frictionless-founder/SKILL.md"
+    },
     "bootstrap-bill-onboarding": {
-      "sha256": "dd2e842332b10c54ee6e088fa3a9932e951897fb4b53fe511a022ff6a35c6808",
+      "sha256": "57fbfb9b38166d985ad5cb093f3256875e95c2ccb98235b91ae19b0980ac7823",
       "path": "templates/bootstrap-bill/skills/bootstrap-bill-onboarding/SKILL.md"
     },
     "bootstrap-bill-whats-new": {
-      "sha256": "752be220397e78053bf19c583f8a806f377e01654c9e2e72e61eea00e6e94051",
+      "sha256": "5bc0f9779a9549147067f0b2bfdd5f9a8eedbbc53b465c8295d28f47182a82de",
       "path": "templates/bootstrap-bill/skills/bootstrap-bill-whats-new/SKILL.md"
     },
-    "bootstrap-bill-frictionless-founder": {
-      "sha256": "e95285a6374055416b59ec6e95db74df04a0605fd88bf6b777c3c69ed6eda67f",
-      "path": "templates/bootstrap-bill/skills/bootstrap-bill-frictionless-founder/SKILL.md"
-    },
     "bootstrap-board-status-visualization": {
-      "sha256": "035f9379da159218c31c7bd0e59e5c54cfecb35e48bc9ac76526d38c4adbf9fe",
+      "sha256": "abcc486149966f6426e79dd8ea07159f4b9af4a17af136c60f53090d4c4e9c71",
       "path": "templates/bootstrap-bill/skills/bootstrap-board-status-visualization/SKILL.md"
+    },
+    "portfolio-bot-onboarding": {
+      "sha256": "04854cc2039bbd0bb09925359c99c5c5c576cc331589de237cb8b02dfb4508c6",
+      "path": "templates/bootstrap-bill/skills/portfolio-bot-onboarding/SKILL.md"
     }
   },
-  "routinesChanged": false,
-  "memoriesChanged": false
+  "routinesChanged": true,
+  "memoriesChanged": true
 }
